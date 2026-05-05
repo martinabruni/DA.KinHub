@@ -49,7 +49,6 @@ public partial class CoreDbContext : DbContext
             entity.HasIndex(e => e.UserId, "IX_core_FamilyEntity_UserId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-            entity.Property(e => e.AdminCodeHash).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.Name)
                 .IsRequired()
