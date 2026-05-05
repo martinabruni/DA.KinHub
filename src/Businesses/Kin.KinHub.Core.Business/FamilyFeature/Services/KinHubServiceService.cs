@@ -30,7 +30,6 @@ public sealed class KinHubServiceService : IKinHubServiceService
                     Name = s.Name,
                     BaseUrl = s.BaseUrl,
                     IsActive = s.IsActive,
-                    IsAdminOnly = s.IsAdminOnly,
                 })
                 .ToList();
 
