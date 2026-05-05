@@ -33,7 +33,7 @@ export function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       await login(values)
-      navigate('/dashboard')
+      navigate('/select-member')
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { errors?: Record<string, string[]> } } }
       const errors = apiErr?.response?.data?.errors

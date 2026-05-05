@@ -1,29 +1,34 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Grid2x2, Refrigerator, Sparkles, Users } from 'lucide-react'
+import {
+  BookOpen,
+  Grid2x2,
+  Refrigerator,
+  Settings2,
+  Sparkles,
+  Users,
+} from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuthContext } from '@/store/authContext'
 import { apiClient } from '@/api/apiClient'
 import type { Family, Service } from '@/types'
-import { getInitials } from '@/lib/utils'
 
-const serviceIcons: Record<string, React.ElementType> = {
-  Recipes: BookOpen,
-  Fridges: Refrigerator,
-  'AI Assistant': Sparkles,
-  Family: Users,
-  Services: Grid2x2,
+const serviceConfig: Record<string, { icon: React.ElementType; path: string; color: string }> = {
+  Recipes: { icon: BookOpen, path: '/recipe-books', color: 'text-orange-500' },
+  Fridges: { icon: Refrigerator, path: '/fridges', color: 'text-blue-500' },
+  'AI Assistant': { icon: Sparkles, path: '/ai-assistant', color: 'text-violet-500' },
+  Family: { icon: Users, path: '/family', color: 'text-green-500' },
+  Services: { icon: Grid2x2, path: '/services', color: 'text-slate-500' },
 }
 
 export function DashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { activeMember } = useAuthContext()
 
   const { data: family, isLoading: loadingFamily } = useQuery({
     queryKey: ['family'],
@@ -44,102 +49,93 @@ export function DashboardPage() {
     enabled: !!user?.familyId,
   })
 
-  const displayName = user?.email?.split('@')[0] ?? 'there'
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  const enabledServices = (services ?? []).filter((s) => s.isEnabled)
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold">{t('dashboard.greeting', { name: displayName })}</h1>
-      <p className="text-muted-foreground text-sm mt-1">{today}</p>
-      <Separator className="my-6" />
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {t('hub.greeting', { name: activeMember?.name ?? user?.email?.split('@')[0] ?? '' })}
+        </h1>
+        {loadingFamily ? (
+          <Skeleton className="h-4 w-48 mt-2" />
+        ) : family ? (
+          <p className="text-muted-foreground mt-1">
+            {t('hub.familyBanner', { name: family.name })}
+            {' · '}
+            {t('hub.members', { count: family.members?.length ?? 0 })}
+          </p>
+        ) : null}
+      </div>
 
-      {/* Family Card */}
-      {loadingFamily ? (
-        <Skeleton className="h-24 w-full rounded-xl mb-8" />
-      ) : family ? (
-        <Card className="mb-8 border-l-4 border-l-primary">
-          <CardContent className="flex items-center gap-4 p-5">
-            <Avatar className="w-12 h-12">
-              <AvatarFallback className="text-lg bg-primary/20 text-primary">
-                {getInitials(family.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-semibold">{family.name}</span>
-                {user?.familyRole === 'Admin' && (
-                  <Badge variant="secondary">Admin</Badge>
-                )}
-              </div>
-              <p className="text-muted-foreground text-sm">
-                {t('dashboard.members', { count: family.members?.length ?? 0 })}
-              </p>
-            </div>
-            <Link to="/family" className="text-sm text-primary font-medium hover:underline">
-              {t('dashboard.manageFamily')}
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-8 bg-muted/40">
-          <CardContent className="flex flex-col items-center gap-4 py-8">
-            <p className="text-muted-foreground font-medium">{t('dashboard.noFamily.title')}</p>
-            <div className="flex gap-3">
-              <Button asChild size="sm">
-                <Link to="/family">{t('dashboard.noFamily.create')}</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/family">{t('dashboard.noFamily.join')}</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Services Grid */}
-      <h2 className="text-lg font-semibold mb-4">{t('dashboard.yourServices')}</h2>
-      {loadingServices ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
-          ))}
+      {/* Services hub grid */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">{t('hub.yourServices')}</h2>
+          {activeMember?.role === 'Admin' && (
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground gap-1">
+              <Link to="/services">
+                <Settings2 className="w-4 h-4" />
+                {t('hub.manageServices')}
+              </Link>
+            </Button>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(services ?? [])
-            .filter((s) => s.isEnabled)
-            .map((service) => {
-              const Icon = serviceIcons[service.name] ?? Grid2x2
-              const serviceLink = service.name.toLowerCase().includes('recipe')
-                ? '/recipe-books'
-                : service.name.toLowerCase().includes('fridge')
-                ? '/fridges'
-                : service.name.toLowerCase().includes('ai')
-                ? '/ai-assistant'
-                : '/services'
+
+        {loadingServices ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-2xl" />
+            ))}
+          </div>
+        ) : enabledServices.length === 0 ? (
+          <Card className="bg-muted/40">
+            <CardContent className="flex flex-col items-center gap-3 py-10">
+              <Grid2x2 className="w-10 h-10 text-muted-foreground" />
+              <p className="font-medium text-muted-foreground">{t('hub.noServicesTitle')}</p>
+              <p className="text-sm text-muted-foreground text-center max-w-xs">
+                {t('hub.noServicesDescription')}
+              </p>
+              {activeMember?.role === 'Admin' && (
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/services">{t('hub.manageServices')}</Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {enabledServices.map((service) => {
+              const cfg = serviceConfig[service.name] ?? {
+                icon: Grid2x2,
+                path: '/services',
+                color: 'text-slate-500',
+              }
+              const Icon = cfg.icon
               return (
-                <Card
-                  key={service.id}
-                  className="hover:shadow-md hover:border-primary/40 transition-all"
-                >
-                  <CardContent className="p-5">
-                    <Icon className="w-8 h-8 text-primary mb-2" />
-                    <p className="font-semibold">{service.name}</p>
-                    <p className="text-muted-foreground text-sm mt-1">{service.description}</p>
-                    <Link
-                      to={serviceLink}
-                      className="text-sm text-primary font-medium hover:underline mt-3 inline-block"
-                    >
-                      {t('dashboard.open')}
-                    </Link>
-                  </CardContent>
-                </Card>
+                <Link key={service.id} to={cfg.path}>
+                  <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
+                    <CardContent className="flex flex-col gap-3 p-5 h-full">
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                        <Icon className={`w-6 h-6 ${cfg.color}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold leading-tight">{service.name}</p>
+                        <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                          {service.description}
+                        </p>
+                      </div>
+                      <span className="text-xs font-medium text-primary">{t('hub.open')} →</span>
+                    </CardContent>
+                  </Card>
+                </Link>
               )
             })}
-        </div>
-      )}
-
-      <p className="text-muted-foreground text-sm italic mt-8">{t('dashboard.recentActivity')}</p>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
+

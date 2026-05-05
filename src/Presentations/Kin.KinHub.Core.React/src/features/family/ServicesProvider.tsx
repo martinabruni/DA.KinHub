@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api/apiClient";
 import { useAuth } from "@/features/auth/AuthProvider";
-import type { Service } from "@/types";
+import type { Family, Service } from "@/types";
 
 interface ServicesContextValue {
   services: Service[];
@@ -17,20 +17,30 @@ const ServicesContext = createContext<ServicesContextValue | null>(null);
 
 export function ServicesProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  const qKey = ["services", "family", user?.familyId];
+  const { data: family } = useQuery({
+    queryKey: ["family"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Family>("/api/families");
+      return data;
+    },
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
+  const qKey = ["services", "family", family?.id];
 
   const { data: services = [], isLoading } = useQuery({
     queryKey: qKey,
     queryFn: async () => {
       const { data } = await apiClient.get<Service[]>(
-        `/api/services/family/${user!.familyId}`,
+        `/api/services/family/${family!.id}`,
       );
       return data;
     },
-    enabled: !!user?.familyId,
+    enabled: !!family?.id,
   });
 
   const invalidate = useCallback(() => {
@@ -45,7 +55,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       serviceId: number;
       enabled: boolean;
     }) => {
-      await apiClient.post(`/api/services/family/${user!.familyId}/toggle`, {
+      await apiClient.post(`/api/services/family/${family!.id}/toggle`, {
         serviceId,
         isActive: enabled,
       });

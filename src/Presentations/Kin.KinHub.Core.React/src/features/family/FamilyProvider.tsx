@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api/apiClient";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useAuthContext } from "@/store/authContext";
 import type { Family } from "@/types";
 
 interface FamilyContextValue {
@@ -31,6 +32,7 @@ const FamilyContext = createContext<FamilyContextValue | null>(null);
 export function FamilyProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
+  const { activeMember } = useAuthContext();
   const queryClient = useQueryClient();
 
   const { data: family, isLoading } = useQuery({
@@ -77,6 +79,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.memberRemoved"));
       invalidate();
     },
+    onError: () => {
+      toast.error(t("family.removeMember.lastAdminError"));
+    },
   });
 
   const updateAdminCodeMutation = useMutation({
@@ -111,7 +116,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const leaveFamilyMutation = useMutation({
     mutationFn: () =>
-      apiClient.delete(`/api/families/${family!.id}/members/me`),
+      apiClient.delete(`/api/families/${family!.id}/members/${activeMember!.id}`),
     onSuccess: () => {
       toast.success(t("family.left"));
       invalidate();

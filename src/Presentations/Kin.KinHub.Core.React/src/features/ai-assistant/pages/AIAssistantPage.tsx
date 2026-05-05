@@ -70,7 +70,7 @@ function SuggestTab() {
     try {
       await apiClient.post(
         `/api/recipe-books/${saveBookId}/recipes`,
-        saveRecipe.recipe,
+        { ...saveRecipe.recipe, recipeBookId: saveBookId },
       );
       toast.success(t("aiAssistant.suggest.saved"));
       setSaveRecipe(null);
@@ -185,7 +185,7 @@ function ParseTab() {
   const handleSave = async () => {
     if (!result || !saveBookId) return;
     try {
-      await apiClient.post(`/api/recipe-books/${saveBookId}/recipes`, result);
+      await apiClient.post(`/api/recipe-books/${saveBookId}/recipes`, { ...result, recipeBookId: saveBookId });
       toast.success(t("aiAssistant.parse.saved"));
     } catch {
       toast.error(t("common.error"));

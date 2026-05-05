@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes'
 import { useTranslation } from 'react-i18next'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 
 const routeTitles: Record<string, string> = {
@@ -15,6 +15,7 @@ const routeTitles: Record<string, string> = {
   '/fridges': 'nav.fridges',
   '/ai-assistant': 'nav.aiAssistant',
   '/profile': 'nav.profile',
+  '/select-member': 'selectMember.title',
 }
 
 interface TopBarProps {
@@ -24,7 +25,7 @@ interface TopBarProps {
 export function TopBar({ onMenuClick }: TopBarProps) {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
-  const { user } = useAuth()
+  const { activeMember } = useAuthContext()
   const location = useLocation()
 
   const titleKey = Object.entries(routeTitles).find(([path]) =>
@@ -51,7 +52,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
       <Avatar className="w-7 h-7">
         <AvatarFallback className="text-xs bg-primary/20 text-primary">
-          {getInitials(user?.email ?? 'U')}
+          {getInitials(activeMember?.name ?? 'U')}
         </AvatarFallback>
       </Avatar>
     </header>

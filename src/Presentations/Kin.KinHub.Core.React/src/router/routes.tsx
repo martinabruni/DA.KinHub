@@ -1,8 +1,11 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { MemberRoute } from '@/components/MemberRoute'
 import { Layout } from '@/components/Layout'
+import { KinRecipeServiceLayout } from '@/components/KinRecipeServiceLayout'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { SelectMemberPage } from '@/features/family/pages/SelectMemberPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { FamilyPage } from '@/features/family/pages/FamilyPage'
 import { ServicesPage } from '@/features/family/pages/ServicesPage'
@@ -27,22 +30,37 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <Layout />,
+        path: '/select-member',
+        element: <SelectMemberPage />,
+      },
+      {
+        element: <MemberRoute />,
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/family', element: <FamilyPage /> },
-          { path: '/services', element: <ServicesPage /> },
-          { path: '/recipe-books', element: <RecipeBooksPage /> },
-          { path: '/recipe-books/:id', element: <RecipeBookDetailPage /> },
-          { path: '/recipe-books/:id/recipes/:recipeId', element: <RecipeDetailPage /> },
-          { path: '/fridges', element: <FridgesPage /> },
-          { path: '/fridges/:id', element: <FridgeDetailPage /> },
-          { path: '/ai-assistant', element: <AIAssistantPage /> },
-          { path: '/profile', element: <ProfilePage /> },
+          {
+            element: <Layout />,
+            children: [
+              { index: true, element: <Navigate to="/dashboard" replace /> },
+              { path: '/dashboard', element: <DashboardPage /> },
+              { path: '/family', element: <FamilyPage /> },
+              { path: '/services', element: <ServicesPage /> },
+              { path: '/profile', element: <ProfilePage /> },
+              {
+                element: <KinRecipeServiceLayout />,
+                children: [
+                  { path: '/recipe-books', element: <RecipeBooksPage /> },
+                  { path: '/recipe-books/:id', element: <RecipeBookDetailPage /> },
+                  { path: '/recipe-books/:id/recipes/:recipeId', element: <RecipeDetailPage /> },
+                  { path: '/fridges', element: <FridgesPage /> },
+                  { path: '/fridges/:id', element: <FridgeDetailPage /> },
+                  { path: '/ai-assistant', element: <AIAssistantPage /> },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ])
+

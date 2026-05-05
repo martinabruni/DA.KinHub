@@ -1,0 +1,104 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
+import { Shield, User } from 'lucide-react'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { apiClient } from '@/api/apiClient'
+import { useAuthContext } from '@/store/authContext'
+import { getInitials } from '@/lib/utils'
+import type { Family, FamilyMember } from '@/types'
+import { AdminCodeDialog } from '@/features/family/components/AdminCodeDialog'
+
+export function SelectMemberPage() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { setActiveMember } = useAuthContext()
+  const [pendingAdminMember, setPendingAdminMember] = useState<FamilyMember | null>(null)
+
+  const { data: family, isLoading } = useQuery({
+    queryKey: ['family'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Family>('/api/families')
+      return data
+    },
+    retry: false,
+  })
+
+  const handleMemberClick = (member: FamilyMember) => {
+    if (member.role === 'Admin') {
+      setPendingAdminMember(member)
+    } else {
+      setActiveMember(member)
+      navigate('/', { replace: true })
+    }
+  }
+
+  const handleAdminVerified = (member: FamilyMember) => {
+    setActiveMember(member)
+    setPendingAdminMember(null)
+    navigate('/', { replace: true })
+  }
+
+  if (!isLoading && !family) {
+    navigate('/family', { replace: true })
+    return null
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      <div className="mb-10 text-center">
+        <h1 className="text-3xl font-bold tracking-tight">{t('selectMember.title')}</h1>
+        <p className="text-muted-foreground mt-2">{t('selectMember.subtitle')}</p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex gap-6 flex-wrap justify-center">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="w-36 h-44 rounded-2xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-6 flex-wrap justify-center">
+          {(family?.members ?? []).map((member) => (
+            <button
+              key={member.id}
+              onClick={() => handleMemberClick(member)}
+              className="group flex flex-col items-center gap-3 p-4 rounded-2xl w-36 hover:bg-muted/60 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <Avatar className="w-20 h-20 group-hover:ring-2 group-hover:ring-primary transition-all">
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  {getInitials(member.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-semibold text-sm text-center leading-tight">{member.name}</span>
+              {member.role === 'Admin' ? (
+                <Badge variant="default" className="gap-1 text-[10px]">
+                  <Shield className="w-3 h-3" />
+                  {t('family.role.admin')}
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1 text-[10px]">
+                  <User className="w-3 h-3" />
+                  {t('family.role.member')}
+                </Badge>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {pendingAdminMember && family && (
+        <AdminCodeDialog
+          open={!!pendingAdminMember}
+          familyId={family.id}
+          member={pendingAdminMember}
+          onSuccess={handleAdminVerified}
+          onClose={() => setPendingAdminMember(null)}
+        />
+      )}
+    </div>
+  )
+}

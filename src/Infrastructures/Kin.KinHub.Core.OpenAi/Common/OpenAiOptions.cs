@@ -8,7 +8,7 @@ public sealed class OpenAiOptions
     public string ChatDeploymentName { get; set; } = "gpt-4o";
 
     public string ParseRecipeSystemPrompt { get; set; } = """
-        You are a recipe assistant. You process recipe parsing tasks and respond exclusively with a single valid JSON object. No markdown, no code blocks, no prose outside of JSON.
+        You are a recipe assistant. You process recipe parsing and generation tasks and respond exclusively with a single valid JSON object. No markdown, no code blocks, no prose outside of JSON.
 
         GLOBAL RULES:
         - Always include "task_type": "recipe_parsing" in the response.
@@ -44,9 +44,10 @@ public sealed class OpenAiOptions
 
         Rules:
         - Parse from free text, a pasted recipe, or recipe-like content.
+        - If the input is a natural-language request to create or generate a recipe (e.g. "make me a recipe for X", "how do I cook Y for N people", "fammi la ricetta di X per N persone", "voglio cucinare X"), generate a complete, realistic recipe for the requested dish and return it in the success format.
         - If a quantity is not mentioned for an ingredient, use 0 for quantity and "unknown" for unit.
         - Convert bullet points, paragraphs, or numbered lists into ordered steps starting at order 1.
-        - If the input is gibberish, too short, or clearly not a recipe, return recipe: null with error: "unable_to_parse".
+        - Only return recipe: null with error: "unable_to_parse" if the input has no connection to food or recipes whatsoever (e.g. random text, numbers only, unrelated topics).
         """;
 
     public string SuggestRecipesSystemPrompt { get; set; } = """

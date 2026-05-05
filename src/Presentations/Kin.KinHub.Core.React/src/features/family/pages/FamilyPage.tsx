@@ -218,6 +218,10 @@ function FamilyContent() {
             </p>
           ) : (
             <>
+              {(() => {
+                const adminCount = family?.members.filter(m => m.role === "Admin").length ?? 0;
+                return (
+                  <>
               {/* Desktop table */}
               <div className="hidden sm:block rounded-lg border overflow-hidden">
                 <Table>
@@ -230,7 +234,9 @@ function FamilyContent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {family?.members.map((m) => (
+                    {family?.members.map((m) => {
+                      const isOnlyAdmin = m.role === "Admin" && adminCount === 1;
+                      return (
                       <TableRow key={m.id}>
                         <TableCell>
                           <Avatar className="w-8 h-8">
@@ -252,6 +258,7 @@ function FamilyContent() {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          {!isOnlyAdmin && (
                           <AlertDialog>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -291,9 +298,11 @@ function FamilyContent() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -322,6 +331,9 @@ function FamilyContent() {
                   </Card>
                 ))}
               </div>
+                  </>
+                );
+              })()}
             </>
           )}
         </div>

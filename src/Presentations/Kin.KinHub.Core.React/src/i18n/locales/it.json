@@ -72,7 +72,8 @@
     "removeMember": {
       "title": "Rimuovi membro",
       "description": "Sei sicuro di voler rimuovere {{name}} dalla famiglia? Questa azione non può essere annullata.",
-      "confirm": "Rimuovi"
+      "confirm": "Rimuovi",
+      "lastAdminError": "Non puoi eliminare l'unico amministratore della famiglia."
     },
     "adminCode": {
       "title": "Codice Admin",
@@ -305,6 +306,29 @@
       "typeToConfirm": "Digita DELETE per confermare",
       "success": "Account eliminato."
     }
+  },
+  "selectMember": {
+    "title": "Chi guarda?",
+    "subtitle": "Seleziona un membro della famiglia per continuare",
+    "switchMember": "Cambia membro",
+    "adminCode": {
+      "title": "Inserisci il Codice Admin",
+      "description": "Questo membro ha permessi amministratore. Inserisci il codice admin per continuare.",
+      "placeholder": "Codice admin",
+      "confirm": "Continua",
+      "error": "Codice admin non valido. Riprova."
+    }
+  },
+  "hub": {
+    "greeting": "Benvenuto, {{name}}",
+    "yourServices": "I tuoi servizi",
+    "noServicesTitle": "Nessun servizio abilitato",
+    "noServicesDescription": "Abilita i servizi per la tua famiglia per iniziare.",
+    "manageServices": "Gestisci servizi →",
+    "open": "Apri",
+    "familyBanner": "Famiglia {{name}}",
+    "members": "{{count}} membro",
+    "members_other": "{{count}} membri"
   },
   "common": {
     "loading": "Caricamento...",

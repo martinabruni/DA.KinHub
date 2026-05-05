@@ -37,11 +37,6 @@ interface RecipeContextValue {
     recipeId: string,
     stepId: string,
   ) => Promise<void>;
-  reorderSteps: (
-    bookId: string,
-    recipeId: string,
-    steps: Step[],
-  ) => Promise<void>;
 }
 
 const RecipeContext = createContext<RecipeContextValue | null>(null);
@@ -226,22 +221,6 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
     },
   });
 
-  const reorderMutation = useMutation({
-    mutationFn: ({
-      bId,
-      rId,
-      steps,
-    }: {
-      bId: string;
-      rId: string;
-      steps: Step[];
-    }) =>
-      apiClient.put(`/api/recipe-books/${bId}/recipes/${rId}/steps/reorder`, {
-        steps,
-      }),
-    onSuccess: () => invalidate(),
-  });
-
   return (
     <RecipeContext.Provider
       value={{
@@ -266,9 +245,6 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
         },
         deleteStep: async (bId, rId, sId) => {
           await deleteStepMutation.mutateAsync({ bId, rId, sId });
-        },
-        reorderSteps: async (bId, rId, steps) => {
-          await reorderMutation.mutateAsync({ bId, rId, steps });
         },
       }}
     >

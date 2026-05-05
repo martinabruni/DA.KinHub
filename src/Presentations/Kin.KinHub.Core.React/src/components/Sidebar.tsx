@@ -1,15 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  BookOpen,
   ChevronLeft,
   ChevronRight,
   Grid2x2,
   Home,
   LogOut,
   Moon,
-  Refrigerator,
-  Sparkles,
+  Shield,
   Sun,
+  SwitchCamera,
   User,
   Users,
 } from 'lucide-react'
@@ -28,6 +27,7 @@ import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -39,18 +39,16 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { to: '/dashboard', icon: Home, labelKey: 'nav.dashboard' },
-  { to: '/family', icon: Users, labelKey: 'nav.family' },
-  { to: '/services', icon: Grid2x2, labelKey: 'nav.services' },
-  { to: '/recipe-books', icon: BookOpen, labelKey: 'nav.recipeBooks' },
-  { to: '/fridges', icon: Refrigerator, labelKey: 'nav.fridges' },
-  { to: '/ai-assistant', icon: Sparkles, labelKey: 'nav.aiAssistant', badge: 'AI' },
+  { to: '/dashboard', icon: Home, labelKey: 'nav.dashboard', badge: undefined },
+  { to: '/family', icon: Users, labelKey: 'nav.family', badge: undefined },
+  { to: '/services', icon: Grid2x2, labelKey: 'nav.services', badge: undefined },
 ]
 
 function SidebarContent({ collapsed }: { collapsed: boolean }) {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
+  const { activeMember } = useAuthContext()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -129,6 +127,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
 
         <Separator />
 
+        {/* Active member + actions */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -137,11 +136,19 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
             >
               <Avatar className="w-7 h-7">
                 <AvatarFallback className="text-xs bg-primary/20 text-primary">
-                  {getInitials(user?.email ?? 'U')}
+                  {getInitials(activeMember?.name ?? 'U')}
                 </AvatarFallback>
               </Avatar>
-              {!collapsed && (
-                <span className="text-xs truncate max-w-[120px]">{user?.email}</span>
+              {!collapsed && activeMember && (
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="text-xs font-medium truncate max-w-[110px]">{activeMember.name}</span>
+                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    {activeMember.role === 'Admin'
+                      ? <><Shield className="w-2.5 h-2.5" /> Admin</>
+                      : <><User className="w-2.5 h-2.5" /> Member</>
+                    }
+                  </span>
+                </div>
               )}
             </Button>
           </DropdownMenuTrigger>
@@ -149,6 +156,10 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuItem onClick={() => navigate('/profile')}>
               <User className="w-4 h-4 mr-2" />
               {t('nav.profile')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/select-member')}>
+              <SwitchCamera className="w-4 h-4 mr-2" />
+              {t('selectMember.switchMember')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive">
