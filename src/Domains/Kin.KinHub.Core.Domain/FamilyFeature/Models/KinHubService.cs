@@ -6,5 +6,4 @@ public sealed class KinHubService : BaseActivableEntity<int>
 {
     public required string Name { get; set; }
     public required string BaseUrl { get; set; }
-    public bool IsAdminOnly { get; set; }
 }
