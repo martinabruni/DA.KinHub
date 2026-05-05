@@ -238,7 +238,7 @@ CREATE TABLE kinrecipe."RecipeIngredientEntity"
     "Id"          UUID           NOT NULL DEFAULT gen_random_uuid(),
     "Name"        VARCHAR(200)   NOT NULL,
     "MeasureUnit" VARCHAR(50)    NOT NULL,
-    "Quantity"    NUMERIC(18, 4) NOT NULL CHECK ("Quantity" > 0),
+    "Quantity"    NUMERIC(18, 4) NOT NULL CHECK ("Quantity" >= 0),
     "RecipeId"    UUID           NOT NULL,
     "Embedding"   vector(1536)   NULL,
     "IsDeleted"   BOOLEAN        NOT NULL DEFAULT FALSE,
