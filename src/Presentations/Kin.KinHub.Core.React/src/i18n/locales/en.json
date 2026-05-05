@@ -59,12 +59,7 @@
       "description": "Create a family to get started. Members are profiles, not accounts.",
       "familyNamePlaceholder": "Family name",
       "ownerProfileNamePlaceholder": "Your profile name (e.g. Mum)",
-      "adminCodePlaceholder": "Admin code (keep it secret)",
       "create": "Create Family"
-    },
-    "role": {
-      "admin": "Admin",
-      "member": "Member"
     },
     "actions": {
       "edit": "Edit",
@@ -73,20 +68,7 @@
     "removeMember": {
       "title": "Remove member",
       "description": "Are you sure you want to remove {{name}} from the family? This action cannot be undone.",
-      "confirm": "Remove",
-      "lastAdminError": "Cannot remove the only admin of a family."
-    },
-    "adminCode": {
-      "title": "Admin Code",
-      "reveal": "Reveal",
-      "hide": "Hide",
-      "verify": "Verify code",
-      "verifyBtn": "Verify",
-      "changeCode": "Change Code",
-      "changeCodeTitle": "Change Admin Code",
-      "currentCodePlaceholder": "Current code",
-      "newCodePlaceholder": "New code",
-      "changeCodeConfirm": "Save"
+      "confirm": "Remove"
     },
     "dangerZone": {
       "title": "Danger Zone",
@@ -101,7 +83,6 @@
     },
     "noMembers": "No members yet",
     "updated": "Family updated successfully.",
-    "codeRegenerated": "Admin code regenerated.",
     "memberRemoved": "Member removed.",
     "left": "You have left the family.",
     "deleted": "Family deleted."
@@ -272,10 +253,6 @@
   },
   "profile": {
     "title": "Profile",
-    "identity": {
-      "admin": "Admin",
-      "member": "Member"
-    },
     "updateEmail": {
       "title": "Update Email",
       "newEmail": "New email",
@@ -315,9 +292,6 @@
     "familyNamePlaceholder": "e.g. The Smiths",
     "ownerProfileName": "Your profile name",
     "ownerProfileNamePlaceholder": "e.g. Mum",
-    "adminCode": "Admin code",
-    "adminCodePlaceholder": "Choose a secret code",
-    "adminCodeHint": "This code protects your admin profile. You'll need it every time you log in as admin.",
     "submit": "Create Family",
     "submitting": "Creating...",
     "errorGeneric": "Failed to create family. Please try again."
@@ -325,14 +299,7 @@
   "selectMember": {
     "title": "Who's watching?",
     "subtitle": "Select a family member to continue",
-    "switchMember": "Switch member",
-    "adminCode": {
-      "title": "Enter Admin Code",
-      "description": "This member has admin permissions. Enter the admin code to continue.",
-      "placeholder": "Admin code",
-      "confirm": "Continue",
-      "error": "Invalid admin code. Please try again."
-    }
+    "switchMember": "Switch member"
   },
   "hub": {
     "greeting": "Welcome, {{name}}",

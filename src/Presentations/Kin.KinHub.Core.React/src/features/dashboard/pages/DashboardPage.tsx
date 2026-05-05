@@ -73,14 +73,12 @@ export function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{t('hub.yourServices')}</h2>
-          {activeMember?.role === 'Admin' && (
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground gap-1">
-              <Link to="/services">
-                <Settings2 className="w-4 h-4" />
-                {t('hub.manageServices')}
-              </Link>
-            </Button>
-          )}
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground gap-1">
+            <Link to="/services">
+              <Settings2 className="w-4 h-4" />
+              {t('hub.manageServices')}
+            </Link>
+          </Button>
         </div>
 
         {loadingServices ? (
@@ -97,11 +95,9 @@ export function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center max-w-xs">
                 {t('hub.noServicesDescription')}
               </p>
-              {activeMember?.role === 'Admin' && (
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/services">{t('hub.manageServices')}</Link>
-                </Button>
-              )}
+              <Button asChild size="sm" variant="outline">
+                <Link to="/services">{t('hub.manageServices')}</Link>
+              </Button>
             </CardContent>
           </Card>
         ) : (

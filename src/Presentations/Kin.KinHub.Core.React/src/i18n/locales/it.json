@@ -59,12 +59,7 @@
       "description": "Crea una famiglia per iniziare. I membri sono profili, non account.",
       "familyNamePlaceholder": "Nome famiglia",
       "ownerProfileNamePlaceholder": "Il tuo nome profilo (es. Mamma)",
-      "adminCodePlaceholder": "Codice admin (tienilo segreto)",
       "create": "Crea Famiglia"
-    },
-    "role": {
-      "admin": "Admin",
-      "member": "Membro"
     },
     "actions": {
       "edit": "Modifica",
@@ -73,20 +68,7 @@
     "removeMember": {
       "title": "Rimuovi membro",
       "description": "Sei sicuro di voler rimuovere {{name}} dalla famiglia? Questa azione non può essere annullata.",
-      "confirm": "Rimuovi",
-      "lastAdminError": "Non puoi eliminare l'unico amministratore della famiglia."
-    },
-    "adminCode": {
-      "title": "Codice Admin",
-      "reveal": "Mostra",
-      "hide": "Nascondi",
-      "verify": "Verifica codice",
-      "verifyBtn": "Verifica",
-      "changeCode": "Cambia Codice",
-      "changeCodeTitle": "Cambia Codice Admin",
-      "currentCodePlaceholder": "Codice attuale",
-      "newCodePlaceholder": "Nuovo codice",
-      "changeCodeConfirm": "Salva"
+      "confirm": "Rimuovi"
     },
     "dangerZone": {
       "title": "Zona Pericolosa",
@@ -101,7 +83,6 @@
     },
     "noMembers": "Nessun membro",
     "updated": "Famiglia aggiornata.",
-    "codeRegenerated": "Codice admin rigenerato.",
     "memberRemoved": "Membro rimosso.",
     "left": "Hai lasciato la famiglia.",
     "deleted": "Famiglia eliminata."
@@ -272,10 +253,6 @@
   },
   "profile": {
     "title": "Profilo",
-    "identity": {
-      "admin": "Admin",
-      "member": "Membro"
-    },
     "updateEmail": {
       "title": "Aggiorna Email",
       "newEmail": "Nuova email",
@@ -315,9 +292,6 @@
     "familyNamePlaceholder": "es. I Rossi",
     "ownerProfileName": "Il tuo nome profilo",
     "ownerProfileNamePlaceholder": "es. Mamma",
-    "adminCode": "Codice admin",
-    "adminCodePlaceholder": "Scegli un codice segreto",
-    "adminCodeHint": "Questo codice protegge il tuo profilo admin. Ti verrà richiesto ogni volta che accedi come admin.",
     "submit": "Crea Famiglia",
     "submitting": "Creazione in corso...",
     "errorGeneric": "Creazione della famiglia fallita. Riprova."
@@ -325,14 +299,7 @@
   "selectMember": {
     "title": "Chi guarda?",
     "subtitle": "Seleziona un membro della famiglia per continuare",
-    "switchMember": "Cambia membro",
-    "adminCode": {
-      "title": "Inserisci il Codice Admin",
-      "description": "Questo membro ha permessi amministratore. Inserisci il codice admin per continuare.",
-      "placeholder": "Codice admin",
-      "confirm": "Continua",
-      "error": "Codice admin non valido. Riprova."
-    }
+    "switchMember": "Cambia membro"
   },
   "hub": {
     "greeting": "Benvenuto, {{name}}",

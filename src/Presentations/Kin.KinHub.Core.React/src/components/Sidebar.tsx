@@ -6,7 +6,6 @@ import {
   Home,
   LogOut,
   Moon,
-  Shield,
   Sun,
   SwitchCamera,
   User,
@@ -143,10 +142,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
                 <div className="flex flex-col items-start min-w-0">
                   <span className="text-xs font-medium truncate max-w-[110px]">{activeMember.name}</span>
                   <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    {activeMember.role === 'Admin'
-                      ? <><Shield className="w-2.5 h-2.5" /> Admin</>
-                      : <><User className="w-2.5 h-2.5" /> Member</>
-                    }
+                    <User className="w-2.5 h-2.5" /> Member
                   </span>
                 </div>
               )}
