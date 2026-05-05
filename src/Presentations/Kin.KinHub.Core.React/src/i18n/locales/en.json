@@ -88,12 +88,20 @@
     "deleted": "Family deleted."
   },
   "services": {
-    "title": "Family Services",
-    "subtitle": "Enable or disable features for your family",
+    "title": "Services",
+    "subtitle": "Open a service to get started",
     "active": "Active",
     "inactive": "Inactive",
+    "open": "Open",
+    "manage": "Manage services →",
     "toggleError": "Failed to update service. Reverting.",
     "updated": "Service updated."
+  },
+  "console": {
+    "services": {
+      "title": "KinConsole",
+      "subtitle": "Enable or disable services for your family"
+    }
   },
   "recipeBooks": {
     "title": "Recipe Books",

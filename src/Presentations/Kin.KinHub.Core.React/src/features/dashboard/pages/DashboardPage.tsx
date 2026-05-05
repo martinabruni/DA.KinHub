@@ -1,12 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  BookOpen,
   Grid2x2,
-  Refrigerator,
   Settings2,
-  Sparkles,
-  Users,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,20 +11,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
 import { apiClient } from '@/api/apiClient'
-import type { Family, Service } from '@/types'
-
-const serviceConfig: Record<string, { icon: React.ElementType; path: string; color: string }> = {
-  Recipes: { icon: BookOpen, path: '/recipe-books', color: 'text-orange-500' },
-  Fridges: { icon: Refrigerator, path: '/fridges', color: 'text-blue-500' },
-  'AI Assistant': { icon: Sparkles, path: '/ai-assistant', color: 'text-violet-500' },
-  Family: { icon: Users, path: '/family', color: 'text-green-500' },
-  Services: { icon: Grid2x2, path: '/services', color: 'text-slate-500' },
-}
+import { useServices } from '@/features/family/ServicesProvider'
+import { serviceConfig, defaultServiceConfig } from '@/config/serviceConfig'
+import type { Family } from '@/types'
 
 export function DashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { activeMember } = useAuthContext()
+  const { services, isLoading: loadingServices } = useServices()
 
   const { data: family, isLoading: loadingFamily } = useQuery({
     queryKey: ['family'],
@@ -40,16 +31,7 @@ export function DashboardPage() {
     retry: false,
   })
 
-  const { data: services, isLoading: loadingServices } = useQuery({
-    queryKey: ['services', 'family', user?.familyId],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Service[]>(`/api/services/family/${user!.familyId}`)
-      return data
-    },
-    enabled: !!user?.familyId,
-  })
-
-  const enabledServices = (services ?? []).filter((s) => s.isEnabled)
+  const enabledServices = services.filter((s) => s.isEnabled)
 
   return (
     <div className="space-y-8">
@@ -103,11 +85,7 @@ export function DashboardPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {enabledServices.map((service) => {
-              const cfg = serviceConfig[service.name] ?? {
-                icon: Grid2x2,
-                path: '/services',
-                color: 'text-slate-500',
-              }
+              const cfg = serviceConfig[service.name] ?? defaultServiceConfig
               const Icon = cfg.icon
               return (
                 <Link key={service.id} to={cfg.path}>

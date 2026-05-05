@@ -88,12 +88,20 @@
     "deleted": "Famiglia eliminata."
   },
   "services": {
-    "title": "Servizi Famiglia",
-    "subtitle": "Abilita o disabilita funzionalità per la tua famiglia",
+    "title": "Servizi",
+    "subtitle": "Apri un servizio per iniziare",
     "active": "Attivo",
     "inactive": "Inattivo",
+    "open": "Apri",
+    "manage": "Gestisci servizi →",
     "toggleError": "Aggiornamento servizio fallito. Ripristino.",
     "updated": "Servizio aggiornato."
+  },
+  "console": {
+    "services": {
+      "title": "KinConsole",
+      "subtitle": "Abilita o disabilita i servizi per la tua famiglia"
+    }
   },
   "recipeBooks": {
     "title": "Ricettari",
