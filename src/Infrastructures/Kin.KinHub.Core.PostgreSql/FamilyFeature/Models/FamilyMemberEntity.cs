@@ -20,6 +20,4 @@ public partial class FamilyMemberEntity
     public DateTime UpdatedAt { get; set; }
 
     public virtual FamilyEntity Family { get; set; }
-
-    public virtual ICollection<MemberRoleEntity> MemberRoleEntity { get; set; } = new List<MemberRoleEntity>();
 }
