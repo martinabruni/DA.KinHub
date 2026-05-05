@@ -231,14 +231,19 @@
       "saveToBook": "Salva nel Ricettario",
       "selectBook": "Scegli un ricettario...",
       "save": "Salva",
-      "saved": "Ricetta salvata."
+      "saved": "Ricetta salvata.",
+      "existingRecipes": "Le tue ricette",
+      "aiRecipes": "Suggerimenti AI",
+      "noExistingMatches": "Nessuna ricetta esistente corrisponde al tuo frigo."
     },
     "parse": {
       "placeholder": "Incolla una ricetta da qualsiasi fonte...",
       "button": "Analizza Ricetta",
       "parsing": "Analizzando...",
       "saveToBook": "Salva nel Ricettario",
-      "saved": "Ricetta salvata."
+      "saved": "Ricetta salvata.",
+      "saving": "Salvataggio...",
+      "createdSuccessfully": "✓ Creata con successo"
     },
     "adapt": {
       "selectRecipe": "Scegli una ricetta...",

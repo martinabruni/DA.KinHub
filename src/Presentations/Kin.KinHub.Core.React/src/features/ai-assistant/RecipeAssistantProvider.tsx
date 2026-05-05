@@ -2,10 +2,10 @@ import type { ReactNode } from 'react'
 import { createContext, useContext } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { apiClient } from '@/api/apiClient'
-import type { AIAdaptedRecipe, AIParsedRecipe, AISuggestedRecipe } from '@/types'
+import type { AIAdaptedRecipe, AIParsedRecipe, SuggestRecipesResult } from '@/types'
 
 interface RecipeAssistantContextValue {
-  suggestRecipes: (fridgeId: string) => Promise<AISuggestedRecipe[]>
+  suggestRecipes: (fridgeId: string) => Promise<SuggestRecipesResult>
   parseRecipe: (rawText: string) => Promise<AIParsedRecipe>
   adaptRecipe: (recipeId: string, constraints: string[]) => Promise<AIAdaptedRecipe>
   isSuggesting: boolean
@@ -18,7 +18,7 @@ const RecipeAssistantContext = createContext<RecipeAssistantContextValue | null>
 export function RecipeAssistantProvider({ children }: { children: ReactNode }) {
   const suggestMutation = useMutation({
     mutationFn: async (fridgeId: string) => {
-      const { data } = await apiClient.post<AISuggestedRecipe[]>('/api/recipe-assistant/suggest', { fridgeId })
+      const { data } = await apiClient.post<SuggestRecipesResult>('/api/recipe-assistant/suggest', { fridgeId })
       return data
     },
   })

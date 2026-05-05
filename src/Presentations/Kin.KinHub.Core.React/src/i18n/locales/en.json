@@ -231,14 +231,19 @@
       "saveToBook": "Save to Recipe Book",
       "selectBook": "Choose a recipe book...",
       "save": "Save",
-      "saved": "Recipe saved to book."
+      "saved": "Recipe saved to book.",
+      "existingRecipes": "Your Recipes",
+      "aiRecipes": "AI Suggestions",
+      "noExistingMatches": "No existing recipes match your fridge."
     },
     "parse": {
       "placeholder": "Paste a recipe from any source...",
       "button": "Parse Recipe",
       "parsing": "Parsing...",
       "saveToBook": "Save to Recipe Book",
-      "saved": "Recipe saved."
+      "saved": "Recipe saved.",
+      "saving": "Saving...",
+      "createdSuccessfully": "✓ Created successfully"
     },
     "adapt": {
       "selectRecipe": "Choose a recipe...",
