@@ -1,28 +1,31 @@
-import { useTranslation } from 'react-i18next'
-import { Grid2x2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useServices } from '@/features/family/ServicesProvider'
-import { serviceConfig, defaultServiceConfig } from '@/config/serviceConfig'
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useServices } from "@/features/family/ServicesProvider";
+import { serviceConfig, defaultServiceConfig } from "@/config/serviceConfig";
 
 export function ServicesPage() {
-  const { t } = useTranslation()
-  const { services, isLoading } = useServices()
+  const { t } = useTranslation();
+  const { services, isLoading } = useServices();
 
-  const enabledServices = services.filter((s) => s.isEnabled)
+  const enabledServices = services.filter((s) => s.isEnabled);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">{t('services.title')}</h1>
-      <p className="text-muted-foreground text-sm mt-1">{t('services.subtitle')}</p>
+      <h1 className="text-2xl font-bold">{t("services.title")}</h1>
+      <p className="text-muted-foreground text-sm mt-1">
+        {t("services.subtitle")}
+      </p>
 
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {isLoading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-2xl" />
+            ))
           : enabledServices.map((service) => {
-              const cfg = serviceConfig[service.name] ?? defaultServiceConfig
-              const Icon = cfg.icon
+              const cfg = serviceConfig[service.name] ?? defaultServiceConfig;
+              const Icon = cfg.icon;
               return (
                 <Link key={service.id} to={cfg.path}>
                   <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
@@ -31,25 +34,31 @@ export function ServicesPage() {
                         <Icon className={`w-6 h-6 ${cfg.color}`} />
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold leading-tight">{service.name}</p>
+                        <p className="font-semibold leading-tight">
+                          {service.name}
+                        </p>
                         <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
                           {service.description}
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-primary">{t('services.open')} →</span>
+                      <span className="text-xs font-medium text-primary">
+                        {t("services.open")} →
+                      </span>
                     </CardContent>
                   </Card>
                 </Link>
-              )
+              );
             })}
       </div>
 
       <div className="mt-8">
-        <Link to="/console/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          {t('services.manage')}
+        <Link
+          to="/console/services"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {t("services.manage")}
         </Link>
       </div>
     </div>
-  )
+  );
 }
-
