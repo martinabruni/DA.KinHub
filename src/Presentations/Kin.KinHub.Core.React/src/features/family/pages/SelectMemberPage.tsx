@@ -1,22 +1,17 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { Shield, User } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { apiClient } from '@/api/apiClient'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 import type { Family, FamilyMember } from '@/types'
-import { AdminCodeDialog } from '@/features/family/components/AdminCodeDialog'
 
 export function SelectMemberPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { setActiveMember } = useAuthContext()
-  const [pendingAdminMember, setPendingAdminMember] = useState<FamilyMember | null>(null)
 
   const { data: family, isLoading } = useQuery({
     queryKey: ['family'],
@@ -28,22 +23,12 @@ export function SelectMemberPage() {
   })
 
   const handleMemberClick = (member: FamilyMember) => {
-    if (member.role === 'Admin') {
-      setPendingAdminMember(member)
-    } else {
-      setActiveMember(member)
-      navigate('/', { replace: true })
-    }
-  }
-
-  const handleAdminVerified = (member: FamilyMember) => {
     setActiveMember(member)
-    setPendingAdminMember(null)
     navigate('/', { replace: true })
   }
 
   if (!isLoading && !family) {
-    navigate('/family', { replace: true })
+    navigate('/onboarding', { replace: true })
     return null
   }
 
@@ -74,30 +59,9 @@ export function SelectMemberPage() {
                 </AvatarFallback>
               </Avatar>
               <span className="font-semibold text-sm text-center leading-tight">{member.name}</span>
-              {member.role === 'Admin' ? (
-                <Badge variant="default" className="gap-1 text-[10px]">
-                  <Shield className="w-3 h-3" />
-                  {t('family.role.admin')}
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="gap-1 text-[10px]">
-                  <User className="w-3 h-3" />
-                  {t('family.role.member')}
-                </Badge>
-              )}
             </button>
           ))}
         </div>
-      )}
-
-      {pendingAdminMember && family && (
-        <AdminCodeDialog
-          open={!!pendingAdminMember}
-          familyId={family.id}
-          member={pendingAdminMember}
-          onSuccess={handleAdminVerified}
-          onClose={() => setPendingAdminMember(null)}
-        />
       )}
     </div>
   )

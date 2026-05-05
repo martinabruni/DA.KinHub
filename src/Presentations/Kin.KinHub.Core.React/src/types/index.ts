@@ -7,20 +7,17 @@ export interface User {
   id: string;
   email: string;
   familyId: string | null;
-  familyRole: "Admin" | "Member" | null;
 }
 
 export interface Family {
   id: string;
   name: string;
-  adminCode?: string;
   members: FamilyMember[];
 }
 
 export interface FamilyMember {
   id: string;
   name: string;
-  role: "Admin" | "Member";
 }
 
 export interface Service {

@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -102,9 +101,6 @@ export function ProfilePage() {
               </AvatarFallback>
             </Avatar>
             <p className="font-medium">{user?.email}</p>
-            <Badge variant={user?.familyRole === 'Admin' ? 'default' : 'secondary'}>
-              {user?.familyRole === 'Admin' ? t('profile.identity.admin') : t('profile.identity.member')}
-            </Badge>
           </CardContent>
         </Card>
 

@@ -6,6 +6,7 @@ import { KinRecipeServiceLayout } from '@/components/KinRecipeServiceLayout'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { SelectMemberPage } from '@/features/family/pages/SelectMemberPage'
+import { OnboardingPage } from '@/features/family/pages/OnboardingPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { FamilyPage } from '@/features/family/pages/FamilyPage'
 import { ServicesPage } from '@/features/family/pages/ServicesPage'
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
       {
         path: '/select-member',
         element: <SelectMemberPage />,
+      },
+      {
+        path: '/onboarding',
+        element: <OnboardingPage />,
       },
       {
         element: <MemberRoute />,

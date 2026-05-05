@@ -29,7 +29,8 @@
     "login": "Accedi",
     "passwordMismatch": "Le password non corrispondono",
     "accountCreated": "Account creato! Accedi ora.",
-    "loggedOut": "Disconnesso con successo."
+    "loggedOut": "Disconnesso con successo.",
+    "autoLoginFailed": "Account creato, ma il login automatico è fallito. Accedi manualmente."
   },
   "dashboard": {
     "greeting": "Ciao, {{name}}! 👋",
@@ -306,6 +307,20 @@
       "typeToConfirm": "Digita DELETE per confermare",
       "success": "Account eliminato."
     }
+  },
+  "onboarding": {
+    "title": "Crea la tua famiglia",
+    "subtitle": "Configura il tuo spazio famiglia per iniziare.",
+    "familyName": "Nome famiglia",
+    "familyNamePlaceholder": "es. I Rossi",
+    "ownerProfileName": "Il tuo nome profilo",
+    "ownerProfileNamePlaceholder": "es. Mamma",
+    "adminCode": "Codice admin",
+    "adminCodePlaceholder": "Scegli un codice segreto",
+    "adminCodeHint": "Questo codice protegge il tuo profilo admin. Ti verrà richiesto ogni volta che accedi come admin.",
+    "submit": "Crea Famiglia",
+    "submitting": "Creazione in corso...",
+    "errorGeneric": "Creazione della famiglia fallita. Riprova."
   },
   "selectMember": {
     "title": "Chi guarda?",

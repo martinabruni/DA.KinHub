@@ -4,24 +4,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api/apiClient";
-import { useAuth } from "@/features/auth/AuthProvider";
 import { useAuthContext } from "@/store/authContext";
+import { getApiErrorMessage } from "@/lib/errors";
 import type { Family } from "@/types";
 
 interface FamilyContextValue {
   family: Family | undefined;
   isLoading: boolean;
-  isAdmin: boolean;
   updateName: (name: string) => Promise<void>;
   addMember: (name: string) => Promise<void>;
   updateMember: (memberId: string, name: string) => Promise<void>;
   removeMember: (memberId: string) => Promise<void>;
-  verifyAdminCode: (code: string) => Promise<boolean>;
-  updateAdminCode: (currentCode: string, newCode: string) => Promise<void>;
   createFamily: (payload: {
     familyName: string;
     ownerProfileName: string;
-    adminCode: string;
   }) => Promise<void>;
   leaveFamily: () => Promise<void>;
   deleteFamily: () => Promise<void>;
@@ -31,8 +27,7 @@ const FamilyContext = createContext<FamilyContextValue | null>(null);
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
-  const { user, isAuthenticated } = useAuth();
-  const { activeMember } = useAuthContext();
+  const { activeMember, isAuthenticated } = useAuthContext();
   const queryClient = useQueryClient();
 
   const { data: family, isLoading } = useQuery({
@@ -56,12 +51,18 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.updated"));
       invalidate();
     },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
+    },
   });
 
   const addMemberMutation = useMutation({
     mutationFn: (name: string) =>
       apiClient.post(`/api/families/${family!.id}/members`, { name }),
     onSuccess: () => invalidate(),
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
+    },
   });
 
   const updateMemberMutation = useMutation({
@@ -70,6 +71,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
         name,
       }),
     onSuccess: () => invalidate(),
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
+    },
   });
 
   const removeMemberMutation = useMutation({
@@ -79,26 +83,8 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.memberRemoved"));
       invalidate();
     },
-    onError: () => {
-      toast.error(t("family.removeMember.lastAdminError"));
-    },
-  });
-
-  const updateAdminCodeMutation = useMutation({
-    mutationFn: ({
-      currentCode,
-      newCode,
-    }: {
-      currentCode: string;
-      newCode: string;
-    }) =>
-      apiClient.patch(`/api/families/${family!.id}/admin-code`, {
-        currentCode,
-        newCode,
-      }),
-    onSuccess: () => {
-      toast.success(t("family.codeRegenerated"));
-      invalidate();
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
     },
   });
 
@@ -106,11 +92,13 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: (payload: {
       familyName: string;
       ownerProfileName: string;
-      adminCode: string;
     }) => apiClient.post("/api/families", payload),
     onSuccess: () => {
       invalidate();
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
     },
   });
 
@@ -121,6 +109,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.left"));
       invalidate();
     },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
+    },
   });
 
   const deleteFamilyMutation = useMutation({
@@ -129,6 +120,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.deleted"));
       invalidate();
     },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err));
+    },
   });
 
   return (
@@ -136,7 +130,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       value={{
         family,
         isLoading,
-        isAdmin: user?.familyRole === "Admin",
         updateName: async (name) => {
           await updateNameMutation.mutateAsync(name);
         },
@@ -148,16 +141,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
         },
         removeMember: async (memberId) => {
           await removeMemberMutation.mutateAsync(memberId);
-        },
-        verifyAdminCode: async (code) => {
-          const { data } = await apiClient.post(
-            `/api/families/${family!.id}/verify-admin-code`,
-            { adminCode: code },
-          );
-          return data.isValid ?? false;
-        },
-        updateAdminCode: async (currentCode, newCode) => {
-          await updateAdminCodeMutation.mutateAsync({ currentCode, newCode });
         },
         createFamily: async (payload) => {
           await createFamilyMutation.mutateAsync(payload);

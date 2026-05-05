@@ -29,7 +29,8 @@
     "login": "Log in",
     "passwordMismatch": "Passwords do not match",
     "accountCreated": "Account created! Please sign in.",
-    "loggedOut": "Logged out successfully."
+    "loggedOut": "Logged out successfully.",
+    "autoLoginFailed": "Account created, but sign-in failed. Please sign in manually."
   },
   "dashboard": {
     "greeting": "Hello, {{name}}! 👋",
@@ -306,6 +307,20 @@
       "typeToConfirm": "Type DELETE to confirm",
       "success": "Account deleted."
     }
+  },
+  "onboarding": {
+    "title": "Create your family",
+    "subtitle": "Set up your family space to get started.",
+    "familyName": "Family name",
+    "familyNamePlaceholder": "e.g. The Smiths",
+    "ownerProfileName": "Your profile name",
+    "ownerProfileNamePlaceholder": "e.g. Mum",
+    "adminCode": "Admin code",
+    "adminCodePlaceholder": "Choose a secret code",
+    "adminCodeHint": "This code protects your admin profile. You'll need it every time you log in as admin.",
+    "submit": "Create Family",
+    "submitting": "Creating...",
+    "errorGeneric": "Failed to create family. Please try again."
   },
   "selectMember": {
     "title": "Who's watching?",
