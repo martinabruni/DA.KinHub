@@ -46,8 +46,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const updateNameMutation = useMutation({
     mutationFn: (name: string) => {
-      if (!family?.id) throw new Error("Family not loaded");
-      return apiClient.patch(`/api/families/${family.id}`, { name });
+      const currentFamily = queryClient.getQueryData<Family>(["family"]);
+      if (!currentFamily?.id) throw new Error("Family not loaded");
+      return apiClient.patch(`/api/families/${currentFamily.id}`, { name });
     },
     onSuccess: () => {
       toast.success(t("family.updated"));
@@ -60,8 +61,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const addMemberMutation = useMutation({
     mutationFn: (name: string) => {
-      if (!family?.id) throw new Error("Family not loaded");
-      return apiClient.post(`/api/families/${family.id}/members`, { name });
+      const currentFamily = queryClient.getQueryData<Family>(["family"]);
+      if (!currentFamily?.id) throw new Error("Family not loaded");
+      return apiClient.post(`/api/families/${currentFamily.id}/members`, { name });
     },
     onSuccess: () => invalidate(),
     onError: (err) => {
@@ -71,8 +73,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const updateMemberMutation = useMutation({
     mutationFn: ({ memberId, name }: { memberId: string; name: string }) => {
-      if (!family?.id) throw new Error("Family not loaded");
-      return apiClient.put(`/api/families/${family.id}/members/${memberId}`, {
+      const currentFamily = queryClient.getQueryData<Family>(["family"]);
+      if (!currentFamily?.id) throw new Error("Family not loaded");
+      return apiClient.put(`/api/families/${currentFamily.id}/members/${memberId}`, {
         name,
       });
     },
@@ -84,8 +87,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const removeMemberMutation = useMutation({
     mutationFn: (memberId: string) => {
-      if (!family?.id) throw new Error("Family not loaded");
-      return apiClient.delete(`/api/families/${family.id}/members/${memberId}`);
+      const currentFamily = queryClient.getQueryData<Family>(["family"]);
+      if (!currentFamily?.id) throw new Error("Family not loaded");
+      return apiClient.delete(`/api/families/${currentFamily.id}/members/${memberId}`);
     },
     onSuccess: () => {
       toast.success(t("family.memberRemoved"));
@@ -112,9 +116,10 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const leaveFamilyMutation = useMutation({
     mutationFn: () => {
-      if (!family?.id) throw new Error("Family not loaded");
+      const currentFamily = queryClient.getQueryData<Family>(["family"]);
+      if (!currentFamily?.id) throw new Error("Family not loaded");
       if (!activeMember?.id) throw new Error("Active member not set");
-      return apiClient.delete(`/api/families/${family.id}/members/${activeMember.id}`);
+      return apiClient.delete(`/api/families/${currentFamily.id}/members/${activeMember.id}`);
     },
     onSuccess: () => {
       toast.success(t("family.left"));
@@ -127,8 +132,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
 
   const deleteFamilyMutation = useMutation({
     mutationFn: () => {
-      if (!family?.id) throw new Error("Family not loaded");
-      return apiClient.delete(`/api/families/${family.id}`);
+      const currentFamily = queryClient.getQueryData<Family>(["family"]);
+      if (!currentFamily?.id) throw new Error("Family not loaded");
+      return apiClient.delete(`/api/families/${currentFamily.id}`);
     },
     onSuccess: () => {
       toast.success(t("family.deleted"));

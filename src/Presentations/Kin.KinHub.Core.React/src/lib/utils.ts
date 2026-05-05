@@ -22,8 +22,11 @@ export function hashColor(str: string): string {
   return `hsl(${hue}, 60%, 55%)`
 }
 
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
+  return date.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

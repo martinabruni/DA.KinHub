@@ -1,6 +1,6 @@
 -- =============================================================================
 -- KinHub - Test data for kinrecipe schema
--- FamilyId: 44e55156-99c7-4f06-be94-8fd427063bf8
+-- FamilyId: 1c7c91e6-6002-4db5-b41c-3536651466a7
 -- =============================================================================
 
 BEGIN;
@@ -33,7 +33,7 @@ VALUES
         'a1000000-0000-0000-0000-000000000001',
         'Ricette della Nonna',
         'Le ricette tradizionali di famiglia, tramandate di generazione in generazione.',
-        '44e55156-99c7-4f06-be94-8fd427063bf8',
+        '1c7c91e6-6002-4db5-b41c-3536651466a7',
         FALSE,
         '2026-01-10T10:00:00Z',
         '2026-01-10T10:00:00Z'
@@ -42,7 +42,7 @@ VALUES
         'a1000000-0000-0000-0000-000000000002',
         'Piatti Veloci',
         'Ricette semplici e veloci per i giorni di fretta, pronte in meno di 30 minuti.',
-        '44e55156-99c7-4f06-be94-8fd427063bf8',
+        '1c7c91e6-6002-4db5-b41c-3536651466a7',
         FALSE,
         '2026-02-05T09:00:00Z',
         '2026-02-05T09:00:00Z'
@@ -195,7 +195,7 @@ VALUES
     (
         'c1000000-0000-0000-0000-000000000001',
         'Dispensa di Casa',
-        '44e55156-99c7-4f06-be94-8fd427063bf8',
+        '1c7c91e6-6002-4db5-b41c-3536651466a7',
         FALSE,
         '2026-03-01T08:00:00Z',
         '2026-03-01T08:00:00Z'

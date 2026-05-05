@@ -248,7 +248,8 @@ function FamilyContent() {
 
         {/* Right sidebar */}
         <div className="space-y-4">
-          {/* Danger Zone */}
+        {/* Danger Zone */}
+          {(family?.members.length ?? 0) > 1 && (
           <Card className="border-destructive/40">
             <CardHeader className="pb-2">
               <CardTitle className="text-base text-destructive">
@@ -256,8 +257,7 @@ function FamilyContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {(family?.members.length ?? 0) > 1 && (
-                <AlertDialog>
+              <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
                       variant="outline"
@@ -285,9 +285,7 @@ function FamilyContent() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              )}
-              {(family?.members.length ?? 0) > 1 && (
-                <AlertDialog>
+              <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" className="w-full">
                       {t("family.dangerZone.delete")}
@@ -315,9 +313,9 @@ function FamilyContent() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              )}
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     </div>
