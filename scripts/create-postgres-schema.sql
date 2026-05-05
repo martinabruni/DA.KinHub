@@ -126,25 +126,10 @@ CREATE TABLE core."KinHubServiceEntity"
     "Name"        VARCHAR(200) NOT NULL,
     "BaseUrl"     VARCHAR(500) NOT NULL,
     "IsActive"    BOOLEAN      NOT NULL DEFAULT TRUE,
-    "IsAdminOnly" BOOLEAN      NOT NULL DEFAULT FALSE,
     "CreatedAt"   TIMESTAMPTZ  NOT NULL DEFAULT now(),
     "UpdatedAt"   TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT "PK_core_KinHubServiceEntity" PRIMARY KEY ("Id")
-);
-
--- core."FamilyRoleEntity"  (config table — pre-populated)
--- Id: 1=Admin, 2=Member
-CREATE TABLE core."FamilyRoleEntity"
-(
-    "Id"        INTEGER      NOT NULL,
-    "Name"      VARCHAR(100) NOT NULL,
-    "IsActive"  BOOLEAN      NOT NULL DEFAULT FALSE,
-    "CreatedAt" TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    "UpdatedAt" TIMESTAMPTZ  NOT NULL DEFAULT now(),
-
-    CONSTRAINT "PK_core_FamilyRoleEntity"      PRIMARY KEY ("Id"),
-    CONSTRAINT "UQ_core_FamilyRoleEntity_Name" UNIQUE ("Name")
 );
 
 -- core."FamilyEntity"
@@ -153,7 +138,6 @@ CREATE TABLE core."FamilyEntity"
     "Id"            UUID         NOT NULL DEFAULT gen_random_uuid(),
     "Name"          VARCHAR(200) NOT NULL,
     "UserId"        UUID         NOT NULL,
-    "AdminCodeHash" TEXT         NOT NULL,
     "IsDeleted"     BOOLEAN      NOT NULL DEFAULT FALSE,
     "CreatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT now(),
     "UpdatedAt"     TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -206,27 +190,6 @@ CREATE TABLE core."FamilyServiceEntity"
 CREATE INDEX "IX_core_FamilyServiceEntity_FamilyId"
     ON core."FamilyServiceEntity" ("FamilyId");
 
--- core."MemberRoleEntity"
-CREATE TABLE core."MemberRoleEntity"
-(
-    "Id"        UUID        NOT NULL DEFAULT gen_random_uuid(),
-    "MemberId"  UUID        NOT NULL,
-    "RoleId"    INTEGER     NOT NULL,
-    "IsActive"  BOOLEAN     NOT NULL DEFAULT FALSE,
-    "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
-    "UpdatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-    CONSTRAINT "PK_core_MemberRoleEntity" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_core_MemberRoleEntity_MemberId"
-        FOREIGN KEY ("MemberId") REFERENCES core."FamilyMemberEntity" ("Id"),
-    CONSTRAINT "FK_core_MemberRoleEntity_RoleId"
-        FOREIGN KEY ("RoleId")   REFERENCES core."FamilyRoleEntity" ("Id"),
-    CONSTRAINT "UQ_core_MemberRoleEntity_MemberRole" UNIQUE ("MemberId", "RoleId")
-);
-
-CREATE INDEX "IX_core_MemberRoleEntity_MemberId"
-    ON core."MemberRoleEntity" ("MemberId");
-
 -- =============================================================================
 -- KINRECIPE SCHEMA
 -- =============================================================================
@@ -275,7 +238,7 @@ CREATE TABLE kinrecipe."RecipeIngredientEntity"
     "Id"          UUID           NOT NULL DEFAULT gen_random_uuid(),
     "Name"        VARCHAR(200)   NOT NULL,
     "MeasureUnit" VARCHAR(50)    NOT NULL,
-    "Quantity"    NUMERIC(18, 4) NOT NULL CHECK ("Quantity" > 0),
+    "Quantity"    NUMERIC(18, 4) NOT NULL CHECK ("Quantity" >= 0),
     "RecipeId"    UUID           NOT NULL,
     "Embedding"   vector(1536)   NULL,
     "IsDeleted"   BOOLEAN        NOT NULL DEFAULT FALSE,
@@ -367,18 +330,11 @@ VALUES
     (3, 'github',    'Accedi con GitHub',    FALSE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
     (4, 'microsoft', 'Accedi con Microsoft', FALSE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 
--- core."FamilyRoleEntity"
-INSERT INTO core."FamilyRoleEntity"
-    ("Id", "Name", "IsActive", "CreatedAt", "UpdatedAt")
-VALUES
-    (1, 'admin',  TRUE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
-    (2, 'member', TRUE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
-
 -- core."KinHubServiceEntity"
 INSERT INTO core."KinHubServiceEntity"
-    ("Id", "Name", "BaseUrl", "IsActive", "IsAdminOnly", "CreatedAt", "UpdatedAt")
+    ("Id", "Name", "BaseUrl", "IsActive", "CreatedAt", "UpdatedAt")
 VALUES
-    (1, 'KinConsole', '/kin-console', TRUE,  TRUE,  '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
-    (2, 'KinRecipe',  '/kin-recipe',  FALSE, FALSE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+    (1, 'KinConsole', '/kin-console', TRUE,  '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+    (2, 'KinRecipe',  '/kin-recipe',  TRUE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 
 COMMIT;

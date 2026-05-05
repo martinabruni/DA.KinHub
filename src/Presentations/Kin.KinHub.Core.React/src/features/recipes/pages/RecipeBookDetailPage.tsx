@@ -129,7 +129,7 @@ function RecipeBookDetailContent() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteRecipe(id!, recipe.id)}>{t('recipes.delete.confirm')}</AlertDialogAction>
+                      <AlertDialogAction onClick={(e) => { e.stopPropagation(); deleteRecipe(id!, recipe.id) }}>{t('recipes.delete.confirm')}</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>

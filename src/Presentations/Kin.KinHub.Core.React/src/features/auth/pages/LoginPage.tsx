@@ -5,12 +5,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Home, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { extractApiError } from '@/lib/errors'
 
 const schema = z.object({
   email: z.string().email(),
@@ -33,12 +35,12 @@ export function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       await login(values)
-      navigate('/dashboard')
+      navigate('/select-member')
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { errors?: Record<string, string[]> } } }
-      const errors = apiErr?.response?.data?.errors
-      if (errors?.email) form.setError('email', { message: errors.email[0] })
-      if (errors?.password) form.setError('password', { message: errors.password[0] })
+      const { message, fields } = extractApiError(err)
+      if (fields?.email) form.setError('email', { message: fields.email[0] })
+      if (fields?.password) form.setError('password', { message: fields.password[0] })
+      if (message && !fields) toast.error(message)
     }
   }
 

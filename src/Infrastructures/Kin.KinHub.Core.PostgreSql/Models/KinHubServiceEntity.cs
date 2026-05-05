@@ -3,13 +3,15 @@
 using System;
 using System.Collections.Generic;
 
-namespace Kin.KinHub.Core.PostgreSql.FamilyFeature;
+namespace Kin.KinHub.Core.PostgreSql.Models;
 
-public partial class FamilyRoleEntity
+public partial class KinHubServiceEntity
 {
     public int Id { get; set; }
 
     public string Name { get; set; }
+
+    public string BaseUrl { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -17,5 +19,5 @@ public partial class FamilyRoleEntity
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual ICollection<MemberRoleEntity> MemberRoleEntity { get; set; } = new List<MemberRoleEntity>();
+    public virtual ICollection<FamilyServiceEntity> FamilyServiceEntity { get; set; } = new List<FamilyServiceEntity>();
 }

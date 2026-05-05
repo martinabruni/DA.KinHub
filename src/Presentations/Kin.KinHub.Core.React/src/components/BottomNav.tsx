@@ -1,13 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { BookOpen, Home, Refrigerator, Sparkles, User } from 'lucide-react'
+import { Grid2x2, Home, User, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 const items = [
   { to: '/dashboard', icon: Home, labelKey: 'nav.dashboard' },
-  { to: '/recipe-books', icon: BookOpen, labelKey: 'nav.recipeBooks' },
-  { to: '/fridges', icon: Refrigerator, labelKey: 'nav.fridges' },
-  { to: '/ai-assistant', icon: Sparkles, labelKey: 'nav.aiAssistant' },
+  { to: '/family', icon: Users, labelKey: 'nav.family' },
+  { to: '/services', icon: Grid2x2, labelKey: 'nav.services' },
   { to: '/profile', icon: User, labelKey: 'nav.profile' },
 ]
 

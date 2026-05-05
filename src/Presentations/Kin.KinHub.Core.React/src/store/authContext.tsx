@@ -1,12 +1,26 @@
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useContext, useState } from 'react'
-import type { User } from '@/types'
+import type { FamilyMember, User } from '@/types'
+
+const ACTIVE_MEMBER_KEY = 'activeMember'
+
+function loadActiveMember(): FamilyMember | null {
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_MEMBER_KEY)
+    return raw ? (JSON.parse(raw) as FamilyMember) : null
+  } catch {
+    return null
+  }
+}
 
 interface AuthContextValue {
   user: User | null
   accessToken: string | null
+  activeMember: FamilyMember | null
   setUser: (user: User | null) => void
   setTokens: (access: string, refresh: string) => void
+  setActiveMember: (member: FamilyMember) => void
+  clearActiveMember: () => void
   clearAuth: () => void
   isAuthenticated: boolean
 }
@@ -15,6 +29,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthContextProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [activeMember, setActiveMemberState] = useState<FamilyMember | null>(loadActiveMember)
   const [accessToken, setAccessToken] = useState<string | null>(
     () => localStorage.getItem('accessToken'),
   )
@@ -25,11 +40,23 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     setAccessToken(access)
   }, [])
 
+  const setActiveMember = useCallback((member: FamilyMember) => {
+    sessionStorage.setItem(ACTIVE_MEMBER_KEY, JSON.stringify(member))
+    setActiveMemberState(member)
+  }, [])
+
+  const clearActiveMember = useCallback(() => {
+    sessionStorage.removeItem(ACTIVE_MEMBER_KEY)
+    setActiveMemberState(null)
+  }, [])
+
   const clearAuth = useCallback(() => {
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
+    sessionStorage.removeItem(ACTIVE_MEMBER_KEY)
     setAccessToken(null)
     setUser(null)
+    setActiveMemberState(null)
   }, [])
 
   return (
@@ -37,8 +64,11 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         accessToken,
+        activeMember,
         setUser,
         setTokens,
+        setActiveMember,
+        clearActiveMember,
         clearAuth,
         isAuthenticated: accessToken !== null,
       }}

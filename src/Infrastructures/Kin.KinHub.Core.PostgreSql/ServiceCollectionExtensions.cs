@@ -32,8 +32,6 @@ public static class ServiceCollectionExtensions
         // Core repositories
         services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMemberRepository, FamilyMemberRepository>();
-        services.AddScoped<IFamilyRoleRepository, FamilyRoleRepository>();
-        services.AddScoped<IMemberRoleRepository, MemberRoleRepository>();
         services.AddScoped<IKinHubServiceRepository, KinHubServiceRepository>();
         services.AddScoped<IFamilyServiceRepository, FamilyServiceRepository>();
 

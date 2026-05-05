@@ -17,8 +17,6 @@ public partial class CoreDbContext : DbContext
 
     public virtual DbSet<FamilyMemberEntity> FamilyMemberEntity { get; set; }
 
-    public virtual DbSet<FamilyRoleEntity> FamilyRoleEntity { get; set; }
-
     public virtual DbSet<FamilyServiceEntity> FamilyServiceEntity { get; set; }
 
     public virtual DbSet<FridgeEntity> FridgeEntity { get; set; }
@@ -26,8 +24,6 @@ public partial class CoreDbContext : DbContext
     public virtual DbSet<FridgeIngredientEntity> FridgeIngredientEntity { get; set; }
 
     public virtual DbSet<KinHubServiceEntity> KinHubServiceEntity { get; set; }
-
-    public virtual DbSet<MemberRoleEntity> MemberRoleEntity { get; set; }
 
     public virtual DbSet<RecipeBookEntity> RecipeBookEntity { get; set; }
 
@@ -53,7 +49,6 @@ public partial class CoreDbContext : DbContext
             entity.HasIndex(e => e.UserId, "IX_core_FamilyEntity_UserId");
 
             entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-            entity.Property(e => e.AdminCodeHash).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.Name)
                 .IsRequired()
@@ -82,22 +77,6 @@ public partial class CoreDbContext : DbContext
                 .HasForeignKey(d => d.FamilyId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_core_FamilyMemberEntity_FamilyId");
-        });
-
-        modelBuilder.Entity<FamilyRoleEntity>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_core_FamilyRoleEntity");
-
-            entity.ToTable("FamilyRoleEntity", "core");
-
-            entity.HasIndex(e => e.Name, "UQ_core_FamilyRoleEntity_Name").IsUnique();
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.Name)
-                .IsRequired()
-                .HasMaxLength(100);
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<FamilyServiceEntity>(entity =>
@@ -183,31 +162,6 @@ public partial class CoreDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(200);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
-        });
-
-        modelBuilder.Entity<MemberRoleEntity>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_core_MemberRoleEntity");
-
-            entity.ToTable("MemberRoleEntity", "core");
-
-            entity.HasIndex(e => e.MemberId, "IX_core_MemberRoleEntity_MemberId");
-
-            entity.HasIndex(e => new { e.MemberId, e.RoleId }, "UQ_core_MemberRoleEntity_MemberRole").IsUnique();
-
-            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
-
-            entity.HasOne(d => d.Member).WithMany(p => p.MemberRoleEntity)
-                .HasForeignKey(d => d.MemberId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_core_MemberRoleEntity_MemberId");
-
-            entity.HasOne(d => d.Role).WithMany(p => p.MemberRoleEntity)
-                .HasForeignKey(d => d.RoleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_core_MemberRoleEntity_RoleId");
         });
 
         modelBuilder.Entity<RecipeBookEntity>(entity =>

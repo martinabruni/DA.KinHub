@@ -1,64 +1,64 @@
-import { useTranslation } from 'react-i18next'
-import { BookOpen, Grid2x2, Refrigerator, Sparkles, Users } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
-import { ServicesProvider, useServices } from '@/features/family/ServicesProvider'
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useServices } from "@/features/family/ServicesProvider";
+import { serviceConfig, defaultServiceConfig } from "@/config/serviceConfig";
 
-const serviceIcons: Record<string, React.ElementType> = {
-  Recipes: BookOpen,
-  Fridges: Refrigerator,
-  'AI Assistant': Sparkles,
-  Family: Users,
-  Services: Grid2x2,
-}
+export function ServicesPage() {
+  const { t } = useTranslation();
+  const { services, isLoading } = useServices();
 
-function ServicesContent() {
-  const { t } = useTranslation()
-  const { services, isLoading, toggleService } = useServices()
+  const enabledServices = services.filter((s) => s.isEnabled);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">{t('services.title')}</h1>
-      <p className="text-muted-foreground text-sm mt-1">{t('services.subtitle')}</p>
+      <h1 className="text-2xl font-bold">{t("services.title")}</h1>
+      <p className="text-muted-foreground text-sm mt-1">
+        {t("services.subtitle")}
+      </p>
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {isLoading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
-          : services.map((service) => {
-              const Icon = serviceIcons[service.name] ?? Grid2x2
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-2xl" />
+            ))
+          : enabledServices.map((service) => {
+              const cfg = serviceConfig[service.name] ?? defaultServiceConfig;
+              const Icon = cfg.icon;
               return (
-                <Card key={service.id} className="p-6">
-                  <CardContent className="p-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <Icon className="w-7 h-7 text-primary" />
-                      <Switch
-                        checked={service.isEnabled}
-                        onCheckedChange={(checked) => toggleService(service.id, checked)}
-                      />
-                    </div>
-                    <p className="font-semibold">{service.name}</p>
-                    <p className="text-muted-foreground text-sm mt-1">{service.description}</p>
-                    <Badge
-                      variant={service.isEnabled ? 'default' : 'secondary'}
-                      className="mt-3 text-xs"
-                    >
-                      {service.isEnabled ? t('services.active') : t('services.inactive')}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              )
+                <Link key={service.id} to={cfg.path}>
+                  <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
+                    <CardContent className="flex flex-col gap-3 p-5 h-full">
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                        <Icon className={`w-6 h-6 ${cfg.color}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold leading-tight">
+                          {service.name}
+                        </p>
+                        <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                          {service.description}
+                        </p>
+                      </div>
+                      <span className="text-xs font-medium text-primary">
+                        {t("services.open")} →
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
             })}
       </div>
-    </div>
-  )
-}
 
-export function ServicesPage() {
-  return (
-    <ServicesProvider>
-      <ServicesContent />
-    </ServicesProvider>
-  )
+      <div className="mt-8">
+        <Link
+          to="/console/services"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {t("services.manage")}
+        </Link>
+      </div>
+    </div>
+  );
 }

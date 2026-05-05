@@ -30,7 +30,6 @@ public sealed class KinHubServiceService : IKinHubServiceService
                     Name = s.Name,
                     BaseUrl = s.BaseUrl,
                     IsActive = s.IsActive,
-                    IsAdminOnly = s.IsAdminOnly,
                 })
                 .ToList();
 
@@ -52,16 +51,15 @@ public sealed class KinHubServiceService : IKinHubServiceService
             var allServices = await _kinHubServiceRepository.GetAllAsync();
             var familyServices = await _familyServiceRepository.GetByFamilyIdAsync(familyId, cancellationToken);
 
-            var dtos = familyServices
-                .Select(fs =>
+            var dtos = allServices
+                .Select(s =>
                 {
-                    var service = allServices.FirstOrDefault(s => s.Id == fs.ServiceId);
+                    var fs = familyServices.FirstOrDefault(f => f.ServiceId == s.Id);
                     return new FamilyServiceDto
                     {
-                        Id = fs.Id,
-                        ServiceId = fs.ServiceId,
-                        ServiceName = service?.Name ?? string.Empty,
-                        IsActive = fs.IsActive,
+                        Id = s.Id,
+                        Name = s.Name,
+                        IsEnabled = fs?.IsActive ?? false,
                     };
                 })
                 .ToList();
@@ -119,10 +117,9 @@ public sealed class KinHubServiceService : IKinHubServiceService
 
             return Result<FamilyServiceDto>.Success(new FamilyServiceDto
             {
-                Id = familyService.Id,
-                ServiceId = familyService.ServiceId,
-                ServiceName = service?.Name ?? string.Empty,
-                IsActive = familyService.IsActive,
+                Id = familyService.ServiceId,
+                Name = service?.Name ?? string.Empty,
+                IsEnabled = familyService.IsActive,
             });
         }
         catch (Exception ex)

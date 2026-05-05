@@ -13,8 +13,6 @@ public partial class FamilyEntity
 
     public Guid UserId { get; set; }
 
-    public string AdminCodeHash { get; set; }
-
     public bool IsDeleted { get; set; }
 
     public DateTime CreatedAt { get; set; }

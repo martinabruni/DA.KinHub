@@ -7,27 +7,24 @@ export interface User {
   id: string;
   email: string;
   familyId: string | null;
-  familyRole: "Admin" | "Member" | null;
 }
 
 export interface Family {
   id: string;
   name: string;
-  adminCode?: string;
   members: FamilyMember[];
 }
 
 export interface FamilyMember {
   id: string;
   name: string;
-  role: "Admin" | "Member";
 }
 
 export interface Service {
   id: number;
   name: string;
-  description: string;
-  icon: string;
+  description?: string;
+  icon?: string;
   isEnabled: boolean;
 }
 
@@ -76,6 +73,7 @@ export interface FridgeIngredient {
 }
 
 export interface AiIngredient {
+  id?: string;
   name: string;
   quantity: number;
   measureUnit: string;
@@ -101,6 +99,18 @@ export interface AISuggestedRecipe {
   missingIngredients: AiIngredient[];
 }
 
+export interface ExistingRecipeSuggestion {
+  recipeId: string;
+  name: string;
+  matchPercentage: number;
+  missingIngredients: AiIngredient[];
+}
+
+export interface SuggestRecipesResult {
+  existingRecipes: ExistingRecipeSuggestion[];
+  newRecipes: AISuggestedRecipe[];
+}
+
 export interface RecipeChange {
   type: string;
   description: string;
@@ -110,6 +120,7 @@ export interface AIAdaptedRecipe {
   originalRecipe: AIParsedRecipe;
   adaptedRecipe: AIParsedRecipe;
   changes: RecipeChange[];
+  changedOriginalIngredientIds: string[];
 }
 
 export interface LoginRequest {

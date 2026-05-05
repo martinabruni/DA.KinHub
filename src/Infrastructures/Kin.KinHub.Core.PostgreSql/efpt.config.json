@@ -27,19 +27,11 @@
          "ObjectType": 0
       },
       {
-         "Name": "core.FamilyRoleEntity",
-         "ObjectType": 0
-      },
-      {
          "Name": "core.FamilyServiceEntity",
          "ObjectType": 0
       },
       {
          "Name": "core.KinHubServiceEntity",
-         "ObjectType": 0
-      },
-      {
-         "Name": "core.MemberRoleEntity",
          "ObjectType": 0
       },
       {

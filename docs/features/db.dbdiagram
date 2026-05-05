@@ -95,24 +95,3 @@ Table dbo.FamilyMemberEntity {
     (FamilyId, Name) [unique]
   }
 }
-
-Table dbo.FamilyRoleEntity {
-  Id int [primary key] // Enum: 1=Admin, 2=Member (config table — pre-popolata)
-  Name varchar [unique, not null] // "admin", "member"
-  IsActive boolean [default: false]
-  CreatedAt datetime [not null]
-  UpdatedAt datetime [not null]
-}
-
-Table dbo.MemberRoleEntity {
-  Id uuid [primary key]
-  MemberId uuid [not null, ref: > dbo.FamilyMemberEntity.Id]
-  RoleId int [not null, ref: > dbo.FamilyRoleEntity.Id]
-  IsActive boolean [default: false]
-  CreatedAt datetime [not null]
-  UpdatedAt datetime [not null]
-  
-  Indexes {
-    (MemberId, RoleId) [unique]
-  }
-}

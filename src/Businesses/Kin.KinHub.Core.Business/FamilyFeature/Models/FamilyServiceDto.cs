@@ -2,8 +2,7 @@
 
 public sealed class FamilyServiceDto
 {
-    public required Guid Id { get; init; }
-    public required int ServiceId { get; init; }
-    public required string ServiceName { get; init; }
-    public required bool IsActive { get; init; }
+    public required int Id { get; init; }
+    public required string Name { get; init; }
+    public required bool IsEnabled { get; init; }
 }

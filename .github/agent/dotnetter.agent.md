@@ -1,5 +1,9 @@
 ---
-applyTo: "src/{Domains,Businesses,Infrastructures,Presentations}/**/*.cs"
+model: Claude Sonnet 4.6 (copilot)
+name: Dotnetter
+user-invocable: true
+description: An agent that follows my best practise to write backend in dotnet
+tools: [vscode, execute, read, agent, edit, search, todo]
 ---
 
 Preferenze C# obbligatorie per il codice generato.

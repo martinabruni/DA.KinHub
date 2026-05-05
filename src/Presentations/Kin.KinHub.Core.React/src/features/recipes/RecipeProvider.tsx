@@ -6,6 +6,61 @@ import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api/apiClient";
 import type { Ingredient, Recipe, Step } from "@/types";
 
+interface ApiIngredient {
+  id: string;
+  name: string;
+  measureUnit: string;
+  quantity: number;
+  recipeId: string;
+}
+
+interface ApiStep {
+  id: string;
+  order: number;
+  description: string;
+  recipeId: string;
+}
+
+interface ApiRecipeResponse {
+  id: string;
+  name: string;
+  backstory?: string;
+  finalTime: string;
+  portions: number;
+  recipeBookId: string;
+  ingredients: ApiIngredient[];
+  steps: ApiStep[];
+}
+
+function parseFinalTime(time: string): number {
+  const parts = time.split(":");
+  const h = parseInt(parts[0] ?? "0", 10);
+  const m = parseInt(parts[1] ?? "0", 10);
+  return h * 60 + m;
+}
+
+function mapApiRecipe(r: ApiRecipeResponse): Recipe {
+  return {
+    id: r.id,
+    recipeBookId: r.recipeBookId,
+    name: r.name,
+    description: r.backstory,
+    servingSize: r.portions,
+    prepTimeMinutes: parseFinalTime(r.finalTime),
+    ingredients: r.ingredients.map((ing) => ({
+      id: ing.id,
+      name: ing.name,
+      quantity: ing.quantity,
+      unit: ing.measureUnit,
+    })),
+    steps: r.steps.map((s) => ({
+      id: s.id,
+      order: s.order,
+      description: s.description,
+    })),
+  };
+}
+
 interface RecipeContextValue {
   recipes: Recipe[];
   isLoading: boolean;
@@ -37,11 +92,6 @@ interface RecipeContextValue {
     recipeId: string,
     stepId: string,
   ) => Promise<void>;
-  reorderSteps: (
-    bookId: string,
-    recipeId: string,
-    steps: Step[],
-  ) => Promise<void>;
 }
 
 const RecipeContext = createContext<RecipeContextValue | null>(null);
@@ -59,10 +109,10 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
   const { data: recipes = [], isLoading } = useQuery({
     queryKey: qKey,
     queryFn: async () => {
-      const { data } = await apiClient.get<Recipe[]>(
+      const { data } = await apiClient.get<ApiRecipeResponse[]>(
         `/api/recipe-books/${bookId}/recipes`,
       );
-      return data;
+      return data.map(mapApiRecipe);
     },
     enabled: !!bookId,
   });
@@ -76,7 +126,7 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
       const minutes = d.prepTimeMinutes ?? 0;
       const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
       const mm = String(minutes % 60).padStart(2, "0");
-      const { data } = await apiClient.post<Recipe>(
+      const { data } = await apiClient.post<ApiRecipeResponse>(
         `/api/recipe-books/${bId}/recipes`,
         {
           name: d.name,
@@ -95,7 +145,7 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
           })),
         },
       );
-      return data;
+      return mapApiRecipe(data);
     },
     onSuccess: () => {
       toast.success(t("recipes.created"));
@@ -220,26 +270,28 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
       sId: string;
     }) =>
       apiClient.delete(`/api/recipe-books/${bId}/recipes/${rId}/steps/${sId}`),
-    onSuccess: () => {
+    onSuccess: async (_, { bId, rId, sId }) => {
+      const cachedRecipes = queryClient.getQueryData<Recipe[]>(qKey) ?? [];
+      const recipe = cachedRecipes.find((r) => r.id === rId);
+      if (recipe) {
+        const deletedStep = recipe.steps.find((s) => s.id === sId);
+        if (deletedStep) {
+          const stepsToUpdate = recipe.steps.filter(
+            (s) => s.order > deletedStep.order,
+          );
+          await Promise.all(
+            stepsToUpdate.map((s) =>
+              apiClient.put(
+                `/api/recipe-books/${bId}/recipes/${rId}/steps/${s.id}`,
+                { order: s.order - 1, description: s.description },
+              ),
+            ),
+          );
+        }
+      }
       toast.success(t("recipes.stepDeleted"));
       invalidate();
     },
-  });
-
-  const reorderMutation = useMutation({
-    mutationFn: ({
-      bId,
-      rId,
-      steps,
-    }: {
-      bId: string;
-      rId: string;
-      steps: Step[];
-    }) =>
-      apiClient.put(`/api/recipe-books/${bId}/recipes/${rId}/steps/reorder`, {
-        steps,
-      }),
-    onSuccess: () => invalidate(),
   });
 
   return (
@@ -266,9 +318,6 @@ export function RecipeProvider({ children, bookId }: RecipeProviderProps) {
         },
         deleteStep: async (bId, rId, sId) => {
           await deleteStepMutation.mutateAsync({ bId, rId, sId });
-        },
-        reorderSteps: async (bId, rId, steps) => {
-          await reorderMutation.mutateAsync({ bId, rId, steps });
         },
       }}
     >

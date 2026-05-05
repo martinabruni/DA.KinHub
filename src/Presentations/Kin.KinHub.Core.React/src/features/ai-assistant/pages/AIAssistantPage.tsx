@@ -41,6 +41,7 @@ import type {
   Fridge,
   Recipe,
   RecipeBook,
+  SuggestRecipesResult,
 } from "@/types";
 
 function SuggestTab() {
@@ -48,7 +49,7 @@ function SuggestTab() {
   const { suggestRecipes, isSuggesting } = useRecipeAssistant();
   const { books } = useRecipeBooks();
   const [fridgeId, setFridgeId] = useState("");
-  const [results, setResults] = useState<AISuggestedRecipe[]>([]);
+  const [results, setResults] = useState<SuggestRecipesResult | null>(null);
   const [saveRecipe, setSaveRecipe] = useState<AISuggestedRecipe | null>(null);
   const [saveBookId, setSaveBookId] = useState("");
 
@@ -70,7 +71,7 @@ function SuggestTab() {
     try {
       await apiClient.post(
         `/api/recipe-books/${saveBookId}/recipes`,
-        saveRecipe.recipe,
+        { ...saveRecipe.recipe, recipeBookId: saveBookId },
       );
       toast.success(t("aiAssistant.suggest.saved"));
       setSaveRecipe(null);
@@ -107,37 +108,90 @@ function SuggestTab() {
             <Skeleton key={i} className="h-40 rounded-xl" />
           ))}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {results.map((r, i) => (
-            <Card key={i}>
-              <CardContent className="pt-4 pb-4">
-                <p className="font-semibold">{r.recipe.name}</p>
-                {r.recipe.backstory && (
-                  <p className="text-muted-foreground text-sm mt-1">
-                    {r.recipe.backstory}
-                  </p>
-                )}
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {t("aiAssistant.suggest.matchScore")}: {r.matchPercentage}%
-                  </p>
-                  <Progress
-                    value={r.matchPercentage}
-                    className="h-2 bg-muted [&>div]:bg-green-500"
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3"
-                  onClick={() => setSaveRecipe(r)}
-                >
-                  {t("aiAssistant.suggest.saveToBook")}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+      ) : results && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+              {t("aiAssistant.suggest.existingRecipes")}
+            </h3>
+            {results.existingRecipes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("aiAssistant.suggest.noExistingMatches")}</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {results.existingRecipes.map((r) => (
+                  <Card key={r.recipeId}>
+                    <CardContent className="pt-4 pb-4">
+                      <p className="font-semibold">{r.name}</p>
+                      <div className="mt-3">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {t("aiAssistant.suggest.matchScore")}: {r.matchPercentage}%
+                        </p>
+                        <Progress
+                          value={r.matchPercentage}
+                          className="h-2 bg-muted [&>div]:bg-green-500"
+                        />
+                      </div>
+                      {r.missingIngredients.length > 0 && (
+                        <ul className="mt-2 space-y-0.5">
+                          {r.missingIngredients.map((ing, i) => (
+                            <li key={i} className="text-xs text-destructive">
+                              − {ing.quantity} {ing.measureUnit} {ing.name}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+              {t("aiAssistant.suggest.aiRecipes")}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {results.newRecipes.map((r, i) => (
+                <Card key={i}>
+                  <CardContent className="pt-4 pb-4">
+                    <p className="font-semibold">{r.recipe.name}</p>
+                    {r.recipe.backstory && (
+                      <p className="text-muted-foreground text-sm mt-1">
+                        {r.recipe.backstory}
+                      </p>
+                    )}
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {t("aiAssistant.suggest.matchScore")}: {r.matchPercentage}%
+                      </p>
+                      <Progress
+                        value={r.matchPercentage}
+                        className="h-2 bg-muted [&>div]:bg-green-500"
+                      />
+                    </div>
+                    {r.missingIngredients.length > 0 && (
+                      <ul className="mt-2 space-y-0.5">
+                        {r.missingIngredients.map((ing, j) => (
+                          <li key={j} className="text-xs text-destructive">
+                            − {ing.quantity} {ing.measureUnit} {ing.name}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => setSaveRecipe(r)}
+                    >
+                      {t("aiAssistant.suggest.saveToBook")}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -176,19 +230,25 @@ function ParseTab() {
   const [rawText, setRawText] = useState("");
   const [result, setResult] = useState<AIParsedRecipe | null>(null);
   const [saveBookId, setSaveBookId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleParse = async () => {
+    setIsSaved(false);
     const res = await parseRecipe(rawText);
     setResult(res);
   };
 
   const handleSave = async () => {
     if (!result || !saveBookId) return;
+    setIsSaving(true);
     try {
-      await apiClient.post(`/api/recipe-books/${saveBookId}/recipes`, result);
-      toast.success(t("aiAssistant.parse.saved"));
+      await apiClient.post(`/api/recipe-books/${saveBookId}/recipes`, { ...result, recipeBookId: saveBookId });
+      setIsSaved(true);
     } catch {
       toast.error(t("common.error"));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -248,7 +308,7 @@ function ParseTab() {
                 </ol>
               </div>
             </div>
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex gap-3 items-center">
               <Select value={saveBookId} onValueChange={setSaveBookId}>
                 <SelectTrigger className="w-48">
                   <SelectValue
@@ -263,9 +323,15 @@ function ParseTab() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleSave} disabled={!saveBookId}>
-                {t("aiAssistant.parse.saveToBook")}
-              </Button>
+              {isSaved ? (
+                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                  {t("aiAssistant.parse.createdSuccessfully")}
+                </span>
+              ) : (
+                <Button onClick={handleSave} disabled={!saveBookId || isSaving}>
+                  {isSaving ? t("aiAssistant.parse.saving") : t("aiAssistant.parse.saveToBook")}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -370,7 +436,7 @@ function AdaptTab() {
                 {result.originalRecipe.ingredients.map((ing, i) => (
                   <li
                     key={i}
-                    className={`text-sm ${result.adaptedRecipe.ingredients.some((a) => a.name !== ing.name) ? "line-through text-muted-foreground" : ""}`}
+                    className={`text-sm ${result.changedOriginalIngredientIds.includes(ing.id ?? '') ? "line-through text-muted-foreground" : ""}`}
                   >
                     {ing.quantity} {ing.measureUnit} {ing.name}
                   </li>
@@ -387,7 +453,7 @@ function AdaptTab() {
                 {result.adaptedRecipe.ingredients.map((ing, i) => (
                   <li
                     key={i}
-                    className="text-sm text-green-600 dark:text-green-400"
+                    className={`text-sm ${result.changedOriginalIngredientIds.includes(result.originalRecipe.ingredients[i]?.id ?? '') ? "text-green-600 dark:text-green-400" : ""}`}
                   >
                     {ing.quantity} {ing.measureUnit} {ing.name}
                   </li>
@@ -395,23 +461,6 @@ function AdaptTab() {
               </ul>
             </CardContent>
           </Card>
-          {result.changes.length > 0 && (
-            <Card className="md:col-span-2">
-              <CardContent className="pt-4">
-                <p className="font-semibold mb-3">
-                  {t("aiAssistant.adapt.changes")}
-                </p>
-                <ul className="space-y-1">
-                  {result.changes.map((c, i) => (
-                    <li key={i} className="text-sm text-muted-foreground">
-                      <span className="font-medium capitalize">{c.type}</span>:{" "}
-                      {c.description}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
     </div>

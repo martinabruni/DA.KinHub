@@ -30,16 +30,14 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<RecipeSuggestion>> SuggestRecipesAsync(
+    public async Task<IReadOnlyList<RecipeSuggestion>> SuggestNewRecipesAsync(
         IReadOnlyList<RecipeIngredient> fridgeIngredients,
-        IReadOnlyList<Recipe>? familyRecipes = null,
         CancellationToken cancellationToken = default)
     {
         var input = new
         {
             task_type = "recipe_suggestion",
             fridge_ingredients = fridgeIngredients.Select(i => new { i.Name, i.Quantity, unit = i.MeasureUnit }),
-            family_recipes = familyRecipes?.Select(MapToJsonObject),
         };
 
         var json = await SendAsync(JsonSerializer.Serialize(input, JsonOptions), temperature: 0.7f, _suggestPrompt, cancellationToken);
@@ -79,13 +77,58 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
         var json = await SendAsync(JsonSerializer.Serialize(input, JsonOptions), temperature: 0.3f, _adaptPrompt, cancellationToken);
         var response = JsonSerializer.Deserialize<AdaptationResponse>(json, JsonOptions)!;
 
+        var originalRecipe = MapToRecipe(response.OriginalRecipe);
+        var changedIds = new List<Guid>();
+        var adaptedIngredients = originalRecipe.Ingredients?.ToList() ?? [];
+
+        foreach (var change in response.Changes)
+        {
+            if (change.OriginalIngredientId is not null
+                && Guid.TryParse(change.OriginalIngredientId, out var changedId))
+            {
+                changedIds.Add(changedId);
+
+                var idx = adaptedIngredients.FindIndex(i => i.Id == changedId);
+                if (idx >= 0)
+                {
+                    if (change.NewIngredient is not null)
+                        adaptedIngredients[idx] = MapToIngredient(change.NewIngredient);
+                    else
+                        adaptedIngredients.RemoveAt(idx);
+                }
+            }
+            else if (change.NewIngredient is not null && change.Type == "addition")
+            {
+                adaptedIngredients.Add(MapToIngredient(change.NewIngredient));
+            }
+        }
+
+        var adaptedRecipe = new Recipe
+        {
+            Id = Guid.Empty,
+            Name = originalRecipe.Name,
+            Backstory = originalRecipe.Backstory,
+            FinalTime = originalRecipe.FinalTime,
+            Portions = originalRecipe.Portions,
+            RecipeBookId = Guid.Empty,
+            Ingredients = adaptedIngredients,
+            Steps = response.AdaptedSteps.Select(MapToStep).OrderBy(s => s.Order).ToList(),
+        };
+
         return new RecipeAdaptationResult
         {
-            OriginalRecipe = MapToRecipe(response.OriginalRecipe),
-            AdaptedRecipe = MapToRecipe(response.AdaptedRecipe),
+            OriginalRecipe = originalRecipe,
+            AdaptedRecipe = adaptedRecipe,
             Changes = response.Changes
-                .Select(c => new RecipeChange { Type = c.Type, Description = c.Description })
+                .Select(c => new RecipeChange
+                {
+                    Type = c.Type,
+                    Description = c.Description,
+                    OriginalIngredientId = c.OriginalIngredientId is not null && Guid.TryParse(c.OriginalIngredientId, out var id) ? id : null,
+                    NewIngredient = c.NewIngredient is not null ? MapToIngredient(c.NewIngredient) : null,
+                })
                 .ToList(),
+            ChangedOriginalIngredientIds = changedIds,
         };
     }
 
@@ -115,12 +158,12 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
             recipe.Backstory,
             recipe.FinalTime,
             recipe.Portions,
-            Ingredients = recipe.Ingredients?.Select(i => new { i.Name, i.Quantity, unit = i.MeasureUnit }) ?? [],
+            Ingredients = recipe.Ingredients?.Select(i => new { id = i.Id, i.Name, i.Quantity, unit = i.MeasureUnit }) ?? [],
             Steps = recipe.Steps?.Select(s => new { s.Order, s.Description }) ?? [],
         };
 
     private static RecipeIngredient MapToIngredient(IngredientJson j) =>
-        new() { Id = Guid.Empty, Name = j.Name, Quantity = j.Quantity, MeasureUnit = j.Unit, RecipeId = Guid.Empty };
+        new() { Id = j.Id is not null && Guid.TryParse(j.Id, out var id) ? id : Guid.Empty, Name = j.Name, Quantity = j.Quantity, MeasureUnit = j.Unit, RecipeId = Guid.Empty };
 
     private static RecipeStep MapToStep(StepJson j) =>
         new() { Id = Guid.Empty, Order = j.Order, Description = j.Description, RecipeId = Guid.Empty };
@@ -146,7 +189,7 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
             MissingIngredients = s.MissingIngredients.Select(MapToIngredient).ToList(),
         };
 
-    private sealed record IngredientJson(string Name, decimal Quantity, string Unit);
+    private sealed record IngredientJson(string? Id, string Name, decimal Quantity, string Unit);
     private sealed record StepJson(int Order, string Description);
     private sealed record RecipeJson(
         string Name,
@@ -158,10 +201,10 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
     private sealed record SuggestionItem(RecipeJson Recipe, int MatchPercentage, IReadOnlyList<IngredientJson> MissingIngredients);
     private sealed record SuggestionResponse(string TaskType, IReadOnlyList<SuggestionItem> Suggestions);
     private sealed record ParseResponse(string TaskType, RecipeJson? Recipe, string? Error);
-    private sealed record ChangeJson(string Type, string Description);
+    private sealed record ChangeJson(string Type, string Description, string? OriginalIngredientId, IngredientJson? NewIngredient);
     private sealed record AdaptationResponse(
         string TaskType,
         RecipeJson OriginalRecipe,
-        RecipeJson AdaptedRecipe,
+        IReadOnlyList<StepJson> AdaptedSteps,
         IReadOnlyList<ChangeJson> Changes);
 }

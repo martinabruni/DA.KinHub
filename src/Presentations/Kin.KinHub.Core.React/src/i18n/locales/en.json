@@ -29,7 +29,8 @@
     "login": "Log in",
     "passwordMismatch": "Passwords do not match",
     "accountCreated": "Account created! Please sign in.",
-    "loggedOut": "Logged out successfully."
+    "loggedOut": "Logged out successfully.",
+    "autoLoginFailed": "Account created, but sign-in failed. Please sign in manually."
   },
   "dashboard": {
     "greeting": "Hello, {{name}}! 👋",
@@ -58,12 +59,7 @@
       "description": "Create a family to get started. Members are profiles, not accounts.",
       "familyNamePlaceholder": "Family name",
       "ownerProfileNamePlaceholder": "Your profile name (e.g. Mum)",
-      "adminCodePlaceholder": "Admin code (keep it secret)",
       "create": "Create Family"
-    },
-    "role": {
-      "admin": "Admin",
-      "member": "Member"
     },
     "actions": {
       "edit": "Edit",
@@ -73,18 +69,6 @@
       "title": "Remove member",
       "description": "Are you sure you want to remove {{name}} from the family? This action cannot be undone.",
       "confirm": "Remove"
-    },
-    "adminCode": {
-      "title": "Admin Code",
-      "reveal": "Reveal",
-      "hide": "Hide",
-      "verify": "Verify code",
-      "verifyBtn": "Verify",
-      "changeCode": "Change Code",
-      "changeCodeTitle": "Change Admin Code",
-      "currentCodePlaceholder": "Current code",
-      "newCodePlaceholder": "New code",
-      "changeCodeConfirm": "Save"
     },
     "dangerZone": {
       "title": "Danger Zone",
@@ -99,18 +83,25 @@
     },
     "noMembers": "No members yet",
     "updated": "Family updated successfully.",
-    "codeRegenerated": "Admin code regenerated.",
     "memberRemoved": "Member removed.",
     "left": "You have left the family.",
     "deleted": "Family deleted."
   },
   "services": {
-    "title": "Family Services",
-    "subtitle": "Enable or disable features for your family",
+    "title": "Services",
+    "subtitle": "Open a service to get started",
     "active": "Active",
     "inactive": "Inactive",
+    "open": "Open",
+    "manage": "Manage services →",
     "toggleError": "Failed to update service. Reverting.",
     "updated": "Service updated."
+  },
+  "console": {
+    "services": {
+      "title": "KinConsole",
+      "subtitle": "Enable or disable services for your family"
+    }
   },
   "recipeBooks": {
     "title": "Recipe Books",
@@ -248,14 +239,19 @@
       "saveToBook": "Save to Recipe Book",
       "selectBook": "Choose a recipe book...",
       "save": "Save",
-      "saved": "Recipe saved to book."
+      "saved": "Recipe saved to book.",
+      "existingRecipes": "Your Recipes",
+      "aiRecipes": "AI Suggestions",
+      "noExistingMatches": "No existing recipes match your fridge."
     },
     "parse": {
       "placeholder": "Paste a recipe from any source...",
       "button": "Parse Recipe",
       "parsing": "Parsing...",
       "saveToBook": "Save to Recipe Book",
-      "saved": "Recipe saved."
+      "saved": "Recipe saved.",
+      "saving": "Saving...",
+      "createdSuccessfully": "✓ Created successfully"
     },
     "adapt": {
       "selectRecipe": "Choose a recipe...",
@@ -270,10 +266,6 @@
   },
   "profile": {
     "title": "Profile",
-    "identity": {
-      "admin": "Admin",
-      "member": "Member"
-    },
     "updateEmail": {
       "title": "Update Email",
       "newEmail": "New email",
@@ -305,6 +297,33 @@
       "typeToConfirm": "Type DELETE to confirm",
       "success": "Account deleted."
     }
+  },
+  "onboarding": {
+    "title": "Create your family",
+    "subtitle": "Set up your family space to get started.",
+    "familyName": "Family name",
+    "familyNamePlaceholder": "e.g. The Smiths",
+    "ownerProfileName": "Your profile name",
+    "ownerProfileNamePlaceholder": "e.g. Mum",
+    "submit": "Create Family",
+    "submitting": "Creating...",
+    "errorGeneric": "Failed to create family. Please try again."
+  },
+  "selectMember": {
+    "title": "Who's watching?",
+    "subtitle": "Select a family member to continue",
+    "switchMember": "Switch member"
+  },
+  "hub": {
+    "greeting": "Welcome, {{name}}",
+    "yourServices": "Your services",
+    "noServicesTitle": "No services enabled yet",
+    "noServicesDescription": "Enable services for your family to get started.",
+    "manageServices": "Manage services →",
+    "open": "Open",
+    "familyBanner": "{{name}} family",
+    "members": "{{count}} member",
+    "members_other": "{{count}} members"
   },
   "common": {
     "loading": "Loading...",

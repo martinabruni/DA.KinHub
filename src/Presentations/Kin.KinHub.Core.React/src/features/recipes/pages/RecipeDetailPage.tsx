@@ -1,11 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GripVertical, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,32 +17,13 @@ import { RecipeBookProvider, useRecipeBooks } from '@/features/recipes/RecipeBoo
 import { RecipeProvider, useRecipes } from '@/features/recipes/RecipeProvider'
 import { apiClient } from '@/api/apiClient'
 import { hashColor } from '@/lib/utils'
-import type { Fridge, Ingredient, Step } from '@/types'
-
-function SortableStep({ step, onDelete }: { step: Step; onDelete: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.id })
-  const style = { transform: CSS.Transform.toString(transform), transition }
-  return (
-    <div ref={setNodeRef} style={style} className="flex items-start gap-2 p-3 bg-card border rounded-lg">
-      <button {...attributes} {...listeners} className="mt-0.5 text-muted-foreground cursor-grab">
-        <GripVertical className="w-4 h-4" />
-      </button>
-      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 font-bold">
-        {step.order}
-      </span>
-      <p className="flex-1 text-sm">{step.description}</p>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
-        <Trash2 className="w-3 h-3 text-destructive" />
-      </Button>
-    </div>
-  )
-}
+import type { Fridge } from '@/types'
 
 function RecipeDetailContent() {
   const { t } = useTranslation()
   const { id, recipeId } = useParams<{ id: string; recipeId: string }>()
   const { getBook } = useRecipeBooks()
-  const { getRecipe, isLoading, addIngredient, deleteIngredient, addStep, deleteStep, reorderSteps } = useRecipes()
+  const { getRecipe, isLoading, addIngredient, deleteIngredient, addStep, deleteStep } = useRecipes()
 
   const [showIngredientForm, setShowIngredientForm] = useState(false)
   const [showStepForm, setShowStepForm] = useState(false)
@@ -63,26 +41,13 @@ function RecipeDetailContent() {
   const recipe = getRecipe(recipeId!)
   const book = getBook(id!)
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    if (!recipe) return
-    const { active, over } = event
-    if (active.id !== over?.id) {
-      const oldIndex = recipe.steps.findIndex((s) => s.id === active.id)
-      const newIndex = recipe.steps.findIndex((s) => s.id === over?.id)
-      const reordered = arrayMove(recipe.steps, oldIndex, newIndex).map((s, i) => ({ ...s, order: i + 1 }))
-      await reorderSteps(id!, recipeId!, reordered)
-    }
-  }
-
   const checkMissing = async () => {
     if (!selectedFridgeId || !recipe) return
     try {
-      const { data } = await apiClient.post(`/api/recipe-books/${id}/recipes/${recipeId}/check-missing`, { fridgeId: selectedFridgeId })
+      const { data } = await apiClient.post(`/api/recipe-books/${id}/recipes/${recipeId}/missing-ingredients?fridgeId=${selectedFridgeId}`)
       setMissingIngredients(data.missingIngredients ?? [])
     } catch {
-      const fridgeIngredients: Ingredient[] = (await apiClient.get(`/api/fridges/${selectedFridgeId}`)).data?.ingredients ?? []
-      const missing = recipe.ingredients.filter((i) => !fridgeIngredients.some((fi) => fi.name.toLowerCase() === i.name.toLowerCase())).map((i) => i.name)
-      setMissingIngredients(missing)
+      setMissingIngredients([])
     }
   }
 
@@ -201,22 +166,22 @@ function RecipeDetailContent() {
             </Card>
           )}
 
-          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={recipe.steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
-                {recipe.steps
-                  .slice()
-                  .sort((a, b) => a.order - b.order)
-                  .map((step) => (
-                    <SortableStep
-                      key={step.id}
-                      step={step}
-                      onDelete={() => deleteStep(id!, recipeId!, step.id)}
-                    />
-                  ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <div className="space-y-2">
+            {recipe.steps
+              .slice()
+              .sort((a, b) => a.order - b.order)
+              .map((step) => (
+                <div key={step.id} className="flex items-start gap-2 p-3 bg-card border rounded-lg">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 font-bold">
+                    {step.order}
+                  </span>
+                  <p className="flex-1 text-sm">{step.description}</p>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteStep(id!, recipeId!, step.id)}>
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
 

@@ -21,8 +21,7 @@ const AuthProviderContext = createContext<AuthProviderValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { setUser, setTokens, clearAuth, isAuthenticated, user } =
-    useAuthContext();
+  const { setUser, setTokens, clearAuth, isAuthenticated, user } = useAuthContext();
 
   const { isLoading: isLoadingUser } = useQuery({
     queryKey: ["auth", "me"],

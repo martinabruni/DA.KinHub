@@ -29,7 +29,8 @@
     "login": "Accedi",
     "passwordMismatch": "Le password non corrispondono",
     "accountCreated": "Account creato! Accedi ora.",
-    "loggedOut": "Disconnesso con successo."
+    "loggedOut": "Disconnesso con successo.",
+    "autoLoginFailed": "Account creato, ma il login automatico è fallito. Accedi manualmente."
   },
   "dashboard": {
     "greeting": "Ciao, {{name}}! 👋",
@@ -58,12 +59,7 @@
       "description": "Crea una famiglia per iniziare. I membri sono profili, non account.",
       "familyNamePlaceholder": "Nome famiglia",
       "ownerProfileNamePlaceholder": "Il tuo nome profilo (es. Mamma)",
-      "adminCodePlaceholder": "Codice admin (tienilo segreto)",
       "create": "Crea Famiglia"
-    },
-    "role": {
-      "admin": "Admin",
-      "member": "Membro"
     },
     "actions": {
       "edit": "Modifica",
@@ -73,18 +69,6 @@
       "title": "Rimuovi membro",
       "description": "Sei sicuro di voler rimuovere {{name}} dalla famiglia? Questa azione non può essere annullata.",
       "confirm": "Rimuovi"
-    },
-    "adminCode": {
-      "title": "Codice Admin",
-      "reveal": "Mostra",
-      "hide": "Nascondi",
-      "verify": "Verifica codice",
-      "verifyBtn": "Verifica",
-      "changeCode": "Cambia Codice",
-      "changeCodeTitle": "Cambia Codice Admin",
-      "currentCodePlaceholder": "Codice attuale",
-      "newCodePlaceholder": "Nuovo codice",
-      "changeCodeConfirm": "Salva"
     },
     "dangerZone": {
       "title": "Zona Pericolosa",
@@ -99,18 +83,25 @@
     },
     "noMembers": "Nessun membro",
     "updated": "Famiglia aggiornata.",
-    "codeRegenerated": "Codice admin rigenerato.",
     "memberRemoved": "Membro rimosso.",
     "left": "Hai lasciato la famiglia.",
     "deleted": "Famiglia eliminata."
   },
   "services": {
-    "title": "Servizi Famiglia",
-    "subtitle": "Abilita o disabilita funzionalità per la tua famiglia",
+    "title": "Servizi",
+    "subtitle": "Apri un servizio per iniziare",
     "active": "Attivo",
     "inactive": "Inattivo",
+    "open": "Apri",
+    "manage": "Gestisci servizi →",
     "toggleError": "Aggiornamento servizio fallito. Ripristino.",
     "updated": "Servizio aggiornato."
+  },
+  "console": {
+    "services": {
+      "title": "KinConsole",
+      "subtitle": "Abilita o disabilita i servizi per la tua famiglia"
+    }
   },
   "recipeBooks": {
     "title": "Ricettari",
@@ -248,14 +239,19 @@
       "saveToBook": "Salva nel Ricettario",
       "selectBook": "Scegli un ricettario...",
       "save": "Salva",
-      "saved": "Ricetta salvata."
+      "saved": "Ricetta salvata.",
+      "existingRecipes": "Le tue ricette",
+      "aiRecipes": "Suggerimenti AI",
+      "noExistingMatches": "Nessuna ricetta esistente corrisponde al tuo frigo."
     },
     "parse": {
       "placeholder": "Incolla una ricetta da qualsiasi fonte...",
       "button": "Analizza Ricetta",
       "parsing": "Analizzando...",
       "saveToBook": "Salva nel Ricettario",
-      "saved": "Ricetta salvata."
+      "saved": "Ricetta salvata.",
+      "saving": "Salvataggio...",
+      "createdSuccessfully": "✓ Creata con successo"
     },
     "adapt": {
       "selectRecipe": "Scegli una ricetta...",
@@ -270,10 +266,6 @@
   },
   "profile": {
     "title": "Profilo",
-    "identity": {
-      "admin": "Admin",
-      "member": "Membro"
-    },
     "updateEmail": {
       "title": "Aggiorna Email",
       "newEmail": "Nuova email",
@@ -305,6 +297,33 @@
       "typeToConfirm": "Digita DELETE per confermare",
       "success": "Account eliminato."
     }
+  },
+  "onboarding": {
+    "title": "Crea la tua famiglia",
+    "subtitle": "Configura il tuo spazio famiglia per iniziare.",
+    "familyName": "Nome famiglia",
+    "familyNamePlaceholder": "es. I Rossi",
+    "ownerProfileName": "Il tuo nome profilo",
+    "ownerProfileNamePlaceholder": "es. Mamma",
+    "submit": "Crea Famiglia",
+    "submitting": "Creazione in corso...",
+    "errorGeneric": "Creazione della famiglia fallita. Riprova."
+  },
+  "selectMember": {
+    "title": "Chi guarda?",
+    "subtitle": "Seleziona un membro della famiglia per continuare",
+    "switchMember": "Cambia membro"
+  },
+  "hub": {
+    "greeting": "Benvenuto, {{name}}",
+    "yourServices": "I tuoi servizi",
+    "noServicesTitle": "Nessun servizio abilitato",
+    "noServicesDescription": "Abilita i servizi per la tua famiglia per iniziare.",
+    "manageServices": "Gestisci servizi →",
+    "open": "Apri",
+    "familyBanner": "Famiglia {{name}}",
+    "members": "{{count}} membro",
+    "members_other": "{{count}} membri"
   },
   "common": {
     "loading": "Caricamento...",
