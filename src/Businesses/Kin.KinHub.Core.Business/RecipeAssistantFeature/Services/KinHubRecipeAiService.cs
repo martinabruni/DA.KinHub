@@ -35,41 +35,71 @@ public sealed class KinHubRecipeAiService : IRecipeAiService
     }
 
     /// <inheritdoc/>
-    public async Task<Result<IReadOnlyList<RecipeSuggestionResponse>>> SuggestRecipesAsync(
+    public async Task<Result<SuggestRecipesResult>> SuggestRecipesAsync(
         Guid fridgeId,
         Guid userId,
         CancellationToken cancellationToken = default)
     {
         var family = await _familyRepository.FindByUserIdAsync(userId, cancellationToken);
         if (family is null)
-            return Result<IReadOnlyList<RecipeSuggestionResponse>>.NotFound("Family not found for the current user.");
+            return Result<SuggestRecipesResult>.NotFound("Family not found for the current user.");
 
         var fridge = await _fridgeRepository.GetByIdAsync(fridgeId, cancellationToken);
         if (fridge is null)
-            return Result<IReadOnlyList<RecipeSuggestionResponse>>.NotFound("Fridge not found.");
+            return Result<SuggestRecipesResult>.NotFound("Fridge not found.");
         if (fridge.FamilyId != family.Id)
-            return Result<IReadOnlyList<RecipeSuggestionResponse>>.Unauthorized("Access denied.");
+            return Result<SuggestRecipesResult>.Unauthorized("Access denied.");
 
         var fridgeIngredients = await _fridgeIngredientRepository.GetAllByFamilyIdAsync(fridgeId, cancellationToken);
-        var fridgeAi = fridgeIngredients
-            .Select(i => new RecipeIngredient { Id = Guid.Empty, Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit, RecipeId = Guid.Empty })
-            .ToList();
+        var fridgeLookup = fridgeIngredients
+            .GroupBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity), StringComparer.OrdinalIgnoreCase);
 
         var books = await _recipeBookRepository.GetAllByFamilyIdAsync(family.Id, cancellationToken);
-        var familyRecipes = new List<Recipe>();
+        var existingRecipes = new List<ExistingRecipeSuggestionResponse>();
 
         foreach (var book in books)
         {
             var recipes = await _recipeRepository.GetAllByFamilyIdAsync(book.Id, cancellationToken);
             foreach (var recipe in recipes)
             {
-                var aiRecipe = await BuildAiRecipeAsync(recipe, cancellationToken);
-                familyRecipes.Add(aiRecipe);
+                recipe.Ingredients = await _recipeIngredientRepository.GetAllByFamilyIdAsync(recipe.Id, cancellationToken);
+                if (recipe.Ingredients is null || recipe.Ingredients.Count == 0)
+                    continue;
+
+                var missingIngredients = recipe.Ingredients
+                    .Where(ing =>
+                        !fridgeLookup.TryGetValue(ing.Name, out var available) || available < ing.Quantity)
+                    .ToList();
+
+                var matchPercentage = (int)Math.Round(
+                    (double)(recipe.Ingredients.Count - missingIngredients.Count) / recipe.Ingredients.Count * 100);
+
+                existingRecipes.Add(new ExistingRecipeSuggestionResponse
+                {
+                    RecipeId = recipe.Id,
+                    Name = recipe.Name,
+                    MatchPercentage = matchPercentage,
+                    MissingIngredients = missingIngredients
+                        .Select(i => new AiIngredientResponse { Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit })
+                        .ToList(),
+                });
             }
         }
 
-        var suggestions = await _recipeAssistantService.SuggestRecipesAsync(fridgeAi, familyRecipes, cancellationToken);
-        return Result<IReadOnlyList<RecipeSuggestionResponse>>.Success(suggestions.Adapt<IReadOnlyList<RecipeSuggestionResponse>>());
+        existingRecipes = existingRecipes.OrderByDescending(r => r.MatchPercentage).ToList();
+
+        var fridgeAi = fridgeIngredients
+            .Select(i => new RecipeIngredient { Id = Guid.Empty, Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit, RecipeId = Guid.Empty })
+            .ToList();
+
+        var newSuggestions = await _recipeAssistantService.SuggestNewRecipesAsync(fridgeAi, cancellationToken);
+
+        return Result<SuggestRecipesResult>.Success(new SuggestRecipesResult
+        {
+            ExistingRecipes = existingRecipes,
+            NewRecipes = newSuggestions.Adapt<IReadOnlyList<RecipeSuggestionResponse>>(),
+        });
     }
 
     /// <inheritdoc/>

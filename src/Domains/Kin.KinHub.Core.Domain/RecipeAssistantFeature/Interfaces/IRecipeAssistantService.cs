@@ -7,10 +7,9 @@ namespace Kin.KinHub.Core.Domain.RecipeAssistantFeature;
 /// </summary>
 public interface IRecipeAssistantService
 {
-    /// <summary>Suggests up to 3 recipes based on the available fridge ingredients, prioritizing the family's saved recipes when provided.</summary>
-    Task<IReadOnlyList<RecipeSuggestion>> SuggestRecipesAsync(
+    /// <summary>Suggests up to 3 new AI-invented recipes based solely on the available fridge ingredients. Does not include family recipes.</summary>
+    Task<IReadOnlyList<RecipeSuggestion>> SuggestNewRecipesAsync(
         IReadOnlyList<RecipeIngredient> fridgeIngredients,
-        IReadOnlyList<Recipe>? familyRecipes = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Parses a recipe from free text or unstructured input. Returns null if the text cannot be parsed.</summary>

@@ -7,8 +7,8 @@ namespace Kin.KinHub.Core.Business.RecipeAssistantFeature;
 /// </summary>
 public interface IRecipeAiService
 {
-    /// <summary>Suggests up to 3 recipes based on the fridge contents, prioritizing the family's saved recipes.</summary>
-    Task<Result<IReadOnlyList<RecipeSuggestionResponse>>> SuggestRecipesAsync(
+    /// <summary>Suggests recipes based on the fridge contents: existing family recipes with backend-computed match percentage, and up to 3 new AI-invented recipes.</summary>
+    Task<Result<SuggestRecipesResult>> SuggestRecipesAsync(
         Guid fridgeId,
         Guid userId,
         CancellationToken cancellationToken = default);
