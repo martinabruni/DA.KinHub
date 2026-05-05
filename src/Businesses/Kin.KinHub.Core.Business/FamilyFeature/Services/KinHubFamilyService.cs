@@ -170,7 +170,7 @@ public sealed class KinHubFamilyService : IFamilyService
 
             return Result<FamilyDetailResponse>.Success(new FamilyDetailResponse
             {
-                FamilyId = family.Id,
+                Id = family.Id,
                 Name = family.Name,
                 Members = memberDtos,
             });
