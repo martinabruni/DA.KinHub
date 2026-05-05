@@ -14,10 +14,6 @@ internal sealed class CreateFamilyRequestValidator : AbstractValidator<CreateFam
             .NotEmpty()
             .MaximumLength(100);
 
-        RuleFor(x => x.AdminCode)
-            .NotEmpty()
-            .MaximumLength(100);
-
         RuleForEach(x => x.AdditionalMembers)
             .NotEmpty()
             .MaximumLength(100);
