@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { apiClient } from '@/api/apiClient'
+import { useAuthContext } from '@/store/authContext'
 import type { RecipeBook } from '@/types'
 
 interface RecipeBookContextValue {
@@ -19,6 +20,7 @@ const RecipeBookContext = createContext<RecipeBookContextValue | null>(null)
 
 export function RecipeBookProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
+  const { isAuthenticated } = useAuthContext()
   const queryClient = useQueryClient()
   const qKey = ['recipe-books']
 
@@ -28,6 +30,7 @@ export function RecipeBookProvider({ children }: { children: ReactNode }) {
       const { data } = await apiClient.get<RecipeBook[]>('/api/recipe-books')
       return data
     },
+    enabled: isAuthenticated,
   })
 
   const invalidate = useCallback(() => {

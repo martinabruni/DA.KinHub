@@ -45,8 +45,10 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const updateNameMutation = useMutation({
-    mutationFn: (name: string) =>
-      apiClient.patch(`/api/families/${family!.id}`, { name }),
+    mutationFn: (name: string) => {
+      if (!family?.id) throw new Error("Family not loaded");
+      return apiClient.patch(`/api/families/${family.id}`, { name });
+    },
     onSuccess: () => {
       toast.success(t("family.updated"));
       invalidate();
@@ -57,8 +59,10 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: (name: string) =>
-      apiClient.post(`/api/families/${family!.id}/members`, { name }),
+    mutationFn: (name: string) => {
+      if (!family?.id) throw new Error("Family not loaded");
+      return apiClient.post(`/api/families/${family.id}/members`, { name });
+    },
     onSuccess: () => invalidate(),
     onError: (err) => {
       toast.error(getApiErrorMessage(err));
@@ -66,10 +70,12 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: ({ memberId, name }: { memberId: string; name: string }) =>
-      apiClient.put(`/api/families/${family!.id}/members/${memberId}`, {
+    mutationFn: ({ memberId, name }: { memberId: string; name: string }) => {
+      if (!family?.id) throw new Error("Family not loaded");
+      return apiClient.put(`/api/families/${family.id}/members/${memberId}`, {
         name,
-      }),
+      });
+    },
     onSuccess: () => invalidate(),
     onError: (err) => {
       toast.error(getApiErrorMessage(err));
@@ -77,8 +83,10 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) =>
-      apiClient.delete(`/api/families/${family!.id}/members/${memberId}`),
+    mutationFn: (memberId: string) => {
+      if (!family?.id) throw new Error("Family not loaded");
+      return apiClient.delete(`/api/families/${family.id}/members/${memberId}`);
+    },
     onSuccess: () => {
       toast.success(t("family.memberRemoved"));
       invalidate();
@@ -103,8 +111,11 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   });
 
   const leaveFamilyMutation = useMutation({
-    mutationFn: () =>
-      apiClient.delete(`/api/families/${family!.id}/members/${activeMember!.id}`),
+    mutationFn: () => {
+      if (!family?.id) throw new Error("Family not loaded");
+      if (!activeMember?.id) throw new Error("Active member not set");
+      return apiClient.delete(`/api/families/${family.id}/members/${activeMember.id}`);
+    },
     onSuccess: () => {
       toast.success(t("family.left"));
       invalidate();
@@ -115,7 +126,10 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   });
 
   const deleteFamilyMutation = useMutation({
-    mutationFn: () => apiClient.delete(`/api/families/${family!.id}`),
+    mutationFn: () => {
+      if (!family?.id) throw new Error("Family not loaded");
+      return apiClient.delete(`/api/families/${family.id}`);
+    },
     onSuccess: () => {
       toast.success(t("family.deleted"));
       invalidate();

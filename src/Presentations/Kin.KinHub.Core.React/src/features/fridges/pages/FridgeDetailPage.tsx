@@ -28,12 +28,22 @@ function FridgeDetailContent() {
   const { data: fridge, isLoading } = useQuery({
     queryKey: ['fridge', id],
     queryFn: async () => {
-      const { data } = await apiClient.get<Fridge & { ingredients: FridgeIngredient[] }>(`/api/fridges/${id}`)
+      const { data } = await apiClient.get<Fridge>(`/api/fridges/${id}`)
       return data
     },
+    enabled: !!id,
   })
 
-  const filtered = (fridge?.ingredients ?? []).filter((i) =>
+  const { data: ingredients = [] } = useQuery({
+    queryKey: ['fridge-ingredients', id],
+    queryFn: async () => {
+      const { data } = await apiClient.get<FridgeIngredient[]>(`/api/fridges/${id}/ingredients`)
+      return data
+    },
+    enabled: !!id,
+  })
+
+  const filtered = ingredients.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
   )
 
