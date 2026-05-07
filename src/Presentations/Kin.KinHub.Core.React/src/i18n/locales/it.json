@@ -225,7 +225,7 @@
   },
   "aiAssistant": {
     "title": "Assistente Ricette AI",
-    "subtitle": "Powered by GPT-4o — lascia che l'AI ti aiuti a cucinare meglio",
+    "subtitle": "Lascia che l'AI ti aiuti a cucinare meglio",
     "tabs": {
       "suggest": "Suggerisci Ricette",
       "parse": "Analizza Ricetta",
