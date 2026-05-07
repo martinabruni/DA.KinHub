@@ -3,7 +3,7 @@ using Mapster;
 
 namespace Kin.KinHub.Core.Business.RecipeAssistantFeature;
 
-public sealed class KinHubRecipeAiService : IRecipeAiService
+public sealed class KinHubRecipeAssistantManager : IRecipeAssistantManager
 {
     private readonly IFamilyRepository _familyRepository;
     private readonly IFridgeRepository _fridgeRepository;
@@ -14,7 +14,7 @@ public sealed class KinHubRecipeAiService : IRecipeAiService
     private readonly IRecipeStepRepository _recipeStepRepository;
     private readonly IRecipeAssistantService _recipeAssistantService;
 
-    public KinHubRecipeAiService(
+    public KinHubRecipeAssistantManager(
         IFamilyRepository familyRepository,
         IFridgeRepository fridgeRepository,
         IFridgeIngredientRepository fridgeIngredientRepository,
@@ -81,7 +81,7 @@ public sealed class KinHubRecipeAiService : IRecipeAiService
                     Name = recipe.Name,
                     MatchPercentage = matchPercentage,
                     MissingIngredients = missingIngredients
-                        .Select(i => new AiIngredientResponse { Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit })
+                        .Select(i => new AssistantIngredientResponse { Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit })
                         .ToList(),
                 });
             }

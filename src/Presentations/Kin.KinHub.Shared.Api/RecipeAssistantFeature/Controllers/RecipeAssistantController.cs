@@ -6,14 +6,14 @@ namespace Kin.KinHub.Shared.Api.RecipeAssistantFeature;
 [Route("api/recipe-assistant")]
 public sealed class RecipeAssistantController : ControllerBase
 {
-    private readonly IRecipeAiService _recipeAiService;
+    private readonly IRecipeAssistantManager _recipeAiService;
     private readonly IRequestValidator<SuggestRecipesRequest> _suggestValidator;
     private readonly IRequestValidator<ParseRecipeRequest> _parseValidator;
     private readonly IRequestValidator<AdaptRecipeRequest> _adaptValidator;
     private readonly ICurrentUser _currentUser;
 
     public RecipeAssistantController(
-        IRecipeAiService recipeAiService,
+        IRecipeAssistantManager recipeAiService,
         IRequestValidator<SuggestRecipesRequest> suggestValidator,
         IRequestValidator<ParseRecipeRequest> parseValidator,
         IRequestValidator<AdaptRecipeRequest> adaptValidator,

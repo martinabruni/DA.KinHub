@@ -5,7 +5,7 @@ namespace Kin.KinHub.Core.Business.RecipeAssistantFeature;
 /// <summary>
 /// Orchestrates AI-powered recipe features: suggestion from fridge contents, parsing from raw text, and constraint-based adaptation.
 /// </summary>
-public interface IRecipeAiService
+public interface IRecipeAssistantManager
 {
     /// <summary>Suggests recipes based on the fridge contents: existing family recipes with backend-computed match percentage, and up to 3 new AI-invented recipes.</summary>
     Task<Result<SuggestRecipesResult>> SuggestRecipesAsync(

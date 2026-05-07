@@ -6,6 +6,6 @@ public sealed class ParsedRecipeResponse
     public string? Backstory { get; init; }
     public required TimeSpan FinalTime { get; init; }
     public required int Portions { get; init; }
-    public IReadOnlyList<AiIngredientResponse> Ingredients { get; init; } = [];
-    public IReadOnlyList<AiStepResponse> Steps { get; init; } = [];
+    public IReadOnlyList<AssistantIngredientResponse> Ingredients { get; init; } = [];
+    public IReadOnlyList<AssistantStepResponse> Steps { get; init; } = [];
 }
