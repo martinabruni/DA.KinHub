@@ -276,7 +276,6 @@ public partial class CoreDbContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.IsChecked).HasDefaultValue(false);
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(200);
@@ -284,7 +283,6 @@ public partial class CoreDbContext : DbContext
 
             entity.HasOne(d => d.ShoppingList).WithMany(p => p.ShoppingListItemEntity)
                 .HasForeignKey(d => d.ShoppingListId)
-                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_kinrecipe_ShoppingListItemEntity_ShoppingListId");
         });
 
