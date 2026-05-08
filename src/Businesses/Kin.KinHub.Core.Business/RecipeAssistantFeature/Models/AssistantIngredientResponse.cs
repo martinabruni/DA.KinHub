@@ -1,6 +1,6 @@
 namespace Kin.KinHub.Core.Business.RecipeAssistantFeature;
 
-public sealed class AiIngredientResponse
+public sealed class AssistantIngredientResponse
 {
     public Guid? Id { get; init; }
     public required string Name { get; init; }

@@ -41,6 +41,7 @@ import type {
   Fridge,
   Recipe,
   RecipeBook,
+  ShoppingList,
   SuggestRecipesResult,
 } from "@/types";
 
@@ -52,11 +53,21 @@ function SuggestTab() {
   const [results, setResults] = useState<SuggestRecipesResult | null>(null);
   const [saveRecipe, setSaveRecipe] = useState<AISuggestedRecipe | null>(null);
   const [saveBookId, setSaveBookId] = useState("");
+  const [addListRecipeKey, setAddListRecipeKey] = useState<string | null>(null);
+  const [addListIds, setAddListIds] = useState<Record<string, string>>({});
 
   const { data: fridges = [] } = useQuery({
     queryKey: ["fridges"],
     queryFn: async () => {
       const { data } = await apiClient.get<Fridge[]>("/api/fridges");
+      return data;
+    },
+  });
+
+  const { data: shoppingLists = [] } = useQuery({
+    queryKey: ["shopping-lists"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ShoppingList[]>("/api/shopping-lists");
       return data;
     },
   });
@@ -75,6 +86,18 @@ function SuggestTab() {
       );
       toast.success(t("aiAssistant.suggest.saved"));
       setSaveRecipe(null);
+    } catch {
+      toast.error(t("common.error"));
+    }
+  };
+
+  const handleAddToList = async (key: string, names: string[]) => {
+    const listId = addListIds[key];
+    if (!listId || !names.length) return;
+    try {
+      await apiClient.post(`/api/shopping-lists/${listId}/items/bulk`, { names, shoppingListId: listId });
+      toast.success(t("shoppingLists.addedToList"));
+      setAddListRecipeKey(null);
     } catch {
       toast.error(t("common.error"));
     }
@@ -132,13 +155,49 @@ function SuggestTab() {
                         />
                       </div>
                       {r.missingIngredients.length > 0 && (
-                        <ul className="mt-2 space-y-0.5">
-                          {r.missingIngredients.map((ing, i) => (
-                            <li key={i} className="text-xs text-destructive">
-                              − {ing.quantity} {ing.measureUnit} {ing.name}
-                            </li>
-                          ))}
-                        </ul>
+                        <>
+                          <ul className="mt-2 space-y-0.5">
+                            {r.missingIngredients.map((ing, i) => (
+                              <li key={i} className="text-xs text-destructive">
+                                − {ing.quantity} {ing.measureUnit} {ing.name}
+                              </li>
+                            ))}
+                          </ul>
+                          {addListRecipeKey === r.recipeId ? (
+                            <div className="mt-2 flex gap-2">
+                              <Select
+                                value={addListIds[r.recipeId] ?? ""}
+                                onValueChange={(v) => setAddListIds((prev) => ({ ...prev, [r.recipeId]: v }))}
+                              >
+                                <SelectTrigger className="flex-1 h-8 text-xs">
+                                  <SelectValue placeholder={t("shoppingLists.selectList")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {shoppingLists.map((l) => (
+                                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                size="sm"
+                                className="h-8 text-xs"
+                                disabled={!addListIds[r.recipeId]}
+                                onClick={() => handleAddToList(r.recipeId, r.missingIngredients.map((i) => i.name))}
+                              >
+                                {t("shoppingLists.addToList")}
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 h-8 text-xs"
+                              onClick={() => setAddListRecipeKey(r.recipeId)}
+                            >
+                              {t("shoppingLists.addToList")}
+                            </Button>
+                          )}
+                        </>
                       )}
                     </CardContent>
                   </Card>
@@ -152,44 +211,83 @@ function SuggestTab() {
               {t("aiAssistant.suggest.aiRecipes")}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {results.newRecipes.map((r, i) => (
-                <Card key={i}>
-                  <CardContent className="pt-4 pb-4">
-                    <p className="font-semibold">{r.recipe.name}</p>
-                    {r.recipe.backstory && (
-                      <p className="text-muted-foreground text-sm mt-1">
-                        {r.recipe.backstory}
-                      </p>
-                    )}
-                    <div className="mt-3">
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {t("aiAssistant.suggest.matchScore")}: {r.matchPercentage}%
-                      </p>
-                      <Progress
-                        value={r.matchPercentage}
-                        className="h-2 bg-muted [&>div]:bg-green-500"
-                      />
-                    </div>
-                    {r.missingIngredients.length > 0 && (
-                      <ul className="mt-2 space-y-0.5">
-                        {r.missingIngredients.map((ing, j) => (
-                          <li key={j} className="text-xs text-destructive">
-                            − {ing.quantity} {ing.measureUnit} {ing.name}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() => setSaveRecipe(r)}
-                    >
-                      {t("aiAssistant.suggest.saveToBook")}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+              {results.newRecipes.map((r, i) => {
+                const cardKey = `new-${i}`;
+                return (
+                  <Card key={i}>
+                    <CardContent className="pt-4 pb-4">
+                      <p className="font-semibold">{r.recipe.name}</p>
+                      {r.recipe.backstory && (
+                        <p className="text-muted-foreground text-sm mt-1">
+                          {r.recipe.backstory}
+                        </p>
+                      )}
+                      <div className="mt-3">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {t("aiAssistant.suggest.matchScore")}: {r.matchPercentage}%
+                        </p>
+                        <Progress
+                          value={r.matchPercentage}
+                          className="h-2 bg-muted [&>div]:bg-green-500"
+                        />
+                      </div>
+                      {r.missingIngredients.length > 0 && (
+                        <>
+                          <ul className="mt-2 space-y-0.5">
+                            {r.missingIngredients.map((ing, j) => (
+                              <li key={j} className="text-xs text-destructive">
+                                − {ing.quantity} {ing.measureUnit} {ing.name}
+                              </li>
+                            ))}
+                          </ul>
+                          {addListRecipeKey === cardKey ? (
+                            <div className="mt-2 flex gap-2">
+                              <Select
+                                value={addListIds[cardKey] ?? ""}
+                                onValueChange={(v) => setAddListIds((prev) => ({ ...prev, [cardKey]: v }))}
+                              >
+                                <SelectTrigger className="flex-1 h-8 text-xs">
+                                  <SelectValue placeholder={t("shoppingLists.selectList")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {shoppingLists.map((l) => (
+                                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                size="sm"
+                                className="h-8 text-xs"
+                                disabled={!addListIds[cardKey]}
+                                onClick={() => handleAddToList(cardKey, r.missingIngredients.map((ing) => ing.name))}
+                              >
+                                {t("shoppingLists.addToList")}
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 h-8 text-xs"
+                              onClick={() => setAddListRecipeKey(cardKey)}
+                            >
+                              {t("shoppingLists.addToList")}
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => setSaveRecipe(r)}
+                      >
+                        {t("aiAssistant.suggest.saveToBook")}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </div>

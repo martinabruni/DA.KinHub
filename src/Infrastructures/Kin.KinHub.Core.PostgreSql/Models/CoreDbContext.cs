@@ -33,6 +33,10 @@ public partial class CoreDbContext : DbContext
 
     public virtual DbSet<RecipeStepEntity> RecipeStepEntity { get; set; }
 
+    public virtual DbSet<ShoppingListEntity> ShoppingListEntity { get; set; }
+
+    public virtual DbSet<ShoppingListItemEntity> ShoppingListItemEntity { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("vector");
@@ -244,6 +248,42 @@ public partial class CoreDbContext : DbContext
                 .HasForeignKey(d => d.RecipeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_kinrecipe_RecipeStepEntity_RecipeId");
+        });
+
+        modelBuilder.Entity<ShoppingListEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_kinrecipe_ShoppingListEntity");
+
+            entity.ToTable("ShoppingListEntity", "kinrecipe");
+
+            entity.HasIndex(e => e.FamilyId, "IX_kinrecipe_ShoppingListEntity_FamilyId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<ShoppingListItemEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_kinrecipe_ShoppingListItemEntity");
+
+            entity.ToTable("ShoppingListItemEntity", "kinrecipe");
+
+            entity.HasIndex(e => e.ShoppingListId, "IX_kinrecipe_ShoppingListItemEntity_ShoppingListId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.ShoppingList).WithMany(p => p.ShoppingListItemEntity)
+                .HasForeignKey(d => d.ShoppingListId)
+                .HasConstraintName("FK_kinrecipe_ShoppingListItemEntity_ShoppingListId");
         });
 
         OnModelCreatingPartial(modelBuilder);

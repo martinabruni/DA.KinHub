@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { useFamily } from '@/features/family/FamilyProvider'
 import { apiClient } from '@/api/apiClient'
 import { getInitials } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -50,6 +51,7 @@ export function ProfilePage() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
+  const { family, leaveFamily } = useFamily()
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({ resolver: zodResolver(emailSchema) })
@@ -173,7 +175,28 @@ export function ProfilePage() {
             <CardTitle className="text-base text-destructive">{t('profile.dangerZone.title')}</CardTitle>
           </CardHeader>
           <Separator />
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 space-y-2">
+            {(family?.members?.length ?? 0) > 1 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="w-full border-destructive text-destructive hover:bg-destructive/10">
+                    {t('family.dangerZone.leave')}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t('family.dangerZone.leaveTitle')}</AlertDialogTitle>
+                    <AlertDialogDescription>{t('family.dangerZone.leaveDescription')}</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={leaveFamily}>
+                      {t('family.dangerZone.leaveConfirm')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full">{t('profile.dangerZone.delete')}</Button>

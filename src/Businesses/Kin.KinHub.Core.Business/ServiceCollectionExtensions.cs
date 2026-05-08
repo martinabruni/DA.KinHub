@@ -23,7 +23,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRecipeStepService, KinHubRecipeStepService>();
         services.AddScoped<IFridgeService, KinHubFridgeService>();
         services.AddScoped<IFridgeIngredientService, KinHubFridgeIngredientService>();
-        services.AddScoped<IRecipeAiService, KinHubRecipeAiService>();
+        services.AddScoped<IShoppingListService, KinHubShoppingListService>();
+        services.AddScoped<IShoppingListItemService, KinHubShoppingListItemService>();
+        services.AddScoped<IRecipeAssistantManager, KinHubRecipeAssistantManager>();
 
         return services;
     }

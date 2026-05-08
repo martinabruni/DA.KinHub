@@ -57,6 +57,14 @@
       {
          "Name": "kinrecipe.RecipeStepEntity",
          "ObjectType": 0
+      },
+      {
+         "Name": "kinrecipe.ShoppingListEntity",
+         "ObjectType": 0
+      },
+      {
+         "Name": "kinrecipe.ShoppingListItemEntity",
+         "ObjectType": 0
       }
    ],
    "UiHint": null,

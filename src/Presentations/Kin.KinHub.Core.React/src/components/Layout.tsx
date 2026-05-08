@@ -4,12 +4,14 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { BottomNav } from './BottomNav'
 import { ServicesProvider } from '@/features/family/ServicesProvider'
+import { FamilyProvider } from '@/features/family/FamilyProvider'
 
 export function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
+    <FamilyProvider>
     <ServicesProvider>
       <div className="min-h-screen bg-background flex">
         <Sidebar
@@ -31,5 +33,6 @@ export function Layout() {
         <BottomNav />
       </div>
     </ServicesProvider>
+    </FamilyProvider>
   )
 }
