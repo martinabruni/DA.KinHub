@@ -10,6 +10,7 @@
     "recipeBooks": "Recipe Books",
     "fridges": "Fridges",
     "aiAssistant": "AI Assistant",
+    "shoppingLists": "Shopping List",
     "profile": "Profile",
     "logout": "Logout"
   },
@@ -324,6 +325,49 @@
     "familyBanner": "{{name}} family",
     "members": "{{count}} member",
     "members_other": "{{count}} members"
+  },
+  "shoppingLists": {
+    "title": "Shopping Lists",
+    "new": "New List",
+    "itemCount": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "checkedCount": "{{checked}}/{{total}} checked",
+    "empty": {
+      "title": "No shopping lists yet",
+      "cta": "Create your first one"
+    },
+    "emptyItems": {
+      "title": "List is empty.",
+      "cta": "Add your first item."
+    },
+    "create": {
+      "title": "New Shopping List",
+      "namePlaceholder": "e.g. Weekly Groceries",
+      "submit": "Create"
+    },
+    "edit": {
+      "title": "Edit List",
+      "submit": "Save"
+    },
+    "delete": {
+      "title": "Delete List",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "deleteChecked": "Delete checked",
+    "deleteCheckedConfirm": "Delete all checked items?",
+    "addItem": "Add item",
+    "addItemPlaceholder": "Item name",
+    "addToList": "Add to list",
+    "selectList": "Choose a list...",
+    "addedToList": "Items added to list.",
+    "created": "List created.",
+    "updated": "List updated.",
+    "deleted": "List deleted.",
+    "itemAdded": "Item added.",
+    "itemDeleted": "Item removed.",
+    "itemToggled": "Item updated.",
+    "checkedDeleted": "Checked items deleted."
   },
   "common": {
     "loading": "Loading...",

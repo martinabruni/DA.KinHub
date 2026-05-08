@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { NavLink } from 'react-router-dom'
-import { BookOpen, Refrigerator, Sparkles } from 'lucide-react'
+import { BookOpen, Refrigerator, ShoppingCart, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 const serviceNavItems = [
   { to: '/recipe-books', icon: BookOpen, labelKey: 'nav.recipeBooks' },
   { to: '/fridges', icon: Refrigerator, labelKey: 'nav.fridges' },
+  { to: '/shopping-lists', icon: ShoppingCart, labelKey: 'nav.shoppingLists' },
   { to: '/ai-assistant', icon: Sparkles, labelKey: 'nav.aiAssistant', badge: 'AI' },
 ]
 

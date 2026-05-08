@@ -18,6 +18,8 @@ import { RecipeBookDetailPage } from '@/features/recipes/pages/RecipeBookDetailP
 import { RecipeDetailPage } from '@/features/recipes/pages/RecipeDetailPage'
 import { FridgesPage } from '@/features/fridges/pages/FridgesPage'
 import { FridgeDetailPage } from '@/features/fridges/pages/FridgeDetailPage'
+import { ShoppingListsPage } from '@/features/shopping-lists/pages/ShoppingListsPage'
+import { ShoppingListDetailPage } from '@/features/shopping-lists/pages/ShoppingListDetailPage'
 import { AIAssistantPage } from '@/features/ai-assistant/pages/AIAssistantPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 
@@ -70,6 +72,8 @@ export const router = createBrowserRouter([
                       { path: '/recipe-books/:id/recipes/:recipeId', element: <RecipeDetailPage /> },
                       { path: '/fridges', element: <FridgesPage /> },
                       { path: '/fridges/:id', element: <FridgeDetailPage /> },
+                      { path: '/shopping-lists', element: <ShoppingListsPage /> },
+                      { path: '/shopping-lists/:id', element: <ShoppingListDetailPage /> },
                       { path: '/ai-assistant', element: <AIAssistantPage /> },
                     ],
                   },

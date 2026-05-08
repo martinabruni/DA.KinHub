@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -17,7 +18,7 @@ import { RecipeBookProvider, useRecipeBooks } from '@/features/recipes/RecipeBoo
 import { RecipeProvider, useRecipes } from '@/features/recipes/RecipeProvider'
 import { apiClient } from '@/api/apiClient'
 import { hashColor } from '@/lib/utils'
-import type { Fridge } from '@/types'
+import type { Fridge, ShoppingList } from '@/types'
 
 function RecipeDetailContent() {
   const { t } = useTranslation()
@@ -29,6 +30,7 @@ function RecipeDetailContent() {
   const [showStepForm, setShowStepForm] = useState(false)
   const [selectedFridgeId, setSelectedFridgeId] = useState<string>('')
   const [missingIngredients, setMissingIngredients] = useState<string[] | null>(null)
+  const [selectedListId, setSelectedListId] = useState<string>('')
 
   const ingForm = useForm<{ name: string; quantity: string; unit: string }>({ defaultValues: { name: '', quantity: '', unit: '' } })
   const stepForm = useForm<{ description: string }>({ defaultValues: { description: '' } })
@@ -36,6 +38,11 @@ function RecipeDetailContent() {
   const { data: fridges = [] } = useQuery({
     queryKey: ['fridges'],
     queryFn: async () => { const { data } = await apiClient.get<Fridge[]>('/api/fridges'); return data },
+  })
+
+  const { data: shoppingLists = [] } = useQuery({
+    queryKey: ['shopping-lists'],
+    queryFn: async () => { const { data } = await apiClient.get<ShoppingList[]>('/api/shopping-lists'); return data },
   })
 
   const recipe = getRecipe(recipeId!)
@@ -48,6 +55,16 @@ function RecipeDetailContent() {
       setMissingIngredients(data.missingIngredients ?? [])
     } catch {
       setMissingIngredients([])
+    }
+  }
+
+  const addMissingToList = async () => {
+    if (!selectedListId || !missingIngredients?.length) return
+    try {
+      await apiClient.post(`/api/shopping-lists/${selectedListId}/items/bulk`, { names: missingIngredients, shoppingListId: selectedListId })
+      toast.success(t('shoppingLists.addedToList'))
+    } catch {
+      toast.error(t('common.error'))
     }
   }
 
@@ -203,9 +220,23 @@ function RecipeDetailContent() {
           {missingIngredients !== null && (
             missingIngredients.length === 0
               ? <Badge className="bg-green-500 text-white">{t('recipes.allAvailable')}</Badge>
-              : missingIngredients.map((name) => (
-                  <Badge key={name} variant="destructive">{t('recipes.missing')}: {name}</Badge>
-                ))
+              : <>
+                  {missingIngredients.map((name) => (
+                    <Badge key={name} variant="destructive">{t('recipes.missing')}: {name}</Badge>
+                  ))}
+                  <Separator orientation="vertical" className="h-6 mx-1" />
+                  <Select value={selectedListId} onValueChange={setSelectedListId}>
+                    <SelectTrigger className="w-44">
+                      <SelectValue placeholder={t('shoppingLists.selectList')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shoppingLists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={addMissingToList} disabled={!selectedListId}>
+                    {t('shoppingLists.addToList')}
+                  </Button>
+                </>
           )}
         </CardContent>
       </Card>

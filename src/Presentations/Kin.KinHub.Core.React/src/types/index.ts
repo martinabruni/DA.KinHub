@@ -123,6 +123,25 @@ export interface AIAdaptedRecipe {
   changedOriginalIngredientIds: string[];
 }
 
+export interface ShoppingList {
+  id: string;
+  name: string;
+  familyId: string;
+  itemCount: number;
+  checkedCount: number;
+}
+
+export interface ShoppingListItem {
+  id: string;
+  name: string;
+  isChecked: boolean;
+  createdAt: string;
+}
+
+export interface BulkAddShoppingListItemsResponse {
+  addedCount: number;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

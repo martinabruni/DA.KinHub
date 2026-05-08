@@ -10,6 +10,7 @@
     "recipeBooks": "Ricettari",
     "fridges": "Frigoriferi",
     "aiAssistant": "Assistente AI",
+    "shoppingLists": "Lista della Spesa",
     "profile": "Profilo",
     "logout": "Esci"
   },
@@ -324,6 +325,49 @@
     "familyBanner": "Famiglia {{name}}",
     "members": "{{count}} membro",
     "members_other": "{{count}} membri"
+  },
+  "shoppingLists": {
+    "title": "Liste della Spesa",
+    "new": "Nuova Lista",
+    "itemCount": "{{count}} articolo",
+    "itemCount_other": "{{count}} articoli",
+    "checkedCount": "{{checked}}/{{total}} spuntati",
+    "empty": {
+      "title": "Nessuna lista della spesa",
+      "cta": "Crea la prima"
+    },
+    "emptyItems": {
+      "title": "Lista vuota.",
+      "cta": "Aggiungi il primo articolo."
+    },
+    "create": {
+      "title": "Nuova Lista della Spesa",
+      "namePlaceholder": "es. Spesa Settimanale",
+      "submit": "Crea"
+    },
+    "edit": {
+      "title": "Modifica Lista",
+      "submit": "Salva"
+    },
+    "delete": {
+      "title": "Elimina Lista",
+      "description": "Sei sicuro di voler eliminare \"{{name}}\"? Azione irreversibile.",
+      "confirm": "Elimina"
+    },
+    "deleteChecked": "Elimina spuntati",
+    "deleteCheckedConfirm": "Eliminare tutti gli articoli spuntati?",
+    "addItem": "Aggiungi articolo",
+    "addItemPlaceholder": "Nome articolo",
+    "addToList": "Aggiungi alla lista",
+    "selectList": "Scegli una lista...",
+    "addedToList": "Articoli aggiunti alla lista.",
+    "created": "Lista creata.",
+    "updated": "Lista aggiornata.",
+    "deleted": "Lista eliminata.",
+    "itemAdded": "Articolo aggiunto.",
+    "itemDeleted": "Articolo rimosso.",
+    "itemToggled": "Articolo aggiornato.",
+    "checkedDeleted": "Articoli spuntati eliminati."
   },
   "common": {
     "loading": "Caricamento...",

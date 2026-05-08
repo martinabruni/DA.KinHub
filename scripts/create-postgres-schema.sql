@@ -317,6 +317,38 @@ CREATE INDEX "IX_kinrecipe_FridgeIngredientEntity_Embedding"
     ON kinrecipe."FridgeIngredientEntity" USING ivfflat ("Embedding" vector_cosine_ops)
     WHERE "Embedding" IS NOT NULL;
 
+-- kinrecipe."ShoppingListEntity"
+CREATE TABLE kinrecipe."ShoppingListEntity"
+(
+    "Id"        UUID         NOT NULL DEFAULT gen_random_uuid(),
+    "Name"      VARCHAR(200) NOT NULL,
+    "FamilyId"  UUID         NOT NULL,
+    "CreatedAt" TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    "UpdatedAt" TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT "PK_kinrecipe_ShoppingListEntity" PRIMARY KEY ("Id")
+);
+
+CREATE INDEX "IX_kinrecipe_ShoppingListEntity_FamilyId"
+    ON kinrecipe."ShoppingListEntity" ("FamilyId");
+
+-- kinrecipe."ShoppingListItemEntity"
+CREATE TABLE kinrecipe."ShoppingListItemEntity"
+(
+    "Id"             UUID         NOT NULL DEFAULT gen_random_uuid(),
+    "Name"           VARCHAR(200) NOT NULL,
+    "IsChecked"      BOOLEAN      NOT NULL DEFAULT FALSE,
+    "ShoppingListId" UUID         NOT NULL,
+    "CreatedAt"      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    "UpdatedAt"      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT "PK_kinrecipe_ShoppingListItemEntity" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_kinrecipe_ShoppingListItemEntity_ShoppingListId"
+        FOREIGN KEY ("ShoppingListId") REFERENCES kinrecipe."ShoppingListEntity" ("Id")
+        ON DELETE CASCADE
+);
+
+CREATE INDEX "IX_kinrecipe_ShoppingListItemEntity_ShoppingListId"
+    ON kinrecipe."ShoppingListItemEntity" ("ShoppingListId");
+
 -- =============================================================================
 -- SEED DATA
 -- =============================================================================
