@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api/apiClient";
 import { useAuthContext } from "@/store/authContext";
-import { getApiErrorMessage } from "@/lib/errors";
 import type { Family } from "@/types";
 
 interface FamilyContextValue {
@@ -54,9 +53,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.updated"));
       invalidate();
     },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
-    },
   });
 
   const addMemberMutation = useMutation({
@@ -66,12 +62,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       return apiClient.post(`/api/families/${currentFamily.id}/members`, { name });
     },
     onSuccess: () => invalidate(),
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
-    },
   });
 
-  const updateMemberMutation = useMutation({
+  const updateMemberMutation= useMutation({
     mutationFn: ({ memberId, name }: { memberId: string; name: string }) => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
@@ -80,12 +73,9 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => invalidate(),
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
-    },
   });
 
-  const removeMemberMutation = useMutation({
+  const removeMemberMutation= useMutation({
     mutationFn: (memberId: string) => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
@@ -94,9 +84,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       toast.success(t("family.memberRemoved"));
       invalidate();
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
     },
   });
 
@@ -108,9 +95,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       invalidate();
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
     },
   });
 
@@ -125,9 +109,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       toast.success(t("family.left"));
       invalidate();
     },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
-    },
   });
 
   const deleteFamilyMutation = useMutation({
@@ -139,9 +120,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       toast.success(t("family.deleted"));
       invalidate();
-    },
-    onError: (err) => {
-      toast.error(getApiErrorMessage(err));
     },
   });
 

@@ -382,5 +382,12 @@
     "search": "Cerca",
     "clear": "Pulisci",
     "retry": "Riprova"
+  },
+  "errors": {
+    "sessionExpired": "Sessione scaduta, effettua di nuovo il login.",
+    "forbidden": "Non hai i permessi per eseguire questa operazione.",
+    "notFound": "La risorsa richiesta non è stata trovata.",
+    "serverError": "Errore del server. Riprova tra qualche istante.",
+    "generic": "Si è verificato un errore. Riprova."
   }
 }

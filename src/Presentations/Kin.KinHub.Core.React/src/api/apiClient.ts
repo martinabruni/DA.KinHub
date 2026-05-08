@@ -1,4 +1,7 @@
 import axios, { type AxiosRequestConfig } from "axios";
+import { toast } from "sonner";
+import i18next from "i18next";
+import { getStatusAwareErrorMessage } from "@/lib/errors";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
@@ -39,6 +42,10 @@ apiClient.interceptors.response.use(
     const original = error.config as AxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status !== 401 || original._retry) {
+      const status = error.response?.status;
+      if (status !== undefined && status >= 400) {
+        toast.error(getStatusAwareErrorMessage(error, status));
+      }
       return Promise.reject(error);
     }
 
@@ -72,6 +79,7 @@ apiClient.interceptors.response.use(
     } catch (err) {
       processQueue(err, null);
       clearTokens();
+      toast.error(i18next.t("errors.sessionExpired"));
       window.location.href = "/login";
       return Promise.reject(err);
     } finally {

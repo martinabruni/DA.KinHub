@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Kin.KinHub.Identity.PostgreSql.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Kin.KinHub.Identity.PostgreSql.AuthenticationFeature;
 
