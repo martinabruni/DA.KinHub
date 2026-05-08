@@ -382,5 +382,12 @@
     "search": "Search",
     "clear": "Clear",
     "retry": "Retry"
+  },
+  "errors": {
+    "sessionExpired": "Session expired, please log in again.",
+    "forbidden": "You don't have permission to perform this action.",
+    "notFound": "The requested resource was not found.",
+    "serverError": "Server error. Please try again in a moment.",
+    "generic": "Something went wrong. Please try again."
   }
 }
