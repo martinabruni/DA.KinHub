@@ -1,4 +1,5 @@
-﻿using Mapster;
+﻿using Kin.KinHub.Identity.PostgreSql.Models;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kin.KinHub.Identity.PostgreSql.AuthenticationFeature;

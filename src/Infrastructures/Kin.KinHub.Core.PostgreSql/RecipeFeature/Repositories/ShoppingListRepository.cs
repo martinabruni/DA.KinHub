@@ -1,3 +1,4 @@
+using Kin.KinHub.Core.PostgreSql.Models;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
