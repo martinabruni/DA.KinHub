@@ -24,6 +24,13 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware
             {
                 var currentUser = context.RequestServices.GetRequiredService<CurrentUser>();
                 currentUser.Populate(claims);
+
+                var memberIdHeader = context.Request.Headers["X-Member-Id"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(memberIdHeader)
+                    && Guid.TryParse(memberIdHeader, out var memberId))
+                {
+                    currentUser.SetFamilyMemberId(memberId);
+                }
             }
         }
 
