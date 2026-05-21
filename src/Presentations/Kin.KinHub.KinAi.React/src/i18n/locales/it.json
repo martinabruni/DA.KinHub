@@ -1,0 +1,50 @@
+{
+  "app": { "name": "KinBot", "tagline": "Il tuo assistente AI di famiglia" },
+  "auth": {
+    "signIn": "Accedi",
+    "signingIn": "Accesso in corso...",
+    "email": "Email",
+    "password": "Password",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
+    "sessionExpired": "Sessione scaduta. Effettua di nuovo l'accesso.",
+    "loggedOut": "Disconnessione completata.",
+    "accountCreated": "Account creato con successo."
+  },
+  "chat": {
+    "newConversation": "Nuova conversazione",
+    "untitledConversation": "Nuova chat",
+    "noConversations": "Nessuna conversazione. Iniziane una!",
+    "typeMessage": "Scrivi un messaggio...",
+    "send": "Invia",
+    "sending": "Invio in corso...",
+    "deleteConversation": "Elimina conversazione",
+    "confirmDelete": "Sei sicuro di voler eliminare questa conversazione?",
+    "cancel": "Annulla",
+    "confirm": "Conferma",
+    "reject": "Rifiuta",
+    "pendingAction": "Azione in attesa",
+    "pendingActionDesc": "L'assistente vuole eseguire la seguente azione:",
+    "noToolArguments": "Nessun parametro richiesto.",
+    "senders": {
+      "user": "Tu",
+      "assistant": "KinBot",
+      "tool": "Azione"
+    },
+    "toolNames": {
+      "create_shopping_list": "Crea lista della spesa",
+      "add_shopping_list_item": "Aggiungi elemento alla lista",
+      "create_recipe": "Crea ricetta",
+      "add_fridge_ingredient": "Aggiungi ingrediente al frigo",
+      "list_recipe_books": "Lista libri di ricette",
+      "list_shopping_lists": "Lista della spesa"
+    }
+  },
+  "errors": {
+    "sessionExpired": "Sessione scaduta. Effettua di nuovo l'accesso.",
+    "unexpected": "Si è verificato un errore imprevisto.",
+    "forbidden": "Non hai i permessi per eseguire questa azione.",
+    "notFound": "La risorsa richiesta non è stata trovata.",
+    "serverError": "Si è verificato un errore del server. Riprova più tardi."
+  }
+}
