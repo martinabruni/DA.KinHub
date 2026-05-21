@@ -24,4 +24,14 @@ public interface ICurrentUser
     /// Gets a value indicating whether the current request is authenticated.
     /// </summary>
     bool IsAuthenticated { get; }
+
+    /// <summary>
+    /// Gets the active family member ID selected for the current request (from the X-Member-Id header).
+    /// </summary>
+    Guid FamilyMemberId { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether an active family member has been set for this request.
+    /// </summary>
+    bool HasActiveMember { get; }
 }
