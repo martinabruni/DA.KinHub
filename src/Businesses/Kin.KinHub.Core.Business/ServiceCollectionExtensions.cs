@@ -26,6 +26,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShoppingListService, KinHubShoppingListService>();
         services.AddScoped<IShoppingListItemService, KinHubShoppingListItemService>();
         services.AddScoped<IRecipeAssistantManager, KinHubRecipeAssistantManager>();
+        services.AddScoped<IChatToolExecutor, KinHubChatToolExecutor>();
+        services.AddScoped<IChatManager, ChatManager>();
 
         return services;
     }
