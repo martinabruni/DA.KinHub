@@ -5,21 +5,19 @@ using System.Collections.Generic;
 
 namespace Kin.KinHub.Core.PostgreSql.Models;
 
-public partial class FamilyMemberEntity
+public partial class ChatConversationEntity
 {
     public Guid Id { get; set; }
 
-    public string Name { get; set; }
+    public Guid FamilyMemberId { get; set; }
 
-    public Guid FamilyId { get; set; }
-
-    public bool IsDeleted { get; set; }
+    public string Title { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual ICollection<ChatConversationEntity> ChatConversationEntity { get; set; } = new List<ChatConversationEntity>();
+    public virtual ICollection<ChatMessageEntity> ChatMessageEntity { get; set; } = new List<ChatMessageEntity>();
 
-    public virtual FamilyEntity Family { get; set; }
+    public virtual FamilyMemberEntity FamilyMember { get; set; }
 }

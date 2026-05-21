@@ -13,6 +13,12 @@ public partial class CoreDbContext : DbContext
     {
     }
 
+    public virtual DbSet<ChatConversationEntity> ChatConversationEntity { get; set; }
+
+    public virtual DbSet<ChatMessageEntity> ChatMessageEntity { get; set; }
+
+    public virtual DbSet<ChatToolCallEntity> ChatToolCallEntity { get; set; }
+
     public virtual DbSet<FamilyEntity> FamilyEntity { get; set; }
 
     public virtual DbSet<FamilyMemberEntity> FamilyMemberEntity { get; set; }
@@ -40,6 +46,71 @@ public partial class CoreDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("vector");
+
+        modelBuilder.Entity<ChatConversationEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_kinai_ChatConversationEntity");
+
+            entity.ToTable("ChatConversationEntity", "kinai");
+
+            entity.HasIndex(e => e.FamilyMemberId, "IX_kinai_ChatConversationEntity_FamilyMemberId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.FamilyMember).WithMany(p => p.ChatConversationEntity)
+                .HasForeignKey(d => d.FamilyMemberId)
+                .HasConstraintName("FK_kinai_ChatConversationEntity_FamilyMemberId");
+        });
+
+        modelBuilder.Entity<ChatMessageEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_kinai_ChatMessageEntity");
+
+            entity.ToTable("ChatMessageEntity", "kinai");
+
+            entity.HasIndex(e => e.ConversationId, "IX_kinai_ChatMessageEntity_ConversationId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Role)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Conversation).WithMany(p => p.ChatMessageEntity)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("FK_kinai_ChatMessageEntity_ConversationId");
+        });
+
+        modelBuilder.Entity<ChatToolCallEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_kinai_ChatToolCallEntity");
+
+            entity.ToTable("ChatToolCallEntity", "kinai");
+
+            entity.HasIndex(e => e.MessageId, "IX_kinai_ChatToolCallEntity_MessageId");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.ArgumentsJson).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.ToolName)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Message).WithMany(p => p.ChatToolCallEntity)
+                .HasForeignKey(d => d.MessageId)
+                .HasConstraintName("FK_kinai_ChatToolCallEntity_MessageId");
+        });
 
         modelBuilder.Entity<FamilyEntity>(entity =>
         {
