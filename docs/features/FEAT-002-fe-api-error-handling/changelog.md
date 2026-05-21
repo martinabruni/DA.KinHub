@@ -1,3 +1,14 @@
+---
+id: CHANGELOG-FEAT-002
+feature: FEAT-002
+type: changelog
+status: implemented
+created_at: 2026-05-08
+related:
+  - FEAT-002
+  - BUG-001
+---
+
 # Changelog
 
 ## 2026-05-08
