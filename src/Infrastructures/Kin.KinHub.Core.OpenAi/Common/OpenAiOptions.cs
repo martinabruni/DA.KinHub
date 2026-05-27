@@ -5,7 +5,7 @@ public sealed class OpenAiOptions
     public string Endpoint { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
     public string EmbeddingDeploymentName { get; set; } = "text-embedding-3-small";
-    public string ChatDeploymentName { get; set; } = "gpt-4o";
+    public string ModelDeploymentName { get; set; } = "gpt-4o";
 
     public string ParseRecipeSystemPrompt { get; set; } = """
         You are a recipe assistant. You process recipe parsing and generation tasks and respond exclusively with a single valid JSON object. No markdown, no code blocks, no prose outside of JSON.

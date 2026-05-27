@@ -1,7 +1,7 @@
 ---
 id: FEAT-001
 type: feature
-status: planned
+status: implemented
 priority: high
 created_at: 2026-05-08
 related: []

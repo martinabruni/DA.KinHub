@@ -23,7 +23,7 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
     public OpenAiRecipeAssistantService(OpenAiOptions options)
     {
         var client = new AzureOpenAIClient(new Uri(options.Endpoint), new AzureKeyCredential(options.ApiKey));
-        _chatClient = client.GetChatClient(options.ChatDeploymentName);
+        _chatClient = client.GetChatClient(options.ModelDeploymentName);
         _parsePrompt = options.ParseRecipeSystemPrompt;
         _suggestPrompt = options.SuggestRecipesSystemPrompt;
         _adaptPrompt = options.AdaptRecipeSystemPrompt;
