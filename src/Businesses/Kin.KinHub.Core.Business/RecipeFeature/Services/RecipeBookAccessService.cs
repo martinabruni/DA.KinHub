@@ -1,0 +1,100 @@
+using Microsoft.Extensions.Logging;
+
+namespace Kin.KinHub.Core.Business.RecipeFeature;
+
+public sealed class RecipeBookAccessResult
+{
+    private RecipeBookAccessResult(bool isSuccess, Family? family, RecipeBook? recipeBook, ResultStatus status, string? message)
+    {
+        IsSuccess = isSuccess;
+        Family = family;
+        RecipeBook = recipeBook;
+        Status = status;
+        Message = message;
+    }
+
+    public bool IsSuccess { get; }
+
+    public Family? Family { get; }
+
+    public RecipeBook? RecipeBook { get; }
+
+    public ResultStatus Status { get; }
+
+    public string? Message { get; }
+
+    public static RecipeBookAccessResult Success(Family family, RecipeBook recipeBook) =>
+        new(true, family, recipeBook, ResultStatus.Success, null);
+
+    public static RecipeBookAccessResult NotFound(string message) =>
+        new(false, null, null, ResultStatus.NotFound, message);
+
+    public static RecipeBookAccessResult Unauthorized(string message) =>
+        new(false, null, null, ResultStatus.Unauthorized, message);
+
+    public Result<T> ToResult<T>() =>
+        Status switch
+        {
+            ResultStatus.NotFound => Result<T>.NotFound(Message!),
+            ResultStatus.Unauthorized => Result<T>.Unauthorized(Message!),
+            _ => Result<T>.UnexpectedError(Message ?? "Unexpected recipe-book access state."),
+        };
+}
+
+public interface IRecipeBookAccessService
+{
+    Task<RecipeBookAccessResult> GetAccessibleRecipeBookAsync(
+        Guid recipeBookId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class RecipeBookAccessService : IRecipeBookAccessService
+{
+    private readonly IFamilyRepository _familyRepository;
+    private readonly IRecipeBookRepository _recipeBookRepository;
+    private readonly ILogger<RecipeBookAccessService> _logger;
+
+    public RecipeBookAccessService(
+        IFamilyRepository familyRepository,
+        IRecipeBookRepository recipeBookRepository,
+        ILogger<RecipeBookAccessService> logger)
+    {
+        _familyRepository = familyRepository;
+        _recipeBookRepository = recipeBookRepository;
+        _logger = logger;
+    }
+
+    public async Task<RecipeBookAccessResult> GetAccessibleRecipeBookAsync(
+        Guid recipeBookId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var family = await _familyRepository.FindByUserIdAsync(userId, cancellationToken);
+        if (family is null)
+        {
+            _logger.LogWarning("Recipe book access failed because no family was found for user {UserId}.", userId);
+            return RecipeBookAccessResult.NotFound("Family not found for the current user.");
+        }
+
+        var recipeBook = await _recipeBookRepository.GetByIdAsync(recipeBookId, cancellationToken);
+        if (recipeBook is null)
+        {
+            _logger.LogWarning("Recipe book {RecipeBookId} was not found for user {UserId}.", recipeBookId, userId);
+            return RecipeBookAccessResult.NotFound("Recipe book not found.");
+        }
+
+        if (recipeBook.FamilyId != family.Id)
+        {
+            _logger.LogWarning(
+                "Recipe book access denied for user {UserId}. Recipe book {RecipeBookId} belongs to family {RecipeBookFamilyId}, user family {UserFamilyId}.",
+                userId,
+                recipeBookId,
+                recipeBook.FamilyId,
+                family.Id);
+            return RecipeBookAccessResult.Unauthorized("Access denied.");
+        }
+
+        return RecipeBookAccessResult.Success(family, recipeBook);
+    }
+}

@@ -1,15 +1,23 @@
 using Kin.KinHub.Core.Business.Common;
 using Kin.KinHub.Core.Business.FamilyFeature;
+using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ModelContextProtocol;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Kin.KinHub.Core.Test;
@@ -24,131 +32,134 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
     }
 
     [Fact]
-    public async Task Initialize_ReturnsSessionHeaderAndCapabilities()
+    public async Task Initialize_Anonymous_ReturnsUnauthorizedChallenge()
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/v1/mcp", new
-        {
-            jsonrpc = "2.0",
-            id = 1,
-            method = "initialize",
-            @params = new
-            {
-                protocolVersion = "2025-03-26",
-                capabilities = new { },
-                clientInfo = new
-                {
-                    name = "test-client",
-                    version = "1.0.0",
-                },
-            },
-        });
+        var response = await client.PostAsJsonAsync("/api/v1/mcp", CreateInitializePayload());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains(
+            response.Headers.WwwAuthenticate,
+            header => header.Parameter?.Contains(".well-known/oauth-protected-resource", StringComparison.OrdinalIgnoreCase) is true);
+    }
+
+    [Fact]
+    public async Task Initialize_Authenticated_DoesNotReturnSessionHeader_AndReturnsCapabilities()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            await _factory.CreateOAuthAccessTokenAsync(_factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false })));
+
+        var response = await client.PostAsJsonAsync("/api/v1/mcp", CreateInitializePayload());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.True(response.Headers.TryGetValues("Mcp-Session-Id", out var values));
-        Assert.False(string.IsNullOrWhiteSpace(values.Single()));
+        Assert.False(response.Headers.Contains("Mcp-Session-Id"));
 
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var body = await response.ReadAsJsonElementAsync();
         Assert.Equal("2025-03-26", body.GetProperty("result").GetProperty("protocolVersion").GetString());
-        Assert.True(body.GetProperty("result").GetProperty("capabilities").GetProperty("tools").GetProperty("listChanged").ValueKind is JsonValueKind.False);
+        Assert.Equal("Kin.KinHub Shared API", body.GetProperty("result").GetProperty("serverInfo").GetProperty("name").GetString());
+        Assert.True(body.GetProperty("result").GetProperty("capabilities").TryGetProperty("tools", out _));
     }
 
     [Fact]
-    public async Task ToolsList_AfterInitialization_ReturnsToolCatalog()
+    public async Task ToolsList_Authenticated_ReturnsProtectedToolCatalog()
     {
-        using var client = _factory.CreateClient();
-        var sessionId = await InitializeSessionAsync(client);
+        await using var client = await _factory.CreateMcpClientAsync();
 
-        var ready = await client.PostAsJsonAsync("/api/v1/mcp", new
-        {
-            jsonrpc = "2.0",
-            method = "notifications/initialized",
-        }, sessionId);
-        Assert.Equal(HttpStatusCode.Accepted, ready.StatusCode);
+        var tools = await client.ListToolsAsync();
+        var toolNames = tools.Select(tool => tool.Name).OrderBy(name => name).ToArray();
 
-        var response = await client.PostAsJsonAsync("/api/v1/mcp", new
-        {
-            jsonrpc = "2.0",
-            id = 2,
-            method = "tools/list",
-            @params = new { },
-        }, sessionId);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var toolNames = body.GetProperty("result").GetProperty("tools")
-            .EnumerateArray()
-            .Select(tool => tool.GetProperty("name").GetString())
-            .ToArray();
-
-        Assert.Contains("auth.login", toolNames);
-        Assert.Contains("family.manage", toolNames);
+        Assert.Contains("auth.account.get", toolNames);
+        Assert.Contains("auth.register", toolNames);
+        Assert.Contains("family.get", toolNames);
+        Assert.Contains("recipe.get", toolNames);
         Assert.Contains("recipe-assistant.parse", toolNames);
+        Assert.DoesNotContain("auth.login", toolNames);
+        Assert.DoesNotContain("auth.refresh", toolNames);
+        Assert.DoesNotContain("auth.logout", toolNames);
     }
 
     [Fact]
-    public async Task FamilyManage_Get_ReturnsToolPayloadWhenAuthenticated()
+    public async Task FamilyGet_ReturnsToolPayloadWhenAuthenticated()
     {
-        using var client = _factory.CreateClient();
-        var sessionId = await InitializeSessionAsync(client);
+        await using var client = await _factory.CreateMcpClientAsync();
 
-        var initialized = await client.PostAsJsonAsync("/api/v1/mcp", new
-        {
-            jsonrpc = "2.0",
-            method = "notifications/initialized",
-        }, sessionId);
-        Assert.Equal(HttpStatusCode.Accepted, initialized.StatusCode);
+        var result = await client.CallToolAsync(
+            "family.get",
+            new Dictionary<string, object?>());
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateAccessToken());
+        Assert.False(result.IsError ?? false);
 
-        var response = await client.PostAsJsonAsync("/api/v1/mcp", new
-        {
-            jsonrpc = "2.0",
-            id = 3,
-            method = "tools/call",
-            @params = new
-            {
-                name = "family.manage",
-                arguments = new
-                {
-                    action = "get",
-                },
-            },
-        }, sessionId);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var toolResult = body.GetProperty("result");
-        Assert.False(toolResult.GetProperty("isError").GetBoolean());
-
-        var payload = JsonDocument.Parse(toolResult.GetProperty("content")[0].GetProperty("text").GetString()!);
+        var payload = JsonDocument.Parse(Assert.Single(result.Content.OfType<TextContentBlock>()).Text);
         Assert.Equal("Kin Family", payload.RootElement.GetProperty("name").GetString());
     }
 
-    private static async Task<string> InitializeSessionAsync(HttpClient client)
+    [Fact]
+    public async Task AuthorizationServerMetadataEndpoint_ReturnsOAuthDiscoveryDocument()
     {
-        var response = await client.PostAsJsonAsync("/api/v1/mcp", new
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/.well-known/oauth-authorization-server");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("http://localhost", body.GetProperty("issuer").GetString());
+        Assert.Equal("http://localhost/authorize", body.GetProperty("authorization_endpoint").GetString());
+        Assert.Equal("http://localhost/token", body.GetProperty("token_endpoint").GetString());
+        Assert.Equal("http://localhost/register", body.GetProperty("registration_endpoint").GetString());
+        Assert.Contains("authorization_code", body.GetProperty("grant_types_supported").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains("S256", body.GetProperty("code_challenge_methods_supported").EnumerateArray().Select(x => x.GetString()));
+    }
+
+    [Fact]
+    public async Task ProtectedResourceMetadataEndpoint_ReturnsMcpResourceDocument()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/.well-known/oauth-protected-resource");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("KinHub MCP", body.GetProperty("resource_name").GetString());
+        Assert.Equal("http://localhost", body.GetProperty("resource").GetString());
+        Assert.Contains("http://localhost", body.GetProperty("authorization_servers").EnumerateArray().Select(server => server.GetString()));
+        Assert.Contains("mcp:tools", body.GetProperty("scopes_supported").EnumerateArray().Select(scope => scope.GetString()));
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_AuthorizationCodeFlow_ReturnsBearerAndRefreshTokens()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            jsonrpc = "2.0",
-            id = 1,
-            method = "initialize",
-            @params = new
-            {
-                protocolVersion = "2025-03-26",
-                capabilities = new { },
-                clientInfo = new
-                {
-                    name = "integration-test",
-                    version = "1.0.0",
-                },
-            },
+            AllowAutoRedirect = false,
         });
 
-        response.EnsureSuccessStatusCode();
-        return response.Headers.GetValues("Mcp-Session-Id").Single();
+        var tokenResponse = await _factory.CreateOAuthTokenResponseAsync(client);
+
+        Assert.Equal("Bearer", tokenResponse.GetProperty("token_type").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(tokenResponse.GetProperty("access_token").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(tokenResponse.GetProperty("refresh_token").GetString()));
+        Assert.Equal("mcp:tools", tokenResponse.GetProperty("scope").GetString());
     }
+
+    private static object CreateInitializePayload() => new
+    {
+        jsonrpc = "2.0",
+        id = 1,
+        method = "initialize",
+        @params = new
+        {
+            protocolVersion = "2025-03-26",
+            capabilities = new { },
+            clientInfo = new
+            {
+                name = "integration-test",
+                version = "1.0.0",
+            },
+        },
+    };
 }
 
 public sealed class McpApiFactory : WebApplicationFactory<Program>
@@ -170,23 +181,128 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IFamilyService>();
+            services.RemoveAll<IAuthenticationService>();
+            services.RemoveAll<IRegisterUserHandler>();
+            services.RemoveAll<IGetCurrentUserHandler>();
+            services.RemoveAll<IUpdateUserEmailHandler>();
+            services.RemoveAll<IUpdateUserPasswordHandler>();
+            services.RemoveAll<IDeleteUserHandler>();
             services.AddScoped<IFamilyService, FakeFamilyService>();
+            services.AddSingleton<FakeAuthenticationState>();
+            services.AddScoped<IAuthenticationService, FakeAuthenticationService>();
+            services.AddScoped<IRegisterUserHandler, FakeRegisterUserHandler>();
+            services.AddScoped<IGetCurrentUserHandler, FakeGetCurrentUserHandler>();
+            services.AddScoped<IUpdateUserEmailHandler, FakeUpdateUserEmailHandler>();
+            services.AddScoped<IUpdateUserPasswordHandler, FakeUpdateUserPasswordHandler>();
+            services.AddScoped<IDeleteUserHandler, FakeDeleteUserHandler>();
         });
     }
 
-    public string CreateAccessToken()
+    public async Task<McpClient> CreateMcpClientAsync()
     {
-        using var scope = Services.CreateScope();
-        var tokenGenerator = scope.ServiceProvider.GetRequiredService<ITokenGenerator>();
-        return tokenGenerator.GenerateAccessToken(
-            new KinUser
+        var httpClient = CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        var accessToken = await CreateOAuthAccessTokenAsync(httpClient);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var transport = new HttpClientTransport(
+            new HttpClientTransportOptions
             {
-                Id = Guid.Parse("08cbaf25-9470-4c33-8542-9a81151ffb26"),
-                Email = "member@kinhub.dev",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                Endpoint = new Uri(httpClient.BaseAddress!, "/api/v1/mcp"),
             },
-            []);
+            httpClient);
+
+        return await McpClient.CreateAsync(transport);
+    }
+
+    public async Task<string> CreateOAuthAccessTokenAsync(HttpClient? client = null)
+    {
+        var httpClient = client ?? CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var tokenResponse = await CreateOAuthTokenResponseAsync(httpClient);
+        return tokenResponse.GetProperty("access_token").GetString()!;
+    }
+
+    public async Task<JsonElement> CreateOAuthTokenResponseAsync(HttpClient client)
+    {
+        var registrationResponse = await client.PostAsJsonAsync(
+            "/register",
+            new
+            {
+                client_name = "integration-test-client",
+                redirect_uris = new[] { "http://127.0.0.1/callback" },
+                grant_types = new[] { "authorization_code", "refresh_token" },
+                response_types = new[] { "code" },
+                token_endpoint_auth_method = "none",
+                scope = "mcp:tools",
+            });
+
+        registrationResponse.EnsureSuccessStatusCode();
+        var registrationBody = await registrationResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var clientId = registrationBody.GetProperty("client_id").GetString()!;
+        const string redirectUri = "http://127.0.0.1/callback";
+        const string codeVerifier = "integration-test-code-verifier-0123456789";
+        var authorizeUri = QueryHelpers.AddQueryString(
+            "/authorize",
+            new Dictionary<string, string?>
+            {
+                ["response_type"] = "code",
+                ["client_id"] = clientId,
+                ["redirect_uri"] = redirectUri,
+                ["scope"] = "mcp:tools",
+                ["state"] = "integration-state",
+                ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
+                ["code_challenge_method"] = "S256",
+            });
+
+        var authorizeResponse = await client.PostAsync(
+            authorizeUri,
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["response_type"] = "code",
+                ["client_id"] = clientId,
+                ["redirect_uri"] = redirectUri,
+                ["scope"] = "mcp:tools",
+                ["state"] = "integration-state",
+                ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
+                ["code_challenge_method"] = "S256",
+                ["email"] = FakeAuthenticationService.Email,
+                ["password"] = FakeAuthenticationService.Password,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+        var location = authorizeResponse.Headers.Location;
+        Assert.NotNull(location);
+
+        var callbackQuery = QueryHelpers.ParseQuery(location!.Query);
+        var code = callbackQuery["code"].ToString();
+        Assert.False(string.IsNullOrWhiteSpace(code));
+        Assert.Equal("integration-state", callbackQuery["state"].ToString());
+
+        var tokenEndpointResponse = await client.PostAsync(
+            "/token",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = clientId,
+                ["code"] = code,
+                ["redirect_uri"] = redirectUri,
+                ["code_verifier"] = codeVerifier,
+            }));
+
+        tokenEndpointResponse.EnsureSuccessStatusCode();
+        return (await tokenEndpointResponse.Content.ReadFromJsonAsync<JsonElement>()).Clone();
+    }
+
+    private static string ComputeCodeChallenge(string verifier)
+    {
+        var hash = SHA256.HashData(Encoding.ASCII.GetBytes(verifier));
+        return Base64UrlTextEncoder.Encode(hash);
     }
 }
 
@@ -195,8 +311,7 @@ internal static class HttpClientExtensions
     public static async Task<HttpResponseMessage> PostAsJsonAsync(
         this HttpClient client,
         string requestUri,
-        object payload,
-        string? sessionId = null)
+        object payload)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
         {
@@ -205,12 +320,25 @@ internal static class HttpClientExtensions
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-        if (!string.IsNullOrWhiteSpace(sessionId))
+        return await client.SendAsync(request);
+    }
+
+    public static async Task<JsonElement> ReadAsJsonElementAsync(this HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (response.Content.Headers.ContentType?.MediaType == "text/event-stream")
         {
-            request.Headers.Add("Mcp-Session-Id", sessionId);
+            var data = content
+                .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                .Select(line => line["data:".Length..].Trim())
+                .First();
+
+            return JsonDocument.Parse(data).RootElement.Clone();
         }
 
-        return await client.SendAsync(request);
+        return JsonDocument.Parse(content).RootElement.Clone();
     }
 }
 
@@ -248,4 +376,175 @@ internal sealed class FakeFamilyService : IFamilyService
 
     public Task<Result<UpdateFamilyMemberResponse>> UpdateFamilyMemberAsync(Guid familyId, Guid memberId, UpdateFamilyMemberRequest request, Guid userId, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
+}
+
+internal sealed class FakeAuthenticationState
+{
+    private readonly ConcurrentDictionary<string, Guid> _tokens = new(StringComparer.Ordinal);
+
+    public string IssueRefreshToken(Guid userId)
+    {
+        var refreshToken = $"refresh-{Guid.NewGuid():N}";
+        _tokens[refreshToken] = userId;
+        return refreshToken;
+    }
+
+    public bool TryConsumeRefreshToken(string refreshToken, out Guid userId)
+    {
+        if (_tokens.TryRemove(refreshToken, out userId))
+            return true;
+
+        userId = Guid.Empty;
+        return false;
+    }
+
+    public bool RevokeRefreshToken(string refreshToken) =>
+        _tokens.TryRemove(refreshToken, out _);
+}
+
+internal sealed class FakeAuthenticationService : IAuthenticationService
+{
+    internal static readonly Guid UserId = Guid.Parse("08cbaf25-9470-4c33-8542-9a81151ffb26");
+    internal const string Email = "member@kinhub.dev";
+    internal const string Password = "test-password";
+
+    private readonly ITokenGenerator _tokenGenerator;
+    private readonly FakeAuthenticationState _state;
+
+    public FakeAuthenticationService(ITokenGenerator tokenGenerator, FakeAuthenticationState state)
+    {
+        _tokenGenerator = tokenGenerator;
+        _state = state;
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<RegisterResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(request.Email, Email, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(request.Password, Password, StringComparison.Ordinal))
+        {
+            return Task.FromResult(Kin.KinHub.Identity.Business.Common.Result<LoginResponse>.Unauthorized("Invalid email or password."));
+        }
+
+        return Task.FromResult(Kin.KinHub.Identity.Business.Common.Result<LoginResponse>.Success(CreateLoginResponse()));
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<LoginResponse>> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        if (!_state.TryConsumeRefreshToken(refreshToken, out var userId) || userId != UserId)
+        {
+            return Task.FromResult(Kin.KinHub.Identity.Business.Common.Result<LoginResponse>.Unauthorized("Invalid or expired refresh token."));
+        }
+
+        return Task.FromResult(Kin.KinHub.Identity.Business.Common.Result<LoginResponse>.Success(CreateLoginResponse()));
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_state.RevokeRefreshToken(refreshToken)
+            ? Kin.KinHub.Identity.Business.Common.Result<bool>.Success(true)
+            : Kin.KinHub.Identity.Business.Common.Result<bool>.NotFound("Refresh token not found."));
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<UserProfileResponse>> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Kin.KinHub.Identity.Business.Common.Result<UserProfileResponse>.Success(new UserProfileResponse
+        {
+            UserId = UserId,
+            Email = Email,
+            DisplayName = "Martina",
+        }));
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> UpdateUserEmailAsync(Guid userId, UpdateUserEmailRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> UpdateUserPasswordAsync(Guid userId, UpdateUserPasswordRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> DeleteUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    private LoginResponse CreateLoginResponse()
+    {
+        var user = new KinUser
+        {
+            Id = UserId,
+            Email = Email,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        return new LoginResponse
+        {
+            AccessToken = _tokenGenerator.GenerateAccessToken(user, []),
+            RefreshToken = _state.IssueRefreshToken(UserId),
+            ExpiresIn = _tokenGenerator.AccessTokenExpirySeconds,
+            Email = Email,
+            DisplayName = "Martina",
+        };
+    }
+}
+
+internal sealed class FakeRegisterUserHandler : IRegisterUserHandler
+{
+    private readonly IAuthenticationService _authenticationService;
+
+    public FakeRegisterUserHandler(IAuthenticationService authenticationService)
+    {
+        _authenticationService = authenticationService;
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<RegisterResponse>> HandleAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
+        _authenticationService.RegisterAsync(request, cancellationToken);
+}
+
+internal sealed class FakeGetCurrentUserHandler : IGetCurrentUserHandler
+{
+    private readonly IAuthenticationService _authenticationService;
+
+    public FakeGetCurrentUserHandler(IAuthenticationService authenticationService)
+    {
+        _authenticationService = authenticationService;
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<UserProfileResponse>> HandleAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _authenticationService.GetCurrentUserAsync(userId, cancellationToken);
+}
+
+internal sealed class FakeUpdateUserEmailHandler : IUpdateUserEmailHandler
+{
+    private readonly IAuthenticationService _authenticationService;
+
+    public FakeUpdateUserEmailHandler(IAuthenticationService authenticationService)
+    {
+        _authenticationService = authenticationService;
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> HandleAsync(Guid userId, UpdateUserEmailRequest request, CancellationToken cancellationToken = default) =>
+        _authenticationService.UpdateUserEmailAsync(userId, request, cancellationToken);
+}
+
+internal sealed class FakeUpdateUserPasswordHandler : IUpdateUserPasswordHandler
+{
+    private readonly IAuthenticationService _authenticationService;
+
+    public FakeUpdateUserPasswordHandler(IAuthenticationService authenticationService)
+    {
+        _authenticationService = authenticationService;
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> HandleAsync(Guid userId, UpdateUserPasswordRequest request, CancellationToken cancellationToken = default) =>
+        _authenticationService.UpdateUserPasswordAsync(userId, request, cancellationToken);
+}
+
+internal sealed class FakeDeleteUserHandler : IDeleteUserHandler
+{
+    private readonly IAuthenticationService _authenticationService;
+
+    public FakeDeleteUserHandler(IAuthenticationService authenticationService)
+    {
+        _authenticationService = authenticationService;
+    }
+
+    public Task<Kin.KinHub.Identity.Business.Common.Result<bool>> HandleAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _authenticationService.DeleteUserAsync(userId, cancellationToken);
 }

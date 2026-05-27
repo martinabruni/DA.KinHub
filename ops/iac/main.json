@@ -360,6 +360,26 @@
             {
               "name": "OpenAi__ModelDeploymentName",
               "value": "gpt-4o-mini"
+            },
+            {
+              "name": "Mcp__AuthorizationServerUrl",
+              "value": "[format('https://{0}.azurewebsites.net', parameters('webAppName'))]"
+            },
+            {
+              "name": "Cors__AllowAnyOrigin",
+              "value": "false"
+            },
+            {
+              "name": "Cors__AllowedOrigins__0",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2024-04-01').defaultHostname)]"
+            },
+            {
+              "name": "Mcp__AllowAnyOrigin",
+              "value": "false"
+            },
+            {
+              "name": "Mcp__AllowedOrigins__0",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2024-04-01').defaultHostname)]"
             }
           ],
           "ftpsState": "Disabled",
@@ -372,6 +392,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName'))]",
         "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'text-embedding-3-small')]",
         "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'gpt-4o-mini')]",
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
