@@ -3,8 +3,6 @@ global using Kin.KinHub.Shared.Api.Common;
 global using Kin.KinHub.Shared.Api.FamilyFeature;
 global using Kin.KinHub.Shared.Api.RecipeFeature;
 global using Kin.KinHub.Shared.Api.RecipeAssistantFeature;
-global using Kin.KinHub.Shared.Api.ChatFeature;
-global using Kin.KinHub.Core.Business.ChatFeature;
 global using Kin.KinHub.Core.Business.FamilyFeature;
 global using Kin.KinHub.Core.Business.RecipeFeature;
 global using Kin.KinHub.Core.Business.RecipeAssistantFeature;

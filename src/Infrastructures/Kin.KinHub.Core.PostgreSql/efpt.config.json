@@ -35,18 +35,6 @@
          "ObjectType": 0
       },
       {
-         "Name": "kinai.ChatConversationEntity",
-         "ObjectType": 0
-      },
-      {
-         "Name": "kinai.ChatMessageEntity",
-         "ObjectType": 0
-      },
-      {
-         "Name": "kinai.ChatToolCallEntity",
-         "ObjectType": 0
-      },
-      {
          "Name": "kinrecipe.FridgeEntity",
          "ObjectType": 0
       },

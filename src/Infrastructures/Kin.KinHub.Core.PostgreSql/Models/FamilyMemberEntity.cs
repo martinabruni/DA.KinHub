@@ -19,7 +19,5 @@ public partial class FamilyMemberEntity
 
     public DateTime UpdatedAt { get; set; }
 
-    public virtual ICollection<ChatConversationEntity> ChatConversationEntity { get; set; } = new List<ChatConversationEntity>();
-
     public virtual FamilyEntity Family { get; set; }
 }

@@ -23,7 +23,7 @@ builder.Services
         o.Endpoint = builder.Configuration["OpenAi:Endpoint"] ?? string.Empty;
         o.ApiKey = builder.Configuration["OpenAi:ApiKey"] ?? string.Empty;
         o.EmbeddingDeploymentName = builder.Configuration["OpenAi:EmbeddingDeploymentName"] ?? "text-embedding-3-small";
-        o.ChatDeploymentName = builder.Configuration["OpenAi:ChatDeploymentName"] ?? "gpt-4o";
+        o.ModelDeploymentName = builder.Configuration["OpenAi:ModelDeploymentName"] ?? "gpt-4o";
     });
 
 builder.Services.AddOpenTelemetry().UseAzureMonitor();

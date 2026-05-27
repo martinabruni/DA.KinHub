@@ -20,16 +20,6 @@ public static class ServiceCollectionExtensions
         TypeAdapterConfig.GlobalSettings.NewConfig<float[], Vector>()
             .MapWith(f => new Vector(f));
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<ChatMessageEntity, ChatMessage>()
-            .Map(dest => dest.Role, src => Enum.Parse<ChatMessageRole>(src.Role));
-        TypeAdapterConfig.GlobalSettings.NewConfig<ChatMessage, ChatMessageEntity>()
-            .Map(dest => dest.Role, src => src.Role.ToString());
-
-        TypeAdapterConfig.GlobalSettings.NewConfig<ChatToolCallEntity, ChatToolCall>()
-            .Map(dest => dest.Status, src => Enum.Parse<ChatToolCallStatus>(src.Status));
-        TypeAdapterConfig.GlobalSettings.NewConfig<ChatToolCall, ChatToolCallEntity>()
-            .Map(dest => dest.Status, src => src.Status.ToString());
-
         services.AddDbContext<CoreDbContext>(o =>
             o.UseNpgsql(options.ConnectionString, npgsqlOptions =>
             {
@@ -55,11 +45,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFridgeIngredientRepository, FridgeIngredientRepository>();
         services.AddScoped<IShoppingListRepository, ShoppingListRepository>();
         services.AddScoped<IShoppingListItemRepository, ShoppingListItemRepository>();
-
-        // Chat repositories
-        services.AddScoped<IChatConversationRepository, ChatConversationRepository>();
-        services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
-        services.AddScoped<IChatToolCallRepository, ChatToolCallRepository>();
 
         return services;
     }

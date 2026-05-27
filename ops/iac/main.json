@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "15324252364204715281"
+      "templateHash": "3989885076013097418"
     }
   },
   "parameters": {
@@ -55,28 +55,43 @@
         "description": "Key Vault name."
       }
     },
-    "sqlServerName": {
+    "postgresServerName": {
       "type": "string",
       "metadata": {
-        "description": "SQL Server name."
+        "description": "PostgreSQL Flexible Server name."
       }
     },
-    "sqlDatabaseName": {
+    "postgresDatabaseName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "metadata": {
+        "description": "PostgreSQL Database name. Must be 1-63 lowercase alphanumerics and hyphens only. Cannot start or end with hyphens."
+      }
+    },
+    "postgresAdministratorLogin": {
       "type": "string",
       "metadata": {
-        "description": "SQL Database name."
+        "description": "PostgreSQL administrator login."
       }
     },
-    "sqlAdministratorLogin": {
-      "type": "string",
-      "metadata": {
-        "description": "SQL administrator login."
-      }
-    },
-    "sqlAdministratorPassword": {
+    "postgresAdministratorPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "SQL administrator password."
+        "description": "PostgreSQL administrator password."
+      }
+    },
+    "openAiAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure OpenAI account name."
+      }
+    },
+    "openAiSkuName": {
+      "type": "string",
+      "defaultValue": "S0",
+      "metadata": {
+        "description": "Azure OpenAI SKU name."
       }
     },
     "jwtSecret": {
@@ -98,20 +113,13 @@
       "metadata": {
         "description": "JWT access token expiry in minutes."
       }
-    },
-    "businessTimeZoneId": {
-      "type": "string",
-      "defaultValue": "Europe/Rome",
-      "metadata": {
-        "description": "Business timezone identifier."
-      }
     }
   },
   "variables": {
-    "sqlServerFullyQualifiedDomainName": "[format('{0}{1}', parameters('sqlServerName'), environment().suffixes.sqlServerHostname)]",
-    "sqlConnectionString": "[format('Server=tcp:{0},1433;Initial Catalog={1};Persist Security Info=False;User ID={2};Password={3};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;', variables('sqlServerFullyQualifiedDomainName'), parameters('sqlDatabaseName'), parameters('sqlAdministratorLogin'), parameters('sqlAdministratorPassword'))]",
-    "sqlConnectionStringSecretName": "sql-connection-string",
+    "sqlConnectionStringSecretName": "database-connection-string",
     "jwtSecretSecretName": "jwt-secret",
+    "openAiEndpointSecretName": "openai-endpoint",
+    "openAiKeySecretName": "openai-key",
     "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]"
   },
   "resources": [
@@ -147,31 +155,48 @@
       }
     },
     {
-      "type": "Microsoft.Sql/servers",
-      "apiVersion": "2023-08-01-preview",
-      "name": "[parameters('sqlServerName')]",
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2023-06-01-preview",
+      "name": "[parameters('postgresServerName')]",
       "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_B1ms",
+        "tier": "Burstable"
+      },
       "properties": {
-        "administratorLogin": "[parameters('sqlAdministratorLogin')]",
-        "administratorLoginPassword": "[parameters('sqlAdministratorPassword')]",
-        "publicNetworkAccess": "Enabled",
-        "version": "12.0"
+        "administratorLogin": "[parameters('postgresAdministratorLogin')]",
+        "administratorLoginPassword": "[parameters('postgresAdministratorPassword')]",
+        "version": "17",
+        "storage": {
+          "storageSizeGB": 32
+        },
+        "backup": {
+          "backupRetentionDays": 7,
+          "geoRedundantBackup": "Disabled"
+        },
+        "highAvailability": {
+          "mode": "Disabled"
+        }
       }
     },
     {
-      "type": "Microsoft.Sql/servers/databases",
-      "apiVersion": "2023-08-01-preview",
-      "name": "[format('{0}/{1}', parameters('sqlServerName'), parameters('sqlDatabaseName'))]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Basic",
-        "tier": "Basic"
-      },
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2023-06-01-preview",
+      "name": "[format('{0}/{1}', parameters('postgresServerName'), 'AllowAllAzureServicesAndResourcesWithinAzureIps')]",
       "properties": {
-        "collation": "SQL_Latin1_General_CP1_CI_AS"
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2023-06-01-preview",
+      "name": "[format('{0}/{1}', parameters('postgresServerName'), parameters('postgresDatabaseName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
       ]
     },
     {
@@ -179,12 +204,86 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]",
       "properties": {
-        "value": "[variables('sqlConnectionString')]"
+        "value": "[format('Server={0};Database={1};Port=5432;User Id={2};Password={3};Ssl Mode=Require;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName')), '2023-06-01-preview').fullyQualifiedDomainName, parameters('postgresDatabaseName'), parameters('postgresAdministratorLogin'), parameters('postgresAdministratorPassword'))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.Sql/servers/databases', parameters('sqlServerName'), parameters('sqlDatabaseName'))]",
-        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('openAiAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "OpenAI",
+      "sku": {
+        "name": "[parameters('openAiSkuName')]"
+      },
+      "properties": {
+        "customSubDomainName": "[parameters('openAiAccountName')]",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2024-10-01",
+      "name": "[format('{0}/{1}', parameters('openAiAccountName'), 'gpt-4o-mini')]",
+      "sku": {
+        "name": "GlobalStandard",
+        "capacity": 10
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-4o-mini"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2024-10-01",
+      "name": "[format('{0}/{1}', parameters('openAiAccountName'), 'text-embedding-3-small')]",
+      "sku": {
+        "name": "GlobalStandard",
+        "capacity": 10
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "text-embedding-3-small"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'gpt-4o-mini')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('openAiEndpointSecretName'))]",
+      "properties": {
+        "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), '2023-05-01').endpoint]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('openAiKeySecretName'))]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), '2023-05-01').key1]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]"
       ]
     },
     {
@@ -231,10 +330,6 @@
               "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]"
             },
             {
-              "name": "Business__BusinessTimeZoneId",
-              "value": "[parameters('businessTimeZoneId')]"
-            },
-            {
               "name": "ConnectionStrings__KinHub",
               "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]"
             },
@@ -249,9 +344,26 @@
             {
               "name": "Jwt__AccessTokenExpiryMinutes",
               "value": "[parameters('jwtAccessTokenExpiryMinutes')]"
+            },
+            {
+              "name": "OpenAi__Endpoint",
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('openAiEndpointSecretName'))]"
+            },
+            {
+              "name": "OpenAi__ApiKey",
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('openAiKeySecretName'))]"
+            },
+            {
+              "name": "OpenAi__EmbeddingDeploymentName",
+              "value": "text-embedding-3-small"
+            },
+            {
+              "name": "OpenAi__ModelDeploymentName",
+              "value": "gpt-4o-mini"
             }
           ],
           "ftpsState": "Disabled",
+          "healthCheckPath": "/health",
           "http20Enabled": true,
           "linuxFxVersion": "DOTNETCORE|10.0",
           "minTlsVersion": "1.2"
@@ -260,6 +372,8 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'text-embedding-3-small')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'gpt-4o-mini')]",
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     },
@@ -302,6 +416,10 @@
     "staticWebAppDefaultHostname": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2024-04-01').defaultHostname]"
+    },
+    "openAiEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), '2023-05-01').endpoint]"
     }
   }
 }

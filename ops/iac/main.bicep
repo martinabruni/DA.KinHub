@@ -95,7 +95,7 @@ var webAppSettings = [
     value: embeddingDeployment.name
   }
   {
-    name: 'OpenAi__ChatDeploymentName'
+    name: 'OpenAi__ModelDeploymentName'
     value: gpt4oDeployment.name
   }
 ]
