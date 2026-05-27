@@ -98,6 +98,26 @@ var webAppSettings = [
     name: 'OpenAi__ModelDeploymentName'
     value: gpt4oDeployment.name
   }
+  {
+    name: 'Mcp__AuthorizationServerUrl'
+    value: 'https://${webAppName}.azurewebsites.net'
+  }
+  {
+    name: 'Cors__AllowAnyOrigin'
+    value: 'false'
+  }
+  {
+    name: 'Cors__AllowedOrigins__0'
+    value: 'https://${staticWebApp.properties.defaultHostname}'
+  }
+  {
+    name: 'Mcp__AllowAnyOrigin'
+    value: 'false'
+  }
+  {
+    name: 'Mcp__AllowedOrigins__0'
+    value: 'https://${staticWebApp.properties.defaultHostname}'
+  }
 ]
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {

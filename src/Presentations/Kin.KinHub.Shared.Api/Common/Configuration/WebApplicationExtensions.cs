@@ -17,6 +17,7 @@ public static class WebApplicationExtensions
         app.MapControllers();
         app.MapHealthChecks("/health").AllowAnonymous();
         app.MapMcp($"/{McpTransportOptions.EndpointRoute}")
+            .RequireAuthorization()
             .RequireCors(McpTransportOptions.CorsPolicyName);
 
         return app;

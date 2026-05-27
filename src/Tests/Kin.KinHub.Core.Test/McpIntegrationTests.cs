@@ -5,6 +5,7 @@ using Kin.KinHub.Identity.Domain.AuthenticationFeature;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -15,6 +16,8 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Kin.KinHub.Core.Test;
@@ -29,9 +32,25 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
     }
 
     [Fact]
-    public async Task Initialize_DoesNotReturnSessionHeader_AndReturnsCapabilities()
+    public async Task Initialize_Anonymous_ReturnsUnauthorizedChallenge()
     {
         using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/v1/mcp", CreateInitializePayload());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains(
+            response.Headers.WwwAuthenticate,
+            header => header.Parameter?.Contains(".well-known/oauth-protected-resource", StringComparison.OrdinalIgnoreCase) is true);
+    }
+
+    [Fact]
+    public async Task Initialize_Authenticated_DoesNotReturnSessionHeader_AndReturnsCapabilities()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            await _factory.CreateOAuthAccessTokenAsync(_factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false })));
 
         var response = await client.PostAsJsonAsync("/api/v1/mcp", CreateInitializePayload());
 
@@ -45,20 +64,9 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
     }
 
     [Fact]
-    public async Task ToolsList_Anonymous_ReturnsOnlyAnonymousTools()
-    {
-        await using var client = await _factory.CreateMcpClientAsync();
-
-        var tools = await client.ListToolsAsync();
-        var toolNames = tools.Select(tool => tool.Name).OrderBy(name => name).ToArray();
-
-        Assert.Equal(["auth.register"], toolNames);
-    }
-
-    [Fact]
     public async Task ToolsList_Authenticated_ReturnsProtectedToolCatalog()
     {
-        await using var client = await _factory.CreateMcpClientAsync(_factory.CreateAccessToken());
+        await using var client = await _factory.CreateMcpClientAsync();
 
         var tools = await client.ListToolsAsync();
         var toolNames = tools.Select(tool => tool.Name).OrderBy(name => name).ToArray();
@@ -76,7 +84,7 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
     [Fact]
     public async Task FamilyGet_ReturnsToolPayloadWhenAuthenticated()
     {
-        await using var client = await _factory.CreateMcpClientAsync(_factory.CreateAccessToken());
+        await using var client = await _factory.CreateMcpClientAsync();
 
         var result = await client.CallToolAsync(
             "family.get",
@@ -89,17 +97,20 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
     }
 
     [Fact]
-    public async Task UnauthenticatedProtectedToolCall_ReturnsProtocolError()
+    public async Task AuthorizationServerMetadataEndpoint_ReturnsOAuthDiscoveryDocument()
     {
-        await using var client = await _factory.CreateMcpClientAsync();
+        using var client = _factory.CreateClient();
 
-        var exception = await Assert.ThrowsAsync<McpProtocolException>(async () =>
-            await client.CallToolAsync(
-                "family.get",
-                new Dictionary<string, object?>()));
+        var response = await client.GetAsync("/.well-known/oauth-authorization-server");
 
-        Assert.Equal(McpErrorCode.InvalidRequest, exception.ErrorCode);
-        Assert.Contains("requires authorization", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("http://localhost", body.GetProperty("issuer").GetString());
+        Assert.Equal("http://localhost/authorize", body.GetProperty("authorization_endpoint").GetString());
+        Assert.Equal("http://localhost/token", body.GetProperty("token_endpoint").GetString());
+        Assert.Equal("http://localhost/register", body.GetProperty("registration_endpoint").GetString());
+        Assert.Contains("authorization_code", body.GetProperty("grant_types_supported").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains("S256", body.GetProperty("code_challenge_methods_supported").EnumerateArray().Select(x => x.GetString()));
     }
 
     [Fact]
@@ -113,7 +124,24 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("KinHub MCP", body.GetProperty("resource_name").GetString());
         Assert.Equal("http://localhost", body.GetProperty("resource").GetString());
+        Assert.Contains("http://localhost", body.GetProperty("authorization_servers").EnumerateArray().Select(server => server.GetString()));
         Assert.Contains("mcp:tools", body.GetProperty("scopes_supported").EnumerateArray().Select(scope => scope.GetString()));
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_AuthorizationCodeFlow_ReturnsBearerAndRefreshTokens()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var tokenResponse = await _factory.CreateOAuthTokenResponseAsync(client);
+
+        Assert.Equal("Bearer", tokenResponse.GetProperty("token_type").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(tokenResponse.GetProperty("access_token").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(tokenResponse.GetProperty("refresh_token").GetString()));
+        Assert.Equal("mcp:tools", tokenResponse.GetProperty("scope").GetString());
     }
 
     private static object CreateInitializePayload() => new
@@ -170,28 +198,14 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         });
     }
 
-    public string CreateAccessToken()
+    public async Task<McpClient> CreateMcpClientAsync()
     {
-        using var scope = Services.CreateScope();
-        var tokenGenerator = scope.ServiceProvider.GetRequiredService<ITokenGenerator>();
-        return tokenGenerator.GenerateAccessToken(
-            new KinUser
-            {
-                Id = Guid.Parse("08cbaf25-9470-4c33-8542-9a81151ffb26"),
-                Email = "member@kinhub.dev",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            },
-            []);
-    }
-
-    public async Task<McpClient> CreateMcpClientAsync(string? accessToken = null)
-    {
-        var httpClient = CreateClient();
-        if (!string.IsNullOrWhiteSpace(accessToken))
+        var httpClient = CreateClient(new WebApplicationFactoryClientOptions
         {
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        }
+            AllowAutoRedirect = false,
+        });
+        var accessToken = await CreateOAuthAccessTokenAsync(httpClient);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         var transport = new HttpClientTransport(
             new HttpClientTransportOptions
@@ -201,6 +215,94 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
             httpClient);
 
         return await McpClient.CreateAsync(transport);
+    }
+
+    public async Task<string> CreateOAuthAccessTokenAsync(HttpClient? client = null)
+    {
+        var httpClient = client ?? CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var tokenResponse = await CreateOAuthTokenResponseAsync(httpClient);
+        return tokenResponse.GetProperty("access_token").GetString()!;
+    }
+
+    public async Task<JsonElement> CreateOAuthTokenResponseAsync(HttpClient client)
+    {
+        var registrationResponse = await client.PostAsJsonAsync(
+            "/register",
+            new
+            {
+                client_name = "integration-test-client",
+                redirect_uris = new[] { "http://127.0.0.1/callback" },
+                grant_types = new[] { "authorization_code", "refresh_token" },
+                response_types = new[] { "code" },
+                token_endpoint_auth_method = "none",
+                scope = "mcp:tools",
+            });
+
+        registrationResponse.EnsureSuccessStatusCode();
+        var registrationBody = await registrationResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var clientId = registrationBody.GetProperty("client_id").GetString()!;
+        const string redirectUri = "http://127.0.0.1/callback";
+        const string codeVerifier = "integration-test-code-verifier-0123456789";
+        var authorizeUri = QueryHelpers.AddQueryString(
+            "/authorize",
+            new Dictionary<string, string?>
+            {
+                ["response_type"] = "code",
+                ["client_id"] = clientId,
+                ["redirect_uri"] = redirectUri,
+                ["scope"] = "mcp:tools",
+                ["state"] = "integration-state",
+                ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
+                ["code_challenge_method"] = "S256",
+            });
+
+        var authorizeResponse = await client.PostAsync(
+            authorizeUri,
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["response_type"] = "code",
+                ["client_id"] = clientId,
+                ["redirect_uri"] = redirectUri,
+                ["scope"] = "mcp:tools",
+                ["state"] = "integration-state",
+                ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
+                ["code_challenge_method"] = "S256",
+                ["email"] = FakeAuthenticationService.Email,
+                ["password"] = FakeAuthenticationService.Password,
+            }));
+
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+        var location = authorizeResponse.Headers.Location;
+        Assert.NotNull(location);
+
+        var callbackQuery = QueryHelpers.ParseQuery(location!.Query);
+        var code = callbackQuery["code"].ToString();
+        Assert.False(string.IsNullOrWhiteSpace(code));
+        Assert.Equal("integration-state", callbackQuery["state"].ToString());
+
+        var tokenEndpointResponse = await client.PostAsync(
+            "/token",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = clientId,
+                ["code"] = code,
+                ["redirect_uri"] = redirectUri,
+                ["code_verifier"] = codeVerifier,
+            }));
+
+        tokenEndpointResponse.EnsureSuccessStatusCode();
+        return (await tokenEndpointResponse.Content.ReadFromJsonAsync<JsonElement>()).Clone();
+    }
+
+    private static string ComputeCodeChallenge(string verifier)
+    {
+        var hash = SHA256.HashData(Encoding.ASCII.GetBytes(verifier));
+        return Base64UrlTextEncoder.Encode(hash);
     }
 }
 

@@ -86,6 +86,7 @@ public static class ServiceCollectionExtensions
                 {
                     ResourceName = mcpOptions.ResourceName,
                     ResourceDocumentation = mcpOptions.ResourceDocumentation,
+                    AuthorizationServers = { mcpOptions.AuthorizationServerUrl },
                     ScopesSupported = [.. mcpOptions.SupportedScopes],
                 };
             });
@@ -93,6 +94,8 @@ public static class ServiceCollectionExtensions
         services.AddAuthorization();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
+        services.AddSingleton<IOAuthClientStore, InMemoryOAuthClientStore>();
+        services.AddSingleton<IOAuthAuthorizationCodeStore, InMemoryOAuthAuthorizationCodeStore>();
 
         services
             .AddMcpServer(options =>
@@ -147,6 +150,7 @@ public static class ServiceCollectionExtensions
 
                 policy.WithMethods("POST")
                       .WithHeaders("Content-Type", "Authorization", "MCP-Protocol-Version");
+                policy.WithExposedHeaders("WWW-Authenticate");
             });
         });
 
