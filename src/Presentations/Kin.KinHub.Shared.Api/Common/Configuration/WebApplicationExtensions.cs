@@ -11,6 +11,7 @@ public static class WebApplicationExtensions
 
         app.UseHttpsRedirection();
         app.UseCors(CorsOptions.PolicyName);
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseMiddleware<JwtAuthenticationMiddleware>();
         app.UseAuthorization();

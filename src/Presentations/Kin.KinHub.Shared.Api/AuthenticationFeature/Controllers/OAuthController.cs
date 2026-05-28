@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.Tokens;
 using System.Net;
@@ -17,6 +18,8 @@ public sealed class OAuthController : ControllerBase
     private readonly IAuthenticationService _authenticationService;
     private readonly IOAuthClientStore _clientStore;
     private readonly IOAuthAuthorizationCodeStore _authorizationCodeStore;
+    private readonly IOAuthRefreshTokenScopeStore _refreshTokenScopeStore;
+    private readonly ITokenGenerator _tokenGenerator;
     private readonly ITokenValidator _tokenValidator;
     private readonly McpTransportOptions _mcpOptions;
 
@@ -24,19 +27,29 @@ public sealed class OAuthController : ControllerBase
         IAuthenticationService authenticationService,
         IOAuthClientStore clientStore,
         IOAuthAuthorizationCodeStore authorizationCodeStore,
+        IOAuthRefreshTokenScopeStore refreshTokenScopeStore,
+        ITokenGenerator tokenGenerator,
         ITokenValidator tokenValidator,
         McpTransportOptions mcpOptions)
     {
         _authenticationService = authenticationService;
         _clientStore = clientStore;
         _authorizationCodeStore = authorizationCodeStore;
+        _refreshTokenScopeStore = refreshTokenScopeStore;
+        _tokenGenerator = tokenGenerator;
         _tokenValidator = tokenValidator;
         _mcpOptions = mcpOptions;
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
     public IActionResult RegisterClient([FromBody] OAuthDynamicClientRegistrationRequest? request)
     {
+        if (!_mcpOptions.EnableDynamicClientRegistration)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("access_denied", "Dynamic client registration is disabled."));
+        }
+
         if (request is null)
         {
             return BadRequest(CreateOAuthError("invalid_client_metadata", "Missing client metadata."));
@@ -82,7 +95,22 @@ public sealed class OAuthController : ControllerBase
             return BadRequest(CreateOAuthError("invalid_redirect_uri", "Redirect URIs must use HTTPS or localhost."));
         }
 
-        var client = _clientStore.Create(request, string.Join(' ', _mcpOptions.SupportedScopes));
+        if (!TryResolveDynamicClientScope(request.Scope, out var resolvedScope, out var scopeErrorResult))
+        {
+            return scopeErrorResult!;
+        }
+
+        request.Scope = resolvedScope;
+
+        OAuthRegisteredClient client;
+        try
+        {
+            client = _clientStore.Create(request, resolvedScope);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+        }
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -100,6 +128,7 @@ public sealed class OAuthController : ControllerBase
     }
 
     [HttpGet("authorize")]
+    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
     public IActionResult Authorize([FromQuery] OAuthAuthorizeRequest request)
     {
         if (!TryValidateAuthorizationRequest(request, out var client, out var scope, out var errorResult))
@@ -112,6 +141,7 @@ public sealed class OAuthController : ControllerBase
 
     [HttpPost("authorize")]
     [Consumes("application/x-www-form-urlencoded")]
+    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
     public async Task<IActionResult> AuthorizeAsync([FromForm] OAuthAuthorizeLoginRequest request, CancellationToken cancellationToken)
     {
         var authorizeRequest = new OAuthAuthorizeRequest
@@ -128,6 +158,11 @@ public sealed class OAuthController : ControllerBase
         if (!TryValidateAuthorizationRequest(authorizeRequest, out var client, out var scope, out var errorResult))
         {
             return errorResult!;
+        }
+
+        if (string.Equals(request.Decision, "deny", StringComparison.Ordinal))
+        {
+            return RedirectOAuthError(authorizeRequest.RedirectUri!, authorizeRequest.State, "access_denied", "The authorization request was denied.");
         }
 
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
@@ -150,19 +185,34 @@ public sealed class OAuthController : ControllerBase
                 "text/html");
         }
 
+        if (RequiresElevatedConsent(scope) && !request.ApproveElevatedAccess)
+        {
+            return Content(
+                RenderLoginPage(authorizeRequest, client!, scope, "You must explicitly approve elevated MCP access before continuing."),
+                "text/html");
+        }
+
         if (_tokenValidator.ValidateAccessToken(result.Value.AccessToken) is null)
         {
             return StatusCode(StatusCodes.Status500InternalServerError, CreateOAuthError("server_error", "Unable to validate issued access token."));
         }
 
-        var ticket = _authorizationCodeStore.Create(
-            client!.ClientId,
-            authorizeRequest.RedirectUri!,
-            scope,
-            authorizeRequest.CodeChallenge!,
-            authorizeRequest.CodeChallengeMethod!,
-            result.Value,
-            TimeSpan.FromMinutes(_mcpOptions.AuthorizationCodeLifetimeMinutes));
+        OAuthAuthorizationCodeTicket ticket;
+        try
+        {
+            ticket = _authorizationCodeStore.Create(
+                client!.ClientId,
+                authorizeRequest.RedirectUri!,
+                scope,
+                authorizeRequest.CodeChallenge!,
+                authorizeRequest.CodeChallengeMethod!,
+                result.Value,
+                TimeSpan.FromMinutes(_mcpOptions.AuthorizationCodeLifetimeMinutes));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+        }
 
         var redirectParameters = new Dictionary<string, string?>
         {
@@ -179,6 +229,7 @@ public sealed class OAuthController : ControllerBase
 
     [HttpPost("token")]
     [Consumes("application/x-www-form-urlencoded")]
+    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
     public async Task<IActionResult> TokenAsync([FromForm] OAuthTokenRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.ClientId)
@@ -191,16 +242,26 @@ public sealed class OAuthController : ControllerBase
         return request.GrantType switch
         {
             "authorization_code" => ExchangeAuthorizationCodeAsync(request, client),
-            "refresh_token" => await ExchangeRefreshTokenAsync(request, cancellationToken),
+            "refresh_token" => await ExchangeRefreshTokenAsync(request, client, cancellationToken),
             _ => BadRequest(CreateOAuthError("unsupported_grant_type", "The requested grant_type is not supported.")),
         };
     }
 
-    private async Task<IActionResult> ExchangeRefreshTokenAsync(OAuthTokenRequest request, CancellationToken cancellationToken)
+    private async Task<IActionResult> ExchangeRefreshTokenAsync(OAuthTokenRequest request, OAuthRegisteredClient client, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
         {
             return BadRequest(CreateOAuthError("invalid_request", "refresh_token is required."));
+        }
+
+        if (!_refreshTokenScopeStore.TryGet(request.RefreshToken, out var grantedScope) || string.IsNullOrWhiteSpace(grantedScope))
+        {
+            return BadRequest(CreateOAuthError("invalid_grant", "Refresh token was not issued for the OAuth MCP flow."));
+        }
+
+        if (!TryNormalizeGrantedScope(request.Scope, client.Scope, grantedScope, out var resolvedScope, out var errorResult))
+        {
+            return errorResult!;
         }
 
         var result = await _authenticationService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
@@ -209,7 +270,16 @@ public sealed class OAuthController : ControllerBase
             return BadRequest(CreateOAuthError("invalid_grant", result.Message ?? "Invalid refresh token."));
         }
 
-        return Ok(CreateTokenResponse(result.Value, NormalizeScope(request.Scope)));
+        try
+        {
+            _refreshTokenScopeStore.Replace(request.RefreshToken, result.Value.RefreshToken, resolvedScope);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+        }
+
+        return Ok(CreateScopedTokenResponse(result.Value, resolvedScope));
     }
 
     private IActionResult ExchangeAuthorizationCodeAsync(OAuthTokenRequest request, OAuthRegisteredClient client)
@@ -237,7 +307,16 @@ public sealed class OAuthController : ControllerBase
             return BadRequest(CreateOAuthError("invalid_grant", "PKCE verification failed."));
         }
 
-        return Ok(CreateTokenResponse(ticket.LoginResponse, ticket.Scope));
+        try
+        {
+            _refreshTokenScopeStore.Store(ticket.LoginResponse.RefreshToken, ticket.Scope);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+        }
+
+        return Ok(CreateScopedTokenResponse(ticket.LoginResponse, ticket.Scope));
     }
 
     private bool TryValidateAuthorizationRequest(
@@ -247,7 +326,7 @@ public sealed class OAuthController : ControllerBase
         out IActionResult? errorResult)
     {
         client = null;
-        scope = NormalizeScope(request.Scope);
+        scope = string.Empty;
         errorResult = null;
 
         if (!string.Equals(request.ResponseType, "code", StringComparison.Ordinal))
@@ -279,20 +358,86 @@ public sealed class OAuthController : ControllerBase
             return false;
         }
 
-        var requestedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (requestedScopes.Except(_mcpOptions.SupportedScopes, StringComparer.Ordinal).Any())
+        if (!TryNormalizeGrantedScope(request.Scope, client.Scope, client.Scope, out scope, out errorResult))
         {
-            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Requested scope is not supported."));
             return false;
         }
 
         return true;
     }
 
-    private string NormalizeScope(string? scope) =>
+    private bool TryNormalizeGrantedScope(
+        string? requestedScope,
+        string clientScope,
+        string grantedScope,
+        out string scope,
+        out IActionResult? errorResult)
+    {
+        errorResult = null;
+        scope = string.IsNullOrWhiteSpace(requestedScope)
+            ? NormalizeScope(grantedScope)
+            : NormalizeScope(requestedScope);
+
+        var requestedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var supportedScopes = _mcpOptions.SupportedScopes.ToHashSet(StringComparer.Ordinal);
+        var registeredClientScopes = clientScope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.Ordinal);
+        var grantedScopes = grantedScope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (requestedScopes.Except(supportedScopes, StringComparer.Ordinal).Any()
+            || requestedScopes.Except(registeredClientScopes, StringComparer.Ordinal).Any()
+            || requestedScopes.Except(grantedScopes, StringComparer.Ordinal).Any())
+        {
+            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Requested scope is not supported for this client grant."));
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryResolveDynamicClientScope(
+        string? requestedScope,
+        out string resolvedScope,
+        out IActionResult? errorResult)
+    {
+        errorResult = null;
+        resolvedScope = NormalizeScope(requestedScope, string.Join(' ', _mcpOptions.DynamicClientDefaultScopes));
+
+        var supportedScopes = _mcpOptions.SupportedScopes.ToHashSet(StringComparer.Ordinal);
+        var dynamicClientAllowedScopes = _mcpOptions.DynamicClientAllowedScopes.ToHashSet(StringComparer.Ordinal);
+        var scopes = SplitScopes(resolvedScope);
+
+        if (scopes.Length is 0)
+        {
+            errorResult = BadRequest(CreateOAuthError("invalid_scope", "At least one scope is required."));
+            return false;
+        }
+
+        if (scopes.Except(supportedScopes, StringComparer.Ordinal).Any())
+        {
+            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Requested scope is not supported by KinHub MCP."));
+            return false;
+        }
+
+        if (scopes.Except(dynamicClientAllowedScopes, StringComparer.Ordinal).Any())
+        {
+            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Dynamic MCP clients cannot request the specified scope."));
+            return false;
+        }
+
+        return true;
+    }
+
+    private string NormalizeScope(string? scope, string? defaultScope = null) =>
         string.IsNullOrWhiteSpace(scope)
-            ? string.Join(' ', _mcpOptions.SupportedScopes)
-            : string.Join(' ', scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            ? NormalizeScope(defaultScope ?? string.Join(' ', _mcpOptions.SupportedScopes))
+            : string.Join(' ', scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal));
+
+    private static string[] SplitScopes(string? scope) =>
+        string.IsNullOrWhiteSpace(scope)
+            ? []
+            : scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static object CreateOAuthError(string error, string description) =>
         new
@@ -300,6 +445,28 @@ public sealed class OAuthController : ControllerBase
             error,
             error_description = description,
         };
+
+    private bool RequiresElevatedConsent(string scope)
+    {
+        var elevatedScopes = _mcpOptions.ElevatedConsentScopes.ToHashSet(StringComparer.Ordinal);
+        return SplitScopes(scope).Intersect(elevatedScopes, StringComparer.Ordinal).Any();
+    }
+
+    private static IActionResult RedirectOAuthError(string redirectUri, string? state, string error, string description)
+    {
+        var redirectParameters = new Dictionary<string, string?>
+        {
+            ["error"] = error,
+            ["error_description"] = description,
+        };
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            redirectParameters["state"] = state;
+        }
+
+        return new RedirectResult(QueryHelpers.AddQueryString(redirectUri, redirectParameters));
+    }
 
     private static bool VerifyPkce(string codeVerifier, string codeChallenge, string codeChallengeMethod)
     {
@@ -325,15 +492,35 @@ public sealed class OAuthController : ControllerBase
             || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
     }
 
-    private object CreateTokenResponse(LoginResponse response, string scope) =>
-        new
+    private object CreateScopedTokenResponse(LoginResponse response, string scope)
+    {
+        var claims = _tokenValidator.ValidateAccessToken(response.AccessToken);
+        if (claims is null)
         {
-            access_token = response.AccessToken,
+            throw new InvalidOperationException("Unable to validate issued access token.");
+        }
+
+        var user = new KinUser
+        {
+            Id = claims.UserId,
+            Email = claims.Email,
+            DisplayName = response.DisplayName,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        return new
+        {
+            access_token = _tokenGenerator.GenerateAccessToken(
+                user,
+                claims.Roles,
+                scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)),
             token_type = "Bearer",
             expires_in = response.ExpiresIn,
             refresh_token = response.RefreshToken,
             scope,
         };
+    }
 
     private static string RenderLoginPage(
         OAuthAuthorizeRequest request,
@@ -346,6 +533,19 @@ public sealed class OAuthController : ControllerBase
         var errorBlock = string.IsNullOrWhiteSpace(errorMessage)
             ? string.Empty
             : $"<p style=\"color:#b91c1c;margin:0 0 16px;\">{Encode(errorMessage)}</p>";
+        var scopes = SplitScopes(scope);
+        var hasElevatedScope = scopes.Contains(McpScopes.Write, StringComparer.Ordinal) || scopes.Contains(McpScopes.Admin, StringComparer.Ordinal);
+        var scopeList = string.Join(
+            string.Empty,
+            scopes.Select(scopeValue => $"<li style=\"display:inline-block;margin:0 8px 8px 0;padding:6px 10px;border-radius:999px;background:#e2e8f0;font-size:14px;\">{Encode(scopeValue)}</li>"));
+        var elevatedConsentBlock = hasElevatedScope
+            ? """
+        <label style="display:flex;gap:10px;align-items:flex-start;margin:0 0 16px;padding:12px;border:1px solid #fecaca;border-radius:10px;background:#fff1f2;">
+            <input type="checkbox" name="approve_elevated_access" value="true" style="margin-top:4px;" />
+            <span>I understand this client is requesting elevated access that can modify or delete KinHub data.</span>
+        </label>
+"""
+            : string.Empty;
 
         return $$"""
 <!DOCTYPE html>
@@ -358,7 +558,8 @@ public sealed class OAuthController : ControllerBase
 <body style="font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a;padding:32px;">
     <main style="max-width:420px;margin:0 auto;background:white;padding:24px;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.08);">
         <h1 style="margin-top:0;">Authorize {{Encode(client.ClientName)}}</h1>
-        <p style="margin:0 0 16px;">Sign in to grant access to scope <strong>{{Encode(scope)}}</strong>.</p>
+        <p style="margin:0 0 8px;">Sign in to review the MCP scopes requested by <strong>{{Encode(client.ClientName)}}</strong>.</p>
+        <ul style="list-style:none;padding:0;margin:0 0 16px;">{{scopeList}}</ul>
         {{errorBlock}}
         <form method="post" action="/authorize">
             <input type="hidden" name="response_type" value="{{Encode(request.ResponseType)}}" />
@@ -376,7 +577,11 @@ public sealed class OAuthController : ControllerBase
                 <span style="display:block;margin-bottom:6px;">Password</span>
                 <input type="password" name="password" autocomplete="current-password" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;" />
             </label>
-            <button type="submit" style="width:100%;padding:10px 16px;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:600;">Continue</button>
+            {{elevatedConsentBlock}}
+            <div style="display:flex;gap:12px;">
+                <button type="submit" name="decision" value="approve" style="flex:1;padding:10px 16px;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:600;">Continue</button>
+                <button type="submit" name="decision" value="deny" formnovalidate style="flex:1;padding:10px 16px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#0f172a;font-weight:600;">Deny</button>
+            </div>
         </form>
     </main>
 </body>

@@ -24,7 +24,7 @@ public sealed class OAuthMetadataController : ControllerBase
             issuer,
             authorization_endpoint = $"{issuer}/authorize",
             token_endpoint = $"{issuer}/token",
-            registration_endpoint = $"{issuer}/register",
+            registration_endpoint = _mcpOptions.EnableDynamicClientRegistration ? $"{issuer}/register" : null,
             response_types_supported = new[] { "code" },
             grant_types_supported = new[] { "authorization_code", "refresh_token" },
             token_endpoint_auth_methods_supported = new[] { "none" },

@@ -6,6 +6,9 @@ internal sealed class UpdateUserEmailRequestValidator : AbstractValidator<Update
 {
     public UpdateUserEmailRequestValidator()
     {
+        RuleFor(x => x.CurrentPassword)
+            .NotEmpty();
+
         RuleFor(x => x.NewEmail)
             .NotEmpty()
             .EmailAddress();

@@ -91,6 +91,7 @@ public sealed class RecipeMcpTools : McpToolBase
     }
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe-book.create"), Description("Create a recipe book.")]
     public Task<CallToolResult> CreateRecipeBookAsync(
         [Description("The recipe book creation payload.")] CreateRecipeBookRequest? request = null,
@@ -102,11 +103,13 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe-book.list"), Description("List recipe books.")]
     public async Task<CallToolResult> ListRecipeBooksAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromCoreResult(await _recipeBookService.GetAllAsync(CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe-book.get"), Description("Get a recipe book.")]
     public async Task<CallToolResult> GetRecipeBookAsync(
         [Description("The target recipe book id.")] Guid id,
@@ -114,6 +117,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeBookService.GetByIdAsync(id, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe-book.update"), Description("Update a recipe book.")]
     public Task<CallToolResult> UpdateRecipeBookAsync(
         [Description("The target recipe book id.")] Guid id,
@@ -126,6 +130,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "recipe-book.delete"), Description("Delete a recipe book.")]
     public async Task<CallToolResult> DeleteRecipeBookAsync(
         [Description("The target recipe book id.")] Guid id,
@@ -133,6 +138,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeBookService.DeleteAsync(id, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe.create"), Description("Create a recipe.")]
     public Task<CallToolResult> CreateRecipeAsync(
         [Description("The recipe creation payload.")] CreateRecipeRequest? request = null,
@@ -144,6 +150,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.list"), Description("List recipes for a recipe book.")]
     public async Task<CallToolResult> ListRecipesAsync(
         [Description("The target recipe book id.")] Guid recipeBookId,
@@ -151,6 +158,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeService.GetAllAsync(recipeBookId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.get"), Description("Get a recipe.")]
     public async Task<CallToolResult> GetRecipeAsync(
         [Description("The target recipe id.")] Guid recipeId,
@@ -158,6 +166,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeService.GetByIdAsync(recipeId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe.update"), Description("Update a recipe.")]
     public Task<CallToolResult> UpdateRecipeAsync(
         [Description("The target recipe id.")] Guid recipeId,
@@ -170,6 +179,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "recipe.delete"), Description("Delete a recipe.")]
     public async Task<CallToolResult> DeleteRecipeAsync(
         [Description("The target recipe id.")] Guid recipeId,
@@ -177,17 +187,29 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeService.DeleteAsync(recipeId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.missing-ingredients"), Description("Compute missing ingredients for a recipe and fridge.")]
     public async Task<CallToolResult> GetMissingIngredientsAsync(
         [Description("The target recipe id.")] Guid recipeId,
         [Description("The target fridge id.")] Guid fridgeId,
-        CancellationToken cancellationToken = default) =>
-        McpErrorMapper.ToolSuccess(new
+        CancellationToken cancellationToken = default)
+    {
+        var recipeResult = await _recipeService.GetByIdAsync(recipeId, CurrentUser.UserId, cancellationToken);
+        if (!recipeResult.IsSuccess)
+            return McpErrorMapper.FromCoreResult(recipeResult);
+
+        var fridgeResult = await _fridgeService.GetByIdAsync(fridgeId, CurrentUser.UserId, cancellationToken);
+        if (!fridgeResult.IsSuccess)
+            return McpErrorMapper.FromCoreResult(fridgeResult);
+
+        return McpErrorMapper.ToolSuccess(new
         {
             missingIngredients = await _recipeMissingIngredientsService.GetMissingIngredientsAsync(recipeId, fridgeId, cancellationToken),
         });
+    }
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe.ingredient.create"), Description("Create a recipe ingredient.")]
     public Task<CallToolResult> CreateRecipeIngredientAsync(
         [Description("The recipe ingredient creation payload.")] CreateRecipeIngredientRequest? request = null,
@@ -199,6 +221,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.ingredient.list"), Description("List recipe ingredients.")]
     public async Task<CallToolResult> ListRecipeIngredientsAsync(
         [Description("The target recipe id.")] Guid recipeId,
@@ -206,6 +229,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeIngredientService.GetAllAsync(recipeId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.ingredient.get"), Description("Get a recipe ingredient.")]
     public async Task<CallToolResult> GetRecipeIngredientAsync(
         [Description("The target ingredient id.")] Guid ingredientId,
@@ -213,6 +237,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeIngredientService.GetByIdAsync(ingredientId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe.ingredient.update"), Description("Update a recipe ingredient.")]
     public Task<CallToolResult> UpdateRecipeIngredientAsync(
         [Description("The target ingredient id.")] Guid ingredientId,
@@ -225,6 +250,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "recipe.ingredient.delete"), Description("Delete a recipe ingredient.")]
     public async Task<CallToolResult> DeleteRecipeIngredientAsync(
         [Description("The target ingredient id.")] Guid ingredientId,
@@ -232,6 +258,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeIngredientService.DeleteAsync(ingredientId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe.step.create"), Description("Create a recipe step.")]
     public Task<CallToolResult> CreateRecipeStepAsync(
         [Description("The recipe step creation payload.")] CreateRecipeStepRequest? request = null,
@@ -243,6 +270,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.step.list"), Description("List recipe steps.")]
     public async Task<CallToolResult> ListRecipeStepsAsync(
         [Description("The target recipe id.")] Guid recipeId,
@@ -250,6 +278,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeStepService.GetAllAsync(recipeId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe.step.get"), Description("Get a recipe step.")]
     public async Task<CallToolResult> GetRecipeStepAsync(
         [Description("The target step id.")] Guid stepId,
@@ -257,6 +286,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeStepService.GetByIdAsync(stepId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "recipe.step.update"), Description("Update a recipe step.")]
     public Task<CallToolResult> UpdateRecipeStepAsync(
         [Description("The target step id.")] Guid stepId,
@@ -269,6 +299,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "recipe.step.delete"), Description("Delete a recipe step.")]
     public async Task<CallToolResult> DeleteRecipeStepAsync(
         [Description("The target step id.")] Guid stepId,
@@ -276,6 +307,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _recipeStepService.DeleteAsync(stepId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "fridge.create"), Description("Create a fridge.")]
     public Task<CallToolResult> CreateFridgeAsync(
         [Description("The fridge creation payload.")] CreateFridgeRequest? request = null,
@@ -287,11 +319,13 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "fridge.list"), Description("List fridges.")]
     public async Task<CallToolResult> ListFridgesAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromCoreResult(await _fridgeService.GetAllAsync(CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "fridge.get"), Description("Get a fridge.")]
     public async Task<CallToolResult> GetFridgeAsync(
         [Description("The target fridge id.")] Guid id,
@@ -299,6 +333,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _fridgeService.GetByIdAsync(id, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "fridge.update"), Description("Update a fridge.")]
     public Task<CallToolResult> UpdateFridgeAsync(
         [Description("The target fridge id.")] Guid id,
@@ -311,6 +346,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "fridge.delete"), Description("Delete a fridge.")]
     public async Task<CallToolResult> DeleteFridgeAsync(
         [Description("The target fridge id.")] Guid id,
@@ -318,6 +354,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _fridgeService.DeleteAsync(id, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "fridge.ingredient.create"), Description("Create a fridge ingredient.")]
     public Task<CallToolResult> CreateFridgeIngredientAsync(
         [Description("The fridge ingredient creation payload.")] CreateFridgeIngredientRequest? request = null,
@@ -329,6 +366,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "fridge.ingredient.list"), Description("List fridge ingredients.")]
     public async Task<CallToolResult> ListFridgeIngredientsAsync(
         [Description("The target fridge id.")] Guid fridgeId,
@@ -336,6 +374,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _fridgeIngredientService.GetAllAsync(fridgeId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "fridge.ingredient.get"), Description("Get a fridge ingredient.")]
     public async Task<CallToolResult> GetFridgeIngredientAsync(
         [Description("The target ingredient id.")] Guid ingredientId,
@@ -343,6 +382,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _fridgeIngredientService.GetByIdAsync(ingredientId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "fridge.ingredient.update"), Description("Update a fridge ingredient.")]
     public Task<CallToolResult> UpdateFridgeIngredientAsync(
         [Description("The target ingredient id.")] Guid ingredientId,
@@ -355,6 +395,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "fridge.ingredient.delete"), Description("Delete a fridge ingredient.")]
     public async Task<CallToolResult> DeleteFridgeIngredientAsync(
         [Description("The target ingredient id.")] Guid ingredientId,
@@ -362,6 +403,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _fridgeIngredientService.DeleteAsync(ingredientId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "shopping-list.create"), Description("Create a shopping list.")]
     public Task<CallToolResult> CreateShoppingListAsync(
         [Description("The shopping list creation payload.")] CreateShoppingListRequest? request = null,
@@ -373,11 +415,13 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "shopping-list.list"), Description("List shopping lists.")]
     public async Task<CallToolResult> ListShoppingListsAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromCoreResult(await _shoppingListService.GetAllAsync(CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "shopping-list.update"), Description("Update a shopping list.")]
     public Task<CallToolResult> UpdateShoppingListAsync(
         [Description("The target shopping list id.")] Guid id,
@@ -390,6 +434,7 @@ public sealed class RecipeMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "shopping-list.delete"), Description("Delete a shopping list.")]
     public async Task<CallToolResult> DeleteShoppingListAsync(
         [Description("The target shopping list id.")] Guid id,
@@ -397,6 +442,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _shoppingListService.DeleteAsync(id, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "shopping-list.item.list"), Description("List shopping list items.")]
     public async Task<CallToolResult> ListShoppingListItemsAsync(
         [Description("The target shopping list id.")] Guid listId,
@@ -404,6 +450,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _shoppingListItemService.GetAllByListIdAsync(listId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "shopping-list.item.add"), Description("Add a shopping list item.")]
     public Task<CallToolResult> AddShoppingListItemAsync(
         [Description("The target shopping list id.")] Guid listId,
@@ -421,6 +468,7 @@ public sealed class RecipeMcpTools : McpToolBase
     }
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "shopping-list.item.bulk-add"), Description("Bulk add shopping list items.")]
     public Task<CallToolResult> BulkAddShoppingListItemsAsync(
         [Description("The target shopping list id.")] Guid listId,
@@ -438,6 +486,7 @@ public sealed class RecipeMcpTools : McpToolBase
     }
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "shopping-list.item.toggle"), Description("Toggle a shopping list item.")]
     public async Task<CallToolResult> ToggleShoppingListItemAsync(
         [Description("The target shopping list id.")] Guid listId,
@@ -446,6 +495,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _shoppingListItemService.ToggleCheckedAsync(listId, itemId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "shopping-list.item.delete"), Description("Delete a shopping list item.")]
     public async Task<CallToolResult> DeleteShoppingListItemAsync(
         [Description("The target shopping list id.")] Guid listId,
@@ -454,6 +504,7 @@ public sealed class RecipeMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _shoppingListItemService.DeleteAsync(listId, itemId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "shopping-list.item.delete-checked"), Description("Delete checked shopping list items.")]
     public async Task<CallToolResult> DeleteCheckedShoppingListItemsAsync(
         [Description("The target shopping list id.")] Guid listId,

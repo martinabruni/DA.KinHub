@@ -37,11 +37,13 @@ public sealed class FamilyMcpTools : McpToolBase
     }
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "family.get"), Description("Get the current family.")]
     public async Task<CallToolResult> GetFamilyAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromCoreResult(await _familyService.GetFamilyAsync(CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "family.create"), Description("Create a family.")]
     public Task<CallToolResult> CreateFamilyAsync(
         [Description("The family creation payload.")] CreateFamilyRequest? request = null,
@@ -53,6 +55,7 @@ public sealed class FamilyMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "family.update"), Description("Update a family.")]
     public Task<CallToolResult> UpdateFamilyAsync(
         [Description("The target family id.")] Guid familyId,
@@ -65,6 +68,7 @@ public sealed class FamilyMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "family.delete"), Description("Delete a family.")]
     public async Task<CallToolResult> DeleteFamilyAsync(
         [Description("The target family id.")] Guid familyId,
@@ -72,6 +76,7 @@ public sealed class FamilyMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _familyService.DeleteFamilyAsync(familyId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "family.member.add"), Description("Add a family member.")]
     public Task<CallToolResult> AddFamilyMemberAsync(
         [Description("The target family id.")] Guid familyId,
@@ -84,6 +89,7 @@ public sealed class FamilyMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "family.member.update"), Description("Update a family member.")]
     public Task<CallToolResult> UpdateFamilyMemberAsync(
         [Description("The target family id.")] Guid familyId,
@@ -97,6 +103,7 @@ public sealed class FamilyMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "family.member.delete"), Description("Delete a family member.")]
     public async Task<CallToolResult> DeleteFamilyMemberAsync(
         [Description("The target family id.")] Guid familyId,
@@ -105,18 +112,21 @@ public sealed class FamilyMcpTools : McpToolBase
         McpErrorMapper.FromCoreResult(await _familyService.DeleteFamilyMemberAsync(familyId, memberId, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "family.services.list"), Description("List all KinHub services.")]
     public async Task<CallToolResult> ListServicesAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromCoreResult(await _kinHubServiceService.GetAllServicesAsync(cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "family.services.get"), Description("Get the enabled services for a family.")]
     public async Task<CallToolResult> GetFamilyServicesAsync(
         [Description("The target family id.")] Guid id,
         CancellationToken cancellationToken = default) =>
-        McpErrorMapper.FromCoreResult(await _kinHubServiceService.GetFamilyServicesAsync(id, cancellationToken));
+        McpErrorMapper.FromCoreResult(await _kinHubServiceService.GetFamilyServicesAsync(id, CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "family.services.toggle"), Description("Enable or disable a KinHub service for a family.")]
     public Task<CallToolResult> ToggleFamilyServiceAsync(
         [Description("The target family id.")] Guid familyId,
@@ -125,6 +135,6 @@ public sealed class FamilyMcpTools : McpToolBase
         ExecuteCoreValidatedAsync(
             request,
             _toggleFamilyServiceValidator,
-            async (payload, ct) => await _kinHubServiceService.ToggleFamilyServiceAsync(familyId, payload, ct),
+            async (payload, ct) => await _kinHubServiceService.ToggleFamilyServiceAsync(familyId, payload, CurrentUser.UserId, ct),
             cancellationToken);
 }

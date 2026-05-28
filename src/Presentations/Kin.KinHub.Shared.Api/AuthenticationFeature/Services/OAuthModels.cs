@@ -78,6 +78,12 @@ public sealed class OAuthAuthorizeLoginRequest
 
     [FromForm(Name = "password")]
     public string? Password { get; set; }
+
+    [FromForm(Name = "decision")]
+    public string? Decision { get; set; }
+
+    [FromForm(Name = "approve_elevated_access")]
+    public bool ApproveElevatedAccess { get; set; }
 }
 
 public sealed class OAuthTokenRequest
@@ -144,12 +150,30 @@ public interface IOAuthAuthorizationCodeStore
     bool TryConsume(string code, out OAuthAuthorizationCodeTicket? ticket);
 }
 
+public interface IOAuthRefreshTokenScopeStore
+{
+    void Store(string refreshToken, string scope);
+    bool TryGet(string refreshToken, out string? scope);
+    void Replace(string previousRefreshToken, string nextRefreshToken, string scope);
+}
+
 public sealed class InMemoryOAuthClientStore : IOAuthClientStore
 {
     private readonly ConcurrentDictionary<string, OAuthRegisteredClient> _clients = new(StringComparer.Ordinal);
+    private readonly McpTransportOptions _options;
+
+    public InMemoryOAuthClientStore(McpTransportOptions options)
+    {
+        _options = options;
+    }
 
     public OAuthRegisteredClient Create(OAuthDynamicClientRegistrationRequest request, string defaultScope)
     {
+        if (_clients.Count >= _options.MaxRegisteredClients)
+        {
+            throw new InvalidOperationException("Dynamic client registration capacity has been reached.");
+        }
+
         var clientId = $"kinhub-{Guid.NewGuid():N}";
         var issuedAt = DateTimeOffset.UtcNow;
         var client = new OAuthRegisteredClient(
@@ -173,6 +197,12 @@ public sealed class InMemoryOAuthClientStore : IOAuthClientStore
 public sealed class InMemoryOAuthAuthorizationCodeStore : IOAuthAuthorizationCodeStore
 {
     private readonly ConcurrentDictionary<string, OAuthAuthorizationCodeTicket> _tickets = new(StringComparer.Ordinal);
+    private readonly McpTransportOptions _options;
+
+    public InMemoryOAuthAuthorizationCodeStore(McpTransportOptions options)
+    {
+        _options = options;
+    }
 
     public OAuthAuthorizationCodeTicket Create(
         string clientId,
@@ -183,6 +213,12 @@ public sealed class InMemoryOAuthAuthorizationCodeStore : IOAuthAuthorizationCod
         LoginResponse loginResponse,
         TimeSpan lifetime)
     {
+        CleanupExpiredTickets();
+        if (_tickets.Count >= _options.MaxAuthorizationCodes)
+        {
+            throw new InvalidOperationException("Authorization code capacity has been reached.");
+        }
+
         var code = Base64UrlEncoder.Encode(Guid.NewGuid().ToByteArray());
         var ticket = new OAuthAuthorizationCodeTicket(
             code,
@@ -208,5 +244,47 @@ public sealed class InMemoryOAuthAuthorizationCodeStore : IOAuthAuthorizationCod
 
         ticket = null;
         return false;
+    }
+
+    private void CleanupExpiredTickets()
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var item in _tickets)
+        {
+            if (item.Value.ExpiresAtUtc <= now)
+            {
+                _tickets.TryRemove(item.Key, out _);
+            }
+        }
+    }
+}
+
+public sealed class InMemoryOAuthRefreshTokenScopeStore : IOAuthRefreshTokenScopeStore
+{
+    private readonly ConcurrentDictionary<string, string> _scopes = new(StringComparer.Ordinal);
+    private readonly McpTransportOptions _options;
+
+    public InMemoryOAuthRefreshTokenScopeStore(McpTransportOptions options)
+    {
+        _options = options;
+    }
+
+    public void Store(string refreshToken, string scope)
+    {
+        if (_scopes.Count >= _options.MaxScopedRefreshTokens)
+        {
+            throw new InvalidOperationException("Scoped refresh token capacity has been reached.");
+        }
+
+        _scopes[refreshToken] = scope;
+    }
+
+    public bool TryGet(string refreshToken, out string? scope) =>
+        _scopes.TryGetValue(refreshToken, out scope);
+
+    public void Replace(string previousRefreshToken, string nextRefreshToken, string scope)
+    {
+        _scopes.TryRemove(previousRefreshToken, out _);
+        Store(nextRefreshToken, scope);
     }
 }

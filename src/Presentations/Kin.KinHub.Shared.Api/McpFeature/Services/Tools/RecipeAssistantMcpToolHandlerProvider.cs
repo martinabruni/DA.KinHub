@@ -28,6 +28,7 @@ public sealed class RecipeAssistantMcpTools : McpToolBase
     }
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe-assistant.suggest"), Description("Suggest recipes from a fridge.")]
     public async Task<CallToolResult> SuggestRecipesAsync(
         [Description("The fridge id used to suggest recipes.")] Guid fridgeId,
@@ -42,6 +43,7 @@ public sealed class RecipeAssistantMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe-assistant.parse"), Description("Parse a recipe from free-form text.")]
     public async Task<CallToolResult> ParseRecipeAsync(
         [Description("The free-form recipe text to parse.")] string rawText,
@@ -56,6 +58,7 @@ public sealed class RecipeAssistantMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "recipe-assistant.adapt"), Description("Adapt a recipe to new constraints.")]
     public async Task<CallToolResult> AdaptRecipeAsync(
         [Description("The recipe id to adapt.")] Guid recipeId,
