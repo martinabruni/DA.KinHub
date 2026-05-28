@@ -17,6 +17,7 @@ public interface IKinHubServiceService
     /// </summary>
     Task<Result<IReadOnlyList<FamilyServiceDto>>> GetFamilyServicesAsync(
         Guid familyId,
+        Guid userId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -25,5 +26,6 @@ public interface IKinHubServiceService
     Task<Result<FamilyServiceDto>> ToggleFamilyServiceAsync(
         Guid familyId,
         ToggleFamilyServiceRequest request,
+        Guid userId,
         CancellationToken cancellationToken = default);
 }

@@ -8,7 +8,6 @@ namespace Kin.KinHub.Shared.Api.Common.Mcp;
 [McpServerToolType]
 public sealed class AuthenticationMcpTools : McpToolBase
 {
-    private readonly IRegisterUserHandler _registerUserHandler;
     private readonly IGetCurrentUserHandler _getCurrentUserHandler;
     private readonly IUpdateUserEmailHandler _updateUserEmailHandler;
     private readonly IUpdateUserPasswordHandler _updateUserPasswordHandler;
@@ -19,7 +18,6 @@ public sealed class AuthenticationMcpTools : McpToolBase
 
     public AuthenticationMcpTools(
         ICurrentUser currentUser,
-        IRegisterUserHandler registerUserHandler,
         IGetCurrentUserHandler getCurrentUserHandler,
         IUpdateUserEmailHandler updateUserEmailHandler,
         IUpdateUserPasswordHandler updateUserPasswordHandler,
@@ -29,7 +27,6 @@ public sealed class AuthenticationMcpTools : McpToolBase
         IRequestValidator<UpdateUserPasswordRequest> updatePasswordValidator)
         : base(currentUser)
     {
-        _registerUserHandler = registerUserHandler;
         _getCurrentUserHandler = getCurrentUserHandler;
         _updateUserEmailHandler = updateUserEmailHandler;
         _updateUserPasswordHandler = updateUserPasswordHandler;
@@ -39,29 +36,14 @@ public sealed class AuthenticationMcpTools : McpToolBase
         _updatePasswordValidator = updatePasswordValidator;
     }
 
-    [McpServerTool(Name = "auth.register"), Description("Register a new KinHub user.")]
-    public Task<CallToolResult> RegisterAsync(
-        [Description("The email for the new user.")] string email,
-        [Description("The password for the new user.")] string password,
-        [Description("An optional display name for the new user.")] string? displayName = null,
-        CancellationToken cancellationToken = default) =>
-        ExecuteIdentityValidatedAsync(
-            new RegisterRequest
-            {
-                Email = email,
-                Password = password,
-                DisplayName = displayName,
-            },
-            _registerValidator,
-            _registerUserHandler.HandleAsync,
-            cancellationToken);
-
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Read)]
     [McpServerTool(Name = "auth.account.get"), Description("Read the current account.")]
     public async Task<CallToolResult> GetAccountAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromIdentityResult(await _getCurrentUserHandler.HandleAsync(CurrentUser.UserId, cancellationToken));
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "auth.account.update-email"), Description("Update the current account email.")]
     public Task<CallToolResult> UpdateEmailAsync(
         [Description("The email update payload.")] UpdateUserEmailRequest? request = null,
@@ -73,6 +55,7 @@ public sealed class AuthenticationMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Write)]
     [McpServerTool(Name = "auth.account.update-password"), Description("Update the current account password.")]
     public Task<CallToolResult> UpdatePasswordAsync(
         [Description("The password update payload.")] UpdateUserPasswordRequest? request = null,
@@ -84,6 +67,7 @@ public sealed class AuthenticationMcpTools : McpToolBase
             cancellationToken);
 
     [Authorize]
+    [Authorize(Policy = McpAuthorizationPolicies.Admin)]
     [McpServerTool(Name = "auth.account.delete"), Description("Delete the current account.")]
     public async Task<CallToolResult> DeleteAccountAsync(CancellationToken cancellationToken = default) =>
         McpErrorMapper.FromIdentityResult(await _deleteUserHandler.HandleAsync(CurrentUser.UserId, cancellationToken));

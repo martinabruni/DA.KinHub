@@ -6,13 +6,16 @@ public sealed class KinHubServiceService : IKinHubServiceService
 {
     private readonly IKinHubServiceRepository _kinHubServiceRepository;
     private readonly IFamilyServiceRepository _familyServiceRepository;
+    private readonly IFamilyOwnershipService _familyOwnershipService;
 
     public KinHubServiceService(
         IKinHubServiceRepository kinHubServiceRepository,
-        IFamilyServiceRepository familyServiceRepository)
+        IFamilyServiceRepository familyServiceRepository,
+        IFamilyOwnershipService familyOwnershipService)
     {
         _kinHubServiceRepository = kinHubServiceRepository;
         _familyServiceRepository = familyServiceRepository;
+        _familyOwnershipService = familyOwnershipService;
     }
 
     /// <inheritdoc/>
@@ -44,10 +47,15 @@ public sealed class KinHubServiceService : IKinHubServiceService
     /// <inheritdoc/>
     public async Task<Result<IReadOnlyList<FamilyServiceDto>>> GetFamilyServicesAsync(
         Guid familyId,
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
         try
         {
+            var access = await _familyOwnershipService.EnsureOwnershipAsync(familyId, userId, cancellationToken);
+            if (!access.IsSuccess)
+                return access.ToResult<IReadOnlyList<FamilyServiceDto>>();
+
             var allServices = await _kinHubServiceRepository.GetAllAsync();
             var familyServices = await _familyServiceRepository.GetByFamilyIdAsync(familyId, cancellationToken);
 
@@ -76,10 +84,15 @@ public sealed class KinHubServiceService : IKinHubServiceService
     public async Task<Result<FamilyServiceDto>> ToggleFamilyServiceAsync(
         Guid familyId,
         ToggleFamilyServiceRequest request,
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
         try
         {
+            var access = await _familyOwnershipService.EnsureOwnershipAsync(familyId, userId, cancellationToken);
+            if (!access.IsSuccess)
+                return access.ToResult<FamilyServiceDto>();
+
             if (request.ServiceId == (int)KinHubServiceType.KinConsole && !request.IsActive)
                 return Result<FamilyServiceDto>.ValidationError("KinConsole non puÃ² essere disattivato.");
 

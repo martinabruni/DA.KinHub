@@ -8,9 +8,9 @@ namespace Kin.KinHub.Identity.Domain.AuthenticationFeature;
 public interface ITokenGenerator
 {
     /// <summary>
-    /// Generates a signed JWT access token containing standard claims (sub, email, roles, iss, exp).
+    /// Generates a signed JWT access token containing standard claims (sub, email, roles, iss, exp) and optional scopes.
     /// </summary>
-    string GenerateAccessToken(KinUser user, IReadOnlyList<string> roles);
+    string GenerateAccessToken(KinUser user, IReadOnlyList<string> roles, IReadOnlyList<string>? scopes = null);
 
     /// <summary>
     /// Generates a cryptographically-random opaque refresh token.

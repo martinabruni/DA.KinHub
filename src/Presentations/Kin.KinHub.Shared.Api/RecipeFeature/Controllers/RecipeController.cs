@@ -7,6 +7,7 @@ namespace Kin.KinHub.Shared.Api.RecipeFeature;
 public sealed class RecipeController : ControllerBase
 {
     private readonly IRecipeService _recipeService;
+    private readonly IFridgeService _fridgeService;
     private readonly IRecipeMissingIngredientsService _missingIngredientsService;
     private readonly IRequestValidator<CreateRecipeRequest> _createValidator;
     private readonly IRequestValidator<UpdateRecipeRequest> _updateValidator;
@@ -14,12 +15,14 @@ public sealed class RecipeController : ControllerBase
 
     public RecipeController(
         IRecipeService recipeService,
+        IFridgeService fridgeService,
         IRecipeMissingIngredientsService missingIngredientsService,
         IRequestValidator<CreateRecipeRequest> createValidator,
         IRequestValidator<UpdateRecipeRequest> updateValidator,
         ICurrentUser currentUser)
     {
         _recipeService = recipeService;
+        _fridgeService = fridgeService;
         _missingIngredientsService = missingIngredientsService;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
@@ -106,6 +109,14 @@ public sealed class RecipeController : ControllerBase
     {
         if (!_currentUser.IsAuthenticated)
             return Unauthorized(new { message = "Missing or invalid Authorization header." });
+
+        var recipeResult = await _recipeService.GetByIdAsync(id, _currentUser.UserId, cancellationToken);
+        if (!recipeResult.IsSuccess)
+            return HttpResultMapper.ToActionResult(recipeResult);
+
+        var fridgeResult = await _fridgeService.GetByIdAsync(fridgeId, _currentUser.UserId, cancellationToken);
+        if (!fridgeResult.IsSuccess)
+            return HttpResultMapper.ToActionResult(fridgeResult);
 
         var missing = await _missingIngredientsService.GetMissingIngredientsAsync(id, fridgeId, cancellationToken);
         return Ok(new { missingIngredients = missing });

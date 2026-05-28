@@ -2,6 +2,7 @@ using Kin.KinHub.Core.Business.Common;
 using Kin.KinHub.Core.Business.FamilyFeature;
 using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
+using Kin.KinHub.Shared.Api.Common.Mcp;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -72,13 +73,15 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
         var toolNames = tools.Select(tool => tool.Name).OrderBy(name => name).ToArray();
 
         Assert.Contains("auth.account.get", toolNames);
-        Assert.Contains("auth.register", toolNames);
         Assert.Contains("family.get", toolNames);
         Assert.Contains("recipe.get", toolNames);
         Assert.Contains("recipe-assistant.parse", toolNames);
+        Assert.DoesNotContain("auth.account.update-email", toolNames);
+        Assert.DoesNotContain("auth.account.delete", toolNames);
         Assert.DoesNotContain("auth.login", toolNames);
         Assert.DoesNotContain("auth.refresh", toolNames);
         Assert.DoesNotContain("auth.logout", toolNames);
+        Assert.DoesNotContain("auth.register", toolNames);
     }
 
     [Fact]
@@ -111,6 +114,9 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
         Assert.Equal("http://localhost/register", body.GetProperty("registration_endpoint").GetString());
         Assert.Contains("authorization_code", body.GetProperty("grant_types_supported").EnumerateArray().Select(x => x.GetString()));
         Assert.Contains("S256", body.GetProperty("code_challenge_methods_supported").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains(McpScopes.Read, body.GetProperty("scopes_supported").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains(McpScopes.Write, body.GetProperty("scopes_supported").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains(McpScopes.Admin, body.GetProperty("scopes_supported").EnumerateArray().Select(x => x.GetString()));
     }
 
     [Fact]
@@ -125,7 +131,9 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
         Assert.Equal("KinHub MCP", body.GetProperty("resource_name").GetString());
         Assert.Equal("http://localhost", body.GetProperty("resource").GetString());
         Assert.Contains("http://localhost", body.GetProperty("authorization_servers").EnumerateArray().Select(server => server.GetString()));
-        Assert.Contains("mcp:tools", body.GetProperty("scopes_supported").EnumerateArray().Select(scope => scope.GetString()));
+        Assert.Contains(McpScopes.Read, body.GetProperty("scopes_supported").EnumerateArray().Select(scope => scope.GetString()));
+        Assert.Contains(McpScopes.Write, body.GetProperty("scopes_supported").EnumerateArray().Select(scope => scope.GetString()));
+        Assert.Contains(McpScopes.Admin, body.GetProperty("scopes_supported").EnumerateArray().Select(scope => scope.GetString()));
     }
 
     [Fact]
@@ -141,7 +149,115 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
         Assert.Equal("Bearer", tokenResponse.GetProperty("token_type").GetString());
         Assert.False(string.IsNullOrWhiteSpace(tokenResponse.GetProperty("access_token").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(tokenResponse.GetProperty("refresh_token").GetString()));
-        Assert.Equal("mcp:tools", tokenResponse.GetProperty("scope").GetString());
+        Assert.Equal(McpScopes.Read, tokenResponse.GetProperty("scope").GetString());
+    }
+
+    [Fact]
+    public async Task RegisterClient_RequestingAdminScope_ReturnsInvalidScope()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await client.PostAsJsonAsync(
+            "/register",
+            new
+            {
+                client_name = "integration-test-client",
+                redirect_uris = new[] { "http://127.0.0.1/callback" },
+                grant_types = new[] { "authorization_code", "refresh_token" },
+                response_types = new[] { "code" },
+                token_endpoint_auth_method = "none",
+                scope = $"{McpScopes.Read} {McpScopes.Write} {McpScopes.Admin}",
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("invalid_scope", body.GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_WriteScopeRequiresExplicitConsent()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await _factory.AuthorizeOAuthClientAsync(client, $"{McpScopes.Read} {McpScopes.Write}", approveElevatedAccess: false);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("explicitly approve elevated MCP access", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_WriteScopeWithConsent_ReturnsWriteScopedToken()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var tokenResponse = await _factory.CreateOAuthTokenResponseAsync(client, $"{McpScopes.Read} {McpScopes.Write}", approveElevatedAccess: true);
+
+        Assert.Equal($"{McpScopes.Read} {McpScopes.Write}", tokenResponse.GetProperty("scope").GetString());
+    }
+
+    [Fact]
+    public async Task Authorize_Deny_ReturnsAccessDeniedRedirect()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await _factory.AuthorizeOAuthClientAsync(client, McpScopes.Read, decision: "deny");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var location = response.Headers.Location;
+        Assert.NotNull(location);
+
+        var callbackQuery = QueryHelpers.ParseQuery(location!.Query);
+        Assert.Equal("access_denied", callbackQuery["error"].ToString());
+        Assert.Equal("integration-state", callbackQuery["state"].ToString());
+    }
+
+    [Fact]
+    public async Task Health_OnAzureHost_ReturnsOk()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://kinhub-dev-app.azurewebsites.net"),
+        });
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task LoginPreflight_WithAllowedSwaOrigin_ReturnsCorsHeaders()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://kinhub-dev-app.azurewebsites.net"),
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/api/auth/login");
+        request.Headers.Add("Origin", "https://orange-plant-0cdfb6b03.7.azurestaticapps.net");
+        request.Headers.Add("Access-Control-Request-Method", "POST");
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        if (response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins))
+        {
+            Assert.Equal("https://orange-plant-0cdfb6b03.7.azurestaticapps.net", origins.Single());
+        }
     }
 
     private static object CreateInitializePayload() => new
@@ -166,6 +282,7 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Development");
         builder.ConfigureAppConfiguration((_, configurationBuilder) =>
         {
             configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
@@ -175,6 +292,18 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Issuer"] = "kinhub-tests",
                 ["OpenAi:Endpoint"] = "https://localhost/",
                 ["OpenAi:ApiKey"] = "test-key",
+                ["Cors:AllowAnyOrigin"] = "false",
+                ["Cors:AllowedOrigins:0"] = "https://orange-plant-0cdfb6b03.7.azurestaticapps.net",
+                ["Mcp:AuthorizationServerUrl"] = "http://localhost",
+                ["Mcp:EnableDynamicClientRegistration"] = "true",
+                ["Mcp:SupportedScopes:0"] = McpScopes.Read,
+                ["Mcp:SupportedScopes:1"] = McpScopes.Write,
+                ["Mcp:SupportedScopes:2"] = McpScopes.Admin,
+                ["Mcp:DynamicClientDefaultScopes:0"] = McpScopes.Read,
+                ["Mcp:DynamicClientAllowedScopes:0"] = McpScopes.Read,
+                ["Mcp:DynamicClientAllowedScopes:1"] = McpScopes.Write,
+                ["Mcp:ElevatedConsentScopes:0"] = McpScopes.Write,
+                ["Mcp:ElevatedConsentScopes:1"] = McpScopes.Admin,
             });
         });
 
@@ -198,13 +327,13 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         });
     }
 
-    public async Task<McpClient> CreateMcpClientAsync()
+    public async Task<McpClient> CreateMcpClientAsync(string? scope = null, bool approveElevatedAccess = false)
     {
         var httpClient = CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
         });
-        var accessToken = await CreateOAuthAccessTokenAsync(httpClient);
+        var accessToken = await CreateOAuthAccessTokenAsync(httpClient, scope, approveElevatedAccess);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         var transport = new HttpClientTransport(
@@ -217,18 +346,18 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         return await McpClient.CreateAsync(transport);
     }
 
-    public async Task<string> CreateOAuthAccessTokenAsync(HttpClient? client = null)
+    public async Task<string> CreateOAuthAccessTokenAsync(HttpClient? client = null, string? scope = null, bool approveElevatedAccess = false)
     {
         var httpClient = client ?? CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
         });
 
-        var tokenResponse = await CreateOAuthTokenResponseAsync(httpClient);
+        var tokenResponse = await CreateOAuthTokenResponseAsync(httpClient, scope, approveElevatedAccess);
         return tokenResponse.GetProperty("access_token").GetString()!;
     }
 
-    public async Task<JsonElement> CreateOAuthTokenResponseAsync(HttpClient client)
+    public async Task<HttpResponseMessage> AuthorizeOAuthClientAsync(HttpClient client, string? scope = null, bool approveElevatedAccess = false, string decision = "approve")
     {
         var registrationResponse = await client.PostAsJsonAsync(
             "/register",
@@ -239,7 +368,7 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
                 grant_types = new[] { "authorization_code", "refresh_token" },
                 response_types = new[] { "code" },
                 token_endpoint_auth_method = "none",
-                scope = "mcp:tools",
+                scope,
             });
 
         registrationResponse.EnsureSuccessStatusCode();
@@ -247,39 +376,57 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         var clientId = registrationBody.GetProperty("client_id").GetString()!;
         const string redirectUri = "http://127.0.0.1/callback";
         const string codeVerifier = "integration-test-code-verifier-0123456789";
-        var authorizeUri = QueryHelpers.AddQueryString(
-            "/authorize",
-            new Dictionary<string, string?>
-            {
-                ["response_type"] = "code",
-                ["client_id"] = clientId,
-                ["redirect_uri"] = redirectUri,
-                ["scope"] = "mcp:tools",
-                ["state"] = "integration-state",
-                ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
-                ["code_challenge_method"] = "S256",
-            });
+        var authorizeQuery = new Dictionary<string, string?>
+        {
+            ["response_type"] = "code",
+            ["client_id"] = clientId,
+            ["redirect_uri"] = redirectUri,
+            ["state"] = "integration-state",
+            ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
+            ["code_challenge_method"] = "S256",
+        };
+        if (!string.IsNullOrWhiteSpace(scope))
+        {
+            authorizeQuery["scope"] = scope;
+        }
 
-        var authorizeResponse = await client.PostAsync(
-            authorizeUri,
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["response_type"] = "code",
-                ["client_id"] = clientId,
-                ["redirect_uri"] = redirectUri,
-                ["scope"] = "mcp:tools",
-                ["state"] = "integration-state",
-                ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
-                ["code_challenge_method"] = "S256",
-                ["email"] = FakeAuthenticationService.Email,
-                ["password"] = FakeAuthenticationService.Password,
-            }));
+        var authorizeUri = QueryHelpers.AddQueryString("/authorize", authorizeQuery);
+        var form = new Dictionary<string, string>
+        {
+            ["response_type"] = "code",
+            ["client_id"] = clientId,
+            ["redirect_uri"] = redirectUri,
+            ["state"] = "integration-state",
+            ["code_challenge"] = ComputeCodeChallenge(codeVerifier),
+            ["code_challenge_method"] = "S256",
+            ["email"] = FakeAuthenticationService.Email,
+            ["password"] = FakeAuthenticationService.Password,
+            ["decision"] = decision,
+        };
+        if (!string.IsNullOrWhiteSpace(scope))
+        {
+            form["scope"] = scope;
+        }
+
+        if (approveElevatedAccess)
+        {
+            form["approve_elevated_access"] = "true";
+        }
+
+        return await client.PostAsync(authorizeUri, new FormUrlEncodedContent(form));
+    }
+
+    public async Task<JsonElement> CreateOAuthTokenResponseAsync(HttpClient client, string? scope = null, bool approveElevatedAccess = false)
+    {
+        var authorizeResponse = await AuthorizeOAuthClientAsync(client, scope, approveElevatedAccess);
+        const string codeVerifier = "integration-test-code-verifier-0123456789";
 
         Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
         var location = authorizeResponse.Headers.Location;
         Assert.NotNull(location);
 
         var callbackQuery = QueryHelpers.ParseQuery(location!.Query);
+        var authorizeQuery = QueryHelpers.ParseQuery(authorizeResponse.RequestMessage!.RequestUri!.Query);
         var code = callbackQuery["code"].ToString();
         Assert.False(string.IsNullOrWhiteSpace(code));
         Assert.Equal("integration-state", callbackQuery["state"].ToString());
@@ -289,9 +436,9 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
-                ["client_id"] = clientId,
+                ["client_id"] = authorizeQuery["client_id"].ToString(),
                 ["code"] = code,
-                ["redirect_uri"] = redirectUri,
+                ["redirect_uri"] = authorizeQuery["redirect_uri"].ToString(),
                 ["code_verifier"] = codeVerifier,
             }));
 

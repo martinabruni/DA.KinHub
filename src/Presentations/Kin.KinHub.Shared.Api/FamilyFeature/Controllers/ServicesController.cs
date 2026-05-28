@@ -39,7 +39,7 @@ public sealed class ServicesController : ControllerBase
         if (!_currentUser.IsAuthenticated)
             return Unauthorized(new { message = "Missing or invalid Authorization header." });
 
-        var result = await _serviceService.GetFamilyServicesAsync(familyId, cancellationToken);
+        var result = await _serviceService.GetFamilyServicesAsync(familyId, _currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(result);
     }
@@ -61,7 +61,7 @@ public sealed class ServicesController : ControllerBase
         if (!validation.IsValid)
             return BadRequest(new { errors = validation.Errors });
 
-        var result = await _serviceService.ToggleFamilyServiceAsync(familyId, request, cancellationToken);
+        var result = await _serviceService.ToggleFamilyServiceAsync(familyId, request, _currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(result);
     }

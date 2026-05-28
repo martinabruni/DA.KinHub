@@ -147,7 +147,7 @@ public sealed class AuthenticationServiceCharacterizationTests
             new RefreshTokenHandler(refreshTokenRepository, userRepository, loginResponseFactory),
             new LogoutUserHandler(refreshTokenRepository),
             new GetCurrentUserHandler(userRepository),
-            new UpdateUserEmailHandler(userRepository),
+            new UpdateUserEmailHandler(userRepository, credentialRepository, passwordHasher),
             new UpdateUserPasswordHandler(credentialRepository, passwordHasher),
             new DeleteUserHandler(userRepository));
     }
@@ -675,7 +675,7 @@ internal sealed class TestTokenGenerator : ITokenGenerator
 
     public int AccessTokenExpirySeconds => 3600;
 
-    public string GenerateAccessToken(KinUser user, IReadOnlyList<string> roles) =>
+    public string GenerateAccessToken(KinUser user, IReadOnlyList<string> roles, IReadOnlyList<string>? scopes = null) =>
         $"access::{user.Email}::{++_accessTokenCounter}";
 
     public string GenerateRefreshToken() => $"refresh-{_refreshTokenCounter++}";
