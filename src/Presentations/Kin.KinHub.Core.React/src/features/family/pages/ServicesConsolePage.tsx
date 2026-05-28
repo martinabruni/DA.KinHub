@@ -1,18 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Grid2x2, Refrigerator, Sparkles, Users } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import {
+  getServiceConfig,
+  isServiceToggleable,
+} from '@/config/serviceConfig'
 import { useServices } from '@/features/family/ServicesProvider'
-
-const serviceIcons: Record<string, React.ElementType> = {
-  Recipes: BookOpen,
-  Fridges: Refrigerator,
-  'AI Assistant': Sparkles,
-  Family: Users,
-  Services: Grid2x2,
-}
 
 export function ServicesConsolePage() {
   const { t } = useTranslation()
@@ -27,16 +22,24 @@ export function ServicesConsolePage() {
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)
           : services.map((service) => {
-              const Icon = serviceIcons[service.name] ?? Grid2x2
+              const config = getServiceConfig(service.name)
+              const Icon = config.icon
+              const canToggle = isServiceToggleable(service.name)
               return (
                 <Card key={service.id} className="p-6">
                   <CardContent className="p-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <Icon className="w-7 h-7 text-primary" />
-                      <Switch
-                        checked={service.isEnabled}
-                        onCheckedChange={(checked) => toggleService(service.id, checked)}
-                      />
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <Icon className={`w-7 h-7 shrink-0 ${config.color}`} />
+                      {canToggle ? (
+                        <Switch
+                          checked={service.isEnabled}
+                          onCheckedChange={(checked) => toggleService(service.id, checked)}
+                        />
+                      ) : (
+                        <Badge variant="secondary" className="shrink-0 text-xs">
+                          {t('console.services.alwaysOn')}
+                        </Badge>
+                      )}
                     </div>
                     <p className="font-semibold">{service.name}</p>
                     <p className="text-muted-foreground text-sm mt-1">{service.description}</p>
@@ -44,8 +47,17 @@ export function ServicesConsolePage() {
                       variant={service.isEnabled ? 'default' : 'secondary'}
                       className="mt-3 text-xs"
                     >
-                      {service.isEnabled ? t('services.active') : t('services.inactive')}
+                      {canToggle
+                        ? service.isEnabled
+                          ? t('services.active')
+                          : t('services.inactive')
+                        : t('console.services.alwaysOn')}
                     </Badge>
+                    {!canToggle && (
+                      <p className="text-muted-foreground mt-2 text-xs">
+                        {t('console.services.alwaysOnDescription')}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )

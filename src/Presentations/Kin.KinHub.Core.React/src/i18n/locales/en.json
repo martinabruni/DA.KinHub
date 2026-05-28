@@ -95,13 +95,16 @@
     "inactive": "Inactive",
     "open": "Open",
     "manage": "Manage services →",
+    "fixedServiceError": "KinConsole is always on.",
     "toggleError": "Failed to update service. Reverting.",
     "updated": "Service updated."
   },
   "console": {
     "services": {
       "title": "KinConsole",
-      "subtitle": "Enable or disable services for your family"
+      "subtitle": "Manage your family's services. KinConsole is always available.",
+      "alwaysOn": "Always on",
+      "alwaysOnDescription": "KinConsole is the management area and cannot be turned off."
     }
   },
   "recipeBooks": {

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@/api/apiClient";
+import { isServiceToggleable, normalizeServiceState } from "@/config/serviceConfig";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { Family, Service } from "@/types";
 
@@ -38,7 +39,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       const { data } = await apiClient.get<Service[]>(
         `/api/services/family/${family!.id}`,
       );
-      return data;
+      return data.map(normalizeServiceState);
     },
     enabled: !!family?.id,
   });
@@ -83,8 +84,16 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       value={{
         services,
         isLoading,
-        toggleService: (serviceId, enabled) =>
-          toggleMutation.mutateAsync({ serviceId, enabled }),
+        toggleService: (serviceId, enabled) => {
+          const service = services.find((item) => item.id === serviceId);
+
+          if (service && !isServiceToggleable(service.name)) {
+            toast.error(t("services.fixedServiceError"));
+            return Promise.resolve();
+          }
+
+          return toggleMutation.mutateAsync({ serviceId, enabled });
+        },
       }}
     >
       {children}

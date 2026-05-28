@@ -95,13 +95,16 @@
     "inactive": "Inattivo",
     "open": "Apri",
     "manage": "Gestisci servizi →",
+    "fixedServiceError": "KinConsole e' sempre attivo.",
     "toggleError": "Aggiornamento servizio fallito. Ripristino.",
     "updated": "Servizio aggiornato."
   },
   "console": {
     "services": {
       "title": "KinConsole",
-      "subtitle": "Abilita o disabilita i servizi per la tua famiglia"
+      "subtitle": "Gestisci i servizi della tua famiglia. KinConsole e' sempre disponibile.",
+      "alwaysOn": "Sempre attivo",
+      "alwaysOnDescription": "KinConsole e' l'area di gestione e non puo' essere disattivato."
     }
   },
   "recipeBooks": {
