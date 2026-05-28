@@ -11,10 +11,17 @@ public interface IUpdateUserEmailHandler
 public sealed class UpdateUserEmailHandler : IUpdateUserEmailHandler
 {
     private readonly IKinUserRepository _userRepository;
+    private readonly IUserCredentialRepository _credentialRepository;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public UpdateUserEmailHandler(IKinUserRepository userRepository)
+    public UpdateUserEmailHandler(
+        IKinUserRepository userRepository,
+        IUserCredentialRepository credentialRepository,
+        IPasswordHasher passwordHasher)
     {
         _userRepository = userRepository;
+        _credentialRepository = credentialRepository;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<Result<bool>> HandleAsync(
@@ -24,6 +31,13 @@ public sealed class UpdateUserEmailHandler : IUpdateUserEmailHandler
     {
         try
         {
+            var credential = await _credentialRepository.GetByUserIdAsync(userId);
+            if (credential?.PasswordHash is null
+                || !_passwordHasher.Verify(request.CurrentPassword, credential.PasswordHash))
+            {
+                return Result<bool>.Unauthorized("Invalid current password.");
+            }
+
             var user = await _userRepository.GetAsync(userId);
 
             var existing = await _userRepository.FindByEmailAsync(request.NewEmail);
