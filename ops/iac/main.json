@@ -362,6 +362,10 @@
               "value": "gpt-4o-mini"
             },
             {
+              "name": "AllowedHosts",
+              "value": "*"
+            },
+            {
               "name": "Mcp__AuthorizationServerUrl",
               "value": "[format('https://{0}.azurewebsites.net', parameters('webAppName'))]"
             },

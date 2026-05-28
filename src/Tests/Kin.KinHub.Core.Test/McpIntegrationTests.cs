@@ -144,6 +144,40 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
         Assert.Equal("mcp:tools", tokenResponse.GetProperty("scope").GetString());
     }
 
+    [Fact]
+    public async Task Health_OnAzureHost_ReturnsOk()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://kinhub-dev-app.azurewebsites.net"),
+        });
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task LoginPreflight_WithAllowedSwaOrigin_ReturnsCorsHeaders()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://kinhub-dev-app.azurewebsites.net"),
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/api/auth/login");
+        request.Headers.Add("Origin", "https://orange-plant-0cdfb6b03.7.azurestaticapps.net");
+        request.Headers.Add("Access-Control-Request-Method", "POST");
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(
+            "https://orange-plant-0cdfb6b03.7.azurestaticapps.net",
+            response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+    }
+
     private static object CreateInitializePayload() => new
     {
         jsonrpc = "2.0",
@@ -175,6 +209,8 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Issuer"] = "kinhub-tests",
                 ["OpenAi:Endpoint"] = "https://localhost/",
                 ["OpenAi:ApiKey"] = "test-key",
+                ["Cors:AllowAnyOrigin"] = "false",
+                ["Cors:AllowedOrigins:0"] = "https://orange-plant-0cdfb6b03.7.azurestaticapps.net",
             });
         });
 
