@@ -36,7 +36,7 @@ public sealed class JwtTokenGenerator : ITokenGenerator, ITokenValidator
     public int AccessTokenExpirySeconds => _options.AccessTokenExpiryMinutes * 60;
 
     /// <inheritdoc/>
-    public string GenerateAccessToken(KinUser user, IReadOnlyList<string> roles)
+    public string GenerateAccessToken(KinUser user, IReadOnlyList<string> roles, IReadOnlyList<string>? scopes = null)
     {
         var claims = new List<Claim>
         {
@@ -49,6 +49,16 @@ public sealed class JwtTokenGenerator : ITokenGenerator, ITokenValidator
         foreach (var role in roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var normalizedScopes = scopes?
+            .Where(scope => !string.IsNullOrWhiteSpace(scope))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (normalizedScopes is { Length: > 0 })
+        {
+            claims.Add(new Claim("scope", string.Join(' ', normalizedScopes)));
         }
 
         var now = DateTime.UtcNow;
@@ -91,7 +101,12 @@ public sealed class JwtTokenGenerator : ITokenGenerator, ITokenValidator
                 .Select(c => c.Value)
                 .ToList();
 
-            return new TokenClaims(userId, email, roles);
+            var scopes = principal.FindAll("scope")
+                .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            return new TokenClaims(userId, email, roles, scopes);
         }
         catch
         {

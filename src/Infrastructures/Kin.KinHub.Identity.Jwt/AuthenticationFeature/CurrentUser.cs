@@ -13,6 +13,8 @@ public sealed class CurrentUser : ICurrentUser
     /// <inheritdoc/>
     public IReadOnlyList<string> Roles { get; private set; } = [];
 
+    public IReadOnlyList<string> Scopes { get; private set; } = [];
+
     /// <inheritdoc/>
     public bool IsAuthenticated { get; private set; }
 
@@ -27,6 +29,7 @@ public sealed class CurrentUser : ICurrentUser
         UserId = claims.UserId;
         Email = claims.Email;
         Roles = claims.Roles;
+        Scopes = claims.Scopes;
         IsAuthenticated = true;
     }
 
