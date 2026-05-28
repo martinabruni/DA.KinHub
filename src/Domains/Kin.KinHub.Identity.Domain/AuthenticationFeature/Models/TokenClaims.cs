@@ -7,4 +7,5 @@ namespace Kin.KinHub.Identity.Domain.AuthenticationFeature;
 public sealed record TokenClaims(
     Guid UserId,
     string Email,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<string> Scopes);
