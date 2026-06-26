@@ -43,8 +43,8 @@ function RecipeBookDetailContent() {
   })
 
   return (
-    <div>
-      <Breadcrumb className="mb-4">
+    <div className="space-y-5">
+      <Breadcrumb className="hidden sm:block">
         <BreadcrumbList>
           <BreadcrumbItem><BreadcrumbLink asChild><Link to="/recipe-books">{t('recipeBooks.title')}</Link></BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -53,23 +53,23 @@ function RecipeBookDetailContent() {
       </Breadcrumb>
 
       <div
-        className="h-[120px] rounded-xl flex items-center justify-center mb-4"
+        className="flex min-h-[120px] items-center justify-center rounded-3xl px-4 py-8"
         style={{ background: `linear-gradient(135deg, ${hashColor(id!)}, ${hashColor(id! + 'x')})` }}
       >
-        <h1 className="text-3xl font-bold text-white drop-shadow">{book?.name}</h1>
+        <h1 className="text-center text-3xl font-bold text-white drop-shadow">{book?.name}</h1>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2">
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-1" />{t('recipes.addRecipe')}</Button>
+            <Button className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-1" />{t('recipes.addRecipe')}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{t('recipes.create.title')}</DialogTitle></DialogHeader>
             <form onSubmit={form.handleSubmit(async (v) => { await createRecipe(id!, v); setAddOpen(false); form.reset() })} className="space-y-3 mt-2">
               <Input placeholder={t('recipes.name')} {...form.register('name')} />
               <Textarea placeholder={t('recipes.description')} {...form.register('description')} />
-              <div className="flex gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input type="number" placeholder={t('recipes.servingSize')} {...form.register('servingSize', { valueAsNumber: true })} />
                 <Input type="number" placeholder={t('recipes.prepTime')} {...form.register('prepTimeMinutes', { valueAsNumber: true })} />
               </div>
@@ -81,10 +81,10 @@ function RecipeBookDetailContent() {
         </Dialog>
       </div>
 
-      <Separator className="mb-6" />
+      <Separator />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
         </div>
       ) : recipes.length === 0 ? (
@@ -94,7 +94,7 @@ function RecipeBookDetailContent() {
           <Button onClick={() => setAddOpen(true)}>{t('recipes.addRecipe')}</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {recipes.map((recipe) => (
             <Card
               key={recipe.id}

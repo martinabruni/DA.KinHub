@@ -39,9 +39,8 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { to: '/dashboard', icon: Home, labelKey: 'nav.dashboard', badge: undefined },
-  { to: '/family', icon: Users, labelKey: 'nav.family', badge: undefined },
   { to: '/services', icon: Grid2x2, labelKey: 'nav.services', badge: undefined },
+  { to: '/family', icon: Users, labelKey: 'nav.family', badge: undefined },
 ]
 
 function SidebarContent({ collapsed }: { collapsed: boolean }) {

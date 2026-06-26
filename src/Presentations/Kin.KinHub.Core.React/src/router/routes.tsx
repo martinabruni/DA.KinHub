@@ -5,7 +5,6 @@ import { Layout } from '@/components/Layout'
 import { KinConsoleServiceLayout } from '@/components/KinConsoleServiceLayout'
 import { SelectMemberPage } from '@/features/family/pages/SelectMemberPage'
 import { OnboardingPage } from '@/features/family/pages/OnboardingPage'
-import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { FamilyPage } from '@/features/family/pages/FamilyPage'
 import { ServicesPage } from '@/features/family/pages/ServicesPage'
 import { ServicesConsolePage } from '@/features/family/pages/ServicesConsolePage'
@@ -29,8 +28,8 @@ export const router = createBrowserRouter([
           {
             element: <Layout />,
             children: [
-              { index: true, element: <Navigate to="/dashboard" replace /> },
-              { path: '/dashboard', element: <DashboardPage /> },
+              { index: true, element: <Navigate to="/services" replace /> },
+              { path: '/dashboard', element: <Navigate to="/services" replace /> },
               { path: '/family', element: <FamilyPage /> },
               { path: '/services', element: <ServicesPage /> },
               { path: '/profile', element: <ProfilePage /> },

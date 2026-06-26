@@ -329,6 +329,21 @@
     "members": "{{count}} member",
     "members_other": "{{count}} members"
   },
+  "recipeHub": {
+    "title": "Your family kitchen",
+    "subtitle": "Jump straight into recipe books, fridges, shopping lists, or the AI assistant.",
+    "sectionsTitle": "KinRecipe areas",
+    "memberLabel": "Member",
+    "manageServices": "Manage services",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode",
+    "sections": {
+      "recipeBooks": "Save and organize family recipes in collections that are easy to browse.",
+      "fridges": "Track available ingredients and keep shared fridges up to date.",
+      "shoppingLists": "Prepare your grocery run and tick items off while shopping.",
+      "aiAssistant": "Use AI to find ideas, adapt recipes, and turn raw text into structured recipes."
+    }
+  },
   "shoppingLists": {
     "title": "Shopping Lists",
     "new": "New List",

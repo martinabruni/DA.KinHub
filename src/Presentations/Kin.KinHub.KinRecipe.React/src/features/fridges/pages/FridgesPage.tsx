@@ -27,12 +27,15 @@ function FridgesContent() {
   })
 
   return (
-    <div>
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-        <h1 className="text-2xl font-bold">{t('fridges.title')}</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t('fridges.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('fridges.noFridges.cta')}</p>
+        </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-1" />{t('fridges.new')}</Button>
+            <Button className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-1" />{t('fridges.new')}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{t('fridges.create.title')}</DialogTitle></DialogHeader>
@@ -47,7 +50,7 @@ function FridgesContent() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
         </div>
       ) : fridges.length === 0 ? (
@@ -57,14 +60,14 @@ function FridgesContent() {
           <Button onClick={() => setCreateOpen(true)}>{t('fridges.noFridges.cta')}</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {fridges.map((fridge) => (
             <Card
               key={fridge.id}
               className="cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all"
               onClick={() => navigate(`/fridges/${fridge.id}`)}
             >
-              <CardContent className="pt-5 pb-3 flex items-start gap-3">
+              <CardContent className="flex items-start gap-3 pb-3 pt-5">
                 <Refrigerator className="w-8 h-8 text-primary mt-0.5" />
                 <div className="flex-1">
                   <p className="font-semibold">{fridge.name}</p>

@@ -8,9 +8,8 @@ import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 
 const routeTitles: Record<string, string> = {
-  '/dashboard': 'nav.dashboard',
-  '/family': 'nav.family',
   '/services': 'nav.services',
+  '/family': 'nav.family',
   '/recipe-books': 'nav.recipeBooks',
   '/fridges': 'nav.fridges',
   '/ai-assistant': 'nav.aiAssistant',
@@ -33,7 +32,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
   )?.[1]
 
   return (
-    <header className="lg:hidden sticky top-0 z-50 h-14 border-b bg-background/80 backdrop-blur flex items-center px-4 gap-3">
+    <header className="lg:hidden sticky top-0 z-50 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="flex h-14 items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),0px)]">
       <Button variant="ghost" size="icon" onClick={onMenuClick}>
         <Menu className="w-5 h-5" />
       </Button>
@@ -55,6 +55,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
           {getInitials(activeMember?.name ?? 'U')}
         </AvatarFallback>
       </Avatar>
+      </div>
     </header>
   )
 }

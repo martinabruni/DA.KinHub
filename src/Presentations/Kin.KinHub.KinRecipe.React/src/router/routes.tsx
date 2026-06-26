@@ -4,6 +4,7 @@ import { MemberRoute } from '@/components/MemberRoute'
 import { Layout } from '@/components/Layout'
 import { KinRecipeServiceLayout } from '@/components/KinRecipeServiceLayout'
 import { ServiceGuard } from '@/components/ServiceGuard'
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { RecipeBooksPage } from '@/features/recipes/pages/RecipeBooksPage'
 import { RecipeBookDetailPage } from '@/features/recipes/pages/RecipeBookDetailPage'
 import { RecipeDetailPage } from '@/features/recipes/pages/RecipeDetailPage'
@@ -23,8 +24,13 @@ export const router = createBrowserRouter([
           {
             element: <Layout />,
             children: [
-              { index: true, element: <Navigate to="/recipe-books" replace /> },
-              { path: '/dashboard', element: <Navigate to="/recipe-books" replace /> },
+              {
+                element: <ServiceGuard serviceName="KinRecipe" />,
+                children: [
+                  { index: true, element: <DashboardPage /> },
+                  { path: '/dashboard', element: <Navigate to="/" replace /> },
+                ],
+              },
               {
                 element: <KinRecipeServiceLayout />,
                 children: [

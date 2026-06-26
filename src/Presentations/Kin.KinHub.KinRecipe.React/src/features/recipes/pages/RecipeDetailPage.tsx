@@ -72,8 +72,8 @@ function RecipeDetailContent() {
   if (!recipe) return <p className="text-muted-foreground">{t('common.noData')}</p>
 
   return (
-    <div>
-      <Breadcrumb className="mb-4">
+    <div className="space-y-5">
+      <Breadcrumb className="hidden sm:block">
         <BreadcrumbList>
           <BreadcrumbItem><BreadcrumbLink asChild><Link to="/recipe-books">{t('recipeBooks.title')}</Link></BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -84,13 +84,13 @@ function RecipeDetailContent() {
       </Breadcrumb>
 
       <div
-        className="h-[160px] rounded-xl flex items-center justify-center mb-4"
+        className="flex min-h-[160px] items-center justify-center rounded-3xl px-4 py-10"
         style={{ background: `linear-gradient(135deg, ${hashColor(recipe.id)}, ${hashColor(recipe.name)})` }}
       >
         <h1 className="text-4xl font-bold text-white drop-shadow text-center px-4">{recipe.name}</h1>
       </div>
 
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap">
         <Badge variant="secondary">👥 {recipe.servingSize}</Badge>
         <Badge variant="secondary">⏱ {recipe.prepTimeMinutes}min</Badge>
       </div>
@@ -114,11 +114,11 @@ function RecipeDetailContent() {
                     ingForm.reset()
                     setShowIngredientForm(false)
                   })}
-                  className="flex gap-2 flex-wrap"
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_88px_88px_auto_auto]"
                 >
-                  <Input placeholder={t('recipes.ingredientName')} {...ingForm.register('name')} className="flex-1 min-w-32" />
-                  <Input type="number" placeholder={t('recipes.quantity')} {...ingForm.register('quantity')} className="w-20" />
-                  <Input placeholder={t('recipes.unit')} {...ingForm.register('unit')} className="w-20" />
+                  <Input placeholder={t('recipes.ingredientName')} {...ingForm.register('name')} className="min-w-0" />
+                  <Input type="number" placeholder={t('recipes.quantity')} {...ingForm.register('quantity')} />
+                  <Input placeholder={t('recipes.unit')} {...ingForm.register('unit')} />
                   <Button type="submit" size="sm">{t('recipes.saveIngredient')}</Button>
                   <Button type="button" size="sm" variant="ghost" onClick={() => setShowIngredientForm(false)}>{t('recipes.cancel')}</Button>
                 </form>
@@ -174,7 +174,7 @@ function RecipeDetailContent() {
                   className="space-y-2"
                 >
                   <Input placeholder={t('recipes.stepDescription')} {...stepForm.register('description')} />
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button type="submit" size="sm">{t('recipes.saveStep')}</Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => setShowStepForm(false)}>{t('recipes.cancel')}</Button>
                   </div>
@@ -205,16 +205,16 @@ function RecipeDetailContent() {
       {/* Missing Ingredients Check Bar */}
       <Separator className="my-6" />
       <Card className="lg:sticky lg:bottom-4">
-        <CardContent className="flex flex-wrap items-center gap-3 py-4">
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:flex-wrap sm:items-center">
           <Select value={selectedFridgeId} onValueChange={setSelectedFridgeId}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder={t('recipes.selectFridge')} />
             </SelectTrigger>
             <SelectContent>
               {fridges.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button onClick={checkMissing} disabled={!selectedFridgeId}>
+          <Button onClick={checkMissing} disabled={!selectedFridgeId} className="w-full sm:w-auto">
             {t('recipes.checkMissing')}
           </Button>
           {missingIngredients !== null && (
@@ -224,16 +224,16 @@ function RecipeDetailContent() {
                   {missingIngredients.map((name) => (
                     <Badge key={name} variant="destructive">{t('recipes.missing')}: {name}</Badge>
                   ))}
-                  <Separator orientation="vertical" className="h-6 mx-1" />
+                  <Separator orientation="vertical" className="mx-1 hidden h-6 sm:block" />
                   <Select value={selectedListId} onValueChange={setSelectedListId}>
-                    <SelectTrigger className="w-44">
+                    <SelectTrigger className="w-full sm:w-44">
                       <SelectValue placeholder={t('shoppingLists.selectList')} />
                     </SelectTrigger>
                     <SelectContent>
                       {shoppingLists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" onClick={addMissingToList} disabled={!selectedListId}>
+                  <Button size="sm" onClick={addMissingToList} disabled={!selectedListId} className="w-full sm:w-auto">
                     {t('shoppingLists.addToList')}
                   </Button>
                 </>

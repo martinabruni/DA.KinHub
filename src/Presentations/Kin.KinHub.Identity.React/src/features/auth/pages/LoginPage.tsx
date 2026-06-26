@@ -49,95 +49,99 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-white dark:from-zinc-950 dark:to-zinc-900 p-4">
-      <Card className="w-full max-w-[420px] p-8 rounded-2xl shadow-xl">
-        <CardContent className="p-0">
-          <div className="flex flex-col items-center mb-2 gap-2">
-            <Home className="w-10 h-10 text-primary" />
-            <h1 className="text-2xl font-bold">{t('app.name')}</h1>
-            <p className="text-muted-foreground text-sm">{t('app.tagline')}</p>
-            <p className="text-center text-xs text-muted-foreground">
-              {t('auth.centralizedLogin')}
-            </p>
-          </div>
-          <Separator className="my-6" />
+    <div className="min-h-dvh bg-[radial-gradient(circle_at_top,theme(colors.primary/0.12),transparent_35%),linear-gradient(180deg,theme(colors.background),theme(colors.muted/0.45))] px-4 py-6 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-md items-center">
+        <Card className="w-full border-border/70 bg-card/95 shadow-xl backdrop-blur">
+          <CardContent className="p-5 sm:p-7">
+            <div className="mb-2 flex flex-col items-center gap-2 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Home className="h-7 w-7" />
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">{t('app.name')}</h1>
+              <p className="text-sm text-muted-foreground">{t('app.tagline')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('auth.centralizedLogin')}
+              </p>
+            </div>
+            <Separator className="my-6" />
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('auth.email')}</FormLabel>
-                    <FormControl>
-                      <Input type="email" autoComplete="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('auth.password')}</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPwd ? 'text' : 'password'}
-                          autoComplete="current-password"
-                          className="pr-10"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full px-3"
-                          onClick={() => setShowPwd((v) => !v)}
-                          tabIndex={-1}
-                        >
-                          {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={form.formState.isSubmitting}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.email')}</FormLabel>
+                      <FormControl>
+                        <Input type="email" autoComplete="email" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.password')}</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPwd ? 'text' : 'password'}
+                            autoComplete="current-password"
+                            className="h-11 pr-11"
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-11 w-11"
+                            onClick={() => setShowPwd((v) => !v)}
+                            tabIndex={-1}
+                          >
+                            {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="h-11 w-full"
+                  size="lg"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t('auth.signingIn')}
+                    </>
+                  ) : (
+                    t('auth.signIn')
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {t('auth.noAccount')}{' '}
+              <Link
+                to={searchParams.get('returnTo')
+                  ? `/register?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}`
+                  : '/register'}
+                className="font-semibold text-primary hover:underline"
               >
-                {form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t('auth.signingIn')}
-                  </>
-                ) : (
-                  t('auth.signIn')
-                )}
-              </Button>
-            </form>
-          </Form>
-
-          <p className="text-sm text-muted-foreground text-center mt-6">
-            {t('auth.noAccount')}{' '}
-            <Link
-              to={searchParams.get('returnTo')
-                ? `/register?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}`
-                : '/register'}
-              className="font-semibold text-primary hover:underline"
-            >
-              {t('auth.register')}
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+                {t('auth.register')}
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -31,12 +31,15 @@ function RecipeBooksContent() {
   const filtered = books.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-        <h1 className="text-2xl font-bold">{t('recipeBooks.title')}</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t('recipeBooks.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('recipeBooks.search')}</p>
+        </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-1" />{t('recipeBooks.new')}</Button>
+            <Button className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-1" />{t('recipeBooks.new')}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{t('recipeBooks.create.title')}</DialogTitle></DialogHeader>
@@ -54,11 +57,11 @@ function RecipeBooksContent() {
         placeholder={t('recipeBooks.search')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="max-w-sm mb-6"
+        className="h-11 w-full sm:max-w-sm"
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-52 rounded-xl" />)}
         </div>
       ) : filtered.length === 0 ? (
@@ -68,11 +71,11 @@ function RecipeBooksContent() {
           <Button onClick={() => setCreateOpen(true)}>{t('recipeBooks.empty.cta')}</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((book) => (
             <Card
               key={book.id}
-              className="overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
+              className="overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.01]"
               onClick={() => navigate(`/recipe-books/${book.id}`)}
             >
               <div

@@ -1,5 +1,8 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet } from 'react-router-dom'
+import { appendSessionToUrl, buildCoreServicesUrl } from '@/config/appLinks'
 import { useServices } from '@/features/family/ServicesProvider'
+import { useAuthContext } from '@/store/authContext'
 
 interface ServiceGuardProps {
   serviceName: string
@@ -7,6 +10,7 @@ interface ServiceGuardProps {
 
 export function ServiceGuard({ serviceName }: ServiceGuardProps) {
   const { services, isLoading } = useServices()
+  const { activeMember } = useAuthContext()
 
   if (isLoading) return null
 
@@ -15,8 +19,16 @@ export function ServiceGuard({ serviceName }: ServiceGuardProps) {
   )
 
   if (!service?.isEnabled) {
-    return <Navigate to="/services" replace />
+    return <ServiceUnavailableRedirect targetUrl={appendSessionToUrl(buildCoreServicesUrl(), activeMember)} />
   }
 
   return <Outlet />
+}
+
+function ServiceUnavailableRedirect({ targetUrl }: { targetUrl: string }) {
+  useEffect(() => {
+    window.location.assign(targetUrl)
+  }, [targetUrl])
+
+  return null
 }
