@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { appendSessionToUrl, buildCoreSelectMemberUrl } from '@/config/appLinks'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { extractApiError } from '@/lib/errors'
 
@@ -24,7 +25,6 @@ type FormValues = z.infer<typeof schema>
 export function LoginPage() {
   const { t } = useTranslation()
   const { login } = useAuth()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [showPwd, setShowPwd] = useState(false)
 
@@ -37,7 +37,9 @@ export function LoginPage() {
     try {
       await login(values)
       const returnTo = searchParams.get('returnTo')
-      navigate(returnTo ? `/select-member?returnTo=${encodeURIComponent(returnTo)}` : '/select-member')
+      window.location.assign(
+        appendSessionToUrl(buildCoreSelectMemberUrl(returnTo), null),
+      )
     } catch (err: unknown) {
       const { message, fields } = extractApiError(err)
       if (fields?.email) form.setError('email', { message: fields.email[0] })
@@ -54,6 +56,9 @@ export function LoginPage() {
             <Home className="w-10 h-10 text-primary" />
             <h1 className="text-2xl font-bold">{t('app.name')}</h1>
             <p className="text-muted-foreground text-sm">{t('app.tagline')}</p>
+            <p className="text-center text-xs text-muted-foreground">
+              {t('auth.centralizedLogin')}
+            </p>
           </div>
           <Separator className="my-6" />
 
@@ -122,7 +127,12 @@ export function LoginPage() {
 
           <p className="text-sm text-muted-foreground text-center mt-6">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="font-semibold text-primary hover:underline">
+            <Link
+              to={searchParams.get('returnTo')
+                ? `/register?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}`
+                : '/register'}
+              className="font-semibold text-primary hover:underline"
+            >
               {t('auth.register')}
             </Link>
           </p>

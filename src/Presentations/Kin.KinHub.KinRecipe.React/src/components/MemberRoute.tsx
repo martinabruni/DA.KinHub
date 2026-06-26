@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
-import { redirectToIdentitySelectMember } from '@/config/appLinks'
+import { appendSessionToUrl, buildCoreSelectMemberUrl } from '@/config/appLinks'
 import { useAuthContext } from '@/store/authContext'
 
 export function MemberRoute() {
@@ -9,7 +9,9 @@ export function MemberRoute() {
 
   useEffect(() => {
     if (!activeMember) {
-      redirectToIdentitySelectMember()
+      window.location.assign(
+        appendSessionToUrl(buildCoreSelectMemberUrl(), activeMember),
+      )
     }
   }, [activeMember])
 

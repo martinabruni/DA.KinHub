@@ -2,12 +2,18 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthContext } from "@/store/authContext";
 import { useServices } from "@/features/family/ServicesProvider";
-import { serviceConfig, defaultServiceConfig } from "@/config/serviceConfig";
+import {
+  serviceConfig,
+  defaultServiceConfig,
+  getServiceHref,
+} from "@/config/serviceConfig";
 
 export function ServicesPage() {
   const { t } = useTranslation();
   const { services, isLoading } = useServices();
+  const { activeMember } = useAuthContext();
 
   const enabledServices = services.filter((s) => s.isEnabled);
 
@@ -26,8 +32,31 @@ export function ServicesPage() {
           : enabledServices.map((service) => {
               const cfg = serviceConfig[service.name] ?? defaultServiceConfig;
               const Icon = cfg.icon;
+              const href = getServiceHref(service.name, activeMember);
               return (
-                <Link key={service.id} to={cfg.path}>
+                cfg.external ? (
+                  <a key={service.id} href={href}>
+                    <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
+                      <CardContent className="flex flex-col gap-3 p-5 h-full">
+                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                          <Icon className={`w-6 h-6 ${cfg.color}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold leading-tight">
+                            {service.name}
+                          </p>
+                          <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                            {service.description}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium text-primary">
+                          {t("services.open")} →
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ) : (
+                <Link key={service.id} to={href}>
                   <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
                     <CardContent className="flex flex-col gap-3 p-5 h-full">
                       <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
@@ -47,6 +76,7 @@ export function ServicesPage() {
                     </CardContent>
                   </Card>
                 </Link>
+                )
               );
             })}
       </div>

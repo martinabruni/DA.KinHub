@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "5071982345236195815"
+      "templateHash": "47525034010593931"
     }
   },
   "parameters": {
@@ -57,6 +57,24 @@
       "type": "string",
       "metadata": {
         "description": "KinRecipe backend container app name."
+      }
+    },
+    "coreFrontendOrigin": {
+      "type": "string",
+      "metadata": {
+        "description": "Core frontend origin allowed by backend CORS."
+      }
+    },
+    "identityFrontendOrigin": {
+      "type": "string",
+      "metadata": {
+        "description": "Identity frontend origin allowed by backend CORS."
+      }
+    },
+    "kinRecipeFrontendOrigin": {
+      "type": "string",
+      "metadata": {
+        "description": "KinRecipe frontend origin allowed by backend CORS."
       }
     },
     "applicationInsightsName": {
@@ -539,14 +557,26 @@
                 },
                 {
                   "name": "Cors__AllowedOrigins__0",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                  "value": "[parameters('coreFrontendOrigin')]"
                 },
                 {
                   "name": "Cors__AllowedOrigins__1",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                  "value": "[parameters('identityFrontendOrigin')]"
                 },
                 {
                   "name": "Cors__AllowedOrigins__2",
+                  "value": "[parameters('kinRecipeFrontendOrigin')]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__3",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__4",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__5",
                   "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname)]"
                 }
               ],
@@ -683,14 +713,26 @@
                 },
                 {
                   "name": "Cors__AllowedOrigins__0",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                  "value": "[parameters('coreFrontendOrigin')]"
                 },
                 {
                   "name": "Cors__AllowedOrigins__1",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                  "value": "[parameters('identityFrontendOrigin')]"
                 },
                 {
                   "name": "Cors__AllowedOrigins__2",
+                  "value": "[parameters('kinRecipeFrontendOrigin')]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__3",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__4",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__5",
                   "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname)]"
                 }
               ],

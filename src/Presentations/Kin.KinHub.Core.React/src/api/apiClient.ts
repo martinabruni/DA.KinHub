@@ -1,9 +1,17 @@
 import axios, { type AxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import i18next from "i18next";
+import { redirectToIdentityLogin } from "@/config/appLinks";
 import { getStatusAwareErrorMessage } from "@/lib/errors";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+const getEnvUrl = (value: unknown, fallback: string) => {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+};
+
+const BASE_URL = getEnvUrl(
+  import.meta.env.VITE_IDENTITY_API_URL,
+  "http://localhost:5000",
+);
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -15,6 +23,7 @@ const getRefreshToken = () => localStorage.getItem("refreshToken");
 const clearTokens = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
+  sessionStorage.removeItem("activeMember");
 };
 
 apiClient.interceptors.request.use((config) => {
@@ -80,7 +89,7 @@ apiClient.interceptors.response.use(
       processQueue(err, null);
       clearTokens();
       toast.error(i18next.t("errors.sessionExpired"));
-      window.location.href = "/login";
+      redirectToIdentityLogin();
       return Promise.reject(err);
     } finally {
       isRefreshing = false;

@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { appendSessionToUrl, buildCoreSelectMemberUrl } from '@/config/appLinks'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { extractApiError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
@@ -66,15 +67,16 @@ export function RegisterPage() {
       try {
         await login({ email: values.email, password: values.password })
         const returnTo = searchParams.get('returnTo')
-        navigate(
-          returnTo
-            ? `/select-member?returnTo=${encodeURIComponent(returnTo)}`
-            : '/select-member',
-          { replace: true },
+        window.location.assign(
+          appendSessionToUrl(buildCoreSelectMemberUrl(returnTo), null),
         )
       } catch {
         toast.error(t('auth.autoLoginFailed'))
-        navigate('/login')
+        navigate(
+          searchParams.get('returnTo')
+            ? `/login?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}`
+            : '/login',
+        )
       }
     } catch (err: unknown) {
       const { fields } = extractApiError(err)
@@ -171,7 +173,12 @@ export function RegisterPage() {
 
           <p className="text-sm text-muted-foreground text-center mt-6">
             {t('auth.alreadyHaveAccount')}{' '}
-            <Link to="/login" className="font-semibold text-primary hover:underline">
+            <Link
+              to={searchParams.get('returnTo')
+                ? `/login?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}`
+                : '/login'}
+              className="font-semibold text-primary hover:underline"
+            >
               {t('auth.login')}
             </Link>
           </p>

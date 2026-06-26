@@ -24,6 +24,15 @@ param identityContainerAppName string
 @description('KinRecipe backend container app name.')
 param kinRecipeContainerAppName string
 
+@description('Core frontend origin allowed by backend CORS.')
+param coreFrontendOrigin string
+
+@description('Identity frontend origin allowed by backend CORS.')
+param identityFrontendOrigin string
+
+@description('KinRecipe frontend origin allowed by backend CORS.')
+param kinRecipeFrontendOrigin string
+
 @description('Application Insights name.')
 param applicationInsightsName string
 
@@ -398,14 +407,26 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'Cors__AllowedOrigins__0'
-              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+              value: coreFrontendOrigin
             }
             {
               name: 'Cors__AllowedOrigins__1'
-              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+              value: identityFrontendOrigin
             }
             {
               name: 'Cors__AllowedOrigins__2'
+              value: kinRecipeFrontendOrigin
+            }
+            {
+              name: 'Cors__AllowedOrigins__3'
+              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__4'
+              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__5'
               value: 'https://${kinRecipeStaticWebApp.properties.defaultHostname}'
             }
           ]
@@ -533,14 +554,26 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'Cors__AllowedOrigins__0'
-              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+              value: coreFrontendOrigin
             }
             {
               name: 'Cors__AllowedOrigins__1'
-              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+              value: identityFrontendOrigin
             }
             {
               name: 'Cors__AllowedOrigins__2'
+              value: kinRecipeFrontendOrigin
+            }
+            {
+              name: 'Cors__AllowedOrigins__3'
+              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__4'
+              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__5'
               value: 'https://${kinRecipeStaticWebApp.properties.defaultHostname}'
             }
           ]

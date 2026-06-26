@@ -58,10 +58,19 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: http://localhost
+          VITE_KINRECIPE_API_URL: https://kinrecipe-api.example.com
+          VITE_IDENTITY_API_URL: https://identity-api.example.com
           VITE_IDENTITY_URL: https://identity.example.com
+          VITE_CORE_URL: https://core.example.com
           VITE_KINRECIPE_URL: https://kinrecipe.example.com
         run: npm run build
+
+      - name: Verify KinRecipe auth wiring
+        if: matrix.name == 'kinrecipe'
+        env:
+          VITE_KINRECIPE_API_URL: https://kinrecipe-api.example.com
+          VITE_IDENTITY_API_URL: https://identity-api.example.com
+        run: npm run verify:auth-client
 
   deploy_core_dev:
     name: Deploy Core Dev
@@ -91,6 +100,7 @@ jobs:
 
       - name: Build frontend
         env:
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
         run: npm run build
@@ -134,7 +144,8 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
+          VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
         run: npm run build
 
@@ -177,8 +188,10 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_KINRECIPE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
+          VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
         run: npm run build
 
       - name: Deploy Static Web App
@@ -220,6 +233,7 @@ jobs:
 
       - name: Build frontend
         env:
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
         run: npm run build
@@ -263,7 +277,8 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
+          VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
         run: npm run build
 
@@ -306,8 +321,10 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_KINRECIPE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
+          VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
         run: npm run build
 
       - name: Deploy Static Web App

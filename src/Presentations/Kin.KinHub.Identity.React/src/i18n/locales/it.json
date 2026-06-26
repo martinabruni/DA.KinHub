@@ -31,7 +31,8 @@
     "passwordMismatch": "Le password non corrispondono",
     "accountCreated": "Account creato! Accedi ora.",
     "loggedOut": "Disconnesso con successo.",
-    "autoLoginFailed": "Account creato, ma il login automatico è fallito. Accedi manualmente."
+    "autoLoginFailed": "Account creato, ma il login automatico è fallito. Accedi manualmente.",
+    "centralizedLogin": "Accesso centralizzato per tutte le app Kin."
   },
   "dashboard": {
     "greeting": "Ciao, {{name}}! 👋",
