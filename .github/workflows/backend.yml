@@ -164,6 +164,9 @@ jobs:
             "${{ vars.CORE_STATIC_WEB_APP_NAME }}"
             "${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
             "${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.VITE_CORE_URL }}"
+            "${{ vars.VITE_IDENTITY_URL }}"
+            "${{ vars.VITE_KINRECIPE_URL }}"
             "${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
             "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
@@ -224,6 +227,9 @@ jobs:
               coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
               identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
               kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
+              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
+              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
               containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
               identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
               kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
@@ -251,6 +257,9 @@ jobs:
               coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
               identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
               kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
+              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
+              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
               containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
               identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
               kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
@@ -298,6 +307,9 @@ jobs:
             "${{ vars.CORE_STATIC_WEB_APP_NAME }}"
             "${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
             "${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.VITE_CORE_URL }}"
+            "${{ vars.VITE_IDENTITY_URL }}"
+            "${{ vars.VITE_KINRECIPE_URL }}"
             "${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
             "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
@@ -358,6 +370,9 @@ jobs:
               coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
               identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
               kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
+              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
+              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
               containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
               identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
               kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
@@ -385,6 +400,9 @@ jobs:
               coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
               identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
               kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
+              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
+              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
               containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
               identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
               kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \

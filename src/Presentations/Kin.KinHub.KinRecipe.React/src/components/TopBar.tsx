@@ -12,7 +12,6 @@ const routeTitles: Record<string, string> = {
   '/fridges': 'nav.fridges',
   '/shopping-lists': 'nav.shoppingLists',
   '/ai-assistant': 'nav.aiAssistant',
-  '/profile': 'nav.profile',
 }
 
 interface TopBarProps {

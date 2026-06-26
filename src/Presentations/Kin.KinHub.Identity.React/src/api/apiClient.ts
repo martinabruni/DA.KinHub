@@ -3,7 +3,14 @@ import { toast } from "sonner";
 import i18next from "i18next";
 import { getStatusAwareErrorMessage } from "@/lib/errors";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+const getEnvUrl = (value: unknown, fallback: string) => {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+};
+
+const BASE_URL = getEnvUrl(
+  import.meta.env.VITE_IDENTITY_API_URL,
+  "http://localhost:5000",
+);
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

@@ -12,7 +12,6 @@ import { FridgeDetailPage } from '@/features/fridges/pages/FridgeDetailPage'
 import { ShoppingListsPage } from '@/features/shopping-lists/pages/ShoppingListsPage'
 import { ShoppingListDetailPage } from '@/features/shopping-lists/pages/ShoppingListDetailPage'
 import { AIAssistantPage } from '@/features/ai-assistant/pages/AIAssistantPage'
-import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 
 export const router = createBrowserRouter([
   {
@@ -40,7 +39,6 @@ export const router = createBrowserRouter([
                       { path: '/shopping-lists', element: <ShoppingListsPage /> },
                       { path: '/shopping-lists/:id', element: <ShoppingListDetailPage /> },
                       { path: '/ai-assistant', element: <AIAssistantPage /> },
-                      { path: '/profile', element: <ProfilePage /> },
                     ],
                   },
                 ],

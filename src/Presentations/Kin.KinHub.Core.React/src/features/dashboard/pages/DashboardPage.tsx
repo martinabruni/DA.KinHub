@@ -12,7 +12,11 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
 import { apiClient } from '@/api/apiClient'
 import { useServices } from '@/features/family/ServicesProvider'
-import { serviceConfig, defaultServiceConfig } from '@/config/serviceConfig'
+import {
+  serviceConfig,
+  defaultServiceConfig,
+  getServiceHref,
+} from '@/config/serviceConfig'
 import type { Family } from '@/types'
 
 export function DashboardPage() {
@@ -87,8 +91,31 @@ export function DashboardPage() {
             {enabledServices.map((service) => {
               const cfg = serviceConfig[service.name] ?? defaultServiceConfig
               const Icon = cfg.icon
+              const href = getServiceHref(service.name, activeMember)
+
+              if (cfg.external) {
+                return (
+                  <a key={service.id} href={href}>
+                    <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
+                      <CardContent className="flex flex-col gap-3 p-5 h-full">
+                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                          <Icon className={`w-6 h-6 ${cfg.color}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold leading-tight">{service.name}</p>
+                          <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                            {service.description}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium text-primary">{t('hub.open')} →</span>
+                      </CardContent>
+                    </Card>
+                  </a>
+                )
+              }
+
               return (
-                <Link key={service.id} to={cfg.path}>
+                <Link key={service.id} to={href}>
                   <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
                     <CardContent className="flex flex-col gap-3 p-5 h-full">
                       <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">

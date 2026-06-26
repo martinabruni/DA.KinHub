@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   ChefHat,
   ChevronLeft,
@@ -27,7 +27,13 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { buildIdentityLoginUrl, buildIdentitySelectMemberUrl, identityUrl } from '@/config/appLinks'
+import {
+  appendSessionToUrl,
+  buildCoreProfileUrl,
+  buildCoreSelectMemberUrl,
+  buildCoreServicesUrl,
+  buildIdentityLoginUrl,
+} from '@/config/appLinks'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
@@ -52,11 +58,14 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   const { theme, setTheme } = useTheme()
   const { logout } = useAuth()
   const { activeMember } = useAuthContext()
-  const navigate = useNavigate()
 
   const handleLogout = async () => {
     await logout()
     window.location.assign(buildIdentityLoginUrl())
+  }
+
+  const openCoreUrl = (targetUrl: string) => {
+    window.location.assign(appendSessionToUrl(targetUrl, activeMember))
   }
 
   return (
@@ -153,16 +162,18 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-48">
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
+            <DropdownMenuItem onClick={() => openCoreUrl(buildCoreProfileUrl())}>
               <User className="w-4 h-4 mr-2" />
               {t('nav.profile')}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.location.assign(buildIdentitySelectMemberUrl())}>
+            <DropdownMenuItem
+              onClick={() => openCoreUrl(buildCoreSelectMemberUrl(window.location.href))}
+            >
               <SwitchCamera className="w-4 h-4 mr-2" />
               {t('selectMember.switchMember')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => window.location.assign(new URL('/services', identityUrl).toString())}>
+            <DropdownMenuItem onClick={() => openCoreUrl(buildCoreServicesUrl())}>
               <Sparkles className="w-4 h-4 mr-2" />
               {t('services.manage')}
             </DropdownMenuItem>

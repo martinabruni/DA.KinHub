@@ -31,7 +31,8 @@
     "passwordMismatch": "Passwords do not match",
     "accountCreated": "Account created! Please sign in.",
     "loggedOut": "Logged out successfully.",
-    "autoLoginFailed": "Account created, but sign-in failed. Please sign in manually."
+    "autoLoginFailed": "Account created, but sign-in failed. Please sign in manually.",
+    "centralizedLogin": "Centralized sign-in for all Kin apps."
   },
   "dashboard": {
     "greeting": "Hello, {{name}}! 👋",

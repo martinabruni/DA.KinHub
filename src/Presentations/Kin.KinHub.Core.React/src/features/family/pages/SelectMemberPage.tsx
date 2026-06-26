@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { apiClient } from '@/api/apiClient'
+import { appendSessionToUrl } from '@/config/appLinks'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 import type { Family, FamilyMember } from '@/types'
@@ -11,6 +12,7 @@ import type { Family, FamilyMember } from '@/types'
 export function SelectMemberPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { setActiveMember } = useAuthContext()
 
   const { data: family, isLoading } = useQuery({
@@ -24,11 +26,27 @@ export function SelectMemberPage() {
 
   const handleMemberClick = (member: FamilyMember) => {
     setActiveMember(member)
+    const returnTo = searchParams.get('returnTo')
+
+    if (returnTo) {
+      if (/^https?:\/\//i.test(returnTo)) {
+        window.location.assign(appendSessionToUrl(returnTo, member))
+        return
+      }
+
+      navigate(returnTo, { replace: true })
+      return
+    }
+
     navigate('/', { replace: true })
   }
 
   if (!isLoading && !family) {
-    navigate('/onboarding', { replace: true })
+    const returnTo = searchParams.get('returnTo')
+    navigate(
+      returnTo ? `/onboarding?returnTo=${encodeURIComponent(returnTo)}` : '/onboarding',
+      { replace: true },
+    )
     return null
   }
 

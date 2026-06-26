@@ -25,6 +25,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
+import { buildIdentityLoginUrl } from '@/config/appLinks'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
@@ -52,7 +53,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
 
   const handleLogout = async () => {
     await logout()
-    navigate('/login')
+    window.location.assign(buildIdentityLoginUrl())
   }
 
   return (

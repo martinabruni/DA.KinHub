@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,7 +26,9 @@ type FormValues = z.infer<typeof schema>
 export function OnboardingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
+  const returnTo = searchParams.get('returnTo')
 
   const { data: family, isLoading: checkingFamily } = useQuery({
     queryKey: ['family'],
@@ -39,9 +41,12 @@ export function OnboardingPage() {
 
   useEffect(() => {
     if (!checkingFamily && family) {
-      navigate('/select-member', { replace: true })
+      navigate(
+        returnTo ? `/select-member?returnTo=${encodeURIComponent(returnTo)}` : '/select-member',
+        { replace: true },
+      )
     }
-  }, [family, checkingFamily, navigate])
+  }, [family, checkingFamily, navigate, returnTo])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -57,7 +62,10 @@ export function OnboardingPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['family'] })
-      navigate('/select-member', { replace: true })
+      navigate(
+        returnTo ? `/select-member?returnTo=${encodeURIComponent(returnTo)}` : '/select-member',
+        { replace: true },
+      )
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err, t('onboarding.errorGeneric')))
