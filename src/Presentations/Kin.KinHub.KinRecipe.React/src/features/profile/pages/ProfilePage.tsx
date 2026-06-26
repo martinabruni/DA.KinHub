@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useFamily } from '@/features/family/FamilyProvider'
-import { apiClient } from '@/api/apiClient'
+import { identityApiClient } from '@/api/apiClient'
 import { getInitials } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -60,7 +60,7 @@ export function ProfilePage() {
 
   const handleUpdateEmail = async (values: z.infer<typeof emailSchema>) => {
     try {
-      await apiClient.put('/api/auth/me/email', values)
+      await identityApiClient.put('/api/auth/me/email', values)
       toast.success(t('profile.updateEmail.success'))
       emailForm.reset()
     } catch {
@@ -70,7 +70,7 @@ export function ProfilePage() {
 
   const handleUpdatePassword = async (values: z.infer<typeof passwordSchema>) => {
     try {
-      await apiClient.put('/api/auth/me/password', values)
+      await identityApiClient.put('/api/auth/me/password', values)
       toast.success(t('profile.updatePassword.success'))
       passwordForm.reset()
     } catch {
@@ -81,7 +81,7 @@ export function ProfilePage() {
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') return
     try {
-      await apiClient.delete('/api/auth/me')
+      await identityApiClient.delete('/api/auth/me')
       await logout()
       toast.success(t('profile.dangerZone.success'))
     } catch {

@@ -59,6 +59,8 @@ jobs:
       - name: Build frontend
         env:
           VITE_API_URL: http://localhost
+          VITE_KINRECIPE_API_URL: http://localhost
+          VITE_IDENTITY_API_URL: http://localhost
           VITE_IDENTITY_URL: https://identity.example.com
           VITE_KINRECIPE_URL: https://kinrecipe.example.com
         run: npm run build
@@ -177,7 +179,8 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_KINRECIPE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
         run: npm run build
 
@@ -306,7 +309,8 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_KINRECIPE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
         run: npm run build
 

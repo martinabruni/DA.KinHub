@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { apiClient } from "@/api/apiClient";
+import { identityApiClient } from "@/api/apiClient";
 import { useAuthContext } from "@/store/authContext";
 import type { AuthTokens, LoginRequest, RegisterRequest, User } from "@/types";
 
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { isLoading: isLoadingUser } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      const { data } = await apiClient.get<User>("/api/auth/me");
+      const { data } = await identityApiClient.get<User>("/api/auth/me");
       setUser(data);
       return data;
     },
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (payload: LoginRequest) => {
-      const { data } = await apiClient.post<AuthTokens>(
+      const { data } = await identityApiClient.post<AuthTokens>(
         "/api/auth/login",
         payload,
       );
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: async (tokens) => {
       setTokens(tokens.accessToken, tokens.refreshToken);
-      const { data } = await apiClient.get<User>("/api/auth/me");
+      const { data } = await identityApiClient.get<User>("/api/auth/me");
       setUser(data);
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
     },
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (payload: RegisterRequest) => {
-      await apiClient.post("/api/auth/register", payload);
+      await identityApiClient.post("/api/auth/register", payload);
     },
     onSuccess: () => {
       toast.success(t("auth.accountCreated"));
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const refreshToken = localStorage.getItem("refreshToken") ?? "";
-      await apiClient.post("/api/auth/logout", { refreshToken });
+      await identityApiClient.post("/api/auth/logout", { refreshToken });
     },
     onSettled: () => {
       clearAuth();
