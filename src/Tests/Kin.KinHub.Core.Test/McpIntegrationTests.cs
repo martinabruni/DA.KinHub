@@ -287,11 +287,11 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         {
             configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:KinHub"] = "Host=localhost;Database=kinhub;Username=test;Password=test",
                 ["Jwt:Secret"] = "abcdefghijklmnopqrstuvwxyz123456",
                 ["Jwt:Issuer"] = "kinhub-tests",
                 ["OpenAi:Endpoint"] = "https://localhost/",
                 ["OpenAi:ApiKey"] = "test-key",
+                ["Testing:SkipPostgreSqlConnectionValidation"] = "true",
                 ["Cors:AllowAnyOrigin"] = "false",
                 ["Cors:AllowedOrigins:0"] = "https://orange-plant-0cdfb6b03.7.azurestaticapps.net",
                 ["Mcp:AuthorizationServerUrl"] = "http://localhost",

@@ -25,7 +25,9 @@ public static class ServiceCollectionExtensions
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
         var mcpOptions = configuration.GetSection(McpTransportOptions.SectionName).Get<McpTransportOptions>() ?? new();
+        var skipPostgreSqlConnectionValidation = configuration.GetValue<bool>("Testing:SkipPostgreSqlConnectionValidation");
         ValidateSecuritySettings(corsOptions, jwtSettings, mcpOptions, environment);
+        var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
 
@@ -35,8 +37,16 @@ public static class ServiceCollectionExtensions
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
             .AddScoped(typeof(IRequestValidator<>), typeof(FluentRequestValidator<>))
-            .AddKinHubCorePostgreSqlInfrastructure(o => o.ConnectionString = configuration.GetConnectionString("KinHub")!)
-            .AddKinHubIdentityPostgreSqlInfrastructure(o => o.ConnectionString = configuration.GetConnectionString("KinHub")!)
+            .AddKinHubCorePostgreSqlInfrastructure(o =>
+            {
+                o.ConnectionString = connectionString;
+                o.SkipConnectionStringValidation = skipPostgreSqlConnectionValidation;
+            })
+            .AddKinHubIdentityPostgreSqlInfrastructure(o =>
+            {
+                o.ConnectionString = connectionString;
+                o.SkipConnectionStringValidation = skipPostgreSqlConnectionValidation;
+            })
             .AddKinHubIdentityJwtInfrastructure(o =>
             {
                 o.Secret = effectiveJwtSecret;
@@ -55,13 +65,15 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddOpenTelemetry().UseAzureMonitor();
-        services
-            .AddHealthChecks()
-            .AddNpgSql(
-                configuration.GetConnectionString("KinHub")!,
+        var healthChecks = services.AddHealthChecks();
+        if (!skipPostgreSqlConnectionValidation)
+        {
+            healthChecks.AddNpgSql(
+                connectionString,
                 name: "kinhub-dev-psqldb",
                 timeout: TimeSpan.FromSeconds(10),
                 tags: ["ready"]);
+        }
 
         services.AddAuthentication(options =>
             {
