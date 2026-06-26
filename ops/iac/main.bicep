@@ -71,16 +71,20 @@ param jwtRefreshTokenExpiryDays string = '7'
 param ghcrServer string = 'ghcr.io'
 
 @description('Container registry username used by Container Apps to pull private images.')
+@minLength(1)
 param ghcrUsername string
 
 @description('Container registry password or PAT used by Container Apps to pull private images.')
 @secure()
+@minLength(1)
 param ghcrPassword string
 
 @description('Full image reference for the Identity backend.')
+@minLength(1)
 param identityImage string
 
 @description('Full image reference for the KinRecipe backend.')
+@minLength(1)
 param kinRecipeImage string
 
 var postgresConnectionString = 'Server=${postgresServer.properties.fullyQualifiedDomainName};Database=${postgresDatabaseName};Port=5432;User Id=${postgresAdministratorLogin};Password=${postgresAdministratorPassword};Ssl Mode=Require;'

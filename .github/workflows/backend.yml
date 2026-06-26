@@ -19,7 +19,6 @@ env:
   DOTNET_SOLUTION: Kin.KinHub.Core.slnx
   BICEP_FILE: ops/iac/main.bicep
   GHCR_SERVER: ghcr.io
-  IMAGE_NAMESPACE: ${{ github.repository_owner }}
   IDENTITY_API_PROJECT: src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj
   KINRECIPE_API_PROJECT: src/Presentations/Kin.KinHub.KinRecipe.Api/Kin.KinHub.KinRecipe.Api.csproj
   IDENTITY_DOCKERFILE: src/Presentations/Kin.KinHub.Identity.Api/Dockerfile
@@ -75,16 +74,17 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - backend_ci
-    outputs:
-      image: ${{ steps.meta.outputs.image }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Compute image tag
-        id: meta
-        run: echo "image=${{ env.GHCR_SERVER }}/${{ env.IMAGE_NAMESPACE }}/kinhub-identity-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        id: identity_image
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
@@ -100,23 +100,24 @@ jobs:
           context: .
           file: ${{ env.IDENTITY_DOCKERFILE }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.image }}
+          tags: ${{ steps.identity_image.outputs.image }}
 
   package_kinrecipe_image:
     name: Package KinRecipe Image
     runs-on: ubuntu-latest
     needs:
       - backend_ci
-    outputs:
-      image: ${{ steps.meta.outputs.image }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Compute image tag
-        id: meta
-        run: echo "image=${{ env.GHCR_SERVER }}/${{ env.IMAGE_NAMESPACE }}/kinhub-kinrecipe-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        id: kinrecipe_image
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
@@ -132,7 +133,7 @@ jobs:
           context: .
           file: ${{ env.KINRECIPE_DOCKERFILE }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.image }}
+          tags: ${{ steps.kinrecipe_image.outputs.image }}
 
   deploy_dev:
     name: Deploy Dev
@@ -148,6 +149,63 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Compute image tags
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IDENTITY_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "KINRECIPE_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Validate deployment inputs
+        run: |
+          required_values=(
+            "${{ vars.AZURE_RESOURCE_GROUP }}"
+            "${{ vars.AZURE_LOCATION }}"
+            "${{ vars.STATIC_WEB_APP_LOCATION }}"
+            "${{ vars.CORE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
+            "${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
+            "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
+            "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
+            "${{ vars.APPLICATION_INSIGHTS_NAME }}"
+            "${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
+            "${{ vars.KEY_VAULT_NAME }}"
+            "${{ vars.POSTGRES_SERVER_NAME }}"
+            "${{ vars.POSTGRES_DATABASE_NAME }}"
+            "${{ vars.OPEN_AI_ACCOUNT_NAME }}"
+            "${{ vars.JWT_ISSUER }}"
+            "${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}"
+            "${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}"
+            "${{ secrets.JWT_SECRET }}"
+            "${{ secrets.GHCR_USERNAME }}"
+            "${{ secrets.GHCR_PASSWORD }}"
+            "${IDENTITY_IMAGE}"
+            "${KINRECIPE_IMAGE}"
+          )
+
+          for value in "${required_values[@]}"; do
+            if [ -z "$value" ]; then
+              echo "A required deployment input is empty."
+              exit 1
+            fi
+          done
+
+          case "${IDENTITY_IMAGE}" in
+            ghcr.io/*) ;;
+            *)
+              echo "IDENTITY_IMAGE must start with ghcr.io/: ${IDENTITY_IMAGE}"
+              exit 1
+              ;;
+          esac
+
+          case "${KINRECIPE_IMAGE}" in
+            ghcr.io/*) ;;
+            *)
+              echo "KINRECIPE_IMAGE must start with ghcr.io/: ${KINRECIPE_IMAGE}"
+              exit 1
+              ;;
+          esac
+
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -181,8 +239,8 @@ jobs:
               jwtIssuer="${{ vars.JWT_ISSUER }}" \
               ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
               ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${{ needs.package_identity_image.outputs.image }}" \
-              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
+              identityImage="${IDENTITY_IMAGE}" \
+              kinRecipeImage="${KINRECIPE_IMAGE}"
 
           az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
@@ -208,8 +266,8 @@ jobs:
               jwtIssuer="${{ vars.JWT_ISSUER }}" \
               ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
               ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${{ needs.package_identity_image.outputs.image }}" \
-              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
+              identityImage="${IDENTITY_IMAGE}" \
+              kinRecipeImage="${KINRECIPE_IMAGE}"
 
   deploy_prod:
     name: Deploy Prod
@@ -225,6 +283,63 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Compute image tags
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IDENTITY_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "KINRECIPE_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Validate deployment inputs
+        run: |
+          required_values=(
+            "${{ vars.AZURE_RESOURCE_GROUP }}"
+            "${{ vars.AZURE_LOCATION }}"
+            "${{ vars.STATIC_WEB_APP_LOCATION }}"
+            "${{ vars.CORE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
+            "${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
+            "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
+            "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
+            "${{ vars.APPLICATION_INSIGHTS_NAME }}"
+            "${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
+            "${{ vars.KEY_VAULT_NAME }}"
+            "${{ vars.POSTGRES_SERVER_NAME }}"
+            "${{ vars.POSTGRES_DATABASE_NAME }}"
+            "${{ vars.OPEN_AI_ACCOUNT_NAME }}"
+            "${{ vars.JWT_ISSUER }}"
+            "${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}"
+            "${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}"
+            "${{ secrets.JWT_SECRET }}"
+            "${{ secrets.GHCR_USERNAME }}"
+            "${{ secrets.GHCR_PASSWORD }}"
+            "${IDENTITY_IMAGE}"
+            "${KINRECIPE_IMAGE}"
+          )
+
+          for value in "${required_values[@]}"; do
+            if [ -z "$value" ]; then
+              echo "A required deployment input is empty."
+              exit 1
+            fi
+          done
+
+          case "${IDENTITY_IMAGE}" in
+            ghcr.io/*) ;;
+            *)
+              echo "IDENTITY_IMAGE must start with ghcr.io/: ${IDENTITY_IMAGE}"
+              exit 1
+              ;;
+          esac
+
+          case "${KINRECIPE_IMAGE}" in
+            ghcr.io/*) ;;
+            *)
+              echo "KINRECIPE_IMAGE must start with ghcr.io/: ${KINRECIPE_IMAGE}"
+              exit 1
+              ;;
+          esac
+
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -258,8 +373,8 @@ jobs:
               jwtIssuer="${{ vars.JWT_ISSUER }}" \
               ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
               ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${{ needs.package_identity_image.outputs.image }}" \
-              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
+              identityImage="${IDENTITY_IMAGE}" \
+              kinRecipeImage="${KINRECIPE_IMAGE}"
 
           az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
@@ -285,5 +400,5 @@ jobs:
               jwtIssuer="${{ vars.JWT_ISSUER }}" \
               ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
               ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${{ needs.package_identity_image.outputs.image }}" \
-              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
+              identityImage="${IDENTITY_IMAGE}" \
+              kinRecipeImage="${KINRECIPE_IMAGE}"

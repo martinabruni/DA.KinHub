@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "13479500374542935560"
+      "templateHash": "5071982345236195815"
     }
   },
   "parameters": {
@@ -152,24 +152,28 @@
     },
     "ghcrUsername": {
       "type": "string",
+      "minLength": 1,
       "metadata": {
         "description": "Container registry username used by Container Apps to pull private images."
       }
     },
     "ghcrPassword": {
       "type": "securestring",
+      "minLength": 1,
       "metadata": {
         "description": "Container registry password or PAT used by Container Apps to pull private images."
       }
     },
     "identityImage": {
       "type": "string",
+      "minLength": 1,
       "metadata": {
         "description": "Full image reference for the Identity backend."
       }
     },
     "kinRecipeImage": {
       "type": "string",
+      "minLength": 1,
       "metadata": {
         "description": "Full image reference for the KinRecipe backend."
       }
