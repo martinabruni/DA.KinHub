@@ -1,0 +1,396 @@
+{
+  "app": {
+    "name": "KinHub",
+    "tagline": "Your family, all in one place."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "family": "Family",
+    "services": "Services",
+    "recipeBooks": "Recipe Books",
+    "fridges": "Fridges",
+    "aiAssistant": "AI Assistant",
+    "shoppingLists": "Shopping List",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "createAccount": "Create account",
+    "creatingAccount": "Creating account...",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "noAccount": "Don't have an account?",
+    "register": "Register",
+    "alreadyHaveAccount": "Already have an account?",
+    "login": "Log in",
+    "passwordMismatch": "Passwords do not match",
+    "accountCreated": "Account created! Please sign in.",
+    "loggedOut": "Logged out successfully.",
+    "autoLoginFailed": "Account created, but sign-in failed. Please sign in manually."
+  },
+  "dashboard": {
+    "greeting": "Hello, {{name}}! 👋",
+    "yourServices": "Your services",
+    "open": "Open →",
+    "recentActivity": "Recent activity coming soon",
+    "noFamily": {
+      "title": "You're not part of a family yet",
+      "create": "Create a family",
+      "join": "Join with invite code"
+    },
+    "members": "{{count}} member",
+    "members_other": "{{count}} members",
+    "manageFamily": "Manage Family →"
+  },
+  "family": {
+    "title": "Family",
+    "members": "Members",
+    "addMember": "Add Member",
+    "addMemberNamePlaceholder": "Member name",
+    "editName": "Edit family name",
+    "name": "Family name",
+    "save": "Save",
+    "noFamily": {
+      "title": "You don't have a family yet",
+      "description": "Create a family to get started. Members are profiles, not accounts.",
+      "familyNamePlaceholder": "Family name",
+      "ownerProfileNamePlaceholder": "Your profile name (e.g. Mum)",
+      "create": "Create Family"
+    },
+    "actions": {
+      "edit": "Edit",
+      "remove": "Remove"
+    },
+    "removeMember": {
+      "title": "Remove member",
+      "description": "Are you sure you want to remove {{name}} from the family? This action cannot be undone.",
+      "confirm": "Remove"
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "leave": "Leave Family",
+      "leaveTitle": "Leave Family",
+      "leaveDescription": "Are you sure you want to leave this family? You will lose access to all shared resources.",
+      "leaveConfirm": "Leave",
+      "delete": "Delete Family",
+      "deleteTitle": "Delete Family",
+      "deleteDescription": "This will permanently delete the family and all associated data. This action cannot be undone.",
+      "deleteConfirm": "Delete"
+    },
+    "noMembers": "No members yet",
+    "updated": "Family updated successfully.",
+    "memberRemoved": "Member removed.",
+    "left": "You have left the family.",
+    "deleted": "Family deleted."
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "Open a service to get started",
+    "active": "Active",
+    "inactive": "Inactive",
+    "open": "Open",
+    "manage": "Manage services →",
+    "fixedServiceError": "KinConsole is always on.",
+    "toggleError": "Failed to update service. Reverting.",
+    "updated": "Service updated."
+  },
+  "console": {
+    "services": {
+      "title": "KinConsole",
+      "subtitle": "Manage your family's services. KinConsole is always available.",
+      "alwaysOn": "Always on",
+      "alwaysOnDescription": "KinConsole is the management area and cannot be turned off."
+    }
+  },
+  "recipeBooks": {
+    "title": "Recipe Books",
+    "new": "New Recipe Book",
+    "search": "Search recipe books...",
+    "recipes": "recipes",
+    "recipe": "recipe",
+    "lastUpdated": "Updated {{date}}",
+    "empty": {
+      "title": "No recipe books yet",
+      "cta": "Create your first one"
+    },
+    "create": {
+      "title": "New Recipe Book",
+      "namePlaceholder": "e.g. Italian Classics",
+      "submit": "Create"
+    },
+    "edit": {
+      "title": "Edit Recipe Book",
+      "submit": "Save"
+    },
+    "delete": {
+      "title": "Delete Recipe Book",
+      "description": "Are you sure you want to delete \"{{name}}\"? All recipes inside will be deleted. This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "created": "Recipe book created.",
+    "updated": "Recipe book updated.",
+    "deleted": "Recipe book deleted."
+  },
+  "recipes": {
+    "title": "Recipes",
+    "addRecipe": "Add Recipe",
+    "name": "Recipe name",
+    "description": "Description (optional)",
+    "servingSize": "Serving size",
+    "prepTime": "Prep time (minutes)",
+    "create": {
+      "title": "New Recipe",
+      "submit": "Create"
+    },
+    "edit": {
+      "title": "Edit Recipe",
+      "submit": "Save"
+    },
+    "delete": {
+      "title": "Delete Recipe",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "ingredients": "Ingredients",
+    "steps": "Steps",
+    "addIngredient": "Add",
+    "addStep": "Add",
+    "ingredientName": "Ingredient name",
+    "quantity": "Qty",
+    "unit": "Unit",
+    "stepDescription": "Step description",
+    "cancel": "Cancel",
+    "saveIngredient": "Save",
+    "saveStep": "Save",
+    "checkMissing": "Check Missing Ingredients",
+    "selectFridge": "Select a fridge",
+    "allAvailable": "All ingredients available!",
+    "missing": "Missing",
+    "created": "Recipe created.",
+    "updated": "Recipe updated.",
+    "deleted": "Recipe deleted.",
+    "ingredientAdded": "Ingredient added.",
+    "ingredientDeleted": "Ingredient removed.",
+    "stepAdded": "Step added.",
+    "stepDeleted": "Step removed."
+  },
+  "fridges": {
+    "title": "Fridges",
+    "new": "New Fridge",
+    "search": "Search ingredients...",
+    "addIngredient": "Add Ingredient",
+    "ingredients": "ingredients",
+    "ingredient": "ingredient",
+    "empty": {
+      "title": "Your fridge is empty.",
+      "cta": "Add your first ingredient."
+    },
+    "noFridges": {
+      "title": "No fridges yet",
+      "cta": "Create your first one"
+    },
+    "columns": {
+      "name": "Name",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "actions": "Actions"
+    },
+    "create": {
+      "title": "New Fridge",
+      "namePlaceholder": "e.g. Main Fridge",
+      "submit": "Create"
+    },
+    "edit": {
+      "title": "Edit Fridge",
+      "submit": "Save"
+    },
+    "delete": {
+      "title": "Delete Fridge",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "editIngredient": "Edit ingredient",
+    "deleteIngredient": {
+      "title": "Remove Ingredient",
+      "description": "Remove \"{{name}}\" from the fridge?",
+      "confirm": "Remove"
+    },
+    "created": "Fridge created.",
+    "updated": "Fridge updated.",
+    "deleted": "Fridge deleted.",
+    "ingredientAdded": "Ingredient added.",
+    "ingredientUpdated": "Ingredient updated.",
+    "ingredientDeleted": "Ingredient removed."
+  },
+  "aiAssistant": {
+    "title": "AI Recipe Assistant",
+    "subtitle": "Let AI help you cook smarter",
+    "tabs": {
+      "suggest": "Suggest Recipes",
+      "parse": "Parse Recipe",
+      "adapt": "Adapt Recipe"
+    },
+    "suggest": {
+      "selectFridge": "Choose a fridge...",
+      "button": "Suggest Recipes",
+      "suggesting": "Suggesting...",
+      "matchScore": "Match",
+      "saveToBook": "Save to Recipe Book",
+      "selectBook": "Choose a recipe book...",
+      "save": "Save",
+      "saved": "Recipe saved to book.",
+      "existingRecipes": "Your Recipes",
+      "aiRecipes": "AI Suggestions",
+      "noExistingMatches": "No existing recipes match your fridge."
+    },
+    "parse": {
+      "placeholder": "Paste a recipe from any source...",
+      "button": "Parse Recipe",
+      "parsing": "Parsing...",
+      "saveToBook": "Save to Recipe Book",
+      "saved": "Recipe saved.",
+      "saving": "Saving...",
+      "createdSuccessfully": "✓ Created successfully"
+    },
+    "adapt": {
+      "selectRecipe": "Choose a recipe...",
+      "constraints": "Dietary constraints (e.g. gluten-free, vegan)",
+      "button": "Adapt Recipe",
+      "adapting": "Adapting...",
+      "original": "Original",
+      "adapted": "Adapted",
+      "saveAdapted": "Save Adapted Recipe",
+      "saved": "Adapted recipe saved."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "updateEmail": {
+      "title": "Update Email",
+      "newEmail": "New email",
+      "currentPassword": "Current password",
+      "save": "Save",
+      "success": "Email updated."
+    },
+    "updatePassword": {
+      "title": "Update Password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "save": "Save",
+      "success": "Password updated."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "darkMode": "Dark mode",
+      "language": "Language",
+      "english": "English",
+      "italian": "Italiano"
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "delete": "Delete Account",
+      "deleteTitle": "Delete Account",
+      "deleteDescription": "This will permanently delete your account and all your data. Type DELETE to confirm.",
+      "deleteConfirm": "Delete Account",
+      "typeToConfirm": "Type DELETE to confirm",
+      "success": "Account deleted."
+    }
+  },
+  "onboarding": {
+    "title": "Create your family",
+    "subtitle": "Set up your family space to get started.",
+    "familyName": "Family name",
+    "familyNamePlaceholder": "e.g. The Smiths",
+    "ownerProfileName": "Your profile name",
+    "ownerProfileNamePlaceholder": "e.g. Mum",
+    "submit": "Create Family",
+    "submitting": "Creating...",
+    "errorGeneric": "Failed to create family. Please try again."
+  },
+  "selectMember": {
+    "title": "Who's watching?",
+    "subtitle": "Select a family member to continue",
+    "switchMember": "Switch member"
+  },
+  "hub": {
+    "greeting": "Welcome, {{name}}",
+    "yourServices": "Your services",
+    "noServicesTitle": "No services enabled yet",
+    "noServicesDescription": "Enable services for your family to get started.",
+    "manageServices": "Manage services →",
+    "open": "Open",
+    "familyBanner": "{{name}} family",
+    "members": "{{count}} member",
+    "members_other": "{{count}} members"
+  },
+  "shoppingLists": {
+    "title": "Shopping Lists",
+    "new": "New List",
+    "itemCount": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "checkedCount": "{{checked}}/{{total}} checked",
+    "empty": {
+      "title": "No shopping lists yet",
+      "cta": "Create your first one"
+    },
+    "emptyItems": {
+      "title": "List is empty.",
+      "cta": "Add your first item."
+    },
+    "create": {
+      "title": "New Shopping List",
+      "namePlaceholder": "e.g. Weekly Groceries",
+      "submit": "Create"
+    },
+    "edit": {
+      "title": "Edit List",
+      "submit": "Save"
+    },
+    "delete": {
+      "title": "Delete List",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "deleteChecked": "Delete checked",
+    "deleteCheckedConfirm": "Delete all checked items?",
+    "addItem": "Add item",
+    "addItemPlaceholder": "Item name",
+    "addToList": "Add to list",
+    "selectList": "Choose a list...",
+    "addedToList": "Items added to list.",
+    "created": "List created.",
+    "updated": "List updated.",
+    "deleted": "List deleted.",
+    "itemAdded": "Item added.",
+    "itemDeleted": "Item removed.",
+    "itemToggled": "Item updated.",
+    "checkedDeleted": "Checked items deleted."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "actions": "Actions",
+    "noData": "No data available.",
+    "search": "Search",
+    "clear": "Clear",
+    "retry": "Retry"
+  },
+  "errors": {
+    "sessionExpired": "Session expired, please log in again.",
+    "forbidden": "You don't have permission to perform this action.",
+    "notFound": "The requested resource was not found.",
+    "serverError": "Server error. Please try again in a moment.",
+    "generic": "Something went wrong. Please try again."
+  }
+}

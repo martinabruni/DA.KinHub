@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "3989885076013097418"
+      "templateHash": "13479500374542935560"
     }
   },
   "parameters": {
@@ -20,33 +20,55 @@
       "type": "string",
       "defaultValue": "[parameters('location')]",
       "metadata": {
-        "description": "Azure region for the Static Web App. Defaults to the main deployment location."
+        "description": "Azure region for all Static Web Apps. Defaults to the main deployment location."
       }
     },
-    "staticWebAppName": {
+    "coreStaticWebAppName": {
       "type": "string",
       "metadata": {
-        "description": "Static Web App name."
+        "description": "Core hub Static Web App name."
       }
     },
-    "webAppName": {
+    "identityStaticWebAppName": {
       "type": "string",
       "metadata": {
-        "description": "Web App name."
+        "description": "Identity Static Web App name."
       }
     },
-    "appServicePlanName": {
+    "kinRecipeStaticWebAppName": {
       "type": "string",
-      "defaultValue": "[format('{0}-plan', parameters('webAppName'))]",
       "metadata": {
-        "description": "App Service plan name for the Web App."
+        "description": "KinRecipe Static Web App name."
+      }
+    },
+    "containerAppsEnvironmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Container Apps environment name."
+      }
+    },
+    "identityContainerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Identity backend container app name."
+      }
+    },
+    "kinRecipeContainerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "KinRecipe backend container app name."
       }
     },
     "applicationInsightsName": {
       "type": "string",
-      "defaultValue": "[format('{0}-appi', parameters('webAppName'))]",
       "metadata": {
         "description": "Application Insights name."
+      }
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Log Analytics workspace name."
       }
     },
     "keyVaultName": {
@@ -97,14 +119,14 @@
     "jwtSecret": {
       "type": "securestring",
       "metadata": {
-        "description": "JWT secret key."
+        "description": "JWT secret key shared across KinHub services."
       }
     },
     "jwtIssuer": {
       "type": "string",
       "defaultValue": "kinhub",
       "metadata": {
-        "description": "JWT issuer."
+        "description": "JWT issuer value."
       }
     },
     "jwtAccessTokenExpiryMinutes": {
@@ -113,6 +135,44 @@
       "metadata": {
         "description": "JWT access token expiry in minutes."
       }
+    },
+    "jwtRefreshTokenExpiryDays": {
+      "type": "string",
+      "defaultValue": "7",
+      "metadata": {
+        "description": "JWT refresh token expiry in days."
+      }
+    },
+    "ghcrServer": {
+      "type": "string",
+      "defaultValue": "ghcr.io",
+      "metadata": {
+        "description": "Container registry server used by Container Apps."
+      }
+    },
+    "ghcrUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Container registry username used by Container Apps to pull private images."
+      }
+    },
+    "ghcrPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Container registry password or PAT used by Container Apps to pull private images."
+      }
+    },
+    "identityImage": {
+      "type": "string",
+      "metadata": {
+        "description": "Full image reference for the Identity backend."
+      }
+    },
+    "kinRecipeImage": {
+      "type": "string",
+      "metadata": {
+        "description": "Full image reference for the KinRecipe backend."
+      }
     }
   },
   "variables": {
@@ -120,9 +180,22 @@
     "jwtSecretSecretName": "jwt-secret",
     "openAiEndpointSecretName": "openai-endpoint",
     "openAiKeySecretName": "openai-key",
-    "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]"
+    "ghcrUsernameSecretName": "ghcr-username",
+    "ghcrPasswordSecretName": "ghcr-password"
   },
   "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[parameters('logAnalyticsWorkspaceName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "retentionInDays": 30,
+        "sku": {
+          "name": "PerGB2018"
+        }
+      }
+    },
     {
       "type": "Microsoft.Insights/components",
       "apiVersion": "2020-02-02",
@@ -131,8 +204,11 @@
       "kind": "web",
       "properties": {
         "Application_Type": "web",
-        "WorkspaceResourceId": null
-      }
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ]
     },
     {
       "type": "Microsoft.KeyVault/vaults",
@@ -200,18 +276,6 @@
       ]
     },
     {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2023-07-01",
-      "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]",
-      "properties": {
-        "value": "[format('Server={0};Database={1};Port=5432;User Id={2};Password={3};Ssl Mode=Require;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName')), '2023-06-01-preview').fullyQualifiedDomainName, parameters('postgresDatabaseName'), parameters('postgresAdministratorLogin'), parameters('postgresAdministratorPassword'))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.CognitiveServices/accounts",
       "apiVersion": "2023-05-01",
       "name": "[parameters('openAiAccountName')]",
@@ -265,6 +329,18 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]",
+      "properties": {
+        "value": "[format('Server={0};Database={1};Port=5432;User Id={2};Password={3};Ssl Mode=Require;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName')), '2023-06-01-preview').fullyQualifiedDomainName, parameters('postgresDatabaseName'), parameters('postgresAdministratorLogin'), parameters('postgresAdministratorPassword'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('openAiEndpointSecretName'))]",
       "properties": {
         "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), '2023-05-01').endpoint]"
@@ -298,129 +374,31 @@
       ]
     },
     {
-      "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2024-04-01",
-      "name": "[parameters('appServicePlanName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "B1",
-        "tier": "Basic"
-      },
-      "kind": "linux",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('ghcrUsernameSecretName'))]",
       "properties": {
-        "reserved": true
-      }
-    },
-    {
-      "type": "Microsoft.Web/sites",
-      "apiVersion": "2024-04-01",
-      "name": "[parameters('webAppName')]",
-      "location": "[parameters('location')]",
-      "kind": "app,linux",
-      "identity": {
-        "type": "SystemAssigned"
-      },
-      "properties": {
-        "httpsOnly": true,
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
-        "siteConfig": {
-          "appSettings": [
-            {
-              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]"
-            },
-            {
-              "name": "ConnectionStrings__KinHub",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]"
-            },
-            {
-              "name": "Jwt__Secret",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('jwtSecretSecretName'))]"
-            },
-            {
-              "name": "Jwt__Issuer",
-              "value": "[parameters('jwtIssuer')]"
-            },
-            {
-              "name": "Jwt__AccessTokenExpiryMinutes",
-              "value": "[parameters('jwtAccessTokenExpiryMinutes')]"
-            },
-            {
-              "name": "OpenAi__Endpoint",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('openAiEndpointSecretName'))]"
-            },
-            {
-              "name": "OpenAi__ApiKey",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), variables('openAiKeySecretName'))]"
-            },
-            {
-              "name": "OpenAi__EmbeddingDeploymentName",
-              "value": "text-embedding-3-small"
-            },
-            {
-              "name": "OpenAi__ModelDeploymentName",
-              "value": "gpt-4o-mini"
-            },
-            {
-              "name": "AllowedHosts",
-              "value": "*"
-            },
-            {
-              "name": "Mcp__AuthorizationServerUrl",
-              "value": "[format('https://{0}.azurewebsites.net', parameters('webAppName'))]"
-            },
-            {
-              "name": "Cors__AllowAnyOrigin",
-              "value": "false"
-            },
-            {
-              "name": "Cors__AllowedOrigins__0",
-              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2024-04-01').defaultHostname)]"
-            },
-            {
-              "name": "Mcp__AllowAnyOrigin",
-              "value": "false"
-            },
-            {
-              "name": "Mcp__AllowedOrigins__0",
-              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2024-04-01').defaultHostname)]"
-            }
-          ],
-          "ftpsState": "Disabled",
-          "healthCheckPath": "/health",
-          "http20Enabled": true,
-          "linuxFxVersion": "DOTNETCORE|10.0",
-          "minTlsVersion": "1.2"
-        }
+        "value": "[parameters('ghcrUsername')]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
-        "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
-        "[resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName'))]",
-        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'text-embedding-3-small')]",
-        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'gpt-4o-mini')]",
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     },
     {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.Web/sites', parameters('webAppName')), variables('keyVaultSecretsUserRoleDefinitionId'))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), variables('ghcrPasswordSecretName'))]",
       "properties": {
-        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-04-01', 'full').identity.principalId]",
-        "principalType": "ServicePrincipal",
-        "roleDefinitionId": "[variables('keyVaultSecretsUserRoleDefinitionId')]"
+        "value": "[parameters('ghcrPassword')]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     },
     {
       "type": "Microsoft.Web/staticSites",
       "apiVersion": "2024-04-01",
-      "name": "[parameters('staticWebAppName')]",
+      "name": "[parameters('coreStaticWebAppName')]",
       "location": "[parameters('staticWebAppLocation')]",
       "sku": {
         "name": "Standard",
@@ -431,16 +409,343 @@
         "publicNetworkAccess": "Enabled",
         "stagingEnvironmentPolicy": "Disabled"
       }
+    },
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('identityStaticWebAppName')]",
+      "location": "[parameters('staticWebAppLocation')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "properties": {
+        "allowConfigFileUpdates": true,
+        "publicNetworkAccess": "Enabled",
+        "stagingEnvironmentPolicy": "Disabled"
+      }
+    },
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('kinRecipeStaticWebAppName')]",
+      "location": "[parameters('staticWebAppLocation')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "properties": {
+        "allowConfigFileUpdates": true,
+        "publicNetworkAccess": "Enabled",
+        "stagingEnvironmentPolicy": "Disabled"
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('containerAppsEnvironmentName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2023-09-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2023-09-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('identityContainerAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "allowInsecure": false,
+            "external": true,
+            "targetPort": 8080,
+            "transport": "auto"
+          },
+          "registries": [
+            {
+              "server": "[parameters('ghcrServer')]",
+              "username": "[parameters('ghcrUsername')]",
+              "passwordSecretRef": "ghcr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "db-connection-string",
+              "value": "[format('Server={0};Database={1};Port=5432;User Id={2};Password={3};Ssl Mode=Require;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName')), '2023-06-01-preview').fullyQualifiedDomainName, parameters('postgresDatabaseName'), parameters('postgresAdministratorLogin'), parameters('postgresAdministratorPassword'))]"
+            },
+            {
+              "name": "jwt-secret",
+              "value": "[parameters('jwtSecret')]"
+            },
+            {
+              "name": "ghcr-password",
+              "value": "[parameters('ghcrPassword')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "identity",
+              "image": "[parameters('identityImage')]",
+              "env": [
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ConnectionStrings__KinHub",
+                  "secretRef": "db-connection-string"
+                },
+                {
+                  "name": "Jwt__Secret",
+                  "secretRef": "jwt-secret"
+                },
+                {
+                  "name": "Jwt__Issuer",
+                  "value": "[parameters('jwtIssuer')]"
+                },
+                {
+                  "name": "Jwt__AccessTokenExpiryMinutes",
+                  "value": "[parameters('jwtAccessTokenExpiryMinutes')]"
+                },
+                {
+                  "name": "Jwt__RefreshTokenExpiryDays",
+                  "value": "[parameters('jwtRefreshTokenExpiryDays')]"
+                },
+                {
+                  "name": "Cors__AllowAnyOrigin",
+                  "value": "false"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__0",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__1",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__2",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8080
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 30
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1.0Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 1
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName'))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('kinRecipeContainerAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "allowInsecure": false,
+            "external": true,
+            "targetPort": 8080,
+            "transport": "auto"
+          },
+          "registries": [
+            {
+              "server": "[parameters('ghcrServer')]",
+              "username": "[parameters('ghcrUsername')]",
+              "passwordSecretRef": "ghcr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "db-connection-string",
+              "value": "[format('Server={0};Database={1};Port=5432;User Id={2};Password={3};Ssl Mode=Require;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName')), '2023-06-01-preview').fullyQualifiedDomainName, parameters('postgresDatabaseName'), parameters('postgresAdministratorLogin'), parameters('postgresAdministratorPassword'))]"
+            },
+            {
+              "name": "jwt-secret",
+              "value": "[parameters('jwtSecret')]"
+            },
+            {
+              "name": "openai-endpoint",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), '2023-05-01').endpoint]"
+            },
+            {
+              "name": "openai-key",
+              "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), '2023-05-01').key1]"
+            },
+            {
+              "name": "ghcr-password",
+              "value": "[parameters('ghcrPassword')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "kinrecipe",
+              "image": "[parameters('kinRecipeImage')]",
+              "env": [
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString]"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ConnectionStrings__KinHub",
+                  "secretRef": "db-connection-string"
+                },
+                {
+                  "name": "Jwt__Secret",
+                  "secretRef": "jwt-secret"
+                },
+                {
+                  "name": "Jwt__Issuer",
+                  "value": "[parameters('jwtIssuer')]"
+                },
+                {
+                  "name": "Jwt__AccessTokenExpiryMinutes",
+                  "value": "[parameters('jwtAccessTokenExpiryMinutes')]"
+                },
+                {
+                  "name": "Jwt__RefreshTokenExpiryDays",
+                  "value": "[parameters('jwtRefreshTokenExpiryDays')]"
+                },
+                {
+                  "name": "OpenAi__Endpoint",
+                  "secretRef": "openai-endpoint"
+                },
+                {
+                  "name": "OpenAi__ApiKey",
+                  "secretRef": "openai-key"
+                },
+                {
+                  "name": "OpenAi__EmbeddingDeploymentName",
+                  "value": "text-embedding-3-small"
+                },
+                {
+                  "name": "OpenAi__ModelDeploymentName",
+                  "value": "gpt-4o-mini"
+                },
+                {
+                  "name": "Cors__AllowAnyOrigin",
+                  "value": "false"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__0",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__1",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                },
+                {
+                  "name": "Cors__AllowedOrigins__2",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname)]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8080
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 30
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1.0Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 1
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'text-embedding-3-small')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiAccountName'), 'gpt-4o-mini')]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+      ]
     }
   ],
   "outputs": {
-    "webAppDefaultHostname": {
+    "coreStaticWebAppDefaultHostname": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2024-04-01').defaultHostName]"
+      "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname]"
     },
-    "staticWebAppDefaultHostname": {
+    "identityStaticWebAppDefaultHostname": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2024-04-01').defaultHostname]"
+      "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname]"
+    },
+    "kinRecipeStaticWebAppDefaultHostname": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname]"
+    },
+    "identityApiUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('identityContainerAppName')), '2024-03-01').configuration.ingress.fqdn)]"
+    },
+    "kinRecipeApiUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('kinRecipeContainerAppName')), '2024-03-01').configuration.ingress.fqdn)]"
     },
     "openAiEndpoint": {
       "type": "string",
