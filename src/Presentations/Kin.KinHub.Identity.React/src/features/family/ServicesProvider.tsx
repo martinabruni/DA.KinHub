@@ -21,7 +21,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: family } = useQuery({
+  const { data: family, isLoading: isLoadingFamily } = useQuery({
     queryKey: ["family"],
     queryFn: async () => {
       const { data } = await apiClient.get<Family>("/api/families");
@@ -33,7 +33,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
 
   const qKey = ["services", "family", family?.id];
 
-  const { data: services = [], isLoading } = useQuery({
+  const { data: services = [], isLoading: isLoadingServices } = useQuery({
     queryKey: qKey,
     queryFn: async () => {
       const { data } = await apiClient.get<Service[]>(
@@ -83,7 +83,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
     <ServicesContext.Provider
       value={{
         services,
-        isLoading,
+        isLoading: isLoadingFamily || isLoadingServices,
         toggleService: (serviceId, enabled) => {
           const service = services.find((item) => item.id === serviceId);
 
