@@ -27,12 +27,15 @@ function ShoppingListsContent() {
   })
 
   return (
-    <div>
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-        <h1 className="text-2xl font-bold">{t('shoppingLists.title')}</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t('shoppingLists.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('shoppingLists.empty.cta')}</p>
+        </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-1" />{t('shoppingLists.new')}</Button>
+            <Button className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-1" />{t('shoppingLists.new')}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{t('shoppingLists.create.title')}</DialogTitle></DialogHeader>
@@ -47,7 +50,7 @@ function ShoppingListsContent() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
         </div>
       ) : shoppingLists.length === 0 ? (
@@ -57,7 +60,7 @@ function ShoppingListsContent() {
           <Button onClick={() => setCreateOpen(true)}>{t('shoppingLists.empty.cta')}</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {shoppingLists.map((list) => (
             <Card
               key={list.id}

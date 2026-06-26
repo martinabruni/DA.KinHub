@@ -1,113 +1,95 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  Grid2x2,
-  Settings2,
+  ArrowRight,
+  BookOpen,
+  Refrigerator,
+  ShoppingCart,
+  Sparkles,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
-import { apiClient } from '@/api/apiClient'
-import { useServices } from '@/features/family/ServicesProvider'
-import { serviceConfig, defaultServiceConfig } from '@/config/serviceConfig'
-import type { Family } from '@/types'
+
+const sections = [
+  {
+    to: '/recipe-books',
+    icon: BookOpen,
+    titleKey: 'nav.recipeBooks',
+    descriptionKey: 'recipeHub.sections.recipeBooks',
+    colorClass: 'text-orange-500',
+  },
+  {
+    to: '/fridges',
+    icon: Refrigerator,
+    titleKey: 'nav.fridges',
+    descriptionKey: 'recipeHub.sections.fridges',
+    colorClass: 'text-sky-500',
+  },
+  {
+    to: '/shopping-lists',
+    icon: ShoppingCart,
+    titleKey: 'nav.shoppingLists',
+    descriptionKey: 'recipeHub.sections.shoppingLists',
+    colorClass: 'text-emerald-500',
+  },
+  {
+    to: '/ai-assistant',
+    icon: Sparkles,
+    titleKey: 'nav.aiAssistant',
+    descriptionKey: 'recipeHub.sections.aiAssistant',
+    colorClass: 'text-rose-500',
+  },
+]
 
 export function DashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { activeMember } = useAuthContext()
-  const { services, isLoading: loadingServices } = useServices()
-
-  const { data: family, isLoading: loadingFamily } = useQuery({
-    queryKey: ['family'],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Family>('/api/families')
-      return data
-    },
-    enabled: !!user?.familyId,
-    retry: false,
-  })
-
-  const enabledServices = services.filter((s) => s.isEnabled)
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
+    <div className="space-y-6">
+      <section className="rounded-3xl border bg-card px-4 py-5 shadow-sm sm:px-6">
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-primary">
           {t('hub.greeting', { name: activeMember?.name ?? user?.email?.split('@')[0] ?? '' })}
-        </h1>
-        {loadingFamily ? (
-          <Skeleton className="h-4 w-48 mt-2" />
-        ) : family ? (
-          <p className="text-muted-foreground mt-1">
-            {t('hub.familyBanner', { name: family.name })}
-            {' · '}
-            {t('hub.members', { count: family.members?.length ?? 0 })}
           </p>
-        ) : null}
-      </div>
-
-      {/* Services hub grid */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{t('hub.yourServices')}</h2>
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground gap-1">
-            <Link to="/services">
-              <Settings2 className="w-4 h-4" />
-              {t('hub.manageServices')}
-            </Link>
-          </Button>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            {t('recipeHub.title')}
+          </h2>
+          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+            {t('recipeHub.subtitle')}
+          </p>
         </div>
+      </section>
 
-        {loadingServices ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-40 rounded-2xl" />
-            ))}
-          </div>
-        ) : enabledServices.length === 0 ? (
-          <Card className="bg-muted/40">
-            <CardContent className="flex flex-col items-center gap-3 py-10">
-              <Grid2x2 className="w-10 h-10 text-muted-foreground" />
-              <p className="font-medium text-muted-foreground">{t('hub.noServicesTitle')}</p>
-              <p className="text-sm text-muted-foreground text-center max-w-xs">
-                {t('hub.noServicesDescription')}
-              </p>
-              <Button asChild size="sm" variant="outline">
-                <Link to="/services">{t('hub.manageServices')}</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {enabledServices.map((service) => {
-              const cfg = serviceConfig[service.name] ?? defaultServiceConfig
-              const Icon = cfg.icon
-              return (
-                <Link key={service.id} to={cfg.path}>
-                  <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
-                    <CardContent className="flex flex-col gap-3 p-5 h-full">
-                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                        <Icon className={`w-6 h-6 ${cfg.color}`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold leading-tight">{service.name}</p>
-                        <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
-                          {service.description}
-                        </p>
-                      </div>
-                      <span className="text-xs font-medium text-primary">{t('hub.open')} →</span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        )}
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            {t('recipeHub.sectionsTitle')}
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {sections.map(({ to, icon: Icon, titleKey, descriptionKey, colorClass }) => (
+            <Link key={to} to={to} className="block">
+              <Card className="h-full border-border/70 bg-card/80 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+                <CardContent className="flex h-full flex-col gap-4 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-muted ${colorClass}`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold leading-tight">{t(titleKey)}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{t(descriptionKey)}</p>
+                  </div>
+                  <span className="text-sm font-medium text-primary">{t('hub.open')}</span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </section>
     </div>
   )

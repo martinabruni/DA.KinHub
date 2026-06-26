@@ -105,9 +105,9 @@ function SuggestTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Select value={fridgeId} onValueChange={setFridgeId}>
-          <SelectTrigger className="w-56">
+          <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder={t("aiAssistant.suggest.selectFridge")} />
           </SelectTrigger>
           <SelectContent>
@@ -118,7 +118,7 @@ function SuggestTab() {
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={handleSuggest} disabled={!fridgeId || isSuggesting}>
+        <Button onClick={handleSuggest} disabled={!fridgeId || isSuggesting} className="w-full sm:w-auto">
           {isSuggesting
             ? t("aiAssistant.suggest.suggesting")
             : t("aiAssistant.suggest.button")}
@@ -164,12 +164,12 @@ function SuggestTab() {
                             ))}
                           </ul>
                           {addListRecipeKey === r.recipeId ? (
-                            <div className="mt-2 flex gap-2">
+                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                               <Select
                                 value={addListIds[r.recipeId] ?? ""}
                                 onValueChange={(v) => setAddListIds((prev) => ({ ...prev, [r.recipeId]: v }))}
                               >
-                                <SelectTrigger className="flex-1 h-8 text-xs">
+                                <SelectTrigger className="h-8 flex-1 text-xs">
                                   <SelectValue placeholder={t("shoppingLists.selectList")} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -180,7 +180,7 @@ function SuggestTab() {
                               </Select>
                               <Button
                                 size="sm"
-                                className="h-8 text-xs"
+                                className="h-8 text-xs sm:w-auto"
                                 disabled={!addListIds[r.recipeId]}
                                 onClick={() => handleAddToList(r.recipeId, r.missingIngredients.map((i) => i.name))}
                               >
@@ -241,7 +241,7 @@ function SuggestTab() {
                             ))}
                           </ul>
                           {addListRecipeKey === cardKey ? (
-                            <div className="mt-2 flex gap-2">
+                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                               <Select
                                 value={addListIds[cardKey] ?? ""}
                                 onValueChange={(v) => setAddListIds((prev) => ({ ...prev, [cardKey]: v }))}
@@ -257,7 +257,7 @@ function SuggestTab() {
                               </Select>
                               <Button
                                 size="sm"
-                                className="h-8 text-xs"
+                                className="h-8 text-xs sm:w-auto"
                                 disabled={!addListIds[cardKey]}
                                 onClick={() => handleAddToList(cardKey, r.missingIngredients.map((ing) => ing.name))}
                               >
@@ -368,10 +368,10 @@ function ParseTab() {
       {isParsing && (
         <div className="space-y-3">
           <Skeleton className="h-6 w-48" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
         </div>
       )}
 
@@ -384,9 +384,9 @@ function ParseTab() {
                 {result.backstory}
               </p>
             )}
-            <div className="grid grid-cols-2 gap-6 mt-4">
+            <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <p className="font-medium text-sm mb-2">Ingredients</p>
+                <p className="font-medium text-sm mb-2">{t("recipes.ingredients")}</p>
                 <ul className="space-y-1">
                   {result.ingredients.map((ing, i) => (
                     <li key={i} className="text-sm text-muted-foreground">
@@ -396,7 +396,7 @@ function ParseTab() {
                 </ul>
               </div>
               <div>
-                <p className="font-medium text-sm mb-2">Steps</p>
+                <p className="font-medium text-sm mb-2">{t("recipes.steps")}</p>
                 <ol className="space-y-1">
                   {result.steps.map((step, i) => (
                     <li key={i} className="text-sm text-muted-foreground">
@@ -406,9 +406,9 @@ function ParseTab() {
                 </ol>
               </div>
             </div>
-            <div className="mt-4 flex gap-3 items-center">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Select value={saveBookId} onValueChange={setSaveBookId}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue
                     placeholder={t("aiAssistant.suggest.selectBook")}
                   />
@@ -497,7 +497,7 @@ function AdaptTab() {
           onKeyDown={(e) =>
             e.key === "Enter" && (e.preventDefault(), addConstraint())
           }
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
         <Button variant="outline" onClick={addConstraint}>
           +
@@ -578,7 +578,7 @@ function AIAssistantContent() {
       </p>
 
       <Tabs defaultValue="suggest">
-        <TabsList className="w-full sm:w-auto">
+        <TabsList className="grid w-full grid-cols-1 gap-2 bg-transparent p-0 sm:inline-flex sm:w-auto sm:grid-cols-none">
           <TabsTrigger value="suggest">
             {t("aiAssistant.tabs.suggest")}
           </TabsTrigger>

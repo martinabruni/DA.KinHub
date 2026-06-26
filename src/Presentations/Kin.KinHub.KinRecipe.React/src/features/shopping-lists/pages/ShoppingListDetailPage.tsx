@@ -57,8 +57,8 @@ function ShoppingListDetailContent() {
         </p>
       )}
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <div className="flex gap-2 flex-1">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-2 sm:flex-1 sm:flex-row">
           <Input
             placeholder={t('shoppingLists.addItemPlaceholder')}
             value={newItemName}
@@ -66,14 +66,14 @@ function ShoppingListDetailContent() {
             onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
             className="flex-1"
           />
-          <Button onClick={handleAddItem} disabled={!newItemName.trim()}>
+          <Button onClick={handleAddItem} disabled={!newItemName.trim()} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-1" />{t('shoppingLists.addItem')}
           </Button>
         </div>
         {checkedCount > 0 && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-destructive border-destructive/30">
+              <Button variant="outline" size="sm" className="w-full border-destructive/30 text-destructive sm:w-auto">
                 <Trash2 className="w-4 h-4 mr-1" />{t('shoppingLists.deleteChecked')}
               </Button>
             </AlertDialogTrigger>

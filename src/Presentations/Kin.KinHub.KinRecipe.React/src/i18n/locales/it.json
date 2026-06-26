@@ -329,6 +329,21 @@
     "members": "{{count}} membro",
     "members_other": "{{count}} membri"
   },
+  "recipeHub": {
+    "title": "La tua cucina di famiglia",
+    "subtitle": "Apri subito l'area che ti serve: ricettari, frigoriferi, liste della spesa e assistente AI.",
+    "sectionsTitle": "Aree KinRecipe",
+    "memberLabel": "Membro",
+    "manageServices": "Gestisci servizi",
+    "darkMode": "Modalità scura",
+    "lightMode": "Modalità chiara",
+    "sections": {
+      "recipeBooks": "Salva e organizza le ricette della famiglia in raccolte semplici da sfogliare.",
+      "fridges": "Controlla ingredienti disponibili e aggiorna il contenuto dei frigoriferi condivisi.",
+      "shoppingLists": "Prepara la spesa e spunta gli articoli mentre giri per il supermercato.",
+      "aiAssistant": "Usa l'assistente per trovare idee, adattare ricette e trasformare testo in ricette."
+    }
+  },
   "shoppingLists": {
     "title": "Liste della Spesa",
     "new": "Nuova Lista",
