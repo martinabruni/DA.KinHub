@@ -25,7 +25,6 @@ public static class ServiceCollectionExtensions
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
         var mcpOptions = configuration.GetSection(McpTransportOptions.SectionName).Get<McpTransportOptions>() ?? new();
-        var skipPostgreSqlConnectionValidation = configuration.GetValue<bool>("Testing:SkipPostgreSqlConnectionValidation");
         ValidateSecuritySettings(corsOptions, jwtSettings, mcpOptions, environment);
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
@@ -40,12 +39,10 @@ public static class ServiceCollectionExtensions
             .AddKinHubCorePostgreSqlInfrastructure(o =>
             {
                 o.ConnectionString = connectionString;
-                o.SkipConnectionStringValidation = skipPostgreSqlConnectionValidation;
             })
             .AddKinHubIdentityPostgreSqlInfrastructure(o =>
             {
                 o.ConnectionString = connectionString;
-                o.SkipConnectionStringValidation = skipPostgreSqlConnectionValidation;
             })
             .AddKinHubIdentityJwtInfrastructure(o =>
             {
@@ -65,15 +62,11 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddOpenTelemetry().UseAzureMonitor();
-        var healthChecks = services.AddHealthChecks();
-        if (!skipPostgreSqlConnectionValidation)
-        {
-            healthChecks.AddNpgSql(
-                connectionString,
-                name: "kinhub-dev-psqldb",
-                timeout: TimeSpan.FromSeconds(10),
-                tags: ["ready"]);
-        }
+        services.AddHealthChecks().AddNpgSql(
+            connectionString,
+            name: "kinhub-dev-psqldb",
+            timeout: TimeSpan.FromSeconds(10),
+            tags: ["ready"]);
 
         services.AddAuthentication(options =>
             {

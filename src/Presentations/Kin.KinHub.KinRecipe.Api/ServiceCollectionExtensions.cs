@@ -18,7 +18,6 @@ public static class ServiceCollectionExtensions
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
-        var skipPostgreSqlConnectionValidation = configuration.GetValue<bool>("Testing:SkipPostgreSqlConnectionValidation");
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
@@ -31,7 +30,6 @@ public static class ServiceCollectionExtensions
             .AddKinHubCorePostgreSqlInfrastructure(o =>
             {
                 o.ConnectionString = connectionString;
-                o.SkipConnectionStringValidation = skipPostgreSqlConnectionValidation;
             })
             .AddKinHubIdentityJwtInfrastructure(o =>
             {
@@ -50,15 +48,11 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddOpenTelemetry().UseAzureMonitor();
-        var healthChecks = services.AddHealthChecks();
-        if (!skipPostgreSqlConnectionValidation)
-        {
-            healthChecks.AddNpgSql(
-                connectionString,
-                name: "kinhub-kinrecipe-db",
-                timeout: TimeSpan.FromSeconds(10),
-                tags: ["ready"]);
-        }
+        services.AddHealthChecks().AddNpgSql(
+            connectionString,
+            name: "kinhub-kinrecipe-db",
+            timeout: TimeSpan.FromSeconds(10),
+            tags: ["ready"]);
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

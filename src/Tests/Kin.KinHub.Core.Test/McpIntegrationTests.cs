@@ -287,11 +287,12 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
         {
             configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                // MCP tests do not use a real database; this only satisfies SUT startup validation.
+                ["ConnectionStrings:KinHub"] = "Host=localhost;Port=5432;Database=kinhub_tests;Username=kinhub;Password=kinhub",
                 ["Jwt:Secret"] = "abcdefghijklmnopqrstuvwxyz123456",
                 ["Jwt:Issuer"] = "kinhub-tests",
                 ["OpenAi:Endpoint"] = "https://localhost/",
                 ["OpenAi:ApiKey"] = "test-key",
-                ["Testing:SkipPostgreSqlConnectionValidation"] = "true",
                 ["Cors:AllowAnyOrigin"] = "false",
                 ["Cors:AllowedOrigins:0"] = "https://orange-plant-0cdfb6b03.7.azurestaticapps.net",
                 ["Mcp:AuthorizationServerUrl"] = "http://localhost",
