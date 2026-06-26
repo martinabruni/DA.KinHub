@@ -60,7 +60,8 @@ public static class ServiceCollectionExtensions
             .AddNpgSql(
                 configuration.GetConnectionString("KinHub")!,
                 name: "kinhub-dev-psqldb",
-                timeout: TimeSpan.FromSeconds(10));
+                timeout: TimeSpan.FromSeconds(10),
+                tags: ["ready"]);
 
         services.AddAuthentication(options =>
             {

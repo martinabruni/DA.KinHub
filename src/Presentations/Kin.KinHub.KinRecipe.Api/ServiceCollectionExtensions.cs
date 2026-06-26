@@ -46,7 +46,11 @@ public static class ServiceCollectionExtensions
         services.AddOpenTelemetry().UseAzureMonitor();
         services
             .AddHealthChecks()
-            .AddNpgSql(configuration.GetConnectionString("KinHub")!, name: "kinhub-kinrecipe-db", timeout: TimeSpan.FromSeconds(10));
+            .AddNpgSql(
+                configuration.GetConnectionString("KinHub")!,
+                name: "kinhub-kinrecipe-db",
+                timeout: TimeSpan.FromSeconds(10),
+                tags: ["ready"]);
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
