@@ -16,7 +16,14 @@ public static class WebApplicationExtensions
         app.UseMiddleware<JwtAuthenticationMiddleware>();
         app.UseAuthorization();
         app.MapControllers();
-        app.MapHealthChecks("/health").AllowAnonymous();
+        app.MapHealthChecks("/health", new()
+        {
+            Predicate = _ => false,
+        }).AllowAnonymous();
+        app.MapHealthChecks("/health/ready", new()
+        {
+            Predicate = registration => registration.Tags.Contains("ready"),
+        }).AllowAnonymous();
         app.MapMcp($"/{McpTransportOptions.EndpointRoute}")
             .RequireAuthorization()
             .RequireCors(McpTransportOptions.CorsPolicyName);

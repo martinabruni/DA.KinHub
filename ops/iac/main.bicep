@@ -3,20 +3,32 @@ targetScope = 'resourceGroup'
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
 
-@description('Azure region for the Static Web App. Defaults to the main deployment location.')
+@description('Azure region for all Static Web Apps. Defaults to the main deployment location.')
 param staticWebAppLocation string = location
 
-@description('Static Web App name.')
-param staticWebAppName string
+@description('Core hub Static Web App name.')
+param coreStaticWebAppName string
 
-@description('Web App name.')
-param webAppName string
+@description('Identity Static Web App name.')
+param identityStaticWebAppName string
 
-@description('App Service plan name for the Web App.')
-param appServicePlanName string = '${webAppName}-plan'
+@description('KinRecipe Static Web App name.')
+param kinRecipeStaticWebAppName string
+
+@description('Container Apps environment name.')
+param containerAppsEnvironmentName string
+
+@description('Identity backend container app name.')
+param identityContainerAppName string
+
+@description('KinRecipe backend container app name.')
+param kinRecipeContainerAppName string
 
 @description('Application Insights name.')
-param applicationInsightsName string = '${webAppName}-appi'
+param applicationInsightsName string
+
+@description('Log Analytics workspace name.')
+param logAnalyticsWorkspaceName string
 
 @description('Key Vault name.')
 param keyVaultName string
@@ -42,83 +54,53 @@ param openAiAccountName string
 @description('Azure OpenAI SKU name.')
 param openAiSkuName string = 'S0'
 
-@description('JWT secret key.')
+@description('JWT secret key shared across KinHub services.')
 @secure()
 param jwtSecret string
 
-@description('JWT issuer.')
+@description('JWT issuer value.')
 param jwtIssuer string = 'kinhub'
 
 @description('JWT access token expiry in minutes.')
 param jwtAccessTokenExpiryMinutes string = '15'
+
+@description('JWT refresh token expiry in days.')
+param jwtRefreshTokenExpiryDays string = '7'
+
+@description('Container registry server used by Container Apps.')
+param ghcrServer string = 'ghcr.io'
+
+@description('Container registry username used by Container Apps to pull private images.')
+param ghcrUsername string
+
+@description('Container registry password or PAT used by Container Apps to pull private images.')
+@secure()
+param ghcrPassword string
+
+@description('Full image reference for the Identity backend.')
+param identityImage string
+
+@description('Full image reference for the KinRecipe backend.')
+param kinRecipeImage string
 
 var postgresConnectionString = 'Server=${postgresServer.properties.fullyQualifiedDomainName};Database=${postgresDatabaseName};Port=5432;User Id=${postgresAdministratorLogin};Password=${postgresAdministratorPassword};Ssl Mode=Require;'
 var sqlConnectionStringSecretName = 'database-connection-string'
 var jwtSecretSecretName = 'jwt-secret'
 var openAiEndpointSecretName = 'openai-endpoint'
 var openAiKeySecretName = 'openai-key'
-var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '4633458b-17de-408a-b874-0445c86b69e6'
-)
-var webAppSettings = [
-  {
-    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-    value: applicationInsights.properties.ConnectionString
+var ghcrUsernameSecretName = 'ghcr-username'
+var ghcrPasswordSecretName = 'ghcr-password'
+
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: logAnalyticsWorkspaceName
+  location: location
+  properties: {
+    retentionInDays: 30
+    sku: {
+      name: 'PerGB2018'
+    }
   }
-  {
-    name: 'ConnectionStrings__KinHub'
-    value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${sqlConnectionStringSecretName})'
-  }
-  {
-    name: 'Jwt__Secret'
-    value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${jwtSecretSecretName})'
-  }
-  {
-    name: 'Jwt__Issuer'
-    value: jwtIssuer
-  }
-  {
-    name: 'Jwt__AccessTokenExpiryMinutes'
-    value: jwtAccessTokenExpiryMinutes
-  }
-  {
-    name: 'OpenAi__Endpoint'
-    value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${openAiEndpointSecretName})'
-  }
-  {
-    name: 'OpenAi__ApiKey'
-    value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${openAiKeySecretName})'
-  }
-  {
-    name: 'OpenAi__EmbeddingDeploymentName'
-    value: embeddingDeployment.name
-  }
-  {
-    name: 'OpenAi__ModelDeploymentName'
-    value: gpt4oDeployment.name
-  }
-  {
-    name: 'Mcp__AuthorizationServerUrl'
-    value: 'https://${webAppName}.azurewebsites.net'
-  }
-  {
-    name: 'Cors__AllowAnyOrigin'
-    value: 'false'
-  }
-  {
-    name: 'Cors__AllowedOrigins__0'
-    value: 'https://${staticWebApp.properties.defaultHostname}'
-  }
-  {
-    name: 'Mcp__AllowAnyOrigin'
-    value: 'false'
-  }
-  {
-    name: 'Mcp__AllowedOrigins__0'
-    value: 'https://${staticWebApp.properties.defaultHostname}'
-  }
-]
+}
 
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: applicationInsightsName
@@ -126,7 +108,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   kind: 'web'
   properties: {
     Application_Type: 'web'
-    WorkspaceResourceId: null
+    WorkspaceResourceId: logAnalyticsWorkspace.id
   }
 }
 
@@ -187,14 +169,6 @@ resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2
   name: postgresDatabaseName
 }
 
-resource sqlConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: sqlConnectionStringSecretName
-  properties: {
-    value: postgresConnectionString
-  }
-}
-
 resource openAiAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: openAiAccountName
   location: location
@@ -226,7 +200,9 @@ resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-
 resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAiAccount
   name: 'text-embedding-3-small'
-  dependsOn: [gpt4oDeployment]
+  dependsOn: [
+    gpt4oDeployment
+  ]
   sku: {
     name: 'GlobalStandard'
     capacity: 10
@@ -236,6 +212,14 @@ resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2
       format: 'OpenAI'
       name: 'text-embedding-3-small'
     }
+  }
+}
+
+resource sqlConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: sqlConnectionStringSecretName
+  properties: {
+    value: postgresConnectionString
   }
 }
 
@@ -263,52 +247,24 @@ resource jwtSecretKvSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
-  name: appServicePlanName
-  location: location
-  sku: {
-    name: 'B1'
-    tier: 'Basic'
-  }
-  kind: 'linux'
+resource ghcrUsernameSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: ghcrUsernameSecretName
   properties: {
-    reserved: true
+    value: ghcrUsername
   }
 }
 
-resource webApp 'Microsoft.Web/sites@2024-04-01' = {
-  name: webAppName
-  location: location
-  kind: 'app,linux'
-  identity: {
-    type: 'SystemAssigned'
-  }
+resource ghcrPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: ghcrPasswordSecretName
   properties: {
-    httpsOnly: true
-    serverFarmId: appServicePlan.id
-    siteConfig: {
-      appSettings: webAppSettings
-      ftpsState: 'Disabled'
-      healthCheckPath: '/health'
-      http20Enabled: true
-      linuxFxVersion: 'DOTNETCORE|10.0'
-      minTlsVersion: '1.2'
-    }
+    value: ghcrPassword
   }
 }
 
-resource keyVaultSecretsUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault
-  name: guid(keyVault.id, webApp.id, keyVaultSecretsUserRoleDefinitionId)
-  properties: {
-    principalId: webApp.identity.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: keyVaultSecretsUserRoleDefinitionId
-  }
-}
-
-resource staticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
-  name: staticWebAppName
+resource coreStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
+  name: coreStaticWebAppName
   location: staticWebAppLocation
   sku: {
     name: 'Standard'
@@ -321,6 +277,297 @@ resource staticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
   }
 }
 
-output webAppDefaultHostname string = webApp.properties.defaultHostName
-output staticWebAppDefaultHostname string = staticWebApp.properties.defaultHostname
+resource identityStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
+  name: identityStaticWebAppName
+  location: staticWebAppLocation
+  sku: {
+    name: 'Standard'
+    tier: 'Standard'
+  }
+  properties: {
+    allowConfigFileUpdates: true
+    publicNetworkAccess: 'Enabled'
+    stagingEnvironmentPolicy: 'Disabled'
+  }
+}
+
+resource kinRecipeStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
+  name: kinRecipeStaticWebAppName
+  location: staticWebAppLocation
+  sku: {
+    name: 'Standard'
+    tier: 'Standard'
+  }
+  properties: {
+    allowConfigFileUpdates: true
+    publicNetworkAccess: 'Enabled'
+    stagingEnvironmentPolicy: 'Disabled'
+  }
+}
+
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: containerAppsEnvironmentName
+  location: location
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalyticsWorkspace.properties.customerId
+        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+      }
+    }
+  }
+}
+
+resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: identityContainerAppName
+  location: location
+  properties: {
+    managedEnvironmentId: containerAppsEnvironment.id
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        allowInsecure: false
+        external: true
+        targetPort: 8080
+        transport: 'auto'
+      }
+      registries: [
+        {
+          server: ghcrServer
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'db-connection-string'
+          value: postgresConnectionString
+        }
+        {
+          name: 'jwt-secret'
+          value: jwtSecret
+        }
+        {
+          name: 'ghcr-password'
+          value: ghcrPassword
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'identity'
+          image: identityImage
+          env: [
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsights.properties.ConnectionString
+            }
+            {
+              name: 'ASPNETCORE_URLS'
+              value: 'http://+:8080'
+            }
+            {
+              name: 'ConnectionStrings__KinHub'
+              secretRef: 'db-connection-string'
+            }
+            {
+              name: 'Jwt__Secret'
+              secretRef: 'jwt-secret'
+            }
+            {
+              name: 'Jwt__Issuer'
+              value: jwtIssuer
+            }
+            {
+              name: 'Jwt__AccessTokenExpiryMinutes'
+              value: jwtAccessTokenExpiryMinutes
+            }
+            {
+              name: 'Jwt__RefreshTokenExpiryDays'
+              value: jwtRefreshTokenExpiryDays
+            }
+            {
+              name: 'Cors__AllowAnyOrigin'
+              value: 'false'
+            }
+            {
+              name: 'Cors__AllowedOrigins__0'
+              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__1'
+              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__2'
+              value: 'https://${kinRecipeStaticWebApp.properties.defaultHostname}'
+            }
+          ]
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 8080
+              }
+              initialDelaySeconds: 10
+              periodSeconds: 30
+            }
+          ]
+          resources: {
+            cpu: json('0.5')
+            memory: '1.0Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: kinRecipeContainerAppName
+  location: location
+  properties: {
+    managedEnvironmentId: containerAppsEnvironment.id
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        allowInsecure: false
+        external: true
+        targetPort: 8080
+        transport: 'auto'
+      }
+      registries: [
+        {
+          server: ghcrServer
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'db-connection-string'
+          value: postgresConnectionString
+        }
+        {
+          name: 'jwt-secret'
+          value: jwtSecret
+        }
+        {
+          name: 'openai-endpoint'
+          value: openAiAccount.properties.endpoint
+        }
+        {
+          name: 'openai-key'
+          value: openAiAccount.listKeys().key1
+        }
+        {
+          name: 'ghcr-password'
+          value: ghcrPassword
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'kinrecipe'
+          image: kinRecipeImage
+          env: [
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsights.properties.ConnectionString
+            }
+            {
+              name: 'ASPNETCORE_URLS'
+              value: 'http://+:8080'
+            }
+            {
+              name: 'ConnectionStrings__KinHub'
+              secretRef: 'db-connection-string'
+            }
+            {
+              name: 'Jwt__Secret'
+              secretRef: 'jwt-secret'
+            }
+            {
+              name: 'Jwt__Issuer'
+              value: jwtIssuer
+            }
+            {
+              name: 'Jwt__AccessTokenExpiryMinutes'
+              value: jwtAccessTokenExpiryMinutes
+            }
+            {
+              name: 'Jwt__RefreshTokenExpiryDays'
+              value: jwtRefreshTokenExpiryDays
+            }
+            {
+              name: 'OpenAi__Endpoint'
+              secretRef: 'openai-endpoint'
+            }
+            {
+              name: 'OpenAi__ApiKey'
+              secretRef: 'openai-key'
+            }
+            {
+              name: 'OpenAi__EmbeddingDeploymentName'
+              value: embeddingDeployment.name
+            }
+            {
+              name: 'OpenAi__ModelDeploymentName'
+              value: gpt4oDeployment.name
+            }
+            {
+              name: 'Cors__AllowAnyOrigin'
+              value: 'false'
+            }
+            {
+              name: 'Cors__AllowedOrigins__0'
+              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__1'
+              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__2'
+              value: 'https://${kinRecipeStaticWebApp.properties.defaultHostname}'
+            }
+          ]
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 8080
+              }
+              initialDelaySeconds: 10
+              periodSeconds: 30
+            }
+          ]
+          resources: {
+            cpu: json('0.5')
+            memory: '1.0Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+output coreStaticWebAppDefaultHostname string = coreStaticWebApp.properties.defaultHostname
+output identityStaticWebAppDefaultHostname string = identityStaticWebApp.properties.defaultHostname
+output kinRecipeStaticWebAppDefaultHostname string = kinRecipeStaticWebApp.properties.defaultHostname
+output identityApiUrl string = 'https://${identityContainerApp.properties.configuration.ingress.fqdn}'
+output kinRecipeApiUrl string = 'https://${kinRecipeContainerApp.properties.configuration.ingress.fqdn}'
 output openAiEndpoint string = openAiAccount.properties.endpoint

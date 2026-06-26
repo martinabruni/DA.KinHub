@@ -41,6 +41,8 @@
     <Project Path="src\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
   </Folder>
   <Folder Name="/src/Presentations/">
+    <Project Path="src\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" />
+    <Project Path="src\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
   </Folder>
   <Folder Name="/src/Tests/">

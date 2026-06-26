@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
         var mcpOptions = configuration.GetSection(McpTransportOptions.SectionName).Get<McpTransportOptions>() ?? new();
         ValidateSecuritySettings(corsOptions, jwtSettings, mcpOptions, environment);
+        var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
 
@@ -35,8 +36,14 @@ public static class ServiceCollectionExtensions
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
             .AddScoped(typeof(IRequestValidator<>), typeof(FluentRequestValidator<>))
-            .AddKinHubCorePostgreSqlInfrastructure(o => o.ConnectionString = configuration.GetConnectionString("KinHub")!)
-            .AddKinHubIdentityPostgreSqlInfrastructure(o => o.ConnectionString = configuration.GetConnectionString("KinHub")!)
+            .AddKinHubCorePostgreSqlInfrastructure(o =>
+            {
+                o.ConnectionString = connectionString;
+            })
+            .AddKinHubIdentityPostgreSqlInfrastructure(o =>
+            {
+                o.ConnectionString = connectionString;
+            })
             .AddKinHubIdentityJwtInfrastructure(o =>
             {
                 o.Secret = effectiveJwtSecret;
@@ -54,13 +61,12 @@ public static class ServiceCollectionExtensions
                 o.ModelDeploymentName = openAiSettings.ModelDeploymentName;
             });
 
-        services.AddOpenTelemetry().UseAzureMonitor();
-        services
-            .AddHealthChecks()
-            .AddNpgSql(
-                configuration.GetConnectionString("KinHub")!,
-                name: "kinhub-dev-psqldb",
-                timeout: TimeSpan.FromSeconds(10));
+        AddAzureMonitorIfConfigured(services, configuration);
+        services.AddHealthChecks().AddNpgSql(
+            connectionString,
+            name: "kinhub-dev-psqldb",
+            timeout: TimeSpan.FromSeconds(10),
+            tags: ["ready"]);
 
         services.AddAuthentication(options =>
             {
@@ -312,5 +318,30 @@ public static class ServiceCollectionExtensions
         }
 
         throw new InvalidOperationException("Jwt:Issuer must be configured.");
+    }
+
+    private static void AddAzureMonitorIfConfigured(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = ResolveAzureMonitorConnectionString(configuration);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return;
+        }
+
+        services.AddOpenTelemetry().UseAzureMonitor(options =>
+        {
+            options.ConnectionString = connectionString;
+        });
+    }
+
+    private static string? ResolveAzureMonitorConnectionString(IConfiguration configuration)
+    {
+        var configuredConnectionString = configuration["ApplicationInsights:ConnectionString"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+        {
+            return configuredConnectionString;
+        }
+
+        return configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]?.Trim();
     }
 }

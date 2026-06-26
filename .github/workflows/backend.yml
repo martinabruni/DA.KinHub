@@ -12,20 +12,18 @@ on:
 permissions:
   contents: read
   id-token: write
+  packages: write
 
-# -----------------------------------------------------------------------
-# Project-specific configuration — change these to reuse in other projects
-# -----------------------------------------------------------------------
 env:
   DOTNET_VERSION: 10.0.x
   DOTNET_SOLUTION: Kin.KinHub.Core.slnx
-  SHARED_API_PROJECT: src/Presentations/Kin.KinHub.Shared.Api/Kin.KinHub.Shared.Api.csproj
-  # TODO: add test projects when created
-  # BUSINESS_TESTS_PROJECT: src/Tests/Kin.KinHub.Business.Tests/Kin.KinHub.Business.Tests.csproj
-  # API_TESTS_PROJECT: src/Tests/Kin.KinHub.Api.Tests/Kin.KinHub.Api.Tests.csproj
   BICEP_FILE: ops/iac/main.bicep
-  API_ARTIFACT_DIR: artifacts/webapp
-# -----------------------------------------------------------------------
+  GHCR_SERVER: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  IDENTITY_API_PROJECT: src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj
+  KINRECIPE_API_PROJECT: src/Presentations/Kin.KinHub.KinRecipe.Api/Kin.KinHub.KinRecipe.Api.csproj
+  IDENTITY_DOCKERFILE: src/Presentations/Kin.KinHub.Identity.Api/Dockerfile
+  KINRECIPE_DOCKERFILE: src/Presentations/Kin.KinHub.KinRecipe.Api/Dockerfile
 
 concurrency:
   group: backend-${{ github.ref }}
@@ -51,40 +49,8 @@ jobs:
       - name: Build .NET solution
         run: dotnet build ${{ env.DOTNET_SOLUTION }} --configuration Release --no-restore
 
-      # TODO: remove continue-on-error once test projects are created
-      # - name: Run business tests
-      #   # continue-on-error: true
-      #   run: dotnet test "${{ env.BUSINESS_TESTS_PROJECT }}" --configuration Release --no-build
-
-      # TODO: remove continue-on-error once test projects are created
-      # - name: Run api tests
-      #   continue-on-error: true
-      #   run: dotnet test "${{ env.API_TESTS_PROJECT }}" --configuration Release --no-build
-
-  package_webapp:
-    name: Package Web App
-    runs-on: ubuntu-latest
-    needs:
-      - backend_ci
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Publish Shared API
-        run: dotnet publish "${{ env.SHARED_API_PROJECT }}" --configuration Release --output ${{ env.API_ARTIFACT_DIR }}
-
-      - name: Upload Web App package
-        uses: actions/upload-artifact@v4
-        with:
-          name: webapp-package
-          path: ${{ env.API_ARTIFACT_DIR }}
-          if-no-files-found: error
+      - name: Run tests
+        run: dotnet test ${{ env.DOTNET_SOLUTION }} --configuration Release --no-build
 
   validate_bicep:
     name: Validate Bicep
@@ -104,15 +70,79 @@ jobs:
       - name: Build Bicep template
         run: az bicep build --file ${{ env.BICEP_FILE }}
 
+  package_identity_image:
+    name: Package Identity Image
+    runs-on: ubuntu-latest
+    needs:
+      - backend_ci
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: meta
+        run: echo "image=${{ env.GHCR_SERVER }}/${{ env.IMAGE_NAMESPACE }}/kinhub-identity-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_SERVER }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+
+      - name: Build and push Identity image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.IDENTITY_DOCKERFILE }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.image }}
+
+  package_kinrecipe_image:
+    name: Package KinRecipe Image
+    runs-on: ubuntu-latest
+    needs:
+      - backend_ci
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: meta
+        run: echo "image=${{ env.GHCR_SERVER }}/${{ env.IMAGE_NAMESPACE }}/kinhub-kinrecipe-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_SERVER }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+
+      - name: Build and push KinRecipe image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.KINRECIPE_DOCKERFILE }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.image }}
+
   deploy_dev:
     name: Deploy Dev
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: dev
     needs:
-      - backend_ci
-      - package_webapp
       - validate_bicep
+      - package_identity_image
+      - package_kinrecipe_image
 
     steps:
       - name: Checkout repository
@@ -125,130 +155,61 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Download Web App package
-        uses: actions/download-artifact@v4
-        with:
-          name: webapp-package
-          path: webapp-package
-
       - name: Deploy infrastructure
         run: |
           az deployment group what-if \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --template-file ops/iac/main.bicep \
+            --template-file "${{ env.BICEP_FILE }}" \
             --parameters \
               location="${{ vars.AZURE_LOCATION }}" \
               staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}" \
-              webAppName="${{ vars.WEB_APP_NAME }}" \
+              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
+              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
+              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
+              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
+              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
+              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
               keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
               postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
               postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
               postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
               postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
               openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}"
+              jwtSecret="${{ secrets.JWT_SECRET }}" \
+              jwtIssuer="${{ vars.JWT_ISSUER }}" \
+              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
+              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
+              identityImage="${{ needs.package_identity_image.outputs.image }}" \
+              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
 
           az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --template-file ops/iac/main.bicep \
+            --template-file "${{ env.BICEP_FILE }}" \
             --parameters \
               location="${{ vars.AZURE_LOCATION }}" \
               staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}" \
-              webAppName="${{ vars.WEB_APP_NAME }}" \
+              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
+              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
+              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
+              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
+              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
+              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
               keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
               postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
               postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
               postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
               postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
               openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}"
-
-      - name: Deploy Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.WEB_APP_NAME }}
-          package: webapp-package
-
-  # deploy_test:
-  #   name: Deploy Test
-  #   if: github.event_name != 'pull_request'
-  #   runs-on: ubuntu-latest
-  #   environment: test
-  #   needs:
-  #     - deploy_dev
-  #
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Azure login
-  #       uses: azure/login@v2
-  #       with:
-  #         client-id: ${{ secrets.AZURE_CLIENT_ID }}
-  #         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-  #         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  #
-  #     - name: Download Web App package
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: webapp-package
-  #         path: webapp-package
-  #
-  #     - name: Download Identity Web App package
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: identity-webapp-package
-  #         path: identity-webapp-package
-  #
-  #     - name: Deploy infrastructure
-  #       run: |
-  #         az deployment group what-if \
-  #           --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-  #           --template-file ops/iac/main.bicep \
-  #           --parameters \
-  #             location="${{ vars.AZURE_LOCATION }}" \
-  #             staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-  #             staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}" \
-  #             webAppName="${{ vars.WEB_APP_NAME }}" \
-  #             identityWebAppName="${{ vars.IDENTITY_WEB_APP_NAME }}" \
-  #             keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
-  #             postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
-  #             postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
-  #             postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
-  #             postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-  #             openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-  #             jwtSecret="${{ secrets.JWT_SECRET }}"
-  #
-  #         az deployment group create \
-  #           --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-  #           --template-file ops/iac/main.bicep \
-  #           --parameters \
-  #             location="${{ vars.AZURE_LOCATION }}" \
-  #             staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-  #             staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}" \
-  #             webAppName="${{ vars.WEB_APP_NAME }}" \
-  #             identityWebAppName="${{ vars.IDENTITY_WEB_APP_NAME }}" \
-  #             keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
-  #             postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
-  #             postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
-  #             postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
-  #             postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-  #             openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-  #             jwtSecret="${{ secrets.JWT_SECRET }}"
-  #
-  #     - name: Deploy Web App
-  #       uses: azure/webapps-deploy@v3
-  #       with:
-  #         app-name: ${{ vars.WEB_APP_NAME }}
-  #         package: webapp-package
-  #
-  #     - name: Deploy Identity Web App
-  #       uses: azure/webapps-deploy@v3
-  #       with:
-  #         app-name: ${{ vars.IDENTITY_WEB_APP_NAME }}
-  #         package: identity-webapp-package
+              jwtSecret="${{ secrets.JWT_SECRET }}" \
+              jwtIssuer="${{ vars.JWT_ISSUER }}" \
+              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
+              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
+              identityImage="${{ needs.package_identity_image.outputs.image }}" \
+              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
 
   deploy_prod:
     name: Deploy Prod
@@ -257,6 +218,8 @@ jobs:
     environment: prod
     needs:
       - deploy_dev
+      - package_identity_image
+      - package_kinrecipe_image
 
     steps:
       - name: Checkout repository
@@ -269,48 +232,58 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Download Web App package
-        uses: actions/download-artifact@v4
-        with:
-          name: webapp-package
-          path: webapp-package
-
       - name: Deploy infrastructure
         run: |
           az deployment group what-if \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --template-file ops/iac/main.bicep \
+            --template-file "${{ env.BICEP_FILE }}" \
             --parameters \
               location="${{ vars.AZURE_LOCATION }}" \
               staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}" \
-              webAppName="${{ vars.WEB_APP_NAME }}" \
+              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
+              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
+              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
+              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
+              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
+              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
               keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
               postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
               postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
               postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
               postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
               openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}"
+              jwtSecret="${{ secrets.JWT_SECRET }}" \
+              jwtIssuer="${{ vars.JWT_ISSUER }}" \
+              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
+              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
+              identityImage="${{ needs.package_identity_image.outputs.image }}" \
+              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"
 
           az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --template-file ops/iac/main.bicep \
+            --template-file "${{ env.BICEP_FILE }}" \
             --parameters \
               location="${{ vars.AZURE_LOCATION }}" \
               staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              staticWebAppName="${{ vars.STATIC_WEB_APP_NAME }}" \
-              webAppName="${{ vars.WEB_APP_NAME }}" \
+              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
+              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
+              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
+              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
+              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
+              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
+              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
               keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
               postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
               postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
               postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
               postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
               openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}"
-
-      - name: Deploy Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.WEB_APP_NAME }}
-          package: webapp-package
+              jwtSecret="${{ secrets.JWT_SECRET }}" \
+              jwtIssuer="${{ vars.JWT_ISSUER }}" \
+              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
+              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
+              identityImage="${{ needs.package_identity_image.outputs.image }}" \
+              kinRecipeImage="${{ needs.package_kinrecipe_image.outputs.image }}"

@@ -13,13 +13,11 @@ permissions:
   contents: read
   id-token: write
 
-# -----------------------------------------------------------------------
-# Project-specific configuration — change these to reuse in other projects
-# -----------------------------------------------------------------------
 env:
-  FRONTEND_PATH: src/Presentations/Kin.KinHub.Core.React
   NODE_VERSION: 22
-# -----------------------------------------------------------------------
+  CORE_FRONTEND_PATH: src/Presentations/Kin.KinHub.Core.React
+  IDENTITY_FRONTEND_PATH: src/Presentations/Kin.KinHub.Identity.React
+  KINRECIPE_FRONTEND_PATH: src/Presentations/Kin.KinHub.KinRecipe.React
 
 concurrency:
   group: frontend-${{ github.ref }}
@@ -28,12 +26,21 @@ concurrency:
 jobs:
   frontend_ci:
     name: Frontend Build
-    # name: Frontend Build And Test
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: core
+            path: src/Presentations/Kin.KinHub.Core.React
+          - name: identity
+            path: src/Presentations/Kin.KinHub.Identity.React
+          - name: kinrecipe
+            path: src/Presentations/Kin.KinHub.KinRecipe.React
 
     defaults:
       run:
-        working-directory: ${{ env.FRONTEND_PATH }}
+        working-directory: ${{ matrix.path }}
 
     steps:
       - name: Checkout repository
@@ -44,19 +51,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+          cache-dependency-path: ${{ matrix.path }}/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci --include=optional
 
       - name: Build frontend
+        env:
+          VITE_API_URL: http://localhost
+          VITE_IDENTITY_URL: https://identity.example.com
+          VITE_KINRECIPE_URL: https://kinrecipe.example.com
         run: npm run build
 
-      # - name: Run frontend tests
-      #   run: npm run test
-
-  deploy_dev:
-    name: Deploy Dev
+  deploy_core_dev:
+    name: Deploy Core Dev
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: dev
@@ -65,7 +73,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ${{ env.FRONTEND_PATH }}
+        working-directory: ${{ env.CORE_FRONTEND_PATH }}
 
     steps:
       - name: Checkout repository
@@ -76,81 +84,125 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+          cache-dependency-path: ${{ env.CORE_FRONTEND_PATH }}/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci --include=optional
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
+          VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
         run: npm run build
 
       - name: Deploy Static Web App
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.CORE_AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: ${{ env.FRONTEND_PATH }}/dist
-          config_file_location: ${{ env.FRONTEND_PATH }}
+          app_location: ${{ env.CORE_FRONTEND_PATH }}/dist
+          config_file_location: ${{ env.CORE_FRONTEND_PATH }}
           output_location: ""
           skip_app_build: true
 
-  # deploy_test:
-  #   name: Deploy Test
-  #   if: github.event_name != 'pull_request'
-  #   runs-on: ubuntu-latest
-  #   environment: test
-  #   needs:
-  #     - deploy_dev
-  #
-  #   defaults:
-  #     run:
-  #       working-directory: ${{ env.FRONTEND_PATH }}
-  #
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: npm
-  #         cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
-  #
-  #     - name: Install frontend dependencies
-  #       run: npm ci --include=optional
-  #
-  #     - name: Build frontend
-  #       env:
-  #         VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
-  #         VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
-  #       run: npm run build
-  #
-  #     - name: Deploy Static Web App
-  #       uses: Azure/static-web-apps-deploy@v1
-  #       with:
-  #         azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-  #         repo_token: ${{ secrets.GITHUB_TOKEN }}
-  #         action: upload
-  #         app_location: ${{ env.FRONTEND_PATH }}/dist
-  #         config_file_location: ${{ env.FRONTEND_PATH }}
-  #         output_location: ""
-  #         skip_app_build: true
+  deploy_identity_dev:
+    name: Deploy Identity Dev
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev
+    needs:
+      - frontend_ci
 
-  deploy_prod:
-    name: Deploy Prod
+    defaults:
+      run:
+        working-directory: ${{ env.IDENTITY_FRONTEND_PATH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.IDENTITY_FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --include=optional
+
+      - name: Build frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
+          VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
+        run: npm run build
+
+      - name: Deploy Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.IDENTITY_AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: ${{ env.IDENTITY_FRONTEND_PATH }}/dist
+          config_file_location: ${{ env.IDENTITY_FRONTEND_PATH }}
+          output_location: ""
+          skip_app_build: true
+
+  deploy_kinrecipe_dev:
+    name: Deploy KinRecipe Dev
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev
+    needs:
+      - frontend_ci
+
+    defaults:
+      run:
+        working-directory: ${{ env.KINRECIPE_FRONTEND_PATH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.KINRECIPE_FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --include=optional
+
+      - name: Build frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
+        run: npm run build
+
+      - name: Deploy Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.KINRECIPE_AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: ${{ env.KINRECIPE_FRONTEND_PATH }}/dist
+          config_file_location: ${{ env.KINRECIPE_FRONTEND_PATH }}
+          output_location: ""
+          skip_app_build: true
+
+  deploy_core_prod:
+    name: Deploy Core Prod
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: prod
     needs:
-      - deploy_dev
+      - deploy_core_dev
 
     defaults:
       run:
-        working-directory: ${{ env.FRONTEND_PATH }}
+        working-directory: ${{ env.CORE_FRONTEND_PATH }}
 
     steps:
       - name: Checkout repository
@@ -161,23 +213,110 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+          cache-dependency-path: ${{ env.CORE_FRONTEND_PATH }}/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci --include=optional
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
+          VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
         run: npm run build
 
       - name: Deploy Static Web App
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.CORE_AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          app_location: ${{ env.FRONTEND_PATH }}/dist
-          config_file_location: ${{ env.FRONTEND_PATH }}
+          app_location: ${{ env.CORE_FRONTEND_PATH }}/dist
+          config_file_location: ${{ env.CORE_FRONTEND_PATH }}
+          output_location: ""
+          skip_app_build: true
+
+  deploy_identity_prod:
+    name: Deploy Identity Prod
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: prod
+    needs:
+      - deploy_identity_dev
+
+    defaults:
+      run:
+        working-directory: ${{ env.IDENTITY_FRONTEND_PATH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.IDENTITY_FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --include=optional
+
+      - name: Build frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
+          VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
+        run: npm run build
+
+      - name: Deploy Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.IDENTITY_AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: ${{ env.IDENTITY_FRONTEND_PATH }}/dist
+          config_file_location: ${{ env.IDENTITY_FRONTEND_PATH }}
+          output_location: ""
+          skip_app_build: true
+
+  deploy_kinrecipe_prod:
+    name: Deploy KinRecipe Prod
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: prod
+    needs:
+      - deploy_kinrecipe_dev
+
+    defaults:
+      run:
+        working-directory: ${{ env.KINRECIPE_FRONTEND_PATH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.KINRECIPE_FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --include=optional
+
+      - name: Build frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
+          VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
+        run: npm run build
+
+      - name: Deploy Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.KINRECIPE_AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: ${{ env.KINRECIPE_FRONTEND_PATH }}/dist
+          config_file_location: ${{ env.KINRECIPE_FRONTEND_PATH }}
           output_location: ""
           skip_app_build: true

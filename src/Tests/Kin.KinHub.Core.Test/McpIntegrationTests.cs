@@ -280,32 +280,32 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
 
 public sealed class McpApiFactory : WebApplicationFactory<Program>
 {
+    private readonly Dictionary<string, string?> _originalEnvironmentVariables = new(StringComparer.Ordinal);
+
+    public McpApiFactory()
+    {
+        SetEnvironmentVariable("KINHUB_ConnectionStrings__KinHub", "Host=localhost;Port=5432;Database=kinhub_tests;Username=kinhub;Password=kinhub");
+        SetEnvironmentVariable("KINHUB_Jwt__Secret", "abcdefghijklmnopqrstuvwxyz123456");
+        SetEnvironmentVariable("KINHUB_Jwt__Issuer", "kinhub-tests");
+        SetEnvironmentVariable("KINHUB_OpenAi__Endpoint", "https://localhost/");
+        SetEnvironmentVariable("KINHUB_OpenAi__ApiKey", "test-key");
+        SetEnvironmentVariable("KINHUB_Cors__AllowAnyOrigin", "false");
+        SetEnvironmentVariable("KINHUB_Cors__AllowedOrigins__0", "https://orange-plant-0cdfb6b03.7.azurestaticapps.net");
+        SetEnvironmentVariable("KINHUB_Mcp__AuthorizationServerUrl", "http://localhost");
+        SetEnvironmentVariable("KINHUB_Mcp__EnableDynamicClientRegistration", "true");
+        SetEnvironmentVariable("KINHUB_Mcp__SupportedScopes__0", McpScopes.Read);
+        SetEnvironmentVariable("KINHUB_Mcp__SupportedScopes__1", McpScopes.Write);
+        SetEnvironmentVariable("KINHUB_Mcp__SupportedScopes__2", McpScopes.Admin);
+        SetEnvironmentVariable("KINHUB_Mcp__DynamicClientDefaultScopes__0", McpScopes.Read);
+        SetEnvironmentVariable("KINHUB_Mcp__DynamicClientAllowedScopes__0", McpScopes.Read);
+        SetEnvironmentVariable("KINHUB_Mcp__DynamicClientAllowedScopes__1", McpScopes.Write);
+        SetEnvironmentVariable("KINHUB_Mcp__ElevatedConsentScopes__0", McpScopes.Write);
+        SetEnvironmentVariable("KINHUB_Mcp__ElevatedConsentScopes__1", McpScopes.Admin);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        builder.ConfigureAppConfiguration((_, configurationBuilder) =>
-        {
-            configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:KinHub"] = "Host=localhost;Database=kinhub;Username=test;Password=test",
-                ["Jwt:Secret"] = "abcdefghijklmnopqrstuvwxyz123456",
-                ["Jwt:Issuer"] = "kinhub-tests",
-                ["OpenAi:Endpoint"] = "https://localhost/",
-                ["OpenAi:ApiKey"] = "test-key",
-                ["Cors:AllowAnyOrigin"] = "false",
-                ["Cors:AllowedOrigins:0"] = "https://orange-plant-0cdfb6b03.7.azurestaticapps.net",
-                ["Mcp:AuthorizationServerUrl"] = "http://localhost",
-                ["Mcp:EnableDynamicClientRegistration"] = "true",
-                ["Mcp:SupportedScopes:0"] = McpScopes.Read,
-                ["Mcp:SupportedScopes:1"] = McpScopes.Write,
-                ["Mcp:SupportedScopes:2"] = McpScopes.Admin,
-                ["Mcp:DynamicClientDefaultScopes:0"] = McpScopes.Read,
-                ["Mcp:DynamicClientAllowedScopes:0"] = McpScopes.Read,
-                ["Mcp:DynamicClientAllowedScopes:1"] = McpScopes.Write,
-                ["Mcp:ElevatedConsentScopes:0"] = McpScopes.Write,
-                ["Mcp:ElevatedConsentScopes:1"] = McpScopes.Admin,
-            });
-        });
 
         builder.ConfigureTestServices(services =>
         {
@@ -325,6 +325,19 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
             services.AddScoped<IUpdateUserPasswordHandler, FakeUpdateUserPasswordHandler>();
             services.AddScoped<IDeleteUserHandler, FakeDeleteUserHandler>();
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            foreach (var (key, value) in _originalEnvironmentVariables)
+            {
+                Environment.SetEnvironmentVariable(key, value);
+            }
+        }
+
+        base.Dispose(disposing);
     }
 
     public async Task<McpClient> CreateMcpClientAsync(string? scope = null, bool approveElevatedAccess = false)
@@ -450,6 +463,16 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
     {
         var hash = SHA256.HashData(Encoding.ASCII.GetBytes(verifier));
         return Base64UrlTextEncoder.Encode(hash);
+    }
+
+    private void SetEnvironmentVariable(string key, string value)
+    {
+        if (!_originalEnvironmentVariables.ContainsKey(key))
+        {
+            _originalEnvironmentVariables[key] = Environment.GetEnvironmentVariable(key);
+        }
+
+        Environment.SetEnvironmentVariable(key, value);
     }
 }
 
