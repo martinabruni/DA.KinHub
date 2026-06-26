@@ -61,7 +61,7 @@ public static class ServiceCollectionExtensions
                 o.ModelDeploymentName = openAiSettings.ModelDeploymentName;
             });
 
-        services.AddOpenTelemetry().UseAzureMonitor();
+        AddAzureMonitorIfConfigured(services, configuration);
         services.AddHealthChecks().AddNpgSql(
             connectionString,
             name: "kinhub-dev-psqldb",
@@ -318,5 +318,30 @@ public static class ServiceCollectionExtensions
         }
 
         throw new InvalidOperationException("Jwt:Issuer must be configured.");
+    }
+
+    private static void AddAzureMonitorIfConfigured(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = ResolveAzureMonitorConnectionString(configuration);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return;
+        }
+
+        services.AddOpenTelemetry().UseAzureMonitor(options =>
+        {
+            options.ConnectionString = connectionString;
+        });
+    }
+
+    private static string? ResolveAzureMonitorConnectionString(IConfiguration configuration)
+    {
+        var configuredConnectionString = configuration["ApplicationInsights:ConnectionString"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+        {
+            return configuredConnectionString;
+        }
+
+        return configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]?.Trim();
     }
 }
