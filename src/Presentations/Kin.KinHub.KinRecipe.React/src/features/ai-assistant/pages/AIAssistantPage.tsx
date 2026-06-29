@@ -520,14 +520,14 @@ function AIAssistantContent() {
       </p>
 
       <Tabs defaultValue="suggest">
-        <TabsList className="grid w-full grid-cols-1 gap-2 bg-transparent p-0 sm:inline-flex sm:w-auto sm:grid-cols-none">
+        <TabsList className="hidden sm:inline-flex sm:w-auto">
           <TabsTrigger value="suggest">
             {t("aiAssistant.tabs.suggest")}
           </TabsTrigger>
           <TabsTrigger value="parse">{t("aiAssistant.tabs.parse")}</TabsTrigger>
           <TabsTrigger value="adapt">{t("aiAssistant.tabs.adapt")}</TabsTrigger>
         </TabsList>
-        <div className="mt-6">
+        <div className="mt-6 pb-24 sm:pb-0">
           <TabsContent value="suggest">
             <SuggestTab />
           </TabsContent>
@@ -537,6 +537,19 @@ function AIAssistantContent() {
           <TabsContent value="adapt">
             <AdaptTab />
           </TabsContent>
+        </div>
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/90 sm:hidden">
+          <TabsList className="grid h-auto w-full grid-cols-3 rounded-3xl bg-muted/80 p-1">
+            <TabsTrigger value="suggest" className="min-h-11 rounded-2xl px-3 py-2 text-xs">
+              {t("aiAssistant.tabs.suggest")}
+            </TabsTrigger>
+            <TabsTrigger value="parse" className="min-h-11 rounded-2xl px-3 py-2 text-xs">
+              {t("aiAssistant.tabs.parse")}
+            </TabsTrigger>
+            <TabsTrigger value="adapt" className="min-h-11 rounded-2xl px-3 py-2 text-xs">
+              {t("aiAssistant.tabs.adapt")}
+            </TabsTrigger>
+          </TabsList>
         </div>
       </Tabs>
     </div>

@@ -15,14 +15,17 @@ export function TopBar() {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const canGoBack = location.pathname !== '/' && ((window.history.state?.idx ?? 0) > 0)
+  const fallbackPath = '/'
+  const historyIndex = window.history.state?.idx ?? 0
+  const canGoBack = historyIndex > 0
+
   const handleBack = () => {
     if (canGoBack) {
       navigate(-1)
       return
     }
 
-    navigate('/', { replace: true })
+    navigate(fallbackPath, { replace: true })
   }
 
   const titleKey = Object.entries(routeTitles).find(([path]) =>
@@ -32,19 +35,26 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),0px)] sm:px-5 md:px-6 lg:px-8">
-        {location.pathname !== '/' ? (
+        {canGoBack ? (
           <Button
             variant="ghost"
             size="icon"
             className="h-10 w-10 rounded-2xl"
             onClick={handleBack}
+            aria-label={t('common.back')}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-2xl bg-primary/10 text-primary hover:bg-primary/15"
+            onClick={() => navigate(fallbackPath, { replace: location.pathname === fallbackPath })}
+            aria-label={t('app.name')}
+          >
             <ChefHat className="h-5 w-5" />
-          </div>
+          </Button>
         )}
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
