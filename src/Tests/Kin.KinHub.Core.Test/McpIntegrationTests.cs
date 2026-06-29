@@ -20,6 +20,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Kin.KinHub.Core.Business.RecipeFeature;
 
 namespace Kin.KinHub.Core.Test;
 
@@ -206,6 +207,32 @@ public sealed class McpIntegrationTests : IClassFixture<McpApiFactory>
     }
 
     [Fact]
+    public async Task ShoppingListDetail_Anonymous_ReturnsUnauthorized_InsteadOfMethodNotAllowed()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/shopping-lists/{FakeShoppingListService.ShoppingListId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ShoppingListDetail_Authenticated_ReturnsShoppingList()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            await _factory.CreateOAuthAccessTokenAsync(_factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false })));
+
+        var response = await client.GetAsync($"/api/shopping-lists/{FakeShoppingListService.ShoppingListId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(FakeShoppingListService.ShoppingListId, body.GetProperty("id").GetGuid());
+        Assert.Equal("Weekend groceries", body.GetProperty("name").GetString());
+    }
+
+    [Fact]
     public async Task Authorize_Deny_ReturnsAccessDeniedRedirect()
     {
         using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -316,6 +343,7 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IUpdateUserEmailHandler>();
             services.RemoveAll<IUpdateUserPasswordHandler>();
             services.RemoveAll<IDeleteUserHandler>();
+            services.RemoveAll<IShoppingListService>();
             services.AddScoped<IFamilyService, FakeFamilyService>();
             services.AddSingleton<FakeAuthenticationState>();
             services.AddScoped<IAuthenticationService, FakeAuthenticationService>();
@@ -324,6 +352,7 @@ public sealed class McpApiFactory : WebApplicationFactory<Program>
             services.AddScoped<IUpdateUserEmailHandler, FakeUpdateUserEmailHandler>();
             services.AddScoped<IUpdateUserPasswordHandler, FakeUpdateUserPasswordHandler>();
             services.AddScoped<IDeleteUserHandler, FakeDeleteUserHandler>();
+            services.AddScoped<IShoppingListService, FakeShoppingListService>();
         });
     }
 
@@ -570,6 +599,39 @@ internal sealed class FakeAuthenticationState
 
     public bool RevokeRefreshToken(string refreshToken) =>
         _tokens.TryRemove(refreshToken, out _);
+}
+
+internal sealed class FakeShoppingListService : IShoppingListService
+{
+    internal static readonly Guid ShoppingListId = Guid.Parse("cbce2512-2154-48af-ab6b-7e1360f5341d");
+    private static readonly Guid FamilyId = Guid.Parse("ef0ba922-c9b0-4618-a68e-f6b2dbfb6e04");
+
+    public Task<Result<IReadOnlyList<ShoppingListResponse>>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result<IReadOnlyList<ShoppingListResponse>>.Success([CreateResponse()]));
+
+    public Task<Result<ShoppingListResponse>> GetByIdAsync(Guid id, Guid userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(id == ShoppingListId
+            ? Result<ShoppingListResponse>.Success(CreateResponse())
+            : Result<ShoppingListResponse>.NotFound("Shopping list not found."));
+
+    public Task<Result<ShoppingListResponse>> CreateAsync(CreateShoppingListRequest request, Guid userId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Result<ShoppingListResponse>> UpdateAsync(Guid id, UpdateShoppingListRequest request, Guid userId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Result<bool>> DeleteAsync(Guid id, Guid userId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    private static ShoppingListResponse CreateResponse() =>
+        new()
+        {
+            Id = ShoppingListId,
+            Name = "Weekend groceries",
+            FamilyId = FamilyId,
+            ItemCount = 3,
+            CheckedCount = 1,
+        };
 }
 
 internal sealed class FakeAuthenticationService : IAuthenticationService

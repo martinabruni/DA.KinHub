@@ -1,6 +1,7 @@
 import { ArrowRight, Globe, Grid2x2, LogOut, Moon, Sun, SwitchCamera, User, Users } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,14 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  appendSessionToUrl,
-  buildCoreFamilyUrl,
-  buildCoreProfileUrl,
-  buildCoreSelectMemberUrl,
-  buildCoreServicesUrl,
-  buildIdentityLoginUrl,
-} from '@/config/appLinks'
+import { buildIdentityLoginUrl } from '@/config/appLinks'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
@@ -50,6 +44,7 @@ function MenuLinkRow({
 }
 
 export function FloatingUserMenu() {
+  const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { logout } = useAuth()
@@ -58,10 +53,6 @@ export function FloatingUserMenu() {
   const handleLogout = async () => {
     await logout()
     window.location.assign(buildIdentityLoginUrl())
-  }
-
-  const openCoreUrl = (targetUrl: string) => {
-    window.location.assign(appendSessionToUrl(targetUrl, activeMember))
   }
 
   return (
@@ -78,8 +69,10 @@ export function FloatingUserMenu() {
               </AvatarFallback>
             </Avatar>
             <div className="ml-2 hidden min-w-0 text-left sm:block">
-              <p className="truncate text-sm font-medium">{activeMember?.name ?? t('selectMember.switchMember')}</p>
-              <p className="text-xs text-muted-foreground">{t('recipeHub.memberLabel')}</p>
+              <p className="truncate text-sm font-medium">
+                {activeMember?.name ?? t('selectMember.switchMember')}
+              </p>
+              <p className="text-xs text-muted-foreground">{t('family.members')}</p>
             </div>
           </Button>
         </DropdownMenuTrigger>
@@ -88,34 +81,21 @@ export function FloatingUserMenu() {
           align="end"
           className="mb-3 w-[280px] rounded-[28px] border border-border/70 bg-card p-2 shadow-2xl"
         >
-          <MenuLinkRow
-            icon={Grid2x2}
-            label={t('nav.services')}
-            onClick={() => openCoreUrl(buildCoreServicesUrl())}
-            showArrow
-          />
-          <MenuLinkRow
-            icon={Users}
-            label={t('nav.family')}
-            onClick={() => openCoreUrl(buildCoreFamilyUrl())}
-            showArrow
-          />
-          <MenuLinkRow
-            icon={User}
-            label={t('nav.profile')}
-            onClick={() => openCoreUrl(buildCoreProfileUrl())}
-            showArrow
-          />
+          <MenuLinkRow icon={Grid2x2} label={t('nav.services')} onClick={() => navigate('/services')} />
+          <MenuLinkRow icon={Users} label={t('nav.family')} onClick={() => navigate('/family')} />
+          <MenuLinkRow icon={User} label={t('nav.profile')} onClick={() => navigate('/profile')} />
           <MenuLinkRow
             icon={SwitchCamera}
             label={t('selectMember.switchMember')}
-            onClick={() => openCoreUrl(buildCoreSelectMemberUrl(window.location.href))}
+            onClick={() => navigate('/select-member')}
             showArrow
           />
           <DropdownMenuSeparator />
           <MenuLinkRow
             icon={theme === 'dark' ? Sun : Moon}
-            label={theme === 'dark' ? t('recipeHub.lightMode') : t('recipeHub.darkMode')}
+            label={theme === 'dark'
+              ? i18n.language === 'it' ? 'Modalita chiara' : 'Light mode'
+              : t('profile.preferences.darkMode')}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           />
           <MenuLinkRow

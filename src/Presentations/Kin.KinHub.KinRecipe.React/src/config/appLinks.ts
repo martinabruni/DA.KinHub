@@ -29,6 +29,10 @@ export function buildCoreProfileUrl() {
   return buildCoreUrl('/profile').toString()
 }
 
+export function buildCoreFamilyUrl() {
+  return buildCoreUrl('/family').toString()
+}
+
 export function buildCoreServicesUrl() {
   return buildCoreUrl('/services').toString()
 }

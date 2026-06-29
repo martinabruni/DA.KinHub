@@ -1,15 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  ArrowRight,
   BookOpen,
   Refrigerator,
   ShoppingCart,
   Sparkles,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { useAuth } from '@/features/auth/AuthProvider'
-import { useAuthContext } from '@/store/authContext'
 
 const sections = [
   {
@@ -44,47 +41,37 @@ const sections = [
 
 export function DashboardPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
-  const { activeMember } = useAuthContext()
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border bg-card px-4 py-5 shadow-sm sm:px-6">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-primary">
-          {t('hub.greeting', { name: activeMember?.name ?? user?.email?.split('@')[0] ?? '' })}
-          </p>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {t('recipeHub.title')}
-          </h2>
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            {t('recipeHub.subtitle')}
-          </p>
-        </div>
+    <div className="space-y-5">
+      <section className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          {t('recipeHub.title')}
+        </h1>
+        <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+          {t('recipeHub.subtitle')}
+        </p>
       </section>
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {t('recipeHub.sectionsTitle')}
-          </h3>
+          </h2>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           {sections.map(({ to, icon: Icon, titleKey, descriptionKey, colorClass }) => (
             <Link key={to} to={to} className="block">
               <Card className="h-full border-border/70 bg-card/80 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
-                <CardContent className="flex h-full flex-col gap-4 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-muted ${colorClass}`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                <CardContent className="flex aspect-square h-full flex-col p-4 sm:p-5">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-muted sm:h-11 sm:w-11 ${colorClass}`}>
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <div className="flex-1">
+                  <div className="mt-4 flex-1">
                     <p className="font-semibold leading-tight">{t(titleKey)}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{t(descriptionKey)}</p>
+                    <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{t(descriptionKey)}</p>
                   </div>
-                  <span className="text-sm font-medium text-primary">{t('hub.open')}</span>
+                  <span className="mt-4 text-sm font-medium text-primary">{t('hub.open')}</span>
                 </CardContent>
               </Card>
             </Link>

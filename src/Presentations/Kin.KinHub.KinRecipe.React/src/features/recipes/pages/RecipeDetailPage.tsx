@@ -10,10 +10,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { MissingIngredientsAlert } from '@/components/MissingIngredientsAlert'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Separator } from '@/components/ui/separator'
 import { RecipeBookProvider, useRecipeBooks } from '@/features/recipes/RecipeBookProvider'
 import { RecipeProvider, useRecipes } from '@/features/recipes/RecipeProvider'
 import { apiClient } from '@/api/apiClient'
@@ -31,6 +31,7 @@ function RecipeDetailContent() {
   const [selectedFridgeId, setSelectedFridgeId] = useState<string>('')
   const [missingIngredients, setMissingIngredients] = useState<string[] | null>(null)
   const [selectedListId, setSelectedListId] = useState<string>('')
+  const [addState, setAddState] = useState<'idle' | 'loading' | 'added'>('idle')
 
   const ingForm = useForm<{ name: string; quantity: string; unit: string }>({ defaultValues: { name: '', quantity: '', unit: '' } })
   const stepForm = useForm<{ description: string }>({ defaultValues: { description: '' } })
@@ -50,6 +51,7 @@ function RecipeDetailContent() {
 
   const checkMissing = async () => {
     if (!selectedFridgeId || !recipe) return
+    setAddState('idle')
     try {
       const { data } = await apiClient.post(`/api/recipe-books/${id}/recipes/${recipeId}/missing-ingredients?fridgeId=${selectedFridgeId}`)
       setMissingIngredients(data.missingIngredients ?? [])
@@ -59,11 +61,13 @@ function RecipeDetailContent() {
   }
 
   const addMissingToList = async () => {
-    if (!selectedListId || !missingIngredients?.length) return
+    if (!selectedListId || !missingIngredients?.length || addState === 'loading') return
+    setAddState('loading')
     try {
       await apiClient.post(`/api/shopping-lists/${selectedListId}/items/bulk`, { names: missingIngredients, shoppingListId: selectedListId })
-      toast.success(t('shoppingLists.addedToList'))
+      setAddState('added')
     } catch {
+      setAddState('idle')
       toast.error(t('common.error'))
     }
   }
@@ -95,6 +99,28 @@ function RecipeDetailContent() {
         <Badge variant="secondary">⏱ {recipe.prepTimeMinutes}min</Badge>
       </div>
 
+      <Card>
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
+          <Select value={selectedFridgeId} onValueChange={(value) => {
+            setSelectedFridgeId(value)
+            setAddState('idle')
+          }}>
+            <SelectTrigger className="w-full sm:max-w-xs">
+              <SelectValue placeholder={t('recipes.selectFridge')} />
+            </SelectTrigger>
+            <SelectContent>
+              {fridges.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button onClick={checkMissing} disabled={!selectedFridgeId} className="w-full sm:w-auto">
+            {t('recipes.checkMissing')}
+          </Button>
+          {missingIngredients?.length === 0 ? (
+            <Badge className="bg-green-500 text-white">{t('recipes.allAvailable')}</Badge>
+          ) : null}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Ingredients (col-span-3) */}
         <div className="lg:col-span-3">
@@ -104,6 +130,19 @@ function RecipeDetailContent() {
               <Plus className="w-4 h-4 mr-1" />{t('recipes.addIngredient')}
             </Button>
           </div>
+
+          <MissingIngredientsAlert
+            ingredients={missingIngredients ?? []}
+            shoppingLists={shoppingLists}
+            selectedListId={selectedListId}
+            onSelectedListChange={(value) => {
+              setSelectedListId(value)
+              setAddState('idle')
+            }}
+            onAdd={addMissingToList}
+            addState={addState}
+            className="mb-4"
+          />
 
           {showIngredientForm && (
             <Card className="mb-3">
@@ -201,45 +240,6 @@ function RecipeDetailContent() {
           </div>
         </div>
       </div>
-
-      {/* Missing Ingredients Check Bar */}
-      <Separator className="my-6" />
-      <Card className="lg:sticky lg:bottom-4">
-        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:flex-wrap sm:items-center">
-          <Select value={selectedFridgeId} onValueChange={setSelectedFridgeId}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder={t('recipes.selectFridge')} />
-            </SelectTrigger>
-            <SelectContent>
-              {fridges.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button onClick={checkMissing} disabled={!selectedFridgeId} className="w-full sm:w-auto">
-            {t('recipes.checkMissing')}
-          </Button>
-          {missingIngredients !== null && (
-            missingIngredients.length === 0
-              ? <Badge className="bg-green-500 text-white">{t('recipes.allAvailable')}</Badge>
-              : <>
-                  {missingIngredients.map((name) => (
-                    <Badge key={name} variant="destructive">{t('recipes.missing')}: {name}</Badge>
-                  ))}
-                  <Separator orientation="vertical" className="mx-1 hidden h-6 sm:block" />
-                  <Select value={selectedListId} onValueChange={setSelectedListId}>
-                    <SelectTrigger className="w-full sm:w-44">
-                      <SelectValue placeholder={t('shoppingLists.selectList')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {shoppingLists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={addMissingToList} disabled={!selectedListId} className="w-full sm:w-auto">
-                    {t('shoppingLists.addToList')}
-                  </Button>
-                </>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

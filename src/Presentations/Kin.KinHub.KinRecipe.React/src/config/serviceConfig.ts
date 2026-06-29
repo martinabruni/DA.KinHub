@@ -22,7 +22,7 @@ export const serviceConfig: Record<string, ServiceConfig> = {
     color: 'text-slate-500',
     canToggle: false,
   },
-  KinRecipe: { icon: BookOpen, path: '/recipe-books', color: 'text-orange-500' },
+  KinRecipe: { icon: BookOpen, path: '/', color: 'text-orange-500' },
   Recipes: { icon: BookOpen, path: '/recipe-books', color: 'text-orange-500' },
   Fridges: { icon: Refrigerator, path: '/fridges', color: 'text-blue-500' },
   'AI Assistant': { icon: Sparkles, path: '/ai-assistant', color: 'text-violet-500' },

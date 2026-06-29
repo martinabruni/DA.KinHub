@@ -33,6 +33,16 @@ public sealed class ShoppingListController : ControllerBase
         return HttpResultMapper.ToActionResult(result);
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (!_currentUser.IsAuthenticated)
+            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+
+        var result = await _shoppingListService.GetByIdAsync(id, _currentUser.UserId, cancellationToken);
+        return HttpResultMapper.ToActionResult(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
         [FromBody] CreateShoppingListRequest? request,

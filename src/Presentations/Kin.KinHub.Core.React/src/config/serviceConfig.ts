@@ -28,10 +28,10 @@ export const serviceConfig: Record<string, ServiceConfig> = {
   },
   KinRecipe: {
     icon: BookOpen,
-    path: '/recipe-books',
+    path: '/',
     color: 'text-orange-500',
     external: true,
-    buildHref: (member) => buildKinRecipeLaunchUrl(member, '/recipe-books'),
+    buildHref: (member) => buildKinRecipeLaunchUrl(member, '/'),
   },
   Recipes: {
     icon: BookOpen,
