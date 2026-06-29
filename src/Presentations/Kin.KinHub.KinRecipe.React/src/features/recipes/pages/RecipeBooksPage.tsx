@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -61,53 +61,58 @@ function RecipeBooksContent() {
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-52 rounded-xl" />)}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-3xl" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 py-16">
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-border/80 bg-card/40 px-6 py-14 text-center">
           <span className="text-5xl">📚</span>
           <p className="text-muted-foreground font-medium">{t('recipeBooks.empty.title')}</p>
-          <Button onClick={() => setCreateOpen(true)}>{t('recipeBooks.empty.cta')}</Button>
+          <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">{t('recipeBooks.empty.cta')}</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((book) => (
             <Card
               key={book.id}
-              className="overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.01]"
+              className="h-full cursor-pointer border-border/70 bg-card/80 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               onClick={() => navigate(`/recipe-books/${book.id}`)}
             >
-              <div
-                className="aspect-[4/3] relative flex items-end p-3"
-                style={{ background: `linear-gradient(135deg, ${hashColor(book.id)}, ${hashColor(book.id + 'x')})` }}
-              >
-                <p className="text-white font-bold text-lg drop-shadow">{book.name}</p>
-              </div>
-              <CardContent className="pt-3 pb-0">
-                <Badge variant="secondary" className="text-xs">
-                  {book.recipeCount} {book.recipeCount === 1 ? t('recipeBooks.recipe') : t('recipeBooks.recipes')}
-                </Badge>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('recipeBooks.lastUpdated', { date: formatDate(book.updatedAt) })}
-                </p>
-              </CardContent>
-              <CardFooter className="pt-2 pb-3">
+              <CardContent className="flex aspect-square h-full flex-col p-4 sm:p-5">
                 <AlertDialog>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="ml-auto">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                          {t('common.delete')}
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                      style={{ background: `linear-gradient(135deg, ${hashColor(book.id)}, ${hashColor(book.id + 'x')})` }}
+                    >
+                      <span className="text-sm font-semibold text-white">
+                        {book.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="-mr-2 -mt-2 h-9 w-9 rounded-2xl">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
+                            {t('common.delete')}
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="mt-4 flex-1">
+                    <p className="line-clamp-2 font-semibold leading-tight">{book.name}</p>
+                    <Badge variant="secondary" className="mt-3 text-xs">
+                      {book.recipeCount} {book.recipeCount === 1 ? t('recipeBooks.recipe') : t('recipeBooks.recipes')}
+                    </Badge>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {t('recipeBooks.lastUpdated', { date: formatDate(book.updatedAt) })}
+                    </p>
+                  </div>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('recipeBooks.delete.title')}</AlertDialogTitle>
@@ -119,7 +124,7 @@ function RecipeBooksContent() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </CardFooter>
+              </CardContent>
             </Card>
           ))}
         </div>
