@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { MissingIngredientsAlert } from "@/components/MissingIngredientsAlert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -53,8 +54,8 @@ function SuggestTab() {
   const [results, setResults] = useState<SuggestRecipesResult | null>(null);
   const [saveRecipe, setSaveRecipe] = useState<AISuggestedRecipe | null>(null);
   const [saveBookId, setSaveBookId] = useState("");
-  const [addListRecipeKey, setAddListRecipeKey] = useState<string | null>(null);
   const [addListIds, setAddListIds] = useState<Record<string, string>>({});
+  const [addStates, setAddStates] = useState<Record<string, "idle" | "loading" | "added">>({});
 
   const { data: fridges = [] } = useQuery({
     queryKey: ["fridges"],
@@ -73,6 +74,8 @@ function SuggestTab() {
   });
 
   const handleSuggest = async () => {
+    setAddListIds({});
+    setAddStates({});
     const res = await suggestRecipes(fridgeId);
     setResults(res);
   };
@@ -93,12 +96,13 @@ function SuggestTab() {
 
   const handleAddToList = async (key: string, names: string[]) => {
     const listId = addListIds[key];
-    if (!listId || !names.length) return;
+    if (!listId || !names.length || addStates[key] === "loading") return;
+    setAddStates((prev) => ({ ...prev, [key]: "loading" }));
     try {
       await apiClient.post(`/api/shopping-lists/${listId}/items/bulk`, { names, shoppingListId: listId });
-      toast.success(t("shoppingLists.addedToList"));
-      setAddListRecipeKey(null);
+      setAddStates((prev) => ({ ...prev, [key]: "added" }));
     } catch {
+      setAddStates((prev) => ({ ...prev, [key]: "idle" }));
       toast.error(t("common.error"));
     }
   };
@@ -143,7 +147,7 @@ function SuggestTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {results.existingRecipes.map((r) => (
                   <Card key={r.recipeId}>
-                    <CardContent className="pt-4 pb-4">
+                    <CardContent className="min-w-0 pt-4 pb-4">
                       <p className="font-semibold">{r.name}</p>
                       <div className="mt-3">
                         <p className="text-xs text-muted-foreground mb-1">
@@ -155,49 +159,18 @@ function SuggestTab() {
                         />
                       </div>
                       {r.missingIngredients.length > 0 && (
-                        <>
-                          <ul className="mt-2 space-y-0.5">
-                            {r.missingIngredients.map((ing, i) => (
-                              <li key={i} className="text-xs text-destructive">
-                                − {ing.quantity} {ing.measureUnit} {ing.name}
-                              </li>
-                            ))}
-                          </ul>
-                          {addListRecipeKey === r.recipeId ? (
-                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                              <Select
-                                value={addListIds[r.recipeId] ?? ""}
-                                onValueChange={(v) => setAddListIds((prev) => ({ ...prev, [r.recipeId]: v }))}
-                              >
-                                <SelectTrigger className="h-8 flex-1 text-xs">
-                                  <SelectValue placeholder={t("shoppingLists.selectList")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {shoppingLists.map((l) => (
-                                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                className="h-8 text-xs sm:w-auto"
-                                disabled={!addListIds[r.recipeId]}
-                                onClick={() => handleAddToList(r.recipeId, r.missingIngredients.map((i) => i.name))}
-                              >
-                                {t("shoppingLists.addToList")}
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="mt-2 h-8 text-xs"
-                              onClick={() => setAddListRecipeKey(r.recipeId)}
-                            >
-                              {t("shoppingLists.addToList")}
-                            </Button>
-                          )}
-                        </>
+                        <MissingIngredientsAlert
+                          className="mt-3"
+                          ingredients={r.missingIngredients.map((ing) => `${ing.quantity} ${ing.measureUnit} ${ing.name}`)}
+                          shoppingLists={shoppingLists}
+                          selectedListId={addListIds[r.recipeId] ?? ""}
+                          onSelectedListChange={(value) => {
+                            setAddListIds((prev) => ({ ...prev, [r.recipeId]: value }));
+                            setAddStates((prev) => ({ ...prev, [r.recipeId]: "idle" }));
+                          }}
+                          onAdd={() => handleAddToList(r.recipeId, r.missingIngredients.map((i) => i.name))}
+                          addState={addStates[r.recipeId] ?? "idle"}
+                        />
                       )}
                     </CardContent>
                   </Card>
@@ -215,7 +188,7 @@ function SuggestTab() {
                 const cardKey = `new-${i}`;
                 return (
                   <Card key={i}>
-                    <CardContent className="pt-4 pb-4">
+                    <CardContent className="min-w-0 pt-4 pb-4">
                       <p className="font-semibold">{r.recipe.name}</p>
                       {r.recipe.backstory && (
                         <p className="text-muted-foreground text-sm mt-1">
@@ -232,49 +205,18 @@ function SuggestTab() {
                         />
                       </div>
                       {r.missingIngredients.length > 0 && (
-                        <>
-                          <ul className="mt-2 space-y-0.5">
-                            {r.missingIngredients.map((ing, j) => (
-                              <li key={j} className="text-xs text-destructive">
-                                − {ing.quantity} {ing.measureUnit} {ing.name}
-                              </li>
-                            ))}
-                          </ul>
-                          {addListRecipeKey === cardKey ? (
-                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                              <Select
-                                value={addListIds[cardKey] ?? ""}
-                                onValueChange={(v) => setAddListIds((prev) => ({ ...prev, [cardKey]: v }))}
-                              >
-                                <SelectTrigger className="flex-1 h-8 text-xs">
-                                  <SelectValue placeholder={t("shoppingLists.selectList")} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {shoppingLists.map((l) => (
-                                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                className="h-8 text-xs sm:w-auto"
-                                disabled={!addListIds[cardKey]}
-                                onClick={() => handleAddToList(cardKey, r.missingIngredients.map((ing) => ing.name))}
-                              >
-                                {t("shoppingLists.addToList")}
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="mt-2 h-8 text-xs"
-                              onClick={() => setAddListRecipeKey(cardKey)}
-                            >
-                              {t("shoppingLists.addToList")}
-                            </Button>
-                          )}
-                        </>
+                        <MissingIngredientsAlert
+                          className="mt-3"
+                          ingredients={r.missingIngredients.map((ing) => `${ing.quantity} ${ing.measureUnit} ${ing.name}`)}
+                          shoppingLists={shoppingLists}
+                          selectedListId={addListIds[cardKey] ?? ""}
+                          onSelectedListChange={(value) => {
+                            setAddListIds((prev) => ({ ...prev, [cardKey]: value }));
+                            setAddStates((prev) => ({ ...prev, [cardKey]: "idle" }));
+                          }}
+                          onAdd={() => handleAddToList(cardKey, r.missingIngredients.map((ing) => ing.name))}
+                          addState={addStates[cardKey] ?? "idle"}
+                        />
                       )}
                       <Button
                         size="sm"
@@ -299,7 +241,7 @@ function SuggestTab() {
             <DialogTitle>{t("aiAssistant.suggest.saveToBook")}</DialogTitle>
           </DialogHeader>
           <Select value={saveBookId} onValueChange={setSaveBookId}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={t("aiAssistant.suggest.selectBook")} />
             </SelectTrigger>
             <SelectContent>
@@ -311,7 +253,7 @@ function SuggestTab() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button onClick={handleSave} disabled={!saveBookId}>
+            <Button onClick={handleSave} disabled={!saveBookId} className="w-full sm:w-auto">
               {t("aiAssistant.suggest.save")}
             </Button>
           </DialogFooter>
@@ -426,7 +368,7 @@ function ParseTab() {
                   {t("aiAssistant.parse.createdSuccessfully")}
                 </span>
               ) : (
-                <Button onClick={handleSave} disabled={!saveBookId || isSaving}>
+                <Button onClick={handleSave} disabled={!saveBookId || isSaving} className="w-full sm:w-auto">
                   {isSaving ? t("aiAssistant.parse.saving") : t("aiAssistant.parse.saveToBook")}
                 </Button>
               )}
@@ -477,7 +419,7 @@ function AdaptTab() {
   return (
     <div className="space-y-4">
       <Select value={recipeId} onValueChange={setRecipeId}>
-        <SelectTrigger className="w-full max-w-sm">
+        <SelectTrigger className="w-full sm:max-w-sm">
           <SelectValue placeholder={t("aiAssistant.adapt.selectRecipe")} />
         </SelectTrigger>
         <SelectContent>
@@ -489,7 +431,7 @@ function AdaptTab() {
         </SelectContent>
       </Select>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Input
           placeholder={t("aiAssistant.adapt.constraints")}
           value={constraint}
@@ -499,7 +441,7 @@ function AdaptTab() {
           }
           className="w-full sm:max-w-xs"
         />
-        <Button variant="outline" onClick={addConstraint}>
+        <Button variant="outline" onClick={addConstraint} className="w-full sm:w-auto">
           +
         </Button>
         {constraints.map((c) => (
