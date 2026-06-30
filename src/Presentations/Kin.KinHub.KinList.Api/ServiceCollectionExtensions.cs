@@ -1,5 +1,6 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
+using Kin.KinHub.KinList.Ai.Common;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Api.Common;
 using Kin.KinHub.KinList.Api.Common.Configuration;
@@ -23,6 +24,8 @@ public static class ServiceCollectionExtensions
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var coreApiOptions = configuration.GetSection(CoreApiOptions.SectionName).Get<CoreApiOptions>() ?? new();
         var kinListOptions = configuration.GetSection(KinListOptions.SectionName).Get<KinListOptions>() ?? new();
+        var speechOptions = configuration.GetSection(SpeechToTextOptions.SectionName).Get<SpeechToTextOptions>() ?? new();
+        var openAiOptions = configuration.GetSection("OpenAi").Get<OpenAiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
@@ -57,8 +60,40 @@ public static class ServiceCollectionExtensions
                 o.IdempotencyRetentionHours = kinListOptions.IdempotencyRetentionHours;
                 o.MaxAudioDurationSeconds = kinListOptions.MaxAudioDurationSeconds;
                 o.MaxAudioBytes = kinListOptions.MaxAudioBytes;
+                o.AudioProcessingTimeoutSeconds = kinListOptions.AudioProcessingTimeoutSeconds;
+                o.TransientRetryMaxAttempts = kinListOptions.TransientRetryMaxAttempts;
+                o.TransientRetryBaseDelayMilliseconds = kinListOptions.TransientRetryBaseDelayMilliseconds;
+                o.TransientRetryMaxDelayMilliseconds = kinListOptions.TransientRetryMaxDelayMilliseconds;
+                o.IdempotencyCleanupIntervalMinutes = kinListOptions.IdempotencyCleanupIntervalMinutes;
                 o.AllowedAudioMimeTypes = kinListOptions.AllowedAudioMimeTypes;
             });
+
+        var hasConfiguredAudioPipeline = speechOptions.IsConfigured() && openAiOptions.IsConfigured();
+        var hasPartialAudioPipelineConfiguration =
+            speechOptions.HasPartialConfiguration()
+            || openAiOptions.HasPartialConfiguration();
+
+        if (hasPartialAudioPipelineConfiguration && !hasConfiguredAudioPipeline)
+        {
+            throw new InvalidOperationException("KinList audio processing requires both Speech and OpenAi endpoint/apiKey configuration.");
+        }
+
+        if (hasConfiguredAudioPipeline)
+        {
+            services.AddKinHubKinListAiInfrastructure(
+                configureSpeech: o =>
+                {
+                    o.Endpoint = speechOptions.Endpoint;
+                    o.ApiKey = speechOptions.ApiKey;
+                    o.CandidateLocales = speechOptions.CandidateLocales;
+                },
+                configureOpenAi: o =>
+                {
+                    o.Endpoint = openAiOptions.Endpoint;
+                    o.ApiKey = openAiOptions.ApiKey;
+                    o.ModelDeploymentName = openAiOptions.ModelDeploymentName;
+                });
+        }
 
         services.RemoveAll<IFamilyOwnershipService>();
         services.AddHttpClient<IFamilyOwnershipService, RemoteFamilyOwnershipService>((serviceProvider, client) =>
@@ -94,6 +129,7 @@ public static class ServiceCollectionExtensions
         services.AddAuthorization();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
+        services.AddHostedService<IdempotencyRecordCleanupService>();
         services.AddControllers();
         services.AddOpenApi();
         services.AddCors(options =>

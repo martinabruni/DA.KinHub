@@ -11,6 +11,11 @@ public sealed class KinListOptions
     public int IdempotencyRetentionHours { get; set; } = 24;
     public int MaxAudioDurationSeconds { get; set; } = 60;
     public long MaxAudioBytes { get; set; } = 10 * 1024 * 1024;
+    public int AudioProcessingTimeoutSeconds { get; set; } = 30;
+    public int TransientRetryMaxAttempts { get; set; } = 3;
+    public int TransientRetryBaseDelayMilliseconds { get; set; } = 250;
+    public int TransientRetryMaxDelayMilliseconds { get; set; } = 5000;
+    public int IdempotencyCleanupIntervalMinutes { get; set; } = 60;
     public string[] AllowedAudioMimeTypes { get; set; } =
     [
         "audio/webm",
@@ -62,6 +67,31 @@ public sealed class KinListOptions
         if (MaxAudioBytes <= 0)
         {
             throw new InvalidOperationException("KinList:MaxAudioBytes must be greater than zero.");
+        }
+
+        if (AudioProcessingTimeoutSeconds <= 0)
+        {
+            throw new InvalidOperationException("KinList:AudioProcessingTimeoutSeconds must be greater than zero.");
+        }
+
+        if (TransientRetryMaxAttempts <= 0)
+        {
+            throw new InvalidOperationException("KinList:TransientRetryMaxAttempts must be greater than zero.");
+        }
+
+        if (TransientRetryBaseDelayMilliseconds <= 0)
+        {
+            throw new InvalidOperationException("KinList:TransientRetryBaseDelayMilliseconds must be greater than zero.");
+        }
+
+        if (TransientRetryMaxDelayMilliseconds < TransientRetryBaseDelayMilliseconds)
+        {
+            throw new InvalidOperationException("KinList:TransientRetryMaxDelayMilliseconds cannot be less than KinList:TransientRetryBaseDelayMilliseconds.");
+        }
+
+        if (IdempotencyCleanupIntervalMinutes <= 0)
+        {
+            throw new InvalidOperationException("KinList:IdempotencyCleanupIntervalMinutes must be greater than zero.");
         }
 
         if (AllowedAudioMimeTypes.Length is 0 || AllowedAudioMimeTypes.Any(x => string.IsNullOrWhiteSpace(x)))

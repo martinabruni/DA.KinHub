@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" Aliases="KinRecipeApi" />
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.KinList.Domain\Kin.KinHub.KinList.Domain.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
   </ItemGroup>
 
   <ItemGroup>

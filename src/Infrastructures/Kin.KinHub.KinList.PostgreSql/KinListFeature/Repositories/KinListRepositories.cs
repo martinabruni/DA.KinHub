@@ -207,6 +207,22 @@ public sealed class IdempotencyRecordRepository : IIdempotencyRecordRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<int> DeleteExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        var expiredRecords = await _context.IdempotencyRecords
+            .Where(x => x.ExpiresAt <= utcNow)
+            .ToListAsync(cancellationToken);
+
+        if (expiredRecords.Count is 0)
+        {
+            return 0;
+        }
+
+        _context.IdempotencyRecords.RemoveRange(expiredRecords);
+        await _context.SaveChangesAsync(cancellationToken);
+        return expiredRecords.Count;
+    }
+
     public async Task<IdempotencyRecord> AddAsync(IdempotencyRecord record, CancellationToken cancellationToken = default)
     {
         var entity = new IdempotencyRecordEntity

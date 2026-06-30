@@ -115,17 +115,31 @@ Stato non ancora fatto del piano
   - migration EF reali generate:
     - `src/Infrastructures/Kin.KinHub.KinList.PostgreSql/Migrations/20260630140545_InitialKinList.cs`
     - `src/Infrastructures/Kin.KinHub.KinList.PostgreSql/Migrations/KinListDbContextModelSnapshot.cs`
+  - pipeline audio draft Speech/OpenAI reale ora cablata in un'infrastruttura dedicata attivabile via config:
+    - nuovo progetto `src/Infrastructures/Kin.KinHub.KinList.Ai`
+    - trascrizione via Azure Speech Transcription
+    - strutturazione via Azure OpenAI `gpt-4o-mini` con prompt versionato `kinlist-audio-v1`
+    - audio/transcript/title/items non loggati dal nuovo layer
+    - fallback fail-closed ancora mantenuto quando `Speech`/`OpenAi` non sono configurati
+  - retry/transient fault handling esplicito aggiunto per il layer audio:
+    - timeout configurabile
+    - massimo 3 tentativi con exponential backoff + jitter su timeout/429/5xx
+  - bootstrap/fallback della pipeline audio riallineato:
+    - `KinList.Api` non prova piu' a registrare Azure Speech/OpenAI quando endpoint/key non sono configurati
+    - configurazioni parziali `Speech`/`OpenAi` falliscono esplicitamente all'avvio
+  - cleanup persistente dei record di idempotenza schedulato:
+    - nuovo hosted service `IdempotencyRecordCleanupService`
+    - purge globale degli expired via repository dedicato
+    - intervallo configurabile via `KinList:IdempotencyCleanupIntervalMinutes`
   - restano da completare:
-    - pipeline audio draft Speech/OpenAI reale dietro i nuovi endpoint
     - conferma completa delle proposte audio nel flusso finale SPA/backend
-    - retry/transient fault policy piu' esplicita e cleanup idempotenza persistente schedulato
 - [not_started] Nuova SPA Kin List.
 - [not_started] Migrazioni dati, IaC e pipeline del piano esteso.
 
 Prossimo step consigliato
 
 1. Completare il backend `Kin List` oltre il primo slice: contratti audio mancanti, hardening di `ETag`/retry/idempotenza e transazioni infrastrutturali.
-2. Collegare la pipeline reale Speech/OpenAI ai nuovi endpoint audio draft di `KinList`.
+2. Collegare il flusso finale di conferma delle proposte audio tra SPA e backend `KinList`.
 3. Creare la nuova SPA `Kin List` contro i contratti backend appena introdotti.
 4. Rifinire il cleanup legacy `ShoppingList` da `KinRecipe/Core` solo dopo che il nuovo backend/frontend Kin List sono davvero sostitutivi.
 
@@ -185,8 +199,9 @@ Backend
   - limiti configurabili registrati via `KinListOptions`, inclusi MIME/size audio
   - coordinamento transazionale EF introdotto per le mutazioni multi-step
   - cleanup dei record di idempotenza scaduti sul riuso della stessa chiave
+  - cleanup persistente schedulato dei record di idempotenza scaduti via hosted service
   - test service-level per idempotent replay, record scaduti, riattivazione item, bulk confirm e draft audio/duplicati
-  - provider audio di default fail-closed: i nuovi endpoint rispondono `503 audio_processing_unavailable` finche' non viene collegata la pipeline Speech/OpenAI reale
+  - provider audio di default fail-closed: i nuovi endpoint rispondono `503 audio_processing_unavailable` finche' `Speech`/`OpenAi` non sono configurati
 - [not_started] Nessun Dockerfile/containerization aggiunto.
 - [not_started] Nessuna conversione ad Azure Functions vera e propria; al momento i nuovi host sono ASP.NET separati, non function
   apps.
@@ -311,7 +326,10 @@ Aggiornamento di questa sessione:
   - `POST /api/list-drafts/from-audio`
   - `POST /api/lists/{id}/item-drafts/from-audio`
 - aggiunto coordinamento transazionale per le mutazioni multi-step e cleanup dei record idempotenza scaduti sul riuso della stessa chiave
-- i nuovi endpoint audio sono wiring-ready, con validazione `multipart/form-data` e `422 no_items_detected`, ma la pipeline Speech/OpenAI reale non e' ancora collegata e quindi il provider di default resta fail-closed con `503 audio_processing_unavailable`
+- collegata la pipeline reale Speech/OpenAI in un progetto infrastrutturale separato:
+  - `src/Infrastructures/Kin.KinHub.KinList.Ai`
+  - se `Speech` e `OpenAi` non sono configurati il provider di default resta comunque fail-closed con `503 audio_processing_unavailable`
+- aggiunti parametri config `KinList` per timeout e retry transient del processing audio
 - generate le migration EF iniziali reali per `KinListDbContext`
 - build verificate in questa tranche:
   - `dotnet build src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj`
@@ -320,3 +338,6 @@ Aggiornamento di questa sessione:
   - `dotnet ef migrations add InitialKinList --project src/Infrastructures/Kin.KinHub.KinList.PostgreSql/Kin.KinHub.KinList.PostgreSql.csproj --startup-project src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj --context Kin.KinHub.KinList.PostgreSql.Models.KinListDbContext --output-dir Migrations`
   - `dotnet build src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj` dopo l'introduzione dei contratti audio draft
   - `dotnet test src/Tests/Kin.KinHub.Core.Test/Kin.KinHub.Core.Test.csproj --filter KinListServiceTests` con copertura aggiuntiva su idempotenza scaduta, draft audio e duplicati
+  - `dotnet build src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj` dopo l'introduzione di `Kin.KinHub.KinList.Ai`
+  - `dotnet test src/Tests/Kin.KinHub.Core.Test/Kin.KinHub.Core.Test.csproj --filter KinList`
+  - `dotnet build Kin.KinHub.Core.slnx` dopo l'integrazione del layer Azure Speech + OpenAI

@@ -296,6 +296,12 @@ internal sealed class InMemoryKinListRepositories : IKinListRepository, IKinList
         return Task.CompletedTask;
     }
 
+    public Task<int> DeleteExpiredAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        var removed = _records.RemoveAll(x => x.ExpiresAt <= utcNow);
+        return Task.FromResult(removed);
+    }
+
     public Task<IdempotencyRecord> AddAsync(IdempotencyRecord record, CancellationToken cancellationToken = default)
     {
         _records.Add(Clone(record));
