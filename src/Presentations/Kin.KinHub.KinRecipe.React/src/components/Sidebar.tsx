@@ -28,7 +28,6 @@ import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import {
-  appendSessionToUrl,
   buildCoreProfileUrl,
   buildCoreSelectMemberUrl,
   buildCoreServicesUrl,
@@ -65,7 +64,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   }
 
   const openCoreUrl = (targetUrl: string) => {
-    window.location.assign(appendSessionToUrl(targetUrl, activeMember))
+    window.location.assign(targetUrl)
   }
 
   return (

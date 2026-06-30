@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { apiClient } from '@/api/apiClient'
-import { appendSessionToUrl } from '@/config/appLinks'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 import type { Family, FamilyMember } from '@/types'
@@ -30,7 +29,7 @@ export function SelectMemberPage() {
 
     if (returnTo) {
       if (/^https?:\/\//i.test(returnTo)) {
-        window.location.assign(appendSessionToUrl(returnTo, member))
+        window.location.assign(returnTo)
         return
       }
 

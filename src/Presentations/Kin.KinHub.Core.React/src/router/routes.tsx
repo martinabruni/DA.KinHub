@@ -3,6 +3,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { MemberRoute } from '@/components/MemberRoute'
 import { Layout } from '@/components/Layout'
 import { KinConsoleServiceLayout } from '@/components/KinConsoleServiceLayout'
+import { OAuthCallbackPage } from '@/features/auth/pages/OAuthCallbackPage'
 import { SelectMemberPage } from '@/features/family/pages/SelectMemberPage'
 import { OnboardingPage } from '@/features/family/pages/OnboardingPage'
 import { FamilyPage } from '@/features/family/pages/FamilyPage'
@@ -11,6 +12,10 @@ import { ServicesConsolePage } from '@/features/family/pages/ServicesConsolePage
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 
 export const router = createBrowserRouter([
+  {
+    path: '/oauth/callback',
+    element: <OAuthCallbackPage />,
+  },
   {
     element: <ProtectedRoute />,
     children: [

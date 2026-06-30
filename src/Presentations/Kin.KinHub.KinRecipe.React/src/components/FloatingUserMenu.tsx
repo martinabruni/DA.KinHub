@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  appendSessionToUrl,
   buildCoreFamilyUrl,
   buildCoreProfileUrl,
   buildCoreSelectMemberUrl,
@@ -61,7 +60,7 @@ export function FloatingUserMenu() {
   }
 
   const openCoreUrl = (targetUrl: string) => {
-    window.location.assign(appendSessionToUrl(targetUrl, activeMember))
+    window.location.assign(targetUrl)
   }
 
   return (
