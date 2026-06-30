@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { buildKinRecipeLaunchUrl } from "@/config/appLinks";
+import { buildKinListLaunchUrl, buildKinRecipeLaunchUrl } from "@/config/appLinks";
 import { useServices } from "@/features/family/ServicesProvider";
 import { serviceConfig, defaultServiceConfig } from "@/config/serviceConfig";
 
@@ -29,7 +29,9 @@ export function ServicesPage() {
               const Icon = cfg.icon;
               const href =
                 cfg.external
-                  ? buildKinRecipeLaunchUrl('/')
+                  ? service.name === 'KinList' || service.name === 'Lists'
+                    ? buildKinListLaunchUrl('/')
+                    : buildKinRecipeLaunchUrl('/')
                   : cfg.path;
               const content = (
                 <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">

@@ -1,12 +1,13 @@
 import {
   BookOpen,
   Grid2x2,
+  ListChecks,
   Refrigerator,
   Sparkles,
   Terminal,
   Users,
 } from 'lucide-react'
-import { buildKinRecipeLaunchUrl } from '@/config/appLinks'
+import { buildKinListLaunchUrl, buildKinRecipeLaunchUrl } from '@/config/appLinks'
 import type { Service } from '@/types'
 import type { FamilyMember } from '@/types'
 
@@ -33,6 +34,13 @@ export const serviceConfig: Record<string, ServiceConfig> = {
     external: true,
     buildHref: (member) => buildKinRecipeLaunchUrl(member, '/'),
   },
+  KinList: {
+    icon: ListChecks,
+    path: '/',
+    color: 'text-emerald-500',
+    external: true,
+    buildHref: (member) => buildKinListLaunchUrl(member, '/'),
+  },
   Recipes: {
     icon: BookOpen,
     path: '/recipe-books',
@@ -46,6 +54,13 @@ export const serviceConfig: Record<string, ServiceConfig> = {
     color: 'text-blue-500',
     external: true,
     buildHref: (member) => buildKinRecipeLaunchUrl(member, '/fridges'),
+  },
+  Lists: {
+    icon: ListChecks,
+    path: '/',
+    color: 'text-emerald-500',
+    external: true,
+    buildHref: (member) => buildKinListLaunchUrl(member, '/'),
   },
   'AI Assistant': {
     icon: Sparkles,
