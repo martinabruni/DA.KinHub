@@ -1,0 +1,354 @@
+using Kin.KinHub.Core.Business.FamilyFeature;
+using Kin.KinHub.Core.Domain.FamilyFeature;
+using Kin.KinHub.Identity.Business.AuthenticationFeature;
+using Kin.KinHub.Identity.Business.Common;
+using Kin.KinHub.Identity.Domain.AuthenticationFeature;
+using Kin.KinHub.Shared.Api.AuthenticationFeature;
+using Kin.KinHub.Shared.Api.Common.Configuration;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+
+namespace Kin.KinHub.Core.Test;
+
+public sealed class OAuthAndAccessIntegrationTests
+{
+    [Fact]
+    public async Task AuthorizationServerMetadata_UsesOAuthConfiguration()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/.well-known/oauth-authorization-server");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("http://localhost", body.GetProperty("issuer").GetString());
+        Assert.Contains(OAuthScopes.Read, body.GetProperty("scopes_supported").EnumerateArray().Select(x => x.GetString()));
+        Assert.Contains(OAuthScopes.Write, body.GetProperty("scopes_supported").EnumerateArray().Select(x => x.GetString()));
+    }
+
+    [Fact]
+    public async Task AuthorizationCodeFlow_WithPkce_ReturnsBearerToken()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+        var code = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location!.Query)["code"].ToString();
+
+        var tokenResponse = await client.PostAsync(
+            "/token",
+            new FormUrlEncodedContent(new Dictionary<string, string?>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = OAuthApiFactory.ClientId,
+                ["code"] = code,
+                ["redirect_uri"] = OAuthApiFactory.RedirectUri,
+                ["code_verifier"] = "integration-verifier",
+            }!));
+
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
+        var body = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Bearer", body.GetProperty("token_type").GetString());
+        Assert.Equal(OAuthScopes.Read, body.GetProperty("scope").GetString());
+        Assert.False(body.TryGetProperty("refresh_token", out _));
+    }
+
+    [Fact]
+    public async Task AuthorizationCodeFlow_WithInvalidPkce_ReturnsInvalidGrant()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+        var code = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location!.Query)["code"].ToString();
+
+        var tokenResponse = await client.PostAsync(
+            "/token",
+            new FormUrlEncodedContent(new Dictionary<string, string?>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = OAuthApiFactory.ClientId,
+                ["code"] = code,
+                ["redirect_uri"] = OAuthApiFactory.RedirectUri,
+                ["code_verifier"] = "wrong-verifier",
+            }!));
+
+        Assert.Equal(HttpStatusCode.BadRequest, tokenResponse.StatusCode);
+        var body = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("invalid_grant", body.GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public async Task AuthorizationCodeFlow_WithExistingIdentitySession_SkipsCredentialPrompt()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var firstAuthorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+
+        Assert.Equal(HttpStatusCode.Redirect, firstAuthorizeResponse.StatusCode);
+
+        var secondAuthorizeResponse = await client.GetAsync(
+            $"/authorize?response_type=code&client_id={OAuthApiFactory.ClientId}&redirect_uri={Uri.EscapeDataString(OAuthApiFactory.RedirectUri)}&scope={OAuthScopes.Read}&state=integration-state&code_challenge={ComputeCodeChallenge("integration-verifier")}&code_challenge_method=S256");
+
+        Assert.Equal(HttpStatusCode.Redirect, secondAuthorizeResponse.StatusCode);
+        Assert.Contains("code=", secondAuthorizeResponse.Headers.Location!.Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Logout_ClearsIdentitySessionCookie()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+
+        var logoutResponse = await client.PostAsync("/logout", content: null);
+
+        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
+        Assert.Contains(
+            logoutResponse.Headers.TryGetValues("Set-Cookie", out var cookies) ? cookies : [],
+            header => header.Contains("expires=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task FamilyContext_WhenFamilyExists_ReturnsFamilyId()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
+
+        var response = await client.GetAsync("/api/access/family-context");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(OAuthApiFactory.FamilyId, body.GetProperty("familyId").GetGuid());
+    }
+
+    [Fact]
+    public async Task FamilyContext_WhenFamilyMissing_ReturnsFamilyRequiredProblemDetails()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: false);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
+
+        var response = await client.GetAsync("/api/access/family-context");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("family_required", body.GetProperty("code").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
+    }
+
+    private static async Task<HttpResponseMessage> AuthorizeAsync(HttpClient client, string clientId, string redirectUri, string codeVerifier)
+    {
+        var challenge = ComputeCodeChallenge(codeVerifier);
+        return await client.PostAsync(
+            "/authorize",
+            new FormUrlEncodedContent(new Dictionary<string, string?>
+            {
+                ["response_type"] = "code",
+                ["client_id"] = clientId,
+                ["redirect_uri"] = redirectUri,
+                ["scope"] = OAuthScopes.Read,
+                ["state"] = "integration-state",
+                ["code_challenge"] = challenge,
+                ["code_challenge_method"] = "S256",
+                ["email"] = "integration@kinhub.dev",
+                ["password"] = "Password123!",
+                ["decision"] = "approve",
+            }!));
+    }
+
+    private static string ComputeCodeChallenge(string codeVerifier)
+    {
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(codeVerifier));
+        return Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Encode(hash);
+    }
+}
+
+internal sealed class OAuthApiFactory : WebApplicationFactory<Program>
+{
+    internal const string ClientId = "integration-client";
+    internal const string RedirectUri = "http://127.0.0.1/callback";
+    internal static readonly Guid UserId = Guid.Parse("5fb90fe2-31fd-4295-a81f-421fd3e8b8d2");
+    internal static readonly Guid FamilyId = Guid.Parse("b5f1c687-3a8f-44cf-b75f-caa1f8c5b755");
+
+    private readonly bool _hasFamilyContext;
+
+    public OAuthApiFactory(bool hasFamilyContext)
+    {
+        _hasFamilyContext = hasFamilyContext;
+    }
+
+    public string CreateAccessToken()
+    {
+        using var scope = Services.CreateScope();
+        var tokenGenerator = scope.ServiceProvider.GetRequiredService<ITokenGenerator>();
+        return tokenGenerator.GenerateAccessToken(
+            new KinUser
+            {
+                Id = UserId,
+                Email = "integration@kinhub.dev",
+                DisplayName = "Integration User",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            },
+            [],
+            [OAuthScopes.Read]);
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Development");
+        builder.ConfigureAppConfiguration(configuration =>
+        {
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:KinHub"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
+                ["Jwt:Issuer"] = "http://localhost",
+                ["OAuth:AuthorizationServerUrl"] = "http://localhost",
+                ["OAuth:EnableDynamicClientRegistration"] = "true",
+                ["OAuth:Clients:0:ClientId"] = ClientId,
+                ["OAuth:Clients:0:ClientName"] = "Integration Client",
+                ["OAuth:Clients:0:RedirectUris:0"] = RedirectUri,
+                ["OAuth:Clients:0:GrantTypes:0"] = "authorization_code",
+                ["OAuth:Clients:0:ResponseTypes:0"] = "code",
+                ["OAuth:Clients:0:TokenEndpointAuthMethod"] = "none",
+                ["OAuth:Clients:0:Scope"] = OAuthScopes.Read,
+                ["OAuth:SupportedScopes:0"] = OAuthScopes.Read,
+                ["OAuth:SupportedScopes:1"] = OAuthScopes.Write,
+                ["OAuth:SupportedScopes:2"] = OAuthScopes.Admin,
+                ["OAuth:DynamicClientDefaultScopes:0"] = OAuthScopes.Read,
+                ["OAuth:DynamicClientAllowedScopes:0"] = OAuthScopes.Read,
+                ["OAuth:DynamicClientAllowedScopes:1"] = OAuthScopes.Write,
+                ["OAuth:ElevatedConsentScopes:0"] = OAuthScopes.Write,
+                ["OAuth:ElevatedConsentScopes:1"] = OAuthScopes.Admin,
+            });
+        });
+
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IAuthenticationService>();
+            services.RemoveAll<IFamilyOwnershipService>();
+            services.RemoveAll<IOAuthClientStore>();
+
+            services.AddScoped<IAuthenticationService>(sp => new FakeAuthenticationService(sp.GetRequiredService<ITokenGenerator>()));
+            services.AddScoped<IFamilyOwnershipService>(_ => new FakeFamilyOwnershipService(_hasFamilyContext));
+            services.AddSingleton<IOAuthClientStore>(new FixedOAuthClientStore());
+        });
+    }
+}
+
+internal sealed class FakeAuthenticationService : IAuthenticationService
+{
+    private readonly ITokenGenerator _tokenGenerator;
+
+    public FakeAuthenticationService(ITokenGenerator tokenGenerator)
+    {
+        _tokenGenerator = tokenGenerator;
+    }
+
+    public Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Result<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result<LoginResponse>.Success(CreateLoginResponse()));
+
+    public Task<Result<LoginResponse>> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result<LoginResponse>.Success(CreateLoginResponse()));
+
+    public Task<Result<bool>> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result<bool>.Success(true));
+
+    public Task<Result<UserProfileResponse>> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Result<bool>> UpdateUserEmailAsync(Guid userId, UpdateUserEmailRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Result<bool>> UpdateUserPasswordAsync(Guid userId, UpdateUserPasswordRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<Result<bool>> DeleteUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    private LoginResponse CreateLoginResponse() =>
+        new()
+        {
+            AccessToken = _tokenGenerator.GenerateAccessToken(
+                new KinUser
+                {
+                    Id = OAuthApiFactory.UserId,
+                    Email = "integration@kinhub.dev",
+                    DisplayName = "Integration User",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                },
+                [],
+                [OAuthScopes.Read]),
+            RefreshToken = "refresh-token",
+            ExpiresIn = _tokenGenerator.AccessTokenExpirySeconds,
+            Email = "integration@kinhub.dev",
+            DisplayName = "Integration User",
+        };
+}
+
+internal sealed class FakeFamilyOwnershipService : IFamilyOwnershipService
+{
+    private readonly bool _hasFamilyContext;
+
+    public FakeFamilyOwnershipService(bool hasFamilyContext)
+    {
+        _hasFamilyContext = hasFamilyContext;
+    }
+
+    public Task<FamilyAccessResult> GetCurrentFamilyAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_hasFamilyContext
+            ? FamilyAccessResult.Success(new Family
+            {
+                Id = OAuthApiFactory.FamilyId,
+                Name = "Kin Family",
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            })
+            : FamilyAccessResult.NotFound("Family not found for this user."));
+
+    public Task<FamilyAccessResult> EnsureOwnershipAsync(Guid familyId, Guid userId, CancellationToken cancellationToken = default) =>
+        GetCurrentFamilyAsync(userId, cancellationToken);
+}
+
+internal sealed class FixedOAuthClientStore : IOAuthClientStore
+{
+    private readonly OAuthRegisteredClient _client = new(
+        OAuthApiFactory.ClientId,
+        "Integration Client",
+        [OAuthApiFactory.RedirectUri],
+        ["authorization_code", "refresh_token"],
+        ["code"],
+        "none",
+        OAuthScopes.Read,
+        DateTimeOffset.UtcNow);
+
+    public OAuthRegisteredClient Create(OAuthDynamicClientRegistrationRequest request, string defaultScope) => _client;
+
+    public bool TryGet(string clientId, out OAuthRegisteredClient? client)
+    {
+        client = string.Equals(clientId, _client.ClientId, StringComparison.Ordinal) ? _client : null;
+        return client is not null;
+    }
+}
