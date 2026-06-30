@@ -27,20 +27,20 @@ public sealed class ShoppingListController : ControllerBase
     public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _shoppingListService.GetAllAsync(_currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _shoppingListService.GetByIdAsync(id, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost]
@@ -49,17 +49,17 @@ public sealed class ShoppingListController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _createValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _shoppingListService.CreateAsync(request, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToCreatedActionResult(result);
+        return HttpResultMapper.ToCreatedActionResult(this, result);
     }
 
     [HttpPut("{id:guid}")]
@@ -69,26 +69,26 @@ public sealed class ShoppingListController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _updateValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _shoppingListService.UpdateAsync(id, request, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _shoppingListService.DeleteAsync(id, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 }

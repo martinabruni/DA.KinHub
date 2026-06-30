@@ -153,6 +153,41 @@ public sealed class OAuthAndAccessIntegrationTests
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
     }
 
+    [Fact]
+    public async Task AuthMe_WhenUnauthorized_ReturnsProblemDetails()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await client.GetAsync("/api/auth/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("authentication_required", body.GetProperty("code").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
+    }
+
+    [Fact]
+    public async Task AuthLogin_WhenValidationFails_ReturnsProblemDetails()
+    {
+        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new
+            {
+                email = string.Empty,
+                password = string.Empty,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("validation_error", body.GetProperty("code").GetString());
+        Assert.True(body.GetProperty("errors").GetArrayLength() > 0);
+        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
+    }
+
     private static async Task<HttpResponseMessage> AuthorizeAsync(HttpClient client, string clientId, string redirectUri, string codeVerifier)
     {
         var challenge = ComputeCodeChallenge(codeVerifier);

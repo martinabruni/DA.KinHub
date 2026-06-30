@@ -4,6 +4,15 @@ namespace Kin.KinHub.Shared.Api.Common;
 
 internal static class ApiProblemDetails
 {
+    internal static IActionResult InvalidRequestBody(ControllerBase controller) =>
+        BadRequest(controller, "invalid_request_body", "Invalid request body.");
+
+    internal static IActionResult Validation(ControllerBase controller, IReadOnlyList<string> errors) =>
+        BadRequest(controller, "validation_error", errors);
+
+    internal static IActionResult AuthenticationRequired(ControllerBase controller) =>
+        Unauthorized(controller, "authentication_required", "Missing or invalid Authorization header.");
+
     internal static IActionResult BadRequest(ControllerBase controller, string code, string detail) =>
         controller.BadRequest(Create(controller, StatusCodes.Status400BadRequest, code, detail));
 
@@ -17,6 +26,12 @@ internal static class ApiProblemDetails
         new ObjectResult(Create(controller, StatusCodes.Status403Forbidden, code, detail))
         {
             StatusCode = StatusCodes.Status403Forbidden,
+        };
+
+    internal static IActionResult ServiceUnavailable(ControllerBase controller, string code, string detail) =>
+        new ObjectResult(Create(controller, StatusCodes.Status503ServiceUnavailable, code, detail))
+        {
+            StatusCode = StatusCodes.Status503ServiceUnavailable,
         };
 
     internal static ProblemDetails Create(
@@ -54,6 +69,9 @@ internal static class ApiProblemDetails
             StatusCodes.Status403Forbidden => "Forbidden",
             StatusCodes.Status404NotFound => "Not Found",
             StatusCodes.Status409Conflict => "Conflict",
+            StatusCodes.Status422UnprocessableEntity => "Unprocessable Entity",
+            StatusCodes.Status500InternalServerError => "Internal Server Error",
+            StatusCodes.Status503ServiceUnavailable => "Service Unavailable",
             _ => "Error",
         };
 }

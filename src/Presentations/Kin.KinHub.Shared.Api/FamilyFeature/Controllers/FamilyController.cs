@@ -35,30 +35,30 @@ public sealed class FamilyController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _createValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _familyService.CreateFamilyAsync(request, _currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToCreatedActionResult(result);
+        return HttpResultMapper.ToCreatedActionResult(this, result);
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _familyService.GetFamilyAsync(_currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("{familyId:guid}/members")]
@@ -68,19 +68,19 @@ public sealed class FamilyController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _addMemberValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _familyService.AddFamilyMemberAsync(familyId, request, _currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToCreatedActionResult(result);
+        return HttpResultMapper.ToCreatedActionResult(this, result);
     }
 
     [HttpDelete("{familyId:guid}/members/{memberId:guid}")]
@@ -90,11 +90,11 @@ public sealed class FamilyController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _familyService.DeleteFamilyMemberAsync(familyId, memberId, _currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("{familyId:guid}/members/{memberId:guid}")]
@@ -105,19 +105,19 @@ public sealed class FamilyController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _updateMemberValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _familyService.UpdateFamilyMemberAsync(familyId, memberId, request, _currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPatch("{familyId:guid}")]
@@ -127,19 +127,19 @@ public sealed class FamilyController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _updateFamilyValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _familyService.UpdateFamilyAsync(familyId, request, _currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpDelete("{familyId:guid}")]
@@ -148,10 +148,10 @@ public sealed class FamilyController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _familyService.DeleteFamilyAsync(familyId, _currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 }

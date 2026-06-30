@@ -39,16 +39,16 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _loginValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _authService.LoginAsync(request, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("register")]
@@ -57,19 +57,16 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _registerValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _authService.RegisterAsync(request, cancellationToken);
 
-        if (result.IsSuccess)
-            return new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created };
-
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToCreatedActionResult(this, result);
     }
 
     [HttpPost("logout")]
@@ -78,27 +75,27 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _refreshValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _authService.LogoutAsync(request.RefreshToken, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpGet("me")]
     public async Task<IActionResult> MeAsync(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _authService.GetCurrentUserAsync(_currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("refresh")]
@@ -107,16 +104,16 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _refreshValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _authService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("me/email")]
@@ -125,19 +122,19 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _updateEmailValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _authService.UpdateUserEmailAsync(_currentUser.UserId, request, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("me/password")]
@@ -146,29 +143,29 @@ public sealed class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _updatePasswordValidator.ValidateAsync(request, cancellationToken);
 
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _authService.UpdateUserPasswordAsync(_currentUser.UserId, request, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpDelete("me")]
     public async Task<IActionResult> DeleteAccountAsync(CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _authService.DeleteUserAsync(_currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 }

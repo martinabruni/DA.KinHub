@@ -14,6 +14,7 @@ internal static partial class HttpResultMapper
             CoreResult.ResultStatus.Conflict => new ConflictObjectResult(new { message = result.Message }),
             CoreResult.ResultStatus.ValidationError => new BadRequestObjectResult(new { message = result.Message }),
             CoreResult.ResultStatus.Unauthorized => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status403Forbidden },
+            CoreResult.ResultStatus.ServiceUnavailable => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status503ServiceUnavailable },
             _ => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 
@@ -25,6 +26,7 @@ internal static partial class HttpResultMapper
             CoreResult.ResultStatus.Conflict => new ConflictObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status409Conflict, "conflict", result.Message ?? "The request conflicted with the current resource state.")),
             CoreResult.ResultStatus.ValidationError => new BadRequestObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status400BadRequest, "validation_error", result.Message ?? "The request is invalid.")),
             CoreResult.ResultStatus.Unauthorized => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status403Forbidden, "forbidden", result.Message ?? "The authenticated user cannot access this resource.")) { StatusCode = StatusCodes.Status403Forbidden },
+            CoreResult.ResultStatus.ServiceUnavailable => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status503ServiceUnavailable, "service_unavailable", result.Message ?? "A required upstream service is unavailable.")) { StatusCode = StatusCodes.Status503ServiceUnavailable },
             _ => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status500InternalServerError, "unexpected_error", result.Message ?? "Unexpected server error.")) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 

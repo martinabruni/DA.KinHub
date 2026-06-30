@@ -7,5 +7,6 @@ public enum ResultStatus
     Conflict,
     ValidationError,
     Unauthorized,
+    ServiceUnavailable,
     UnexpectedError,
 }

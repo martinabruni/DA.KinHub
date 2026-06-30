@@ -1,6 +1,9 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
+using Kin.KinHub.KinRecipe.Api.Common;
+using Kin.KinHub.KinRecipe.Api.Common.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -18,11 +21,14 @@ public static class ServiceCollectionExtensions
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
+        var coreApiOptions = configuration.GetSection(CoreApiOptions.SectionName).Get<CoreApiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
+        coreApiOptions.Validate();
 
         services.AddSingleton(corsOptions);
+        services.AddSingleton(coreApiOptions);
 
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
@@ -46,6 +52,14 @@ public static class ServiceCollectionExtensions
                 o.EmbeddingDeploymentName = openAiSettings.EmbeddingDeploymentName;
                 o.ModelDeploymentName = openAiSettings.ModelDeploymentName;
             });
+
+        services.RemoveAll<IFamilyOwnershipService>();
+        services.AddHttpClient<IFamilyOwnershipService, RemoteFamilyOwnershipService>((serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<CoreApiOptions>();
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
 
         AddAzureMonitorIfConfigured(services, configuration);
         services.AddHealthChecks().AddNpgSql(
