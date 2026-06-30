@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
@@ -15,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { EntityCard } from '@/components/entity-card'
 import { RecipeBookProvider, useRecipeBooks } from '@/features/recipes/RecipeBookProvider'
 import { RecipeProvider, useRecipes } from '@/features/recipes/RecipeProvider'
 import { hashColor } from '@/lib/utils'
@@ -84,8 +84,8 @@ function RecipeBookDetailContent() {
       <Separator className="mb-6" />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-3xl" />)}
         </div>
       ) : recipes.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-16">
@@ -94,24 +94,26 @@ function RecipeBookDetailContent() {
           <Button onClick={() => setAddOpen(true)}>{t('recipes.addRecipe')}</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {recipes.map((recipe) => (
-            <Card
+            <EntityCard
               key={recipe.id}
-              className="overflow-hidden cursor-pointer hover:shadow-md transition-all"
+              className="cursor-pointer"
               onClick={() => navigate(`/recipe-books/${id}/recipes/${recipe.id}`)}
-            >
-              <div className="h-[60px]" style={{ background: `linear-gradient(90deg, ${hashColor(recipe.id)}, ${hashColor(recipe.name)})` }} />
-              <CardContent className="pt-3 pb-3">
-                <p className="font-semibold text-base">{recipe.name}</p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  👥 {recipe.servingSize} · ⏱ {recipe.prepTimeMinutes}min
-                </p>
+              icon={
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold text-white sm:h-11 sm:w-11"
+                  style={{ background: `linear-gradient(135deg, ${hashColor(recipe.id)}, ${hashColor(recipe.name)})` }}
+                >
+                  {recipe.name.slice(0, 2).toUpperCase()}
+                </div>
+              }
+              topRight={
                 <AlertDialog>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="mt-2 -ml-2">
-                        <MoreHorizontal className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="-mr-2 -mt-2 h-9 w-9 rounded-2xl">
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -133,8 +135,16 @@ function RecipeBookDetailContent() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </CardContent>
-            </Card>
+              }
+              title={recipe.name}
+              description={recipe.description}
+              meta={
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {recipe.servingSize} porzioni · {recipe.prepTimeMinutes} min
+                </p>
+              }
+              footer={<span className="text-sm font-medium text-primary">{t('hub.open')}</span>}
+            />
           ))}
         </div>
       )}

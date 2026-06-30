@@ -6,10 +6,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { EntityCard } from '@/components/entity-card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -73,46 +73,36 @@ function RecipeBooksContent() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((book) => (
-            <Card
+            <EntityCard
               key={book.id}
-              className="h-full cursor-pointer border-border/70 bg-card/80 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              className="cursor-pointer"
               onClick={() => navigate(`/recipe-books/${book.id}`)}
-            >
-              <CardContent className="flex aspect-square h-full flex-col p-4 sm:p-5">
+              icon={
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-11 sm:w-11"
+                  style={{ background: `linear-gradient(135deg, ${hashColor(book.id)}, ${hashColor(book.id + 'x')})` }}
+                >
+                  <span className="text-sm font-semibold text-white">
+                    {book.name.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              }
+              topRight={
                 <AlertDialog>
-                  <div className="flex items-start justify-between gap-3">
-                    <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-                      style={{ background: `linear-gradient(135deg, ${hashColor(book.id)}, ${hashColor(book.id + 'x')})` }}
-                    >
-                      <span className="text-sm font-semibold text-white">
-                        {book.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="-mr-2 -mt-2 h-9 w-9 rounded-2xl">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                            {t('common.delete')}
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="mt-4 flex-1">
-                    <p className="line-clamp-2 font-semibold leading-tight">{book.name}</p>
-                    <Badge variant="secondary" className="mt-3 text-xs">
-                      {book.recipeCount} {book.recipeCount === 1 ? t('recipeBooks.recipe') : t('recipeBooks.recipes')}
-                    </Badge>
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {t('recipeBooks.lastUpdated', { date: formatDate(book.updatedAt) })}
-                    </p>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="-mr-2 -mt-2 h-9 w-9 rounded-2xl">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
+                          {t('common.delete')}
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('recipeBooks.delete.title')}</AlertDialogTitle>
@@ -124,8 +114,19 @@ function RecipeBooksContent() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </CardContent>
-            </Card>
+              }
+              title={book.name}
+              meta={
+                <>
+                  <Badge variant="secondary" className="mt-3 text-xs">
+                    {book.recipeCount} {book.recipeCount === 1 ? t('recipeBooks.recipe') : t('recipeBooks.recipes')}
+                  </Badge>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {t('recipeBooks.lastUpdated', { date: formatDate(book.updatedAt) })}
+                  </p>
+                </>
+              }
+            />
           ))}
         </div>
       )}
