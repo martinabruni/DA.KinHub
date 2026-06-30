@@ -1,5 +1,78 @@
 • Checkpoint
 
+Aggiornamento 2026-06-30
+
+Questo file contiene anche un checkpoint piu' recente relativo al piano "Kin List, Identity broker e rimozione MCP". Se una nuova sessione deve ripartire da qui, usare prima questa sezione e solo dopo il resto del file.
+
+Checkpoint Piano Kin List / Identity broker / rimozione MCP
+
+Stato completato in questa tranche
+
+- [done] Rimossa la superficie MCP di runtime da `Kin.KinHub.Shared.Api`:
+  - package `ModelContextProtocol.AspNetCore` rimosso
+  - `MapMcp(...)` rimosso
+  - policy/options/tool MCP rimossi
+  - file rimossi sotto `src/Presentations/Kin.KinHub.Shared.Api/Common/Mcp`
+  - file rimossi sotto `src/Presentations/Kin.KinHub.Shared.Api/McpFeature/Services/Tools`
+- [done] Rinominata e separata la configurazione OAuth da MCP:
+  - nuovo file `src/Presentations/Kin.KinHub.Shared.Api/Common/Configuration/OAuthServerOptions.cs`
+  - `appsettings.json` aggiornato da sezione `Mcp` a sezione `OAuth`
+  - scope ora:
+    - `kinhub.api`
+    - `kinhub.api.write`
+    - `kinhub.api.admin`
+- [done] Mantenuto e riallineato il flow OAuth Authorization Code + PKCE in:
+  - `src/Presentations/Kin.KinHub.Shared.Api/AuthenticationFeature/Controllers/OAuthController.cs`
+  - `src/Presentations/Kin.KinHub.Shared.Api/AuthenticationFeature/Controllers/OAuthMetadataController.cs`
+- [done] Introdotto family context request-scoped risolto dal backend:
+  - `X-Member-Id` non e' piu' usato come input autoritativo nel middleware
+  - `JwtAuthenticationMiddleware` risolve la famiglia corrente via `IFamilyOwnershipService`
+  - `ICurrentUser` / `CurrentUser` ora espongono `FamilyId` e `HasFamilyContext`
+- [done] Aggiunto endpoint `GET /api/access/family-context` in:
+  - `src/Presentations/Kin.KinHub.Shared.Api/AccessFeature/Controllers/AccessController.cs`
+  - comportamento:
+    - `200` con `familyId` se il contesto famiglia esiste
+    - `403` con `code = family_required` se manca la famiglia
+- [done] Introdotto `ProblemDetails` con `code` e `correlationId`:
+  - nuovo file `src/Presentations/Kin.KinHub.Shared.Api/Common/ApiProblemDetails.cs`
+  - `HttpResultMapper` aggiornato per poter restituire errori strutturati
+- [done] Aggiornati i project file linkati di `Identity.Api` e `KinRecipe.Api` per includere i nuovi file condivisi necessari.
+- [done] Sostituito il vecchio test MCP con test focalizzati su OAuth e family context:
+  - rimosso `src/Tests/Kin.KinHub.Core.Test/McpIntegrationTests.cs`
+  - aggiunto `src/Tests/Kin.KinHub.Core.Test/OAuthAndAccessIntegrationTests.cs`
+
+Verifiche eseguite
+
+- [done] `dotnet build Kin.KinHub.Core.slnx`
+- [done] `dotnet test src/Tests/Kin.KinHub.Core.Test/Kin.KinHub.Core.Test.csproj`
+- [done] `dotnet build src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj`
+- [done] `dotnet build src/Presentations/Kin.KinHub.Shared.Api/Kin.KinHub.Shared.Api.csproj`
+- [done] `dotnet test src/Tests/Kin.KinHub.Core.Test/Kin.KinHub.Core.Test.csproj` dopo l'introduzione della sessione broker
+
+Stato non ancora fatto del piano
+
+- [partial] Broker Identity backend avviato:
+  - client OAuth stabili configurabili via `OAuth:Clients`
+  - sessione broker server-side con cookie `HttpOnly`
+  - `GET /authorize` riusa la sessione esistente e salta il reinserimento credenziali
+  - `POST /logout` centralizzato invalida cookie/sessione broker
+  - token exchange authorization-code non restituisce piu' `refresh_token` al browser
+  - resta da migrare il frontend al client OAuth comune e completare la policy `Secure`/cross-site per gli ambienti reali
+- [not_started] Eliminazione del relay frontend cross-app basato su token in fragment/localStorage.
+- [not_started] Client OAuth comune tra Core, Identity e KinRecipe.
+- [not_started] Standardizzazione completa di tutti i controller su RFC 9457 `ProblemDetails`.
+- [not_started] `family-context` remoto tra servizi con fail-closed `503` quando Core non e' raggiungibile.
+- [not_started] Nuovo bounded context Kin List backend.
+- [not_started] Nuova SPA Kin List.
+- [not_started] Migrazioni dati, IaC e pipeline del piano esteso.
+
+Prossimo step consigliato
+
+1. Migrare Core, Identity e KinRecipe a un client OAuth comune basato su Authorization Code + PKCE.
+2. Rimuovere il relay frontend con token in fragment e tutto il codice `sessionRelay` / `appendSessionToUrl`.
+3. Decidere come propagare o rimuovere il vecchio stato UI `activeMember` senza reintrodurre un canale autoritativo lato client.
+4. Solo dopo, aprire il blocco Kin List backend/frontend del piano.
+
 Di seguito lo stato reale del repo a questo checkpoint.
 
 - [done] Esplorazione iniziale completata: split points identificati tra Shared.Api, React app, EF/PostgreSQL e IaC.

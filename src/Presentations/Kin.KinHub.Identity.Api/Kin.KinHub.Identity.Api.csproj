@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Kin.KinHub.Shared.Api\Common\ApiProblemDetails.cs" Link="Common\ApiProblemDetails.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\HttpResultMapper.cs" Link="Common\HttpResultMapper.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\IdentityHttpResultMapper.cs" Link="Common\IdentityHttpResultMapper.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\CorsOptions.cs" Link="Common\Configuration\CorsOptions.cs" />

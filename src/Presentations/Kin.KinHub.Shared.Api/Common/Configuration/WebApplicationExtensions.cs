@@ -24,9 +24,6 @@ public static class WebApplicationExtensions
         {
             Predicate = registration => registration.Tags.Contains("ready"),
         }).AllowAnonymous();
-        app.MapMcp($"/{McpTransportOptions.EndpointRoute}")
-            .RequireAuthorization()
-            .RequireCors(McpTransportOptions.CorsPolicyName);
 
         return app;
     }

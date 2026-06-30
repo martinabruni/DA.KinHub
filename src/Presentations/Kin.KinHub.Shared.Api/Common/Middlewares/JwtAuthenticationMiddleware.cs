@@ -5,14 +5,14 @@ namespace Kin.KinHub.Shared.Api.Common;
 
 public sealed class JwtAuthenticationMiddleware : IMiddleware
 {
-    private readonly IFamilyService _familyService;
+    private readonly IFamilyOwnershipService _familyOwnershipService;
     private readonly ILogger<JwtAuthenticationMiddleware> _logger;
 
     public JwtAuthenticationMiddleware(
-        IFamilyService familyService,
+        IFamilyOwnershipService familyOwnershipService,
         ILogger<JwtAuthenticationMiddleware> logger)
     {
-        _familyService = familyService;
+        _familyOwnershipService = familyOwnershipService;
         _logger = logger;
     }
 
@@ -23,11 +23,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware
         if (context.User.Identity?.IsAuthenticated is true)
         {
             PopulateCurrentUserFromPrincipal(context, currentUser);
-
-            if (!await TrySetFamilyMemberAsync(context, currentUser))
-            {
-                return;
-            }
+            await TrySetFamilyContextAsync(currentUser, context.RequestAborted);
         }
 
         await next(context);
@@ -53,39 +49,15 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware
         }
     }
 
-    private async Task<bool> TrySetFamilyMemberAsync(HttpContext context, CurrentUser currentUser)
+    private async Task TrySetFamilyContextAsync(CurrentUser currentUser, CancellationToken cancellationToken)
     {
-        var memberIdHeader = context.Request.Headers["X-Member-Id"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(memberIdHeader))
+        var familyResult = await _familyOwnershipService.GetCurrentFamilyAsync(currentUser.UserId, cancellationToken);
+        if (!familyResult.IsSuccess || familyResult.Family is null)
         {
-            return true;
+            return;
         }
 
-        if (!Guid.TryParse(memberIdHeader, out var memberId))
-        {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { message = "X-Member-Id must be a valid GUID." });
-            return false;
-        }
-
-        var familyResult = await _familyService.GetFamilyAsync(currentUser.UserId, context.RequestAborted);
-        if (!familyResult.IsSuccess || familyResult.Value is null)
-        {
-            _logger.LogWarning("Rejected X-Member-Id override for user {UserId} because no accessible family was found.", currentUser.UserId);
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { message = "The authenticated user cannot select a family member for this request." });
-            return false;
-        }
-
-        if (!familyResult.Value.Members.Any(member => member.Id == memberId))
-        {
-            _logger.LogWarning("Rejected X-Member-Id override for user {UserId} and member {MemberId}.", currentUser.UserId, memberId);
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { message = "The supplied X-Member-Id does not belong to the authenticated family." });
-            return false;
-        }
-
-        currentUser.SetFamilyMemberId(memberId);
-        return true;
+        currentUser.SetFamilyContext(familyResult.Family.Id);
+        _logger.LogDebug("Resolved family context {FamilyId} for user {UserId}.", familyResult.Family.Id, currentUser.UserId);
     }
 }

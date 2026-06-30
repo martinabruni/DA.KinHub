@@ -160,11 +160,29 @@ public interface IOAuthRefreshTokenScopeStore
 public sealed class InMemoryOAuthClientStore : IOAuthClientStore
 {
     private readonly ConcurrentDictionary<string, OAuthRegisteredClient> _clients = new(StringComparer.Ordinal);
-    private readonly McpTransportOptions _options;
+    private readonly ConcurrentDictionary<string, OAuthRegisteredClient> _configuredClients = new(StringComparer.Ordinal);
+    private readonly OAuthServerOptions _options;
 
-    public InMemoryOAuthClientStore(McpTransportOptions options)
+    public InMemoryOAuthClientStore(OAuthServerOptions options)
     {
         _options = options;
+        foreach (var client in options.Clients)
+        {
+            if (string.IsNullOrWhiteSpace(client.ClientId) || client.RedirectUris.Length is 0)
+            {
+                continue;
+            }
+
+            _configuredClients[client.ClientId] = new OAuthRegisteredClient(
+                client.ClientId.Trim(),
+                string.IsNullOrWhiteSpace(client.ClientName) ? client.ClientId.Trim() : client.ClientName.Trim(),
+                client.RedirectUris,
+                client.GrantTypes,
+                client.ResponseTypes,
+                string.IsNullOrWhiteSpace(client.TokenEndpointAuthMethod) ? "none" : client.TokenEndpointAuthMethod.Trim(),
+                client.Scope.Trim(),
+                DateTimeOffset.UtcNow);
+        }
     }
 
     public OAuthRegisteredClient Create(OAuthDynamicClientRegistrationRequest request, string defaultScope)
@@ -178,7 +196,7 @@ public sealed class InMemoryOAuthClientStore : IOAuthClientStore
         var issuedAt = DateTimeOffset.UtcNow;
         var client = new OAuthRegisteredClient(
             clientId,
-            request.ClientName?.Trim() is { Length: > 0 } clientName ? clientName : "KinHub MCP Client",
+            request.ClientName?.Trim() is { Length: > 0 } clientName ? clientName : "KinHub Client",
             request.RedirectUris,
             request.GrantTypes,
             request.ResponseTypes,
@@ -191,15 +209,16 @@ public sealed class InMemoryOAuthClientStore : IOAuthClientStore
     }
 
     public bool TryGet(string clientId, out OAuthRegisteredClient? client) =>
-        _clients.TryGetValue(clientId, out client);
+        _configuredClients.TryGetValue(clientId, out client)
+        || _clients.TryGetValue(clientId, out client);
 }
 
 public sealed class InMemoryOAuthAuthorizationCodeStore : IOAuthAuthorizationCodeStore
 {
     private readonly ConcurrentDictionary<string, OAuthAuthorizationCodeTicket> _tickets = new(StringComparer.Ordinal);
-    private readonly McpTransportOptions _options;
+    private readonly OAuthServerOptions _options;
 
-    public InMemoryOAuthAuthorizationCodeStore(McpTransportOptions options)
+    public InMemoryOAuthAuthorizationCodeStore(OAuthServerOptions options)
     {
         _options = options;
     }
@@ -262,9 +281,9 @@ public sealed class InMemoryOAuthAuthorizationCodeStore : IOAuthAuthorizationCod
 public sealed class InMemoryOAuthRefreshTokenScopeStore : IOAuthRefreshTokenScopeStore
 {
     private readonly ConcurrentDictionary<string, string> _scopes = new(StringComparer.Ordinal);
-    private readonly McpTransportOptions _options;
+    private readonly OAuthServerOptions _options;
 
-    public InMemoryOAuthRefreshTokenScopeStore(McpTransportOptions options)
+    public InMemoryOAuthRefreshTokenScopeStore(OAuthServerOptions options)
     {
         _options = options;
     }
@@ -286,5 +305,89 @@ public sealed class InMemoryOAuthRefreshTokenScopeStore : IOAuthRefreshTokenScop
     {
         _scopes.TryRemove(previousRefreshToken, out _);
         Store(nextRefreshToken, scope);
+    }
+}
+
+public sealed record OAuthIdentitySession(
+    string SessionId,
+    string RefreshToken,
+    string Email,
+    string? DisplayName,
+    DateTimeOffset ExpiresAtUtc);
+
+public interface IOAuthIdentitySessionStore
+{
+    OAuthIdentitySession Create(LoginResponse loginResponse, TimeSpan lifetime);
+    bool TryGet(string sessionId, out OAuthIdentitySession? session);
+    void Replace(string sessionId, LoginResponse loginResponse, TimeSpan lifetime);
+    bool TryRemove(string sessionId, out OAuthIdentitySession? session);
+}
+
+public sealed class InMemoryOAuthIdentitySessionStore : IOAuthIdentitySessionStore
+{
+    private readonly ConcurrentDictionary<string, OAuthIdentitySession> _sessions = new(StringComparer.Ordinal);
+    private readonly OAuthServerOptions _options;
+
+    public InMemoryOAuthIdentitySessionStore(OAuthServerOptions options)
+    {
+        _options = options;
+    }
+
+    public OAuthIdentitySession Create(LoginResponse loginResponse, TimeSpan lifetime)
+    {
+        CleanupExpiredSessions();
+        if (_sessions.Count >= _options.MaxIdentitySessions)
+        {
+            throw new InvalidOperationException("Identity session capacity has been reached.");
+        }
+
+        var session = CreateSession(Guid.NewGuid().ToString("N"), loginResponse, lifetime);
+        _sessions[session.SessionId] = session;
+        return session;
+    }
+
+    public bool TryGet(string sessionId, out OAuthIdentitySession? session)
+    {
+        if (_sessions.TryGetValue(sessionId, out session)
+            && session.ExpiresAtUtc > DateTimeOffset.UtcNow)
+        {
+            return true;
+        }
+
+        if (session is not null)
+        {
+            _sessions.TryRemove(sessionId, out _);
+        }
+
+        session = null;
+        return false;
+    }
+
+    public void Replace(string sessionId, LoginResponse loginResponse, TimeSpan lifetime)
+    {
+        _sessions[sessionId] = CreateSession(sessionId, loginResponse, lifetime);
+    }
+
+    public bool TryRemove(string sessionId, out OAuthIdentitySession? session) =>
+        _sessions.TryRemove(sessionId, out session);
+
+    private static OAuthIdentitySession CreateSession(string sessionId, LoginResponse loginResponse, TimeSpan lifetime) =>
+        new(
+            sessionId,
+            loginResponse.RefreshToken,
+            loginResponse.Email,
+            loginResponse.DisplayName,
+            DateTimeOffset.UtcNow.Add(lifetime));
+
+    private void CleanupExpiredSessions()
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var session in _sessions)
+        {
+            if (session.Value.ExpiresAtUtc <= now)
+            {
+                _sessions.TryRemove(session.Key, out _);
+            }
+        }
     }
 }
