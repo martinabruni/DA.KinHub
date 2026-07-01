@@ -37,6 +37,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Guard against Model Context Protocol references
+        run: bash scripts/verify-no-mcp.sh
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:

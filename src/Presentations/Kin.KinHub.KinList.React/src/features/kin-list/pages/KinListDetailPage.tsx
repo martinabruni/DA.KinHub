@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { Check, Loader2, Mic, PencilLine, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react'
@@ -49,13 +49,13 @@ export function KinListDetailPage() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editingItemText, setEditingItemText] = useState('')
 
-  const confirmDiscardDraft = () => {
+  const confirmDiscardDraft = useCallback(() => {
     if (!dirty) {
       return true
     }
 
     return window.confirm('Discard this draft and lose the unsaved changes?')
-  }
+  }, [dirty])
 
   useEffect(() => {
     if (isDraftMode && !draftSession) {
@@ -79,7 +79,7 @@ export function KinListDetailPage() {
     }
 
     draftBlocker.reset()
-  }, [draftBlocker])
+  }, [draftBlocker, confirmDiscardDraft])
 
   useEffect(() => {
     if (!dirty) {
@@ -104,12 +104,15 @@ export function KinListDetailPage() {
     },
   })
 
-  useEffect(() => {
-    if (!isDraftMode && detailQuery.data) {
-      setTitle(detailQuery.data.title)
-      setDirty(false)
-    }
-  }, [detailQuery.data, isDraftMode])
+  // Sync the editable title from the freshly loaded server snapshot. Adjusting state
+  // during render (guarded by the last-synced snapshot held in state) is the recommended
+  // alternative to a setState-in-effect: https://react.dev/learn/you-might-not-need-an-effect
+  const [syncedDetail, setSyncedDetail] = useState<KinListDetail | null>(null)
+  if (!isDraftMode && detailQuery.data && detailQuery.data !== syncedDetail) {
+    setSyncedDetail(detailQuery.data)
+    setTitle(detailQuery.data.title)
+    setDirty(false)
+  }
 
   const handleConflict = async () => {
     toast.error('This list changed elsewhere. Reloading the latest version.')

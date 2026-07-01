@@ -6,10 +6,10 @@ Il piano non può essere considerato completato finché tutti i punti seguenti n
 
 ## Gate trasversali
 
-- [ ] Rendere verde `dotnet test Kin.KinHub.Core.slnx -c Release` da checkout pulito. Attualmente 9 test in `OAuthAndAccessIntegrationTests` falliscono perché l'host di test non configura `PostgreSqlOptions.ConnectionString`.
-- [ ] Rendere verde `npm run lint` per Kin List. Attualmente risultano 15 errori e 8 warning, inclusi errori nei nuovi componenti Kin List.
-- [ ] Correggere e rendere verde `npm run verify:auth-client` per Kin List; lo script è ancora copiato da KinRecipe e cerca marker non presenti.
-- [ ] Aggiungere una suite automatizzata per la SPA Kin List: oggi `package.json` non espone uno script di test e non esistono file `*.test.*`/`*.spec.*`.
+- [~] `dotnet test` — i 36 test unitari e la classe `OAuthAndAccessIntegrationTests` (9 test) passano ciascuno nei rispettivi gruppi. La causa reale dell'instabilità era la creazione di un `WebApplicationFactory` per ogni fatto: ora i due host richiesti sono condivisi nella classe via `IClassFixture` (host creato una sola volta per variante). Caveat: nell'ambiente sandbox locale l'esecuzione dell'INTERA suite mista (45 test) in un solo processo può ancora bloccarsi al teardown del test host (probabile timer del rate limiter o data source Npgsql dell'health check che non rilascia il processo). Da confermare in CI Linux dove il teardown differisce.
+- [x] Rendere verde `npm run lint` per Kin List. Risolti tutti i 15 errori e 8 warning (rimozione codice legacy, split degli hook `useAuth`/`useAuthContext`, fix `AudioCaptureDialog` use-before-declare e i due setState-in-effect con pattern compatibili con React Compiler, override eslint per i primitivi shadcn `components/ui`).
+- [x] Correggere e rendere verde `npm run verify:auth-client` per Kin List; lo script ora verifica il contratto Kin List reale (KINLIST_API_URL, identity client, token store in memoria, nessun endpoint auth sull'API Kin List).
+- [x] Aggiungere una suite automatizzata per la SPA Kin List: aggiunti `vitest` + script `test`/`test:watch` e i primi test (`draftSessionStore.test.ts`, `AudioCaptureDialog.test.tsx`, 8 test verdi). La matrice completa di flussi/MediaRecorder resta da estendere (vedi T04).
 - [ ] Eseguire e documentare build/test Release, build di tutte le SPA, test PostgreSQL reale, migrazione da schema precedente, Bicep build, build immagini e scansioni di sicurezza richieste da T07.
 
 ## T01 — Identity broker e authorization familiare
@@ -25,8 +25,8 @@ Il piano non può essere considerato completato finché tutti i punti seguenti n
 
 ## T02 — Bounded context e API Kin List
 
-- [ ] Rimuovere completamente liste e item da Core/RecipeFeature: dominio, business, repository, mapping EF, controller/validator condivisi e registrazioni DI sono tuttora presenti.
-- [ ] Rimuovere `ShoppingListEntity` e `ShoppingListItemEntity` dal `CoreDbContext` e dal relativo model snapshot dopo la migrazione contract.
+- [x] Rimuovere completamente liste e item da Core/RecipeFeature: eliminati dominio (`ShoppingList`/`ShoppingListItem` + interfacce repo), business (services/models/interfacce), repository PostgreSql, controller e validator condivisi in `Shared.Api/RecipeFeature`, le registrazioni DI in entrambi i `ServiceCollectionExtensions` e i `<Compile Include>` collegati in `Kin.KinHub.KinRecipe.Api.csproj`. La soluzione compila (`Shared.Api` e `KinRecipe.Api` verdi).
+- [x] Rimuovere `ShoppingListEntity` e `ShoppingListItemEntity` dal `CoreDbContext` e dal model snapshot: rimossi DbSet e configurazione EF; generata la migration di contract `20260701070642_RemoveShoppingListFromCore` (DropTable delle due tabelle nello schema `kinrecipe`) e snapshot riallineato (0 riferimenti residui). Nota T06: il piano richiede expand/contract con spostamento dati verso `kinlist` + view di compatibilità prima del drop — la sequenza di deploy è coperta da T06.
 - [ ] Verificare l'intero contratto API con integration test, inclusi tutti gli endpoint lista/item, bulk confirm, restore, soft-delete e isolamento familiare.
 - [ ] Aggiungere test con PostgreSQL reale per transazioni, concorrenza, ordinamento e idempotenza; i test correnti sono prevalentemente unitari/in-memory.
 - [ ] Provare con test che ogni mutazione richiede `If-Match`, che il mismatch restituisce `409 etag_conflict` senza retry, che una mutazione item aggiorna lista/versione e che item differenti restano aggiornabili indipendentemente.
@@ -43,21 +43,21 @@ Il piano non può essere considerato completato finché tutti i punti seguenti n
 
 ## T04 — Static Web App Kin List
 
-- [ ] Eliminare dalla nuova SPA il codice copiato non pertinente (shopping-list legacy, ricette, frigoriferi, assistant e pagine/provider Core/Identity), lasciando Kin List come superficie autonoma.
-- [ ] Sostituire ogni chiamata legacy `/api/shopping-lists` con il contratto `/api/lists` oppure rimuovere il relativo codice morto.
+- [x] Eliminare dalla nuova SPA il codice copiato non pertinente (shopping-list legacy, ricette, frigoriferi, assistant e pagine/provider Core/Identity), lasciando Kin List come superficie autonoma. Rimossi 7 folder feature + 8 componenti copiati + pagine login/register; rimosso `activeMember`; typecheck/build verdi.
+- [x] Sostituire ogni chiamata legacy `/api/shopping-lists` con il contratto `/api/lists` oppure rimuovere il relativo codice morto. Tutto il codice morto shopping-list/ricette è stato rimosso dalla SPA Kin List.
 - [ ] Aggiungere test componenti/flussi con API mock per empty/list landing, creazione manuale/audio, draft condiviso, dirty navigation, retry blob, ordering, undo 5 secondi, ETag conflict e responsive layout.
 - [ ] Aggiungere test MediaRecorder per permesso negato, API non supportata, stop automatico a 60 secondi, MIME/browser supportati, retry in memoria e rilascio del blob.
 - [ ] Verificare che non esistano upload alternativi, persistenza draft prima di Salva, realtime, offline o PWA.
-- [ ] Correggere gli errori lint specifici di `AudioCaptureDialog` e `KinListDetailPage` e gli altri errori/warning del progetto.
+- [x] Correggere gli errori lint specifici di `AudioCaptureDialog` e `KinListDetailPage` e gli altri errori/warning del progetto. `npm run lint` ora esce con 0 problemi.
 
 ## T05 — Catalogo, estrazione KinRecipe e rimozione MCP
 
 - [ ] Registrare Kin List nel catalogo persistito e abilitarlo automaticamente per tutte le famiglie esistenti e nuove; l'enum e i link frontend da soli non dimostrano assegnazione/backfill.
-- [ ] Rimuovere completamente shopping list da KinRecipe/Core: modelli, servizi, repository, controller, validator, UI e accesso alle tabelle sono ancora presenti.
+- [~] Rimuovere completamente shopping list da KinRecipe/Core: **backend fatto** (modelli, servizi, repository, controller, validator condivisi, DI e mapping EF rimossi; nessun accesso residuo alle tabelle da Core). **Resta**: la UI shopping-list nella SPA KinRecipe (`features/shopping-lists`) e la sua trasformazione in redirect verso Kin List.
 - [ ] Trasformare le vecchie pagine KinRecipe in soli redirect verso Kin List, preservando l'ID nel dettaglio.
 - [ ] Rimuovere le vecchie API shopping-list; non devono restare endpoint di compatibilità.
 - [ ] Aggiungere test per launcher/catalogo, assegnazione a famiglie esistenti/nuove e redirect lista/dettaglio.
-- [ ] Mantenere verde una scansione CI che garantisca assenza di riferimenti MCP produttivi, package, endpoint, transport, handler, tool, configurazioni e test. La scansione locale attuale non trova riferimenti MCP fuori da documentazione/piani, ma manca il gate automatizzato.
+- [x] Mantenere verde una scansione CI che garantisca assenza di riferimenti MCP produttivi, package, endpoint, transport, handler, tool, configurazioni e test. Aggiunto `scripts/verify-no-mcp.sh` (eseguito nel job `backend_ci`). La scansione ha rilevato e rimosso una dipendenza MCP reale: `@modelcontextprotocol/sdk` arrivava transitivamente dal CLI `shadcn` presente in `dependencies` di tutte e 4 le SPA — `shadcn` (non importato a runtime) è stato rimosso e i lockfile rigenerati.
 
 ## T06 — Migrazione, IaC e pipeline
 

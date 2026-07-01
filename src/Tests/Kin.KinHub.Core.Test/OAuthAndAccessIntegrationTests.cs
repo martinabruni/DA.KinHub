@@ -19,11 +19,42 @@ using System.Text.Json;
 namespace Kin.KinHub.Core.Test;
 
 public sealed class OAuthAndAccessIntegrationTests
+    : IClassFixture<OAuthAndAccessIntegrationTests.FamilyContextFactory>,
+      IClassFixture<OAuthAndAccessIntegrationTests.NoFamilyContextFactory>
 {
+    // A fresh WebApplicationFactory per test builds (and tears down) a full ASP.NET host.
+    // Doing that for every fact in this class exhausts host/timer resources on some
+    // environments and hangs the test host, so the two required variants are shared
+    // across the class through IClassFixture (each host is created exactly once).
+    private readonly OAuthApiFactory _familyFactory;
+    private readonly OAuthApiFactory _noFamilyFactory;
+
+    public OAuthAndAccessIntegrationTests(FamilyContextFactory familyFactory, NoFamilyContextFactory noFamilyFactory)
+    {
+        _familyFactory = familyFactory;
+        _noFamilyFactory = noFamilyFactory;
+    }
+
+    public sealed class FamilyContextFactory : OAuthApiFactory
+    {
+        public FamilyContextFactory()
+            : base(hasFamilyContext: true)
+        {
+        }
+    }
+
+    public sealed class NoFamilyContextFactory : OAuthApiFactory
+    {
+        public NoFamilyContextFactory()
+            : base(hasFamilyContext: false)
+        {
+        }
+    }
+
     [Fact]
     public async Task AuthorizationServerMetadata_UsesOAuthConfiguration()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/.well-known/oauth-authorization-server");
@@ -38,7 +69,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task AuthorizationCodeFlow_WithPkce_ReturnsBearerToken()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
@@ -67,7 +98,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task AuthorizationCodeFlow_WithInvalidPkce_ReturnsInvalidGrant()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
@@ -92,7 +123,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task AuthorizationCodeFlow_WithExistingIdentitySession_SkipsCredentialPrompt()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var firstAuthorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
@@ -109,7 +140,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task Logout_ClearsIdentitySessionCookie()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
@@ -127,7 +158,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task FamilyContext_WhenFamilyExists_ReturnsFamilyId()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
 
@@ -141,7 +172,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task FamilyContext_WhenFamilyMissing_ReturnsFamilyRequiredProblemDetails()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: false);
+        var factory = _noFamilyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
 
@@ -156,7 +187,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task AuthMe_WhenUnauthorized_ReturnsProblemDetails()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var response = await client.GetAsync("/api/auth/me");
@@ -170,7 +201,7 @@ public sealed class OAuthAndAccessIntegrationTests
     [Fact]
     public async Task AuthLogin_WhenValidationFails_ReturnsProblemDetails()
     {
-        await using var factory = new OAuthApiFactory(hasFamilyContext: true);
+        var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var response = await client.PostAsJsonAsync(
@@ -215,7 +246,7 @@ public sealed class OAuthAndAccessIntegrationTests
     }
 }
 
-internal sealed class OAuthApiFactory : WebApplicationFactory<Program>
+public class OAuthApiFactory : WebApplicationFactory<Program>
 {
     internal const string ClientId = "integration-client";
     internal const string RedirectUri = "http://127.0.0.1/callback";

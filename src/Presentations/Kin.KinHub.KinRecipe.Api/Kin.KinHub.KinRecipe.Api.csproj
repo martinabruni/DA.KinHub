@@ -50,23 +50,17 @@
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeController.cs" Link="RecipeFeature\Controllers\RecipeController.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeIngredientController.cs" Link="RecipeFeature\Controllers\RecipeIngredientController.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeStepController.cs" Link="RecipeFeature\Controllers\RecipeStepController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\ShoppingListController.cs" Link="RecipeFeature\Controllers\ShoppingListController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\ShoppingListItemController.cs" Link="RecipeFeature\Controllers\ShoppingListItemController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\BulkAddShoppingListItemsRequestValidator.cs" Link="RecipeFeature\Validators\BulkAddShoppingListItemsRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateFridgeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\CreateFridgeIngredientRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateFridgeRequestValidator.cs" Link="RecipeFeature\Validators\CreateFridgeRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeBookRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeBookRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeIngredientRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeStepRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeStepRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateShoppingListItemRequestValidator.cs" Link="RecipeFeature\Validators\CreateShoppingListItemRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateShoppingListRequestValidator.cs" Link="RecipeFeature\Validators\CreateShoppingListRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateFridgeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\UpdateFridgeIngredientRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateFridgeRequestValidator.cs" Link="RecipeFeature\Validators\UpdateFridgeRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeBookRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeBookRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeIngredientRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeStepRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeStepRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateShoppingListRequestValidator.cs" Link="RecipeFeature\Validators\UpdateShoppingListRequestValidator.cs" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Mic, RotateCcw, Square, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -59,17 +59,8 @@ export function AudioCaptureDialog({
 
   const mimeType = useMemo(() => pickSupportedMimeType(), [])
 
-  useEffect(() => {
-    if (!open) {
-      resetCapture()
-    }
-
-    return () => {
-      resetCapture()
-    }
-  }, [open])
-
-  const cleanupMedia = () => {
+  // Releases the MediaRecorder, microphone stream and timers (external resources only).
+  const cleanupMedia = useCallback(() => {
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current)
       timeoutRef.current = null
@@ -85,15 +76,26 @@ export function AudioCaptureDialog({
     streamRef.current = null
     chunksRef.current = []
     setIsRecording(false)
-  }
+  }, [])
 
-  const resetCapture = () => {
+  const resetCapture = useCallback(() => {
     cleanupMedia()
     setBlob(null)
     setError(null)
     setElapsedSeconds(0)
     setIsSubmitting(false)
-  }
+  }, [cleanupMedia])
+
+  // When the dialog closes (and on unmount) release the microphone and discard the
+  // in-memory blob so nothing survives between sessions. The teardown runs in the
+  // effect cleanup so it fires exactly on the open -> closed transition.
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    return () => resetCapture()
+  }, [open, resetCapture])
 
   const stopRecording = () => {
     if (recorderRef.current?.state === 'recording') {
