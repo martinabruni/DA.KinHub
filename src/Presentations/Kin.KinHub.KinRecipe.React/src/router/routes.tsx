@@ -10,8 +10,7 @@ import { RecipeBookDetailPage } from '@/features/recipes/pages/RecipeBookDetailP
 import { RecipeDetailPage } from '@/features/recipes/pages/RecipeDetailPage'
 import { FridgesPage } from '@/features/fridges/pages/FridgesPage'
 import { FridgeDetailPage } from '@/features/fridges/pages/FridgeDetailPage'
-import { ShoppingListsPage } from '@/features/shopping-lists/pages/ShoppingListsPage'
-import { ShoppingListDetailPage } from '@/features/shopping-lists/pages/ShoppingListDetailPage'
+import { ShoppingListsRedirect, ShoppingListDetailRedirect } from '@/features/shopping-lists/pages/ShoppingListRedirects'
 import { AIAssistantPage } from '@/features/ai-assistant/pages/AIAssistantPage'
 
 export const router = createBrowserRouter([
@@ -46,8 +45,8 @@ export const router = createBrowserRouter([
                   { path: '/recipe-books/:id/recipes/:recipeId', element: <RecipeDetailPage /> },
                   { path: '/fridges', element: <FridgesPage /> },
                   { path: '/fridges/:id', element: <FridgeDetailPage /> },
-                  { path: '/shopping-lists', element: <ShoppingListsPage /> },
-                  { path: '/shopping-lists/:id', element: <ShoppingListDetailPage /> },
+                  { path: '/shopping-lists', element: <ShoppingListsRedirect /> },
+                  { path: '/shopping-lists/:id', element: <ShoppingListDetailRedirect /> },
                   { path: '/ai-assistant', element: <AIAssistantPage /> },
                 ],
               },
