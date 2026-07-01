@@ -1,3 +1,5 @@
+using Kin.KinHub.Shared.Api.Common.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.Shared.Api.FamilyFeature;
@@ -30,13 +32,11 @@ public sealed class FamilyController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> CreateAsync(
         [FromBody] CreateFamilyRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -51,25 +51,21 @@ public sealed class FamilyController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _familyService.GetFamilyAsync(_currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("{familyId:guid}/members")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> AddMemberAsync(
         Guid familyId,
         [FromBody] AddFamilyMemberRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -84,29 +80,25 @@ public sealed class FamilyController : ControllerBase
     }
 
     [HttpDelete("{familyId:guid}/members/{memberId:guid}")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> DeleteMemberAsync(
         Guid familyId,
         Guid memberId,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _familyService.DeleteFamilyMemberAsync(familyId, memberId, _currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("{familyId:guid}/members/{memberId:guid}")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> UpdateMemberAsync(
         Guid familyId,
         Guid memberId,
         [FromBody] UpdateFamilyMemberRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -121,14 +113,12 @@ public sealed class FamilyController : ControllerBase
     }
 
     [HttpPatch("{familyId:guid}")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> UpdateFamilyAsync(
         Guid familyId,
         [FromBody] UpdateFamilyRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -143,13 +133,11 @@ public sealed class FamilyController : ControllerBase
     }
 
     [HttpDelete("{familyId:guid}")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> DeleteFamilyAsync(
         Guid familyId,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _familyService.DeleteFamilyAsync(familyId, _currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);

@@ -23,11 +23,17 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware
         if (context.User.Identity?.IsAuthenticated is true)
         {
             PopulateCurrentUserFromPrincipal(context, currentUser);
-            await TrySetFamilyContextAsync(currentUser, context.RequestAborted);
+            await TrySetFamilyContextAsync(context, currentUser, context.RequestAborted);
         }
 
         await next(context);
     }
+
+    /// <summary>
+    /// Key under which the family resolution status for the current request is stashed so
+    /// the authorization layer can distinguish "no family" (403) from "Core unavailable" (503).
+    /// </summary>
+    public const string FamilyAccessStatusItemKey = "kinhub.family-access-status";
 
     private static void PopulateCurrentUserFromPrincipal(HttpContext context, CurrentUser currentUser)
     {
@@ -49,14 +55,18 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware
         }
     }
 
-    private async Task TrySetFamilyContextAsync(CurrentUser currentUser, CancellationToken cancellationToken)
+    private async Task TrySetFamilyContextAsync(HttpContext context, CurrentUser currentUser, CancellationToken cancellationToken)
     {
         var familyResult = await _familyOwnershipService.GetCurrentFamilyAsync(currentUser.UserId, cancellationToken);
+        context.Items[FamilyAccessStatusItemKey] = familyResult.Status;
+
         if (!familyResult.IsSuccess || familyResult.Family is null)
         {
             return;
         }
 
+        // familyId is only ever set on the request-scoped principal from the repository/Core
+        // resolution here; it is never read from the JWT, route, or request body.
         currentUser.SetFamilyContext(familyResult.Family.Id);
         _logger.LogDebug("Resolved family context {FamilyId} for user {UserId}.", familyResult.Family.Id, currentUser.UserId);
     }

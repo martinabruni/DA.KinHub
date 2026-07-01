@@ -1,3 +1,5 @@
+using Kin.KinHub.Shared.Api.Common.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.Shared.Api.AccessFeature;
@@ -14,21 +16,10 @@ public sealed class AccessController : ControllerBase
     }
 
     [HttpGet("family-context")]
-    public IActionResult GetFamilyContext()
-    {
-        if (!_currentUser.IsAuthenticated)
-        {
-            return ApiProblemDetails.Unauthorized(this, "authentication_required", "Missing or invalid Authorization header.");
-        }
-
-        if (!_currentUser.HasFamilyContext)
-        {
-            return ApiProblemDetails.Forbidden(this, "family_required", "The authenticated user does not currently belong to a family.");
-        }
-
-        return Ok(new
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
+    public IActionResult GetFamilyContext() =>
+        Ok(new
         {
             familyId = _currentUser.FamilyId,
         });
-    }
 }

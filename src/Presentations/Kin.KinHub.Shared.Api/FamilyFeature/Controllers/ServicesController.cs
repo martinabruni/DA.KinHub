@@ -1,3 +1,5 @@
+using Kin.KinHub.Shared.Api.Common.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.Shared.Api.FamilyFeature;
@@ -21,38 +23,32 @@ public sealed class ServicesController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _serviceService.GetAllServicesAsync(cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpGet("family/{familyId:guid}")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> GetFamilyServicesAsync(
         Guid familyId,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _serviceService.GetFamilyServicesAsync(familyId, _currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("family/{familyId:guid}/toggle")]
+    [Authorize(Policy = FamilyContextRequirement.PolicyName)]
     public async Task<IActionResult> ToggleAsync(
         Guid familyId,
         [FromBody] ToggleFamilyServiceRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
