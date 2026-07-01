@@ -1,8 +1,28 @@
-# Piano completo — Kin List, Identity broker e rimozione MCP
+# Piano operativo per Claude — Kin List, Identity broker e rimozione MCP
 
-## 1. Strategia worktree e controllo qualità
+Ultimo aggiornamento: 30 giugno 2026.
 
-Creare un branch di integrazione `codex/kin-list` e un worktree separato per ogni task:
+Questo piano sostituisce la versione precedente orientata a Codex multi-agent. Da qui in avanti il documento deve essere eseguibile da Claude come implementatore principale, usando branch e worktree dedicati per task e una verifica finale esplicita `PASS` o `FAIL` basata su prove automatizzate.
+
+## Obiettivo
+
+Portare a completamento il programma Kin List + autenticazione, includendo:
+
+- broker OAuth/OIDC comune;
+- autorizzazione familiare centralizzata;
+- bounded context Kin List autonomo;
+- pipeline audio Speech + OpenAI;
+- nuova SPA Kin List;
+- estrazione completa da KinRecipe;
+- rimozione completa MCP;
+- migrazione dati, IaC, pipeline e verifica end-to-end finale.
+
+## Modalita di esecuzione per Claude
+
+- Leggere prima lo stato reale del repository e il `git status`; non assumere che la working tree sia pulita.
+- Non sovrascrivere o revertare modifiche locali non proprie.
+- Creare un branch di integrazione dedicato, ad esempio `claude/kin-list` oppure altro branch concordato, e far partire tutti i task da li.
+- Usare un worktree separato per ogni task, in una struttura equivalente a:
 
 ```text
 ../Kin.KinHub-worktrees/
@@ -14,262 +34,202 @@ Creare un branch di integrazione `codex/kin-list` e un worktree separato per ogn
   t06-integration/
 ```
 
-Regole operative:
+- Ogni worktree deve usare un branch task dedicato, ad esempio `claude/kin-list-t01-auth`, `claude/kin-list-t02-backend`, e cosi via.
+- Ogni task parte dall'ultimo commit approvato del branch di integrazione.
+- Se Claude esegue task in parallelo, non devono avanzare in parallelo task che modificano gli stessi file condivisi o contratti ancora instabili.
+- Congelare i contratti API prima di far avanzare il frontend in modo definitivo.
+- Segnare una checkbox come completata solo con evidenza verificabile: test automatizzati verdi, build verde, scansione verde o prova documentata nel codice.
+- Se un punto e parzialmente coperto, lasciarlo non spuntato e annotare il perimetro gia coperto.
+- Ogni task deve chiudersi con un mini-verdetto locale nel proprio worktree: `PASS` solo se requisiti, test pertinenti e assenza di regressioni sono confermati; altrimenti `FAIL` con gap espliciti.
+- Dopo `PASS` del task, creare un commit atomico e integrare nel branch di integrazione con merge non fast-forward oppure con la strategia di merge concordata, mantenendo comunque tracciabile il perimetro del task.
+- Prima della chiusura finale, rieseguire i gate trasversali e il pacchetto T07 completo.
 
-- Ogni task parte dall’ultimo commit approvato del branch di integrazione.
-- Ogni worktree usa un branch `codex/kin-list-tXX-*`.
-- Massimo due implementation agent contemporanei, riservando uno slot al judge.
-- Task che modificano gli stessi file condivisi non vengono eseguiti in parallelo.
-- Ogni agente esegue build e test pertinenti prima del giudizio.
-- Un agente LLM distinto, senza contesto delle decisioni implementative, esegue il judge leggendo requisiti, diff, test e file finali.
-- Il judge restituisce:
-  - `PASS` solo se requisiti, architettura, sicurezza, test e assenza di regressioni risultano completi;
-  - `FAIL` con elenco numerato di problemi bloccanti e prove mancanti.
-- In caso di `FAIL`, il task viene riaperto integralmente: l’implementation agent riesamina requisiti e diff, corregge, riesegue tutti i test e richiede un nuovo judge. Nessun merge finché non arriva `PASS`.
-- Il task non viene azzerato con operazioni distruttive: “ricominciare” significa ripetere l’intero ciclo requisiti → implementazione → verifica, preservando le correzioni valide.
-- Dopo `PASS`, commit atomico e merge `--no-ff` nel branch di integrazione.
-- Il task finale `t06` applica un ulteriore judge end-to-end sull’intero branch, indipendente dai judge dei singoli task.
+## Stato attuale verificato
 
-Rubrica obbligatoria del judge:
+Le seguenti evidenze risultano gia ottenute:
 
-1. Tutti i requisiti assegnati sono implementati.
-2. Build e test passano dal worktree pulito.
-3. API, schema e configurazione coincidono con il piano.
-4. Nessun segreto o contenuto utente viene loggato.
-5. Authorization familiare non è aggirabile.
-6. Retry, ETag e idempotenza non causano sovrascritture o duplicati.
-7. Il task non lascia codice MCP o dipendenze obsolete quando pertinente.
-8. Sono presenti test per happy path, errori e regressioni.
-9. Nessun TODO o implementazione simulata resta nel codice produttivo.
+- `dotnet test Kin.KinHub.Core.slnx -c Release --no-restore` verde.
+- `npm run lint` verde per Kin List React.
+- `npm run verify:auth-client` verde per Kin List React.
+- `npm test` verde per Kin List React con 5 test iniziali.
+- `npm run build` verde per Kin List React, con solo warning di chunk size.
+- Fix lint/react gia applicati in `AudioCaptureDialog` e `KinListDetailPage`.
+- Esiste una suite test iniziale SPA per `AudioCaptureDialog` e `draftSessionStore`.
 
-## 2. Sequenza dei task
+Queste evidenze non chiudono i task completi: coprono solo una parte dei gate trasversali e di T04.
 
-### T01 — Identity broker e authorization familiare
+## Sequenza obbligatoria
 
-Worktree: `t01-auth`. Deve completare prima di tutti gli altri.
+Ordine di esecuzione:
 
-- Trasformare KinHub Identity in broker OAuth/OIDC:
-  - provider locale KinHub/password dietro un’interfaccia provider;
-  - account KinHub stabile collegabile a più `UserProvider`;
-  - un provider può essere scollegato solo se ne resta almeno uno;
-  - nessun linking automatico basato solo sull’email;
-  - adapter futuri Google, GitHub ed Entra aggiungibili senza modificare Core, KinRecipe o KinList.
-- Implementare Authorization Code + PKCE:
-  - client e redirect URI registrati e validati;
-  - codice monouso, breve scadenza e singolo utilizzo;
-  - sessione Identity in cookie `HttpOnly`, `Secure`, con policy SameSite compatibile con redirect top-level;
-  - access token tenuto in memoria dalle SPA;
-  - nessun access token o refresh token in URL/localStorage;
-  - rinnovo tramite nuovo authorize silenzioso/top-level basato sulla sessione Identity;
-  - logout centralizzato.
-- Migrare Core, Identity e KinRecipe al client OAuth comune, eliminando il relay corrente.
-- Il JWT identifica l’utente ma non è fonte autoritativa del `familyId`.
-- Aggiungere in Core `GET /api/access/family-context`:
-  - usa il JWT dell’utente;
-  - legge l’appartenenza corrente;
-  - restituisce `familyId` oppure `403 family_required`;
-  - onboarding e creazione famiglia restano accessibili senza famiglia.
-- Creare middleware/authorization handler condiviso:
-  - Core risolve direttamente dal repository;
-  - KinRecipe e successivamente KinList propagano il bearer token a Core;
-  - nessuna cache, per garantire revoca immediata;
-  - Core non raggiungibile → fail closed con `503`;
-  - il `familyId` viene aggiunto solo al principal request-scoped;
-  - payload e route applicative non possono imporre un `familyId`.
-- Applicare la policy solo agli endpoint familiari; login, registrazione, OAuth e onboarding sono esclusi.
-- Standardizzare gli errori con RFC 9457 `ProblemDetails`, includendo `code`, `correlationId` ed errori di campo.
+1. `T01` prima di tutti gli altri.
+2. `T02` dopo il merge di `T01` nel branch di integrazione.
+3. `T03` e `T04` dopo il congelamento dei contratti di `T02`; possono usare worktree separati.
+4. `T05` dopo il merge di `T02` nel branch di integrazione.
+5. `T06` dopo `T05` e dopo la disponibilita degli output di `T02`.
+6. `T07` in un worktree di integrazione finale, solo quando `T01`-`T06` sono chiusi e mergiati.
 
-Gate: test di registrazione senza famiglia, creazione famiglia senza riemissione token, cambio/uscita con revoca immediata, Core indisponibile, PKCE invalido, code replay, redirect non autorizzato e linking provider.
+## Checklist integrata
 
-### T02 — Bounded context e API Kin List
+## Gate trasversali
 
-Worktree: `t02-kinlist-backend`, creato dal branch dopo T01.
+- [x] Rendere verde `dotnet test Kin.KinHub.Core.slnx -c Release --no-restore`.
+  Evidenza: eseguito con esito verde il 30 giugno 2026.
+- [x] Rendere verde `npm run lint` per Kin List React.
+  Evidenza: lint verde il 30 giugno 2026.
+- [x] Correggere e rendere verde `npm run verify:auth-client`.
+  Evidenza: script corretto e verifica verde il 30 giugno 2026.
+- [x] Introdurre una suite automatizzata iniziale per la SPA Kin List.
+  Evidenza: `npm test` verde con 5 test iniziali su dialog audio e draft session store.
+- [ ] Eseguire e documentare l'intero pacchetto finale richiesto da T07: build/test Release da checkout pulito, build di tutte le SPA, test PostgreSQL reale, migrazione da schema precedente, Bicep build, build immagini e scansioni finali.
 
-- Creare progetti separati Kin List: Domain, Business, PostgreSql, Speech/OpenAI e ASP.NET API Container App.
-- Spostare liste e item fuori da `RecipeFeature`; Kin List diventa unico proprietario.
-- Usare lo stesso PostgreSQL con schema dedicato `kinlist`.
-- Modello:
-  - lista: ID, famiglia, titolo, stato soft-delete, timestamp, versione;
-  - item: ID, lista, testo completo, stato completato, ordine di attivazione, soft-delete, timestamp, versione;
-  - idempotency record: chiave, famiglia/utente, hash payload, risultato e scadenza.
-- Limiti configurabili e validati all’avvio:
-  - audio 60 secondi e 10 MB;
-  - titolo 100 caratteri;
-  - item 200 caratteri;
-  - 100 item per lista;
-  - 50 item per registrazione;
-  - MIME consentiti: WebM, MP4/M4A e OGG;
-  - timeout, retry e cleanup idempotenza.
-- Comportamenti:
-  - liste condivise da tutti i membri della famiglia;
-  - nuovi item e item deselezionati in cima;
-  - item completati oscurati e in fondo;
-  - liste attive ordinate per ultima modifica;
-  - liste completate grigie e in fondo;
-  - deselezionare un item riattiva la lista;
-  - cancellazione lista/item soft-delete;
-  - endpoint restore per undo entro snackbar client di 5 secondi;
-  - ripristinare una lista conserva item e stati precedenti.
-- ETag/version:
-  - ogni mutazione richiede `If-Match`;
-  - mismatch → `409 etag_conflict`, senza retry;
-  - modifiche item aggiornano anche versione e timestamp della lista;
-  - item differenti possono essere aggiornati indipendentemente.
-- Retry:
-  - massimo tre tentativi solo per timeout, reset, `429`, `5xx` e codici PostgreSQL transienti;
-  - exponential backoff con jitter;
-  - deadlock/serialization retry dell’intera transazione;
-  - nessun retry su validation, authorization o ETag.
-- Creazione lista idempotente:
-  - `Idempotency-Key` obbligatoria;
-  - lista e item salvati in una transazione;
-  - stessa chiave e stesso hash restituiscono il risultato precedente;
-  - stessa chiave e payload diverso → `409`;
-  - retention 24 ore e cleanup configurabile.
+## T01 — Identity broker e authorization familiare
 
-API principali:
+Obiettivo:
+realizzare il broker OAuth/OIDC comune e una authorization familiare centralizzata, senza usare il JWT come fonte autoritativa del `familyId`.
 
-- `GET /api/lists`
-- `GET /api/lists/{id}`
-- `POST /api/lists`
-- `PATCH /api/lists/{id}`
-- `DELETE /api/lists/{id}`
-- `POST /api/lists/{id}/restore`
-- CRUD item e bulk confirm sotto `/api/lists/{id}/items`
-- `POST /api/list-drafts/from-audio`
-- `POST /api/lists/{id}/item-drafts/from-audio`
+Checklist:
 
-Gli endpoint audio ricevono `multipart/form-data` e non persistono dati.
+- [ ] Introdurre una vera interfaccia adapter per gli identity provider e implementare KinHub/password tramite tale adapter.
+- [ ] Modellare `UserProvider` con linking/unlinking esplicito: niente linking automatico per email e divieto di scollegare l'ultimo provider.
+- [ ] Implementare Authorization Code + PKCE con client/redirect validati, codice monouso a breve scadenza e protezioni anti-replay.
+- [ ] Usare sessione Identity in cookie `HttpOnly` + `Secure`, con policy `SameSite` compatibile con redirect top-level.
+- [ ] Tenere l'access token solo in memoria nelle SPA; nessun token in URL, `localStorage` o refresh token lato SPA.
+- [ ] Allineare il rinnovo SPA al piano: nuovo authorize silenzioso/top-level basato sulla sessione Identity.
+- [ ] Migrare Core, Identity, KinRecipe e KinList a un client OAuth comune, eliminando relay e duplicazioni.
+- [ ] Aggiungere in Core `GET /api/access/family-context` come fonte autoritativa del contesto famiglia.
+- [ ] Creare middleware/authorization handler condiviso request-scoped con fail closed a `503` se Core non e raggiungibile.
+- [ ] Impedire che payload o route applicative impongano il `familyId`.
+- [ ] Applicare la policy solo agli endpoint familiari; onboarding/login/registrazione/OAuth esclusi.
+- [ ] Uniformare gli errori applicativi a RFC 9457 `ProblemDetails` con `code`, `correlationId` ed errori di campo, salvo i punti in cui il protocollo OAuth impone altro formato.
+- [ ] Chiudere i gate di test: registrazione senza famiglia, creazione famiglia senza riemissione token, cambio/uscita con revoca immediata, Core indisponibile, PKCE invalido, code replay, redirect non autorizzato e linking provider.
 
-### T03 — Pipeline audio e prompt
+## T02 — Bounded context e API Kin List
 
-Incluso nello stesso worktree T02 per evitare contratti divergenti, ma con commit separato e judge dedicato.
+Obiettivo:
+separare definitivamente Kin List da KinRecipe/Core e completare l'API con concorrenza, retry e idempotenza verificati.
 
-- Provisionare adapter Azure AI Speech:
-  - rilevamento automatico lingua;
-  - trascrizione temporanea;
-  - audio mai salvato;
-  - nessun audio, trascrizione, titolo o item nei log.
-- Passare la trascrizione a `gpt-4o-mini` con structured output validato.
-- Prompt versionato e distribuito nel repository:
-  - accetta elenco diretto o richiesta esplicita;
-  - produce titolo breve e item;
-  - preserva lingua parlata;
-  - concatena quantità/unità nel testo, ad esempio `2 confezioni di latte`;
-  - non separa quantità in campi;
-  - deduplica solo testi identici dopo normalizzazione;
-  - quantità differenti restano item differenti.
-- Nuova lista: risposta `title`, `items`, `detectedLanguage`, `promptVersion`.
-- Lista esistente: restituisce proposte e duplicati esistenti; duplicati deselezionati di default.
-- Nessun item rilevato → `422 no_items_detected`.
-- Telemetria ammessa: byte, durata, lingua, latenze, esito, conteggio item, prompt version e correlation ID.
-- Testare Speech e OpenAI solo tramite mock/fake deterministici; nessun test chiama Azure.
+Checklist:
 
-### T04 — Static Web App Kin List
+- [ ] Creare i progetti separati Kin List: Domain, Business, PostgreSql, Speech/OpenAI e ASP.NET API Container App.
+- [ ] Spostare liste e item fuori da `RecipeFeature`; Kin List deve essere l'unico proprietario.
+- [ ] Usare PostgreSQL con schema dedicato `kinlist`.
+- [ ] Completare il modello lista/item/idempotency record secondo il piano.
+- [ ] Validare all'avvio tutti i limiti configurabili: audio 60 s/10 MB, titolo 100, item 200, 100 item/lista, 50 item/registrazione, MIME ammessi, timeout/retry/cleanup.
+- [ ] Implementare ordinamento, soft-delete, restore e comportamento condiviso per famiglia come da requisiti.
+- [ ] Imporre `If-Match` su ogni mutazione con `409 etag_conflict` su mismatch e senza retry.
+- [ ] Garantire che le mutazioni item aggiornino anche versione e timestamp della lista e che item differenti restino aggiornabili indipendentemente.
+- [ ] Implementare retry massimo 3 con exponential backoff + jitter solo per errori transienti ammessi.
+- [ ] Implementare creazione lista idempotente con `Idempotency-Key`, hash payload, retention 24 ore e cleanup configurabile.
+- [ ] Verificare con integration test tutti gli endpoint principali: liste, dettaglio, patch, delete, restore, CRUD item, bulk confirm e isolamento familiare.
+- [ ] Aggiungere test con PostgreSQL reale per transazioni, concorrenza, ordering, ETag e idempotenza.
+- [ ] Rimuovere `ShoppingListEntity` e `ShoppingListItemEntity` dal `CoreDbContext` e dal relativo snapshot quando il contract e pronto.
 
-Worktree: `t03-kinlist-frontend`, creato dopo il congelamento dei contratti T02; può procedere in parallelo con T03.
+## T03 — Pipeline audio e prompt
 
-- Creare React Static Web App mobile-first riusando design system e card esistenti.
-- Landing senza liste:
-  - grande pulsante microfono centrato;
-  - azione manuale sempre disponibile.
-- Landing con liste:
-  - griglia con layout delle card Kin Service;
-  - card con titolo, completati/totali, progress bar e menu;
-  - liste completate grigie e in fondo;
-  - piccolo pulsante microfono flottante centro-basso.
-- Registrazione:
-  - `MediaRecorder`, contatore e stop automatico a 60 secondi;
-  - supporto Safari iOS, Chrome Android e browser desktop correnti;
-  - permesso negato/non supportato → istruzioni e creazione manuale;
-  - nessun upload file alternativo;
-  - blob mantenuto solo in memoria per “Riprova” e poi eliminato.
-- Bozza:
-  - creazione manuale e audio usano la stessa pagina dettaglio;
-  - titolo e item modificabili;
-  - nessuna persistenza prima di “Salva”;
-  - conferma uscita se la bozza è modificata;
-  - creazione idempotente.
-- Dettaglio persistito:
-  - checklist, modifica/creazione/eliminazione item;
-  - completati oscurati e in fondo;
-  - undo lista/item per 5 secondi tramite restore server-side;
-  - audio aggiunge item tramite anteprima nello stesso dettaglio;
-  - conflitto ETag mostra avviso e ricarica dati.
-- Nessun realtime, offline o PWA.
-- Integrare Authorization Code + PKCE comune; nessuna selezione `activeMember`.
+Obiettivo:
+trascrivere audio senza persistenza, strutturare l'output con `gpt-4o-mini` e rendere il comportamento deterministico nei test.
 
-Gate: test componenti e flussi con API mock, permessi microfono, retry blob, draft dirty, undo, ordering, ETag conflict e responsive layout.
+Checklist:
 
-### T05 — Estrazione da KinRecipe, catalogo Core e rimozione MCP
+- [ ] Provisionare adapter Azure AI Speech con rilevamento lingua automatico e trascrizione solo temporanea.
+- [ ] Garantire che audio, trascrizione, titolo e item non vengano mai loggati.
+- [ ] Passare la trascrizione a `gpt-4o-mini` con structured output validato.
+- [ ] Versionare il prompt nel repository.
+- [ ] Verificare con test il comportamento del prompt: lingua preservata, quantita/unita concatenate nel testo, deduplica solo di testi identici dopo normalizzazione, quantita differenti mantenute separate.
+- [ ] Restituire per nuova lista `title`, `items`, `detectedLanguage`, `promptVersion`.
+- [ ] Per lista esistente, restituire proposte + duplicati esistenti con duplicati deselezionati di default.
+- [ ] Restituire `422 no_items_detected` quando non emergono item.
+- [ ] Limitare la telemetria a byte, durata, lingua, latenze, esito, conteggio item, prompt version e correlation ID.
+- [ ] Aggiungere test deterministici separati per adapter Speech/OpenAI con fake o mock; nessun test deve chiamare Azure.
 
-Worktree: `t04-cleanup`, dopo T02; non parallelo a task che modificano Shared API.
+## T04 — Static Web App Kin List
 
-- Registrare Kin List nel catalogo servizi Core e abilitarlo per tutte le famiglie esistenti e nuove.
-- Aggiungere URL Kin List al service launcher Core.
-- Rimuovere completamente shopping list da KinRecipe:
-  - dominio/business/repository/controller/UI non più proprietari;
-  - vecchie pagine redirigono a Kin List preservando l’ID.
-- Rimuovere MCP dall’intera codebase:
-  - endpoint, transport, handler, tool, package, configurazioni e test MCP;
-  - nessun proxy o compatibility tool.
-- Eliminare dal vecchio `CoreDbContext` il mapping proprietario delle liste dopo l’introduzione del nuovo contesto.
-- Mantenere solo i redirect web compatibili; le vecchie API shopping-list non restano supportate.
+Obiettivo:
+consegnare una SPA Kin List autonoma, mobile-first, integrata col nuovo auth flow e priva di residui legacy.
 
-Gate: ricerca repository senza riferimenti MCP produttivi, build completa, redirect lista e dettaglio, catalogo/assegnazioni famiglia e assenza di accesso KinRecipe alle tabelle Kin List.
+Checklist:
 
-### T06 — Migrazione dati, IaC e pipeline
+- [ ] Creare la Static Web App React mobile-first riusando design system e card esistenti.
+- [ ] Implementare landing senza liste con grande pulsante microfono centrato e azione manuale sempre disponibile.
+- [ ] Implementare landing con liste: griglia card, progress bar, menu, completed in fondo e microfono flottante.
+- [ ] Implementare registrazione con `MediaRecorder`, contatore e stop automatico a 60 secondi, coprendo Safari iOS, Chrome Android e desktop correnti.
+- [ ] Gestire permesso negato o browser non supportato con istruzioni e creazione manuale, senza upload alternativi.
+- [ ] Mantenere il blob solo in memoria per `Riprova` e poi eliminarlo.
+- [ ] Usare la stessa pagina dettaglio per creazione manuale e audio.
+- [ ] Evitare qualsiasi persistenza della bozza prima di `Salva`.
+- [ ] Mostrare conferma uscita se la bozza e modificata.
+- [ ] Usare creazione idempotente.
+- [ ] Nel dettaglio persistito: checklist, CRUD item, completed in fondo, undo server-side 5 secondi, audio -> anteprima nello stesso dettaglio, gestione conflitto ETag con avviso e reload.
+- [ ] Integrare Authorization Code + PKCE comune, senza `activeMember`.
+- [ ] Eliminare dalla SPA il codice copiato non pertinente e i residui legacy non piu usati.
+- [ ] Sostituire le chiamate legacy `/api/shopping-lists` con `/api/lists` o rimuovere il codice morto.
+- [x] Correggere gli errori lint specifici di `AudioCaptureDialog` e `KinListDetailPage`.
+  Evidenza: fix gia applicati e lint verde.
+- [x] Introdurre test iniziali SPA per dialog audio e draft session store.
+  Evidenza: `AudioCaptureDialog.test.tsx` e `draftSessionStore.test.ts` presenti, `npm test` verde con 5 test.
+- [ ] Estendere i test componenti/flussi con API mock per empty/list landing, creazione manuale/audio, draft condiviso, dirty navigation, retry blob, ordering, undo 5 secondi, conflitto ETag e responsive layout.
+- [ ] Estendere i test MediaRecorder per permesso negato, API non supportata, stop automatico 60 secondi, MIME/browser supportati, retry in memoria e rilascio del blob.
+- [ ] Verificare che non esistano realtime, offline o PWA.
 
-Worktree: `t05-infrastructure`, dopo T02 e T05.
+## T05 — Estrazione da KinRecipe, catalogo Core e rimozione MCP
 
-- Migration expand/contract:
-  1. spostare transazionalmente tabelle e dati da `kinrecipe` a `kinlist`;
-  2. creare view PostgreSQL aggiornabili con i vecchi nomi nello schema `kinrecipe`;
-  3. distribuire Kin List;
-  4. distribuire redirect/rimozione vecchie API;
-  5. rimuovere le view solo nel rilascio successivo.
-- Creare migration history separata per `KinListDbContext`.
-- Aggiungere Container Apps Job di migration, eseguito una volta prima dell’attivazione della revisione; vietato `Database.Migrate()` nelle replica applicative.
-- Estendere `main.bicep`:
-  - Kin List Static Web App;
-  - Kin List Container App;
-  - Azure AI Speech;
-  - migration job;
-  - managed identities;
-  - Key Vault references e ruoli RBAC;
-  - origin CORS;
-  - nomi deployment/modello;
-  - tutti i limiti, timeout, retry, retention e delay definiti sopra.
-- Spostare segreti di database, Speech, OpenAI e registry a Key Vault references. Nessun segreto duplicato come valore inline nelle Container App.
-- Aggiornare pipeline backend:
-  - build/test nuovi progetti;
-  - immagini Kin List e migration;
-  - Bicep build/what-if;
-  - migration job prima del rollout;
-  - deploy dev e poi prod.
-- Aggiornare pipeline frontend:
-  - matrice build con Kin List;
-  - variabili URL OAuth/API;
-  - deploy Static Web App dev/prod.
-- Aggiornare solution e parametri di deployment; `main.json` viene rigenerato da Bicep, non modificato manualmente.
+Obiettivo:
+chiudere il passaggio di proprieta a Kin List e rimuovere definitivamente MCP e le vecchie superfici shopping list.
 
-Gate: Bicep build, build immagini, dry-run migration su database temporaneo, verifica rollback con view compatibili e controllo che i secret non compaiano nelle revisioni Container App.
+Checklist:
 
-### T07 — Integrazione end-to-end e judge finale
+- [ ] Registrare Kin List nel catalogo servizi Core.
+- [ ] Abilitare Kin List automaticamente per tutte le famiglie esistenti e nuove.
+- [ ] Aggiungere l'URL Kin List al service launcher Core.
+- [ ] Rimuovere completamente shopping list da KinRecipe/Core: dominio, business, repository, controller, validator, UI e accessi dati.
+- [ ] Trasformare le vecchie pagine KinRecipe in redirect verso Kin List preservando l'ID.
+- [ ] Rimuovere le vecchie API shopping-list; niente endpoint di compatibilita.
+- [ ] Rimuovere MCP da endpoint, transport, handler, tool, package, configurazioni e test.
+- [ ] Eseguire una scansione repository/CI che garantisca l'assenza di riferimenti MCP produttivi.
+- [ ] Verificare con test launcher/catalogo, assegnazione alle famiglie e redirect lista/dettaglio.
 
-Worktree: `t06-integration`, creato dal branch con tutti i task approvati.
+Nota:
+ignorare via ESLint moduli legacy copiati non equivale a chiudere questo task. La rimozione reale del codice legacy resta aperta.
 
-- Risolvere conflitti solo nel branch di integrazione; nessun fix viene fatto direttamente nei branch task già giudicati.
-- Eseguire:
-  - restore/build/test .NET Release;
-  - build di tutte le SPA;
-  - test migration da schema precedente con dati campione;
-  - test auth PKCE e family-context;
-  - test API Kin List con PostgreSQL reale di test;
-  - test audio con mock Speech/OpenAI;
-  - Bicep build;
-  - scansione assenza MCP, token relay, segreti e logging contenuti.
-- Scenario end-to-end:
+## T06 — Migrazione dati, IaC e pipeline
+
+Obiettivo:
+portare in produzione Kin List con migrazione expand/contract, risorse Azure dedicate e pipeline complete.
+
+Checklist:
+
+- [ ] Implementare la migration expand/contract: spostamento transazionale da `kinrecipe` a `kinlist`.
+- [ ] Creare view PostgreSQL aggiornabili con i vecchi nomi nello schema `kinrecipe`.
+- [ ] Pianificare la rimozione delle view solo nel rilascio successivo.
+- [ ] Creare migration history separata per `KinListDbContext`.
+- [ ] Aggiungere un Container Apps Job di migration eseguito una volta prima dell'attivazione della revisione.
+- [ ] Verificare assenza di `Database.Migrate()` nelle repliche applicative.
+- [ ] Estendere `main.bicep` con Static Web App Kin List, Container App Kin List, Azure AI Speech, migration job, managed identities, Key Vault references, RBAC, CORS, modello e tutti i parametri operativi richiesti.
+- [ ] Spostare i segreti di database, Speech, OpenAI e registry a Key Vault references, senza valori inline nelle Container App.
+- [ ] Aggiornare la pipeline backend per build/test nuovi progetti, immagini Kin List/migration, Bicep build/what-if, migration job pre-rollout e deploy dev -> prod.
+- [ ] Aggiornare la pipeline frontend con matrice Kin List, variabili URL OAuth/API e deploy Static Web App dev/prod.
+- [ ] Aggiornare solution e parametri deployment; `main.json` va rigenerato da Bicep e non editato a mano.
+- [ ] Aggiungere dry-run migration su database temporaneo con dati campione, verifica rollback e verifica compatibilita tramite view.
+- [ ] Verificare che i secret non compaiano nelle revisioni Container App.
+
+## T07 — Integrazione end-to-end e review finale
+
+Obiettivo:
+rieseguire tutto il sistema integrato e chiudere il programma solo con un verdetto finale motivato.
+
+Checklist:
+
+- [ ] Risolvere eventuali conflitti solo sul branch di integrazione finale.
+- [ ] Eseguire restore/build/test .NET Release completi.
+- [ ] Eseguire build di tutte le SPA.
+- [ ] Eseguire test migration da schema precedente con dati campione.
+- [ ] Eseguire test auth PKCE e `family-context`.
+- [ ] Eseguire test API Kin List con PostgreSQL reale di test.
+- [ ] Eseguire test audio con mock Speech/OpenAI.
+- [ ] Eseguire `bicep build`.
+- [ ] Eseguire scansioni finali per assenza di MCP, token relay, segreti e logging di contenuti utente.
+- [ ] Automatizzare o verificare integralmente lo scenario end-to-end:
   1. registrazione senza famiglia;
   2. onboarding e creazione famiglia senza nuovo token;
   3. apertura Kin List dal Core;
@@ -280,17 +240,20 @@ Worktree: `t06-integration`, creato dal branch con tutti i task approvati.
   8. modifica concorrente con `409`;
   9. cambio/uscita famiglia con revoca immediata;
   10. redirect da vecchia URL KinRecipe.
-- Eseguire judge finale indipendente sull’intero diff. Ogni `FAIL` riapre T07 e, se necessario, il task proprietario della regressione; ripetere build, test e judge fino a `PASS`.
+- [ ] Emettere un verdetto finale `PASS` o `FAIL` sull'intero diff.
 
-## 3. Assunzioni bloccate
+Regola di chiusura:
+`PASS` finale solo se tutti i punti sopra sono chiusi con prove. Qualsiasi gap residuo mantiene il programma in `FAIL`.
 
-- “Function” indica una nuova API ASP.NET in Azure Container Apps, non Azure Functions.
-- Kin List è l’unico proprietario delle liste.
-- Liste condivise per famiglia; stessi permessi per tutti.
-- Rilascio diretto a tutte le famiglie, senza feature flag.
+## Assunzioni bloccate
+
+- `Function` significa nuova API ASP.NET in Azure Container Apps, non Azure Functions.
+- Kin List e l'unico proprietario delle liste.
+- Le liste sono condivise per famiglia con stessi permessi per tutti i membri.
+- Il rilascio e diretto a tutte le famiglie, senza feature flag.
 - Nessun realtime, streaming audio, storage audio, offline o PWA.
-- Azure Speech esegue trascrizione; `gpt-4o-mini` struttura i dati.
-- Nessuna integrazione Azure Speech reale nei test.
-- Identity locale è il primo provider del broker; Google/GitHub/Entra non vengono implementati ora, ma l’architettura deve accoglierli tramite adapter.
-- L’immediatezza della revoca prevale sulla disponibilità: Core non raggiungibile comporta `503`.
-- Le view di compatibilità restano per un ciclo di rilascio.
+- Azure Speech trascrive; `gpt-4o-mini` struttura i dati.
+- Nessun test usa Azure Speech reale.
+- Identity locale e il primo provider del broker; Google/GitHub/Entra non si implementano ora ma devono essere supportabili via adapter.
+- In caso di indisponibilita di Core, prevale la revoca immediata: fail closed con `503`.
+- Le view di compatibilita restano per un ciclo di rilascio.

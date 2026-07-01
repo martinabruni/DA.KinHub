@@ -59,17 +59,7 @@ export function AudioCaptureDialog({
 
   const mimeType = useMemo(() => pickSupportedMimeType(), [])
 
-  useEffect(() => {
-    if (!open) {
-      resetCapture()
-    }
-
-    return () => {
-      resetCapture()
-    }
-  }, [open])
-
-  const cleanupMedia = () => {
+  function disposeMedia() {
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current)
       timeoutRef.current = null
@@ -84,23 +74,42 @@ export function AudioCaptureDialog({
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
     chunksRef.current = []
+  }
+
+  function cleanupMedia() {
+    disposeMedia()
     setIsRecording(false)
   }
 
-  const resetCapture = () => {
-    cleanupMedia()
+  function resetCapture() {
+    disposeMedia()
     setBlob(null)
     setError(null)
     setElapsedSeconds(0)
+    setIsRecording(false)
     setIsSubmitting(false)
   }
 
-  const stopRecording = () => {
+  useEffect(() => {
+    return () => {
+      disposeMedia()
+    }
+  }, [])
+
+  function stopRecording() {
     if (recorderRef.current?.state === 'recording') {
       recorderRef.current.stop()
     } else {
       cleanupMedia()
     }
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetCapture()
+    }
+
+    onOpenChange(nextOpen)
   }
 
   const startRecording = async () => {
@@ -172,7 +181,7 @@ export function AudioCaptureDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -228,7 +237,7 @@ export function AudioCaptureDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" onClick={confirmAudio} disabled={!blob || isSubmitting}>

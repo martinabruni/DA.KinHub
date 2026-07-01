@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { Check, Loader2, Mic, PencilLine, Plus, RotateCcw, Save, Trash2, X } from 'lucide-react'
@@ -39,7 +39,8 @@ export function KinListDetailPage() {
   const isDraftMode = !id
 
   const draftSession = isDraftMode ? readDraftSession() : null
-  const [title, setTitle] = useState(draftSession?.title ?? '')
+  const [draftTitle, setDraftTitle] = useState(draftSession?.title ?? '')
+  const [persistedTitleDraft, setPersistedTitleDraft] = useState<string | null>(null)
   const [draftItems, setDraftItems] = useState<EditableDraftItem[]>(draftSession?.items ?? [])
   const [newItemText, setNewItemText] = useState('')
   const [appendAudioOpen, setAppendAudioOpen] = useState(false)
@@ -49,13 +50,13 @@ export function KinListDetailPage() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editingItemText, setEditingItemText] = useState('')
 
-  const confirmDiscardDraft = () => {
+  const confirmDiscardDraft = useCallback(() => {
     if (!dirty) {
       return true
     }
 
     return window.confirm('Discard this draft and lose the unsaved changes?')
-  }
+  }, [dirty])
 
   useEffect(() => {
     if (isDraftMode && !draftSession) {
@@ -79,7 +80,7 @@ export function KinListDetailPage() {
     }
 
     draftBlocker.reset()
-  }, [draftBlocker])
+  }, [confirmDiscardDraft, draftBlocker])
 
   useEffect(() => {
     if (!dirty) {
@@ -104,20 +105,19 @@ export function KinListDetailPage() {
     },
   })
 
-  useEffect(() => {
-    if (!isDraftMode && detailQuery.data) {
-      setTitle(detailQuery.data.title)
-      setDirty(false)
-    }
-  }, [detailQuery.data, isDraftMode])
-
   const handleConflict = async () => {
     toast.error('This list changed elsewhere. Reloading the latest version.')
     setEditingItemId(null)
     setEditingItemText('')
+    setPersistedTitleDraft(null)
+    setDirty(false)
     await queryClient.invalidateQueries({ queryKey: ['kin-list-detail', id] })
     await queryClient.invalidateQueries({ queryKey: ['kin-lists'] })
   }
+
+  const title = isDraftMode
+    ? draftTitle
+    : persistedTitleDraft ?? detailQuery.data?.title ?? ''
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -154,6 +154,7 @@ export function KinListDetailPage() {
     onSuccess: (data) => {
       queryClient.setQueryData(['kin-list-detail', data.id], data)
       queryClient.invalidateQueries({ queryKey: ['kin-lists'] })
+      setPersistedTitleDraft(null)
       setDirty(false)
     },
     onError: async (error) => {
@@ -353,7 +354,7 @@ export function KinListDetailPage() {
             <Input
               value={title}
               onChange={(event) => {
-                setTitle(event.target.value)
+                setDraftTitle(event.target.value)
                 setDirty(true)
               }}
               placeholder="List title"
@@ -456,7 +457,7 @@ export function KinListDetailPage() {
             })
 
             const audioDraft = createDraftFromAudio({
-              title: title.trim() || data.title,
+              title: draftTitle.trim() || data.title,
               items: data.items,
               detectedLanguage: data.detectedLanguage,
               promptVersion: data.promptVersion,
@@ -466,11 +467,11 @@ export function KinListDetailPage() {
             const mergedItems = [...draftItems, ...audioDraft.items]
             saveDraftSession({
               ...audioDraft,
-              title: title.trim() || audioDraft.title,
+              title: draftTitle.trim() || audioDraft.title,
               items: mergedItems,
             })
 
-            setTitle((current) => current.trim() || data.title)
+            setDraftTitle((current) => current.trim() || data.title)
             setDraftItems(mergedItems)
             setDirty(true)
           }}
@@ -499,7 +500,7 @@ export function KinListDetailPage() {
             <Input
               value={title}
               onChange={(event) => {
-                setTitle(event.target.value)
+                setPersistedTitleDraft(event.target.value)
                 setDirty(true)
               }}
             />
