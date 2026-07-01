@@ -185,6 +185,15 @@ public sealed class FamilyServiceCharacterizationTests
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
+            },
+            new KinHubService
+            {
+                Id = 3,
+                Name = "KinList",
+                BaseUrl = "/kin-list",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
             });
         var service = CreateFamilyService(families, members, serviceCatalog, familyServices);
 
@@ -202,7 +211,8 @@ public sealed class FamilyServiceCharacterizationTests
         Assert.Contains(members.Items.Values, member => member.Name == "Martina");
         Assert.Contains(members.Items.Values, member => member.Name == "Luca");
         Assert.Contains(members.Items.Values, member => member.Name == "Giulia");
-        Assert.Equal(2, familyServices.Items.Count);
+        Assert.Equal(3, familyServices.Items.Count);
+        Assert.Contains(familyServices.Items.Values, assignment => assignment.ServiceId == 3);
         Assert.All(familyServices.Items.Values, assignment => Assert.True(assignment.IsActive));
     }
 
