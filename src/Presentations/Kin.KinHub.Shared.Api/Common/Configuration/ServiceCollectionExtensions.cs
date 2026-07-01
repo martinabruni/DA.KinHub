@@ -1,6 +1,9 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
+using Kin.KinHub.Shared.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -78,9 +81,35 @@ public static class ServiceCollectionExtensions
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(effectiveJwtSecret)),
                     ClockSkew = TimeSpan.Zero,
                 };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        // Emit a uniform RFC 9457 problem detail instead of the default empty 401 body.
+                        context.HandleResponse();
+                        return ApiProblemDetails.WriteAsync(
+                            context.HttpContext,
+                            StatusCodes.Status401Unauthorized,
+                            "authentication_required",
+                            "Missing or invalid Authorization header.");
+                    },
+                    OnForbidden = context => ApiProblemDetails.WriteAsync(
+                        context.HttpContext,
+                        StatusCodes.Status403Forbidden,
+                        "forbidden",
+                        "You do not have access to this resource."),
+                };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(
+                FamilyContextRequirement.PolicyName,
+                policy => policy.Requirements.Add(new FamilyContextRequirement()));
+        });
+        services.AddScoped<IAuthorizationHandler, FamilyContextAuthorizationHandler>();
+        services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
         services.AddSingleton<IOAuthClientStore>(_ => new InMemoryOAuthClientStore(oauthOptions));

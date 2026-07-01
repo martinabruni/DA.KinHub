@@ -141,9 +141,14 @@ public sealed class AuthenticationServiceCharacterizationTests
 
         var loginResponseFactory = new LoginResponseFactory(tokenGenerator, refreshTokenRepository);
 
+        var providerRegistry = new IdentityProviderRegistry(new IIdentityProvider[]
+        {
+            new KinHubPasswordIdentityProvider(userRepository, credentialRepository, userProviderRepository, passwordHasher),
+        });
+
         return new KinHubAuthenticationService(
-            new RegisterUserHandler(userRepository, credentialRepository, userProviderRepository, passwordHasher),
-            new LoginUserHandler(userRepository, credentialRepository, passwordHasher, loginResponseFactory),
+            new RegisterUserHandler(providerRegistry),
+            new LoginUserHandler(providerRegistry, loginResponseFactory),
             new RefreshTokenHandler(refreshTokenRepository, userRepository, loginResponseFactory),
             new LogoutUserHandler(refreshTokenRepository),
             new GetCurrentUserHandler(userRepository),
@@ -809,6 +814,20 @@ internal sealed class InMemoryUserProviderRepository : IUserProviderRepository
         _ = GetAsync(key);
         Items[key] = model;
         return Task.FromResult(model);
+    }
+
+    public Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId)
+    {
+        IReadOnlyList<UserProvider> matches = Items.Values
+            .Where(x => x.UserId == userId)
+            .ToList();
+        return Task.FromResult(matches);
+    }
+
+    public Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId)
+    {
+        var match = Items.Values.FirstOrDefault(x => x.UserId == userId && x.ProviderId == providerId);
+        return Task.FromResult(match);
     }
 }
 

@@ -12,14 +12,13 @@ namespace Kin.KinHub.Shared.Api.AuthenticationFeature;
 [Route("")]
 public sealed class OAuthController : ControllerBase
 {
-    private static readonly string[] SupportedGrantTypes = ["authorization_code", "refresh_token"];
+    private static readonly string[] SupportedGrantTypes = ["authorization_code"];
     private static readonly string[] SupportedResponseTypes = ["code"];
     private const string SessionCookiePath = "/";
 
     private readonly IAuthenticationService _authenticationService;
     private readonly IOAuthClientStore _clientStore;
     private readonly IOAuthAuthorizationCodeStore _authorizationCodeStore;
-    private readonly IOAuthRefreshTokenScopeStore _refreshTokenScopeStore;
     private readonly IOAuthIdentitySessionStore _identitySessionStore;
     private readonly ITokenGenerator _tokenGenerator;
     private readonly ITokenValidator _tokenValidator;
@@ -29,7 +28,6 @@ public sealed class OAuthController : ControllerBase
         IAuthenticationService authenticationService,
         IOAuthClientStore clientStore,
         IOAuthAuthorizationCodeStore authorizationCodeStore,
-        IOAuthRefreshTokenScopeStore refreshTokenScopeStore,
         IOAuthIdentitySessionStore identitySessionStore,
         ITokenGenerator tokenGenerator,
         ITokenValidator tokenValidator,
@@ -38,7 +36,6 @@ public sealed class OAuthController : ControllerBase
         _authenticationService = authenticationService;
         _clientStore = clientStore;
         _authorizationCodeStore = authorizationCodeStore;
-        _refreshTokenScopeStore = refreshTokenScopeStore;
         _identitySessionStore = identitySessionStore;
         _tokenGenerator = tokenGenerator;
         _tokenValidator = tokenValidator;
@@ -70,7 +67,7 @@ public sealed class OAuthController : ControllerBase
 
         if (request.GrantTypes.Length is 0)
         {
-            request.GrantTypes = ["authorization_code", "refresh_token"];
+            request.GrantTypes = ["authorization_code"];
         }
 
         if (request.ResponseTypes.Length is 0)
@@ -80,7 +77,7 @@ public sealed class OAuthController : ControllerBase
 
         if (!request.GrantTypes.All(SupportedGrantTypes.Contains))
         {
-            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only authorization_code and refresh_token grant types are supported."));
+            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only the authorization_code grant type is supported."));
         }
 
         if (!request.ResponseTypes.All(SupportedResponseTypes.Contains))
@@ -274,7 +271,7 @@ public sealed class OAuthController : ControllerBase
     [HttpPost("token")]
     [Consumes("application/x-www-form-urlencoded")]
     [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
-    public async Task<IActionResult> TokenAsync([FromForm] OAuthTokenRequest request, CancellationToken cancellationToken)
+    public IActionResult Token([FromForm] OAuthTokenRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ClientId)
             || !_clientStore.TryGet(request.ClientId, out var client)
@@ -285,8 +282,7 @@ public sealed class OAuthController : ControllerBase
 
         return request.GrantType switch
         {
-            "authorization_code" => ExchangeAuthorizationCodeAsync(request, client),
-            "refresh_token" => await ExchangeRefreshTokenAsync(request, client, cancellationToken),
+            "authorization_code" => ExchangeAuthorizationCode(request, client),
             _ => BadRequest(CreateOAuthError("unsupported_grant_type", "The requested grant_type is not supported.")),
         };
     }
@@ -306,42 +302,7 @@ public sealed class OAuthController : ControllerBase
         return NoContent();
     }
 
-    private async Task<IActionResult> ExchangeRefreshTokenAsync(OAuthTokenRequest request, OAuthRegisteredClient client, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
-        {
-            return BadRequest(CreateOAuthError("invalid_request", "refresh_token is required."));
-        }
-
-        if (!_refreshTokenScopeStore.TryGet(request.RefreshToken, out var grantedScope) || string.IsNullOrWhiteSpace(grantedScope))
-        {
-            return BadRequest(CreateOAuthError("invalid_grant", "Refresh token was not issued for this OAuth flow."));
-        }
-
-        if (!TryNormalizeGrantedScope(request.Scope, client.Scope, grantedScope, out var resolvedScope, out var errorResult))
-        {
-            return errorResult!;
-        }
-
-        var result = await _authenticationService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
-        if (!result.IsSuccess || result.Value is null)
-        {
-            return BadRequest(CreateOAuthError("invalid_grant", result.Message ?? "Invalid refresh token."));
-        }
-
-        try
-        {
-            _refreshTokenScopeStore.Replace(request.RefreshToken, result.Value.RefreshToken, resolvedScope);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
-        }
-
-        return Ok(CreateScopedTokenResponse(result.Value, resolvedScope));
-    }
-
-    private IActionResult ExchangeAuthorizationCodeAsync(OAuthTokenRequest request, OAuthRegisteredClient client)
+    private IActionResult ExchangeAuthorizationCode(OAuthTokenRequest request, OAuthRegisteredClient client)
     {
         if (string.IsNullOrWhiteSpace(request.Code)
             || string.IsNullOrWhiteSpace(request.RedirectUri)
@@ -366,7 +327,7 @@ public sealed class OAuthController : ControllerBase
             return BadRequest(CreateOAuthError("invalid_grant", "PKCE verification failed."));
         }
 
-        return Ok(CreateScopedTokenResponse(ticket.LoginResponse, ticket.Scope, includeRefreshToken: false));
+        return Ok(CreateScopedTokenResponse(ticket.LoginResponse, ticket.Scope));
     }
 
     private bool TryValidateAuthorizationRequest(
@@ -543,9 +504,6 @@ public sealed class OAuthController : ControllerBase
     }
 
     private object CreateScopedTokenResponse(LoginResponse response, string scope)
-        => CreateScopedTokenResponse(response, scope, includeRefreshToken: true);
-
-    private object CreateScopedTokenResponse(LoginResponse response, string scope, bool includeRefreshToken)
     {
         var claims = _tokenValidator.ValidateAccessToken(response.AccessToken);
         if (claims is null)
@@ -567,18 +525,9 @@ public sealed class OAuthController : ControllerBase
             claims.Roles,
             scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
-        if (includeRefreshToken)
-        {
-            return new
-            {
-                access_token = accessToken,
-                token_type = "Bearer",
-                expires_in = response.ExpiresIn,
-                refresh_token = response.RefreshToken,
-                scope,
-            };
-        }
-
+        // No refresh_token is issued: the refresh_token grant has been removed. SPAs renew
+        // access tokens by performing a silent top-level authorize against the identity
+        // session cookie.
         return new
         {
             access_token = accessToken,

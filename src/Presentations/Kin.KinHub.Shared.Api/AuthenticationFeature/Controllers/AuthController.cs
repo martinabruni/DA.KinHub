@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,6 +14,7 @@ public sealed class AuthController : ControllerBase
     private readonly IRequestValidator<RefreshRequest> _refreshValidator;
     private readonly IRequestValidator<UpdateUserEmailRequest> _updateEmailValidator;
     private readonly IRequestValidator<UpdateUserPasswordRequest> _updatePasswordValidator;
+    private readonly IUserProviderService _userProviderService;
     private readonly ICurrentUser _currentUser;
 
     public AuthController(
@@ -22,6 +24,7 @@ public sealed class AuthController : ControllerBase
         IRequestValidator<RefreshRequest> refreshValidator,
         IRequestValidator<UpdateUserEmailRequest> updateEmailValidator,
         IRequestValidator<UpdateUserPasswordRequest> updatePasswordValidator,
+        IUserProviderService userProviderService,
         ICurrentUser currentUser)
     {
         _authService = authService;
@@ -30,6 +33,7 @@ public sealed class AuthController : ControllerBase
         _refreshValidator = refreshValidator;
         _updateEmailValidator = updateEmailValidator;
         _updatePasswordValidator = updatePasswordValidator;
+        _userProviderService = userProviderService;
         _currentUser = currentUser;
     }
 
@@ -88,11 +92,9 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpGet("me")]
+    [Authorize]
     public async Task<IActionResult> MeAsync(CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _authService.GetCurrentUserAsync(_currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
@@ -117,13 +119,11 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPut("me/email")]
+    [Authorize]
     public async Task<IActionResult> UpdateEmailAsync(
         [FromBody] UpdateUserEmailRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -138,13 +138,11 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPut("me/password")]
+    [Authorize]
     public async Task<IActionResult> UpdatePasswordAsync(
         [FromBody] UpdateUserPasswordRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -159,12 +157,44 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpDelete("me")]
+    [Authorize]
     public async Task<IActionResult> DeleteAccountAsync(CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _authService.DeleteUserAsync(_currentUser.UserId, cancellationToken);
+
+        return HttpResultMapper.ToActionResult(this, result);
+    }
+
+    [HttpGet("me/providers")]
+    [Authorize]
+    public async Task<IActionResult> GetProvidersAsync(CancellationToken cancellationToken)
+    {
+        var result = await _userProviderService.GetProvidersAsync(_currentUser.UserId, cancellationToken);
+
+        return HttpResultMapper.ToActionResult(this, result);
+    }
+
+    [HttpPost("me/providers")]
+    [Authorize]
+    public async Task<IActionResult> LinkProviderAsync(
+        [FromBody] LinkProviderRequest? request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null)
+            return ApiProblemDetails.InvalidRequestBody(this);
+
+        var result = await _userProviderService.LinkAsync(_currentUser.UserId, request, cancellationToken);
+
+        return HttpResultMapper.ToActionResult(this, result);
+    }
+
+    [HttpDelete("me/providers/{provider}")]
+    [Authorize]
+    public async Task<IActionResult> UnlinkProviderAsync(
+        IdentityProviderType provider,
+        CancellationToken cancellationToken)
+    {
+        var result = await _userProviderService.UnlinkAsync(_currentUser.UserId, provider, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
