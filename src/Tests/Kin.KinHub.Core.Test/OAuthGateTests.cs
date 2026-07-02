@@ -1,4 +1,4 @@
-using Kin.KinHub.Shared.Api.AuthenticationFeature;
+using Kin.KinHub.Identity.Api.AuthenticationFeature;
 using Kin.KinHub.Shared.Api.Common.Configuration;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;

@@ -5,6 +5,11 @@ using Kin.KinHub.Identity.Domain.Common;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
 using Kin.KinHub.KinList.Domain.KinListFeature;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -25,6 +30,7 @@ namespace Kin.KinHub.Core.Test;
 /// </summary>
 public sealed class KinListApiFactory : WebApplicationFactory<KinListApiProgram>
 {
+    private const string TestJwtSecret = "integration-only-kinhub-jwt-secret-000000000001";
     public static readonly Guid FamilyA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     public static readonly Guid FamilyB = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     public static readonly Guid UserId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
@@ -41,6 +47,29 @@ public sealed class KinListApiFactory : WebApplicationFactory<KinListApiProgram>
 
     public ConfigurableAudioDraftGenerator AudioGenerator { get; } = new();
 
+    public new HttpClient CreateClient()
+    {
+        var client = base.CreateClient();
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestJwtSecret)),
+            SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            issuer: "http://localhost",
+            audience: "kinhub.api",
+            claims:
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, UserId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, "integration@kinhub.dev"),
+                new Claim("scope", "kinhub.api"),
+            ],
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: credentials);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            new JwtSecurityTokenHandler().WriteToken(token));
+        return client;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -52,8 +81,8 @@ public sealed class KinListApiFactory : WebApplicationFactory<KinListApiProgram>
         // connection is ever opened because the repositories are replaced below.
         Environment.SetEnvironmentVariable("KINHUB_ConnectionStrings__KinHub", "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub");
         Environment.SetEnvironmentVariable("KINHUB_Jwt__Issuer", "http://localhost");
-        Environment.SetEnvironmentVariable("KINHUB_Jwt__Secret", "integration-only-kinhub-jwt-secret-000000000001");
-        Environment.SetEnvironmentVariable("KINHUB_CoreApi__BaseUrl", "http://localhost:5000");
+        Environment.SetEnvironmentVariable("KINHUB_Jwt__Secret", TestJwtSecret);
+        Environment.SetEnvironmentVariable("KINHUB_FamilyContextApi__BaseUrl", "http://localhost:5001");
 
         builder.ConfigureAppConfiguration(configuration =>
         {
@@ -61,8 +90,9 @@ public sealed class KinListApiFactory : WebApplicationFactory<KinListApiProgram>
             {
                 ["ConnectionStrings:KinHub"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
                 ["Jwt:Issuer"] = "http://localhost",
-                ["Jwt:Secret"] = "integration-only-kinhub-jwt-secret-000000000001",
-                ["CoreApi:BaseUrl"] = "http://localhost:5000",
+                ["Jwt:Secret"] = TestJwtSecret,
+                ["Jwt:Audience"] = "kinhub.api",
+                ["FamilyContextApi:BaseUrl"] = "http://localhost:5001",
             });
         });
 

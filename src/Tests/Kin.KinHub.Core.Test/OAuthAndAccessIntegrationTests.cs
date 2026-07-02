@@ -1,9 +1,11 @@
+extern alias IdentityApi;
+
 using Kin.KinHub.Core.Business.FamilyFeature;
 using Kin.KinHub.Core.Domain.FamilyFeature;
 using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Business.Common;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
-using Kin.KinHub.Shared.Api.AuthenticationFeature;
+using Kin.KinHub.Identity.Api.AuthenticationFeature;
 using Kin.KinHub.Shared.Api.Common.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -199,7 +201,7 @@ public sealed class OAuthAndAccessIntegrationTests
     }
 
     [Fact]
-    public async Task AuthLogin_WhenValidationFails_ReturnsProblemDetails()
+    public async Task LegacyAuthLogin_IsNotExposed()
     {
         var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -212,11 +214,7 @@ public sealed class OAuthAndAccessIntegrationTests
                 password = string.Empty,
             });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("validation_error", body.GetProperty("code").GetString());
-        Assert.True(body.GetProperty("errors").GetArrayLength() > 0);
-        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private static async Task<HttpResponseMessage> AuthorizeAsync(HttpClient client, string clientId, string redirectUri, string codeVerifier)
@@ -246,7 +244,7 @@ public sealed class OAuthAndAccessIntegrationTests
     }
 }
 
-public class OAuthApiFactory : WebApplicationFactory<Program>
+public class OAuthApiFactory : WebApplicationFactory<IdentityApi::Program>
 {
     internal const string ClientId = "integration-client";
     internal const string RedirectUri = "http://127.0.0.1/callback";
@@ -280,6 +278,7 @@ public class OAuthApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        Environment.SetEnvironmentVariable("KINHUB_OAuth__AuthorizationServerUrl", "http://localhost");
         builder.ConfigureAppConfiguration(configuration =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
