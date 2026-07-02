@@ -25,11 +25,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Kin.KinHub.Shared.Api\Common\ApiProblemDetails.cs" Link="Common\ApiProblemDetails.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\HttpResultMapper.cs" Link="Common\HttpResultMapper.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\IdentityHttpResultMapper.cs" Link="Common\IdentityHttpResultMapper.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\CorsOptions.cs" Link="Common\Configuration\CorsOptions.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\JwtSettings.cs" Link="Common\Configuration\JwtSettings.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Middlewares\JwtAuthenticationMiddleware.cs" Link="Common\Middlewares\JwtAuthenticationMiddleware.cs" />
+    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Authorization\FamilyContextRequirement.cs" Link="Common\Authorization\FamilyContextRequirement.cs" />
+    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Authorization\FamilyContextAuthorizationHandler.cs" Link="Common\Authorization\FamilyContextAuthorizationHandler.cs" />
+    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Authorization\FamilyAuthorizationMiddlewareResultHandler.cs" Link="Common\Authorization\FamilyAuthorizationMiddlewareResultHandler.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\FluentRequestValidator.cs" Link="Common\Validators\FluentRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\IRequestValidator.cs" Link="Common\Validators\IRequestValidator.cs" />
     <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\RequestValidationResult.cs" Link="Common\Validators\RequestValidationResult.cs" />

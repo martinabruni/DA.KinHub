@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useContext, useState } from 'react'
 import type { FamilyMember, User } from '@/types'
+import { getAccessToken, setAccessToken as setSharedAccessToken } from '@shared/oauth/tokenStore'
 
 const ACTIVE_MEMBER_KEY = 'activeMember'
 
@@ -18,7 +19,7 @@ interface AuthContextValue {
   accessToken: string | null
   activeMember: FamilyMember | null
   setUser: (user: User | null) => void
-  setTokens: (access: string, refresh: string) => void
+  setAccessToken: (accessToken: string | null) => void
   setActiveMember: (member: FamilyMember) => void
   clearActiveMember: () => void
   clearAuth: () => void
@@ -30,14 +31,11 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthContextProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [activeMember, setActiveMemberState] = useState<FamilyMember | null>(loadActiveMember)
-  const [accessToken, setAccessToken] = useState<string | null>(
-    () => localStorage.getItem('accessToken'),
-  )
+  const [accessToken, setAccessTokenState] = useState<string | null>(() => getAccessToken())
 
-  const setTokens = useCallback((access: string, refresh: string) => {
-    localStorage.setItem('accessToken', access)
-    localStorage.setItem('refreshToken', refresh)
-    setAccessToken(access)
+  const setAccessToken = useCallback((value: string | null) => {
+    setSharedAccessToken(value)
+    setAccessTokenState(value)
   }, [])
 
   const setActiveMember = useCallback((member: FamilyMember) => {
@@ -51,10 +49,9 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const clearAuth = useCallback(() => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    setSharedAccessToken(null)
     sessionStorage.removeItem(ACTIVE_MEMBER_KEY)
-    setAccessToken(null)
+    setAccessTokenState(null)
     setUser(null)
     setActiveMemberState(null)
   }, [])
@@ -66,7 +63,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
         accessToken,
         activeMember,
         setUser,
-        setTokens,
+        setAccessToken,
         setActiveMember,
         clearActiveMember,
         clearAuth,

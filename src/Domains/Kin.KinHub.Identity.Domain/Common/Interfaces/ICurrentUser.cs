@@ -26,12 +26,12 @@ public interface ICurrentUser
     bool IsAuthenticated { get; }
 
     /// <summary>
-    /// Gets the active family member ID selected for the current request (from the X-Member-Id header).
+    /// Gets the family context resolved for the current request.
     /// </summary>
-    Guid FamilyMemberId { get; }
+    Guid FamilyId { get; }
 
     /// <summary>
-    /// Gets a value indicating whether an active family member has been set for this request.
+    /// Gets a value indicating whether a family context has been resolved for this request.
     /// </summary>
-    bool HasActiveMember { get; }
+    bool HasFamilyContext { get; }
 }

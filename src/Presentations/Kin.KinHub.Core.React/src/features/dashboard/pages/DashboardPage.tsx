@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EntityCard } from '@/components/entity-card'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
 import { apiClient } from '@/api/apiClient'
@@ -92,45 +93,27 @@ export function DashboardPage() {
               const cfg = serviceConfig[service.name] ?? defaultServiceConfig
               const Icon = cfg.icon
               const href = getServiceHref(service.name, activeMember)
+              const content = (
+                <EntityCard
+                  icon={
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted sm:h-11 sm:w-11">
+                      <Icon className={`h-5 w-5 ${cfg.color}`} />
+                    </div>
+                  }
+                  title={service.name}
+                  description={service.description}
+                  footer={<span className="text-sm font-medium text-primary">{t('hub.open')}</span>}
+                />
+              )
 
               if (cfg.external) {
                 return (
-                  <a key={service.id} href={href}>
-                    <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
-                      <CardContent className="flex flex-col gap-3 p-5 h-full">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                          <Icon className={`w-6 h-6 ${cfg.color}`} />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold leading-tight">{service.name}</p>
-                          <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
-                            {service.description}
-                          </p>
-                        </div>
-                        <span className="text-xs font-medium text-primary">{t('hub.open')} →</span>
-                      </CardContent>
-                    </Card>
-                  </a>
+                  <a key={service.id} href={href} className="block">{content}</a>
                 )
               }
 
               return (
-                <Link key={service.id} to={href}>
-                  <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">
-                    <CardContent className="flex flex-col gap-3 p-5 h-full">
-                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                        <Icon className={`w-6 h-6 ${cfg.color}`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold leading-tight">{service.name}</p>
-                        <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
-                          {service.description}
-                        </p>
-                      </div>
-                      <span className="text-xs font-medium text-primary">{t('hub.open')} →</span>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Link key={service.id} to={href} className="block">{content}</Link>
               )
             })}
           </div>

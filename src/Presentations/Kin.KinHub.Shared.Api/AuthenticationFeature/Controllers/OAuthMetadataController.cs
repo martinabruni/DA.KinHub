@@ -6,11 +6,11 @@ namespace Kin.KinHub.Shared.Api.AuthenticationFeature;
 [Route(".well-known")]
 public sealed class OAuthMetadataController : ControllerBase
 {
-    private readonly McpTransportOptions _mcpOptions;
+    private readonly OAuthServerOptions _oauthOptions;
 
-    public OAuthMetadataController(McpTransportOptions mcpOptions)
+    public OAuthMetadataController(OAuthServerOptions oauthOptions)
     {
-        _mcpOptions = mcpOptions;
+        _oauthOptions = oauthOptions;
     }
 
     [HttpGet("oauth-authorization-server")]
@@ -24,22 +24,22 @@ public sealed class OAuthMetadataController : ControllerBase
             issuer,
             authorization_endpoint = $"{issuer}/authorize",
             token_endpoint = $"{issuer}/token",
-            registration_endpoint = _mcpOptions.EnableDynamicClientRegistration ? $"{issuer}/register" : null,
+            registration_endpoint = _oauthOptions.EnableDynamicClientRegistration ? $"{issuer}/register" : null,
             response_types_supported = new[] { "code" },
-            grant_types_supported = new[] { "authorization_code", "refresh_token" },
+            grant_types_supported = new[] { "authorization_code" },
             token_endpoint_auth_methods_supported = new[] { "none" },
             code_challenge_methods_supported = new[] { "S256" },
             response_modes_supported = new[] { "query" },
-            scopes_supported = _mcpOptions.SupportedScopes,
-            service_documentation = _mcpOptions.ResourceDocumentation,
+            scopes_supported = _oauthOptions.SupportedScopes,
+            service_documentation = _oauthOptions.DocumentationUrl,
         });
     }
 
     private string GetIssuer()
     {
-        if (!string.IsNullOrWhiteSpace(_mcpOptions.AuthorizationServerUrl))
+        if (!string.IsNullOrWhiteSpace(_oauthOptions.AuthorizationServerUrl))
         {
-            return _mcpOptions.AuthorizationServerUrl.TrimEnd('/');
+            return _oauthOptions.AuthorizationServerUrl.TrimEnd('/');
         }
 
         return $"{Request.Scheme}://{Request.Host}";

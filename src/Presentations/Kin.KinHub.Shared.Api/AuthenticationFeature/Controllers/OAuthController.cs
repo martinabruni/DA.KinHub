@@ -12,40 +12,41 @@ namespace Kin.KinHub.Shared.Api.AuthenticationFeature;
 [Route("")]
 public sealed class OAuthController : ControllerBase
 {
-    private static readonly string[] SupportedGrantTypes = ["authorization_code", "refresh_token"];
+    private static readonly string[] SupportedGrantTypes = ["authorization_code"];
     private static readonly string[] SupportedResponseTypes = ["code"];
+    private const string SessionCookiePath = "/";
 
     private readonly IAuthenticationService _authenticationService;
     private readonly IOAuthClientStore _clientStore;
     private readonly IOAuthAuthorizationCodeStore _authorizationCodeStore;
-    private readonly IOAuthRefreshTokenScopeStore _refreshTokenScopeStore;
+    private readonly IOAuthIdentitySessionStore _identitySessionStore;
     private readonly ITokenGenerator _tokenGenerator;
     private readonly ITokenValidator _tokenValidator;
-    private readonly McpTransportOptions _mcpOptions;
+    private readonly OAuthServerOptions _oauthOptions;
 
     public OAuthController(
         IAuthenticationService authenticationService,
         IOAuthClientStore clientStore,
         IOAuthAuthorizationCodeStore authorizationCodeStore,
-        IOAuthRefreshTokenScopeStore refreshTokenScopeStore,
+        IOAuthIdentitySessionStore identitySessionStore,
         ITokenGenerator tokenGenerator,
         ITokenValidator tokenValidator,
-        McpTransportOptions mcpOptions)
+        OAuthServerOptions oauthOptions)
     {
         _authenticationService = authenticationService;
         _clientStore = clientStore;
         _authorizationCodeStore = authorizationCodeStore;
-        _refreshTokenScopeStore = refreshTokenScopeStore;
+        _identitySessionStore = identitySessionStore;
         _tokenGenerator = tokenGenerator;
         _tokenValidator = tokenValidator;
-        _mcpOptions = mcpOptions;
+        _oauthOptions = oauthOptions;
     }
 
     [HttpPost("register")]
-    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
+    [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
     public IActionResult RegisterClient([FromBody] OAuthDynamicClientRegistrationRequest? request)
     {
-        if (!_mcpOptions.EnableDynamicClientRegistration)
+        if (!_oauthOptions.EnableDynamicClientRegistration)
         {
             return StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("access_denied", "Dynamic client registration is disabled."));
         }
@@ -66,7 +67,7 @@ public sealed class OAuthController : ControllerBase
 
         if (request.GrantTypes.Length is 0)
         {
-            request.GrantTypes = ["authorization_code", "refresh_token"];
+            request.GrantTypes = ["authorization_code"];
         }
 
         if (request.ResponseTypes.Length is 0)
@@ -76,7 +77,7 @@ public sealed class OAuthController : ControllerBase
 
         if (!request.GrantTypes.All(SupportedGrantTypes.Contains))
         {
-            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only authorization_code and refresh_token grant types are supported."));
+            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only the authorization_code grant type is supported."));
         }
 
         if (!request.ResponseTypes.All(SupportedResponseTypes.Contains))
@@ -128,7 +129,7 @@ public sealed class OAuthController : ControllerBase
     }
 
     [HttpGet("authorize")]
-    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
+    [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
     public IActionResult Authorize([FromQuery] OAuthAuthorizeRequest request)
     {
         if (!TryValidateAuthorizationRequest(request, out var client, out var scope, out var errorResult))
@@ -136,12 +137,38 @@ public sealed class OAuthController : ControllerBase
             return errorResult!;
         }
 
-        return Content(RenderLoginPage(request, client!, scope), "text/html");
+        if (TryGetIdentitySession(out var session))
+        {
+            try
+            {
+                ArgumentNullException.ThrowIfNull(session);
+                var ticket = _authorizationCodeStore.Create(
+                    client!.ClientId,
+                    request.RedirectUri!,
+                    scope,
+                    request.CodeChallenge!,
+                    request.CodeChallengeMethod!,
+                    RehydrateLoginResponse(session),
+                    TimeSpan.FromMinutes(_oauthOptions.AuthorizationCodeLifetimeMinutes));
+
+                return Redirect(BuildAuthorizationSuccessRedirect(request.RedirectUri!, request.State, ticket.Code));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                DeleteIdentitySessionCookie();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+            }
+        }
+
+        return Content(RenderLoginPage(request, client!, scope, _oauthOptions.RegistrationUiUrl), "text/html");
     }
 
     [HttpPost("authorize")]
     [Consumes("application/x-www-form-urlencoded")]
-    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
+    [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
     public async Task<IActionResult> AuthorizeAsync([FromForm] OAuthAuthorizeLoginRequest request, CancellationToken cancellationToken)
     {
         var authorizeRequest = new OAuthAuthorizeRequest
@@ -167,7 +194,7 @@ public sealed class OAuthController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return Content(RenderLoginPage(authorizeRequest, client!, scope, "Email and password are required."), "text/html");
+            return Content(RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.RegistrationUiUrl, "Email and password are required."), "text/html");
         }
 
         var result = await _authenticationService.LoginAsync(
@@ -188,7 +215,7 @@ public sealed class OAuthController : ControllerBase
         if (RequiresElevatedConsent(scope) && !request.ApproveElevatedAccess)
         {
             return Content(
-                RenderLoginPage(authorizeRequest, client!, scope, "You must explicitly approve elevated MCP access before continuing."),
+                RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.RegistrationUiUrl, "You must explicitly approve elevated write access before continuing."),
                 "text/html");
         }
 
@@ -196,6 +223,20 @@ public sealed class OAuthController : ControllerBase
         {
             return StatusCode(StatusCodes.Status500InternalServerError, CreateOAuthError("server_error", "Unable to validate issued access token."));
         }
+
+        OAuthIdentitySession session;
+        try
+        {
+            session = _identitySessionStore.Create(
+                result.Value,
+                TimeSpan.FromHours(_oauthOptions.SessionLifetimeHours));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+        }
+
+        WriteIdentitySessionCookie(session);
 
         OAuthAuthorizationCodeTicket ticket;
         try
@@ -207,7 +248,7 @@ public sealed class OAuthController : ControllerBase
                 authorizeRequest.CodeChallenge!,
                 authorizeRequest.CodeChallengeMethod!,
                 result.Value,
-                TimeSpan.FromMinutes(_mcpOptions.AuthorizationCodeLifetimeMinutes));
+                TimeSpan.FromMinutes(_oauthOptions.AuthorizationCodeLifetimeMinutes));
         }
         catch (InvalidOperationException ex)
         {
@@ -229,8 +270,8 @@ public sealed class OAuthController : ControllerBase
 
     [HttpPost("token")]
     [Consumes("application/x-www-form-urlencoded")]
-    [EnableRateLimiting(McpTransportOptions.OAuthRateLimitPolicyName)]
-    public async Task<IActionResult> TokenAsync([FromForm] OAuthTokenRequest request, CancellationToken cancellationToken)
+    [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
+    public IActionResult Token([FromForm] OAuthTokenRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ClientId)
             || !_clientStore.TryGet(request.ClientId, out var client)
@@ -241,48 +282,27 @@ public sealed class OAuthController : ControllerBase
 
         return request.GrantType switch
         {
-            "authorization_code" => ExchangeAuthorizationCodeAsync(request, client),
-            "refresh_token" => await ExchangeRefreshTokenAsync(request, client, cancellationToken),
+            "authorization_code" => ExchangeAuthorizationCode(request, client),
             _ => BadRequest(CreateOAuthError("unsupported_grant_type", "The requested grant_type is not supported.")),
         };
     }
 
-    private async Task<IActionResult> ExchangeRefreshTokenAsync(OAuthTokenRequest request, OAuthRegisteredClient client, CancellationToken cancellationToken)
+    [HttpPost("logout")]
+    [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
+    public async Task<IActionResult> LogoutAsync(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        if (TryGetIdentitySessionId(out var sessionId)
+            && _identitySessionStore.TryRemove(sessionId, out var session)
+            && session is not null)
         {
-            return BadRequest(CreateOAuthError("invalid_request", "refresh_token is required."));
+            await _authenticationService.LogoutAsync(session.RefreshToken, cancellationToken);
         }
 
-        if (!_refreshTokenScopeStore.TryGet(request.RefreshToken, out var grantedScope) || string.IsNullOrWhiteSpace(grantedScope))
-        {
-            return BadRequest(CreateOAuthError("invalid_grant", "Refresh token was not issued for the OAuth MCP flow."));
-        }
-
-        if (!TryNormalizeGrantedScope(request.Scope, client.Scope, grantedScope, out var resolvedScope, out var errorResult))
-        {
-            return errorResult!;
-        }
-
-        var result = await _authenticationService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
-        if (!result.IsSuccess || result.Value is null)
-        {
-            return BadRequest(CreateOAuthError("invalid_grant", result.Message ?? "Invalid refresh token."));
-        }
-
-        try
-        {
-            _refreshTokenScopeStore.Replace(request.RefreshToken, result.Value.RefreshToken, resolvedScope);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
-        }
-
-        return Ok(CreateScopedTokenResponse(result.Value, resolvedScope));
+        DeleteIdentitySessionCookie();
+        return NoContent();
     }
 
-    private IActionResult ExchangeAuthorizationCodeAsync(OAuthTokenRequest request, OAuthRegisteredClient client)
+    private IActionResult ExchangeAuthorizationCode(OAuthTokenRequest request, OAuthRegisteredClient client)
     {
         if (string.IsNullOrWhiteSpace(request.Code)
             || string.IsNullOrWhiteSpace(request.RedirectUri)
@@ -305,15 +325,6 @@ public sealed class OAuthController : ControllerBase
         if (!VerifyPkce(request.CodeVerifier, ticket.CodeChallenge, ticket.CodeChallengeMethod))
         {
             return BadRequest(CreateOAuthError("invalid_grant", "PKCE verification failed."));
-        }
-
-        try
-        {
-            _refreshTokenScopeStore.Store(ticket.LoginResponse.RefreshToken, ticket.Scope);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
         }
 
         return Ok(CreateScopedTokenResponse(ticket.LoginResponse, ticket.Scope));
@@ -379,7 +390,7 @@ public sealed class OAuthController : ControllerBase
             : NormalizeScope(requestedScope);
 
         var requestedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var supportedScopes = _mcpOptions.SupportedScopes.ToHashSet(StringComparer.Ordinal);
+        var supportedScopes = _oauthOptions.SupportedScopes.ToHashSet(StringComparer.Ordinal);
         var registeredClientScopes = clientScope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToHashSet(StringComparer.Ordinal);
         var grantedScopes = grantedScope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -402,10 +413,10 @@ public sealed class OAuthController : ControllerBase
         out IActionResult? errorResult)
     {
         errorResult = null;
-        resolvedScope = NormalizeScope(requestedScope, string.Join(' ', _mcpOptions.DynamicClientDefaultScopes));
+        resolvedScope = NormalizeScope(requestedScope, string.Join(' ', _oauthOptions.DynamicClientDefaultScopes));
 
-        var supportedScopes = _mcpOptions.SupportedScopes.ToHashSet(StringComparer.Ordinal);
-        var dynamicClientAllowedScopes = _mcpOptions.DynamicClientAllowedScopes.ToHashSet(StringComparer.Ordinal);
+        var supportedScopes = _oauthOptions.SupportedScopes.ToHashSet(StringComparer.Ordinal);
+        var dynamicClientAllowedScopes = _oauthOptions.DynamicClientAllowedScopes.ToHashSet(StringComparer.Ordinal);
         var scopes = SplitScopes(resolvedScope);
 
         if (scopes.Length is 0)
@@ -416,13 +427,13 @@ public sealed class OAuthController : ControllerBase
 
         if (scopes.Except(supportedScopes, StringComparer.Ordinal).Any())
         {
-            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Requested scope is not supported by KinHub MCP."));
+            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Requested scope is not supported by KinHub."));
             return false;
         }
 
         if (scopes.Except(dynamicClientAllowedScopes, StringComparer.Ordinal).Any())
         {
-            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Dynamic MCP clients cannot request the specified scope."));
+            errorResult = StatusCode(StatusCodes.Status403Forbidden, CreateOAuthError("invalid_scope", "Dynamic clients cannot request the specified scope."));
             return false;
         }
 
@@ -431,7 +442,7 @@ public sealed class OAuthController : ControllerBase
 
     private string NormalizeScope(string? scope, string? defaultScope = null) =>
         string.IsNullOrWhiteSpace(scope)
-            ? NormalizeScope(defaultScope ?? string.Join(' ', _mcpOptions.SupportedScopes))
+            ? NormalizeScope(defaultScope ?? string.Join(' ', _oauthOptions.SupportedScopes))
             : string.Join(' ', scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal));
 
     private static string[] SplitScopes(string? scope) =>
@@ -448,7 +459,7 @@ public sealed class OAuthController : ControllerBase
 
     private bool RequiresElevatedConsent(string scope)
     {
-        var elevatedScopes = _mcpOptions.ElevatedConsentScopes.ToHashSet(StringComparer.Ordinal);
+        var elevatedScopes = _oauthOptions.ElevatedConsentScopes.ToHashSet(StringComparer.Ordinal);
         return SplitScopes(scope).Intersect(elevatedScopes, StringComparer.Ordinal).Any();
     }
 
@@ -509,23 +520,123 @@ public sealed class OAuthController : ControllerBase
             UpdatedAt = DateTime.UtcNow,
         };
 
+        var accessToken = _tokenGenerator.GenerateAccessToken(
+            user,
+            claims.Roles,
+            scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+
+        // No refresh_token is issued: the refresh_token grant has been removed. SPAs renew
+        // access tokens by performing a silent top-level authorize against the identity
+        // session cookie.
         return new
         {
-            access_token = _tokenGenerator.GenerateAccessToken(
-                user,
-                claims.Roles,
-                scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)),
+            access_token = accessToken,
             token_type = "Bearer",
             expires_in = response.ExpiresIn,
-            refresh_token = response.RefreshToken,
             scope,
         };
+    }
+
+    private bool TryGetIdentitySession(out OAuthIdentitySession? session)
+    {
+        session = null;
+        if (!TryGetIdentitySessionId(out var sessionId))
+        {
+            return false;
+        }
+
+        if (!_identitySessionStore.TryGet(sessionId, out var storedSession) || storedSession is null)
+        {
+            DeleteIdentitySessionCookie();
+            return false;
+        }
+
+        session = storedSession;
+        return session is not null;
+    }
+
+    private static string BuildAuthorizationSuccessRedirect(string redirectUri, string? state, string code)
+    {
+        var redirectParameters = new Dictionary<string, string?>
+        {
+            ["code"] = code,
+        };
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            redirectParameters["state"] = state;
+        }
+
+        return QueryHelpers.AddQueryString(redirectUri, redirectParameters);
+    }
+
+    private LoginResponse RehydrateLoginResponse(OAuthIdentitySession session)
+    {
+        var refreshResult = _authenticationService.RefreshTokenAsync(session.RefreshToken, HttpContext.RequestAborted)
+            .GetAwaiter()
+            .GetResult();
+
+        if (!refreshResult.IsSuccess || refreshResult.Value is null)
+        {
+            _identitySessionStore.TryRemove(session.SessionId, out _);
+            throw new UnauthorizedAccessException("Stored identity session is no longer valid.");
+        }
+
+        _identitySessionStore.Replace(
+            session.SessionId,
+            refreshResult.Value,
+            TimeSpan.FromHours(_oauthOptions.SessionLifetimeHours));
+        WriteIdentitySessionCookie(new OAuthIdentitySession(
+            session.SessionId,
+            refreshResult.Value.RefreshToken,
+            refreshResult.Value.Email,
+            refreshResult.Value.DisplayName,
+            DateTimeOffset.UtcNow.AddHours(_oauthOptions.SessionLifetimeHours)));
+
+        return refreshResult.Value;
+    }
+
+    private bool TryGetIdentitySessionId(out string sessionId)
+    {
+        sessionId = Request.Cookies[_oauthOptions.SessionCookieName] ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(sessionId);
+    }
+
+    private void WriteIdentitySessionCookie(OAuthIdentitySession session)
+    {
+        Response.Cookies.Append(
+            _oauthOptions.SessionCookieName,
+            session.SessionId,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps,
+                Path = SessionCookiePath,
+                Expires = session.ExpiresAtUtc,
+            });
+    }
+
+    private void DeleteIdentitySessionCookie()
+    {
+        Response.Cookies.Delete(
+            _oauthOptions.SessionCookieName,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps,
+                Path = SessionCookiePath,
+            });
     }
 
     private static string RenderLoginPage(
         OAuthAuthorizeRequest request,
         OAuthRegisteredClient client,
         string scope,
+        string registrationUiUrl,
         string? errorMessage = null)
     {
         static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
@@ -534,7 +645,7 @@ public sealed class OAuthController : ControllerBase
             ? string.Empty
             : $"<p style=\"color:#b91c1c;margin:0 0 16px;\">{Encode(errorMessage)}</p>";
         var scopes = SplitScopes(scope);
-        var hasElevatedScope = scopes.Contains(McpScopes.Write, StringComparer.Ordinal) || scopes.Contains(McpScopes.Admin, StringComparer.Ordinal);
+        var hasElevatedScope = scopes.Contains(OAuthScopes.Write, StringComparer.Ordinal) || scopes.Contains(OAuthScopes.Admin, StringComparer.Ordinal);
         var scopeList = string.Join(
             string.Empty,
             scopes.Select(scopeValue => $"<li style=\"display:inline-block;margin:0 8px 8px 0;padding:6px 10px;border-radius:999px;background:#e2e8f0;font-size:14px;\">{Encode(scopeValue)}</li>"));
@@ -546,6 +657,23 @@ public sealed class OAuthController : ControllerBase
         </label>
 """
             : string.Empty;
+        var registerBlock = string.IsNullOrWhiteSpace(registrationUiUrl)
+            ? string.Empty
+            : $$"""
+        <p style="margin:16px 0 0;font-size:14px;color:#475569;">
+            Need an account?
+            <a href="{{Encode(QueryHelpers.AddQueryString(registrationUiUrl, "returnTo", QueryHelpers.AddQueryString(request.RedirectUri!, new Dictionary<string, string?>
+            {
+                ["response_type"] = request.ResponseType,
+                ["client_id"] = request.ClientId,
+                ["redirect_uri"] = request.RedirectUri,
+                ["scope"] = scope,
+                ["state"] = request.State,
+                ["code_challenge"] = request.CodeChallenge,
+                ["code_challenge_method"] = request.CodeChallengeMethod,
+            })))}}" style="color:#2563eb;text-decoration:none;font-weight:600;">Create one here</a>.
+        </p>
+""";
 
         return $$"""
 <!DOCTYPE html>
@@ -558,7 +686,7 @@ public sealed class OAuthController : ControllerBase
 <body style="font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a;padding:32px;">
     <main style="max-width:420px;margin:0 auto;background:white;padding:24px;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.08);">
         <h1 style="margin-top:0;">Authorize {{Encode(client.ClientName)}}</h1>
-        <p style="margin:0 0 8px;">Sign in to review the MCP scopes requested by <strong>{{Encode(client.ClientName)}}</strong>.</p>
+        <p style="margin:0 0 8px;">Sign in to review the requested KinHub scopes for <strong>{{Encode(client.ClientName)}}</strong>.</p>
         <ul style="list-style:none;padding:0;margin:0 0 16px;">{{scopeList}}</ul>
         {{errorBlock}}
         <form method="post" action="/authorize">
@@ -583,6 +711,7 @@ public sealed class OAuthController : ControllerBase
                 <button type="submit" name="decision" value="deny" formnovalidate style="flex:1;padding:10px 16px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#0f172a;font-weight:600;">Deny</button>
             </div>
         </form>
+        {{registerBlock}}
     </main>
 </body>
 </html>

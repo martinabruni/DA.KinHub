@@ -29,11 +29,15 @@ public sealed class FamilyAccessResult
     public static FamilyAccessResult Unauthorized(string message) =>
         new(false, null, ResultStatus.Unauthorized, message);
 
+    public static FamilyAccessResult ServiceUnavailable(string message) =>
+        new(false, null, ResultStatus.ServiceUnavailable, message);
+
     public Result<T> ToResult<T>() =>
         Status switch
         {
             ResultStatus.NotFound => Result<T>.NotFound(Message!),
             ResultStatus.Unauthorized => Result<T>.Unauthorized(Message!),
+            ResultStatus.ServiceUnavailable => Result<T>.ServiceUnavailable(Message!),
             _ => Result<T>.UnexpectedError(Message ?? "Unexpected family access state."),
         };
 }

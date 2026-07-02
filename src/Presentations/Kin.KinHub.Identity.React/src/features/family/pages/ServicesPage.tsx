@@ -2,15 +2,13 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { buildKinRecipeLaunchUrl } from "@/config/appLinks";
+import { buildKinListLaunchUrl, buildKinRecipeLaunchUrl } from "@/config/appLinks";
 import { useServices } from "@/features/family/ServicesProvider";
 import { serviceConfig, defaultServiceConfig } from "@/config/serviceConfig";
-import { useAuthContext } from "@/store/authContext";
 
 export function ServicesPage() {
   const { t } = useTranslation();
   const { services, isLoading } = useServices();
-  const { activeMember } = useAuthContext();
 
   const enabledServices = services.filter((s) => s.isEnabled);
 
@@ -31,7 +29,9 @@ export function ServicesPage() {
               const Icon = cfg.icon;
               const href =
                 cfg.external
-                  ? buildKinRecipeLaunchUrl(activeMember, '/')
+                  ? service.name === 'KinList' || service.name === 'Lists'
+                    ? buildKinListLaunchUrl('/')
+                    : buildKinRecipeLaunchUrl('/')
                   : cfg.path;
               const content = (
                 <Card className="h-full hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer group">

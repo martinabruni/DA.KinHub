@@ -25,9 +25,10 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["../Kin.KinHub.Frontend.Shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "../Kin.KinHub.Frontend.Shared"]
 }
 

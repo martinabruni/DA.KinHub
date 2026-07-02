@@ -43,8 +43,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRecipeStepRepository, RecipeStepRepository>();
         services.AddScoped<IFridgeRepository, FridgeRepository>();
         services.AddScoped<IFridgeIngredientRepository, FridgeIngredientRepository>();
-        services.AddScoped<IShoppingListRepository, ShoppingListRepository>();
-        services.AddScoped<IShoppingListItemRepository, ShoppingListItemRepository>();
 
         return services;
     }

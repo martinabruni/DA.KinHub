@@ -32,17 +32,17 @@ public sealed class RecipeAssistantController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _suggestValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _recipeAiService.SuggestRecipesAsync(request.FridgeId, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("parse")]
@@ -51,17 +51,17 @@ public sealed class RecipeAssistantController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _parseValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _recipeAiService.ParseRecipeAsync(request.RawText, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("adapt")]
@@ -70,16 +70,16 @@ public sealed class RecipeAssistantController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _adaptValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _recipeAiService.AdaptRecipeAsync(request.RecipeId, request.Constraints, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 }

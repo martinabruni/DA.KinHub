@@ -15,10 +15,19 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageReference Include="Npgsql" Version="10.0.2" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
+    <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" Aliases="KinRecipeApi" />
+    <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinList.Api\Kin.KinHub.KinList.Api.csproj" Aliases="KinListApi" />
+    <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
+    <ProjectReference Include="..\..\Domains\Kin.KinHub.KinList.Domain\Kin.KinHub.KinList.Domain.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -11,7 +11,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { appendSessionToUrl, buildCoreSelectMemberUrl } from '@/config/appLinks'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { extractApiError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
@@ -49,7 +48,7 @@ function PasswordStrength({ password }: { password: string }) {
 
 export function RegisterPage() {
   const { t } = useTranslation()
-  const { register, login } = useAuth()
+  const { register } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [showPwd, setShowPwd] = useState(false)
@@ -64,20 +63,14 @@ export function RegisterPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       await register({ email: values.email, password: values.password })
-      try {
-        await login({ email: values.email, password: values.password })
-        const returnTo = searchParams.get('returnTo')
-        window.location.assign(
-          appendSessionToUrl(buildCoreSelectMemberUrl(returnTo), null),
-        )
-      } catch {
-        toast.error(t('auth.autoLoginFailed'))
-        navigate(
-          searchParams.get('returnTo')
-            ? `/login?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}`
-            : '/login',
-        )
+      const returnTo = searchParams.get('returnTo')
+      if (returnTo) {
+        window.location.assign(returnTo)
+        return
       }
+
+      toast.success(t('auth.accountCreated'))
+      navigate('/login')
     } catch (err: unknown) {
       const { fields } = extractApiError(err)
       if (fields?.email) form.setError('email', { message: fields.email[0] })

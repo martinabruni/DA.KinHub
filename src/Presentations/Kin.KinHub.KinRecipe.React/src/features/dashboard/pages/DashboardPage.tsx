@@ -6,7 +6,7 @@ import {
   ShoppingCart,
   Sparkles,
 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { EntityCard } from '@/components/entity-card'
 
 const sections = [
   {
@@ -62,18 +62,16 @@ export function DashboardPage() {
         <div className="grid grid-cols-2 gap-3">
           {sections.map(({ to, icon: Icon, titleKey, descriptionKey, colorClass }) => (
             <Link key={to} to={to} className="block">
-              <Card className="h-full border-border/70 bg-card/80 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
-                <CardContent className="flex aspect-square h-full flex-col p-4 sm:p-5">
+              <EntityCard
+                icon={
                   <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-muted sm:h-11 sm:w-11 ${colorClass}`}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <div className="mt-4 flex-1">
-                    <p className="font-semibold leading-tight">{t(titleKey)}</p>
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{t(descriptionKey)}</p>
-                  </div>
-                  <span className="mt-4 text-sm font-medium text-primary">{t('hub.open')}</span>
-                </CardContent>
-              </Card>
+                }
+                title={t(titleKey)}
+                description={t(descriptionKey)}
+                footer={<span className="text-sm font-medium text-primary">{t('hub.open')}</span>}
+              />
             </Link>
           ))}
         </div>

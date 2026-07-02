@@ -24,6 +24,9 @@ public sealed class Result<T>
     public static Result<T> Unauthorized(string message) =>
         new() { Status = ResultStatus.Unauthorized, Message = message };
 
+    public static Result<T> ServiceUnavailable(string message) =>
+        new() { Status = ResultStatus.ServiceUnavailable, Message = message };
+
     public static Result<T> UnexpectedError(string message) =>
         new() { Status = ResultStatus.UnexpectedError, Message = message };
 }

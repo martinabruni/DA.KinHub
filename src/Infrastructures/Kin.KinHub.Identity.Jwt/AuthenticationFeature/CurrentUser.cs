@@ -19,10 +19,10 @@ public sealed class CurrentUser : ICurrentUser
     public bool IsAuthenticated { get; private set; }
 
     /// <inheritdoc/>
-    public Guid FamilyMemberId { get; private set; }
+    public Guid FamilyId { get; private set; }
 
     /// <inheritdoc/>
-    public bool HasActiveMember { get; private set; }
+    public bool HasFamilyContext { get; private set; }
 
     public void Populate(TokenClaims claims)
     {
@@ -33,9 +33,9 @@ public sealed class CurrentUser : ICurrentUser
         IsAuthenticated = true;
     }
 
-    public void SetFamilyMemberId(Guid memberId)
+    public void SetFamilyContext(Guid familyId)
     {
-        FamilyMemberId = memberId;
-        HasActiveMember = true;
+        FamilyId = familyId;
+        HasFamilyContext = true;
     }
 }

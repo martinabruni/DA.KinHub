@@ -1,6 +1,7 @@
 import {
   BookOpen,
   Grid2x2,
+  ListChecks,
   Refrigerator,
   Sparkles,
   Terminal,
@@ -23,7 +24,9 @@ export const serviceConfig: Record<string, ServiceConfig> = {
     color: 'text-slate-500',
     canToggle: false,
   },
+  KinList: { icon: ListChecks, path: '/', color: 'text-emerald-500', external: true },
   KinRecipe: { icon: BookOpen, path: '/', color: 'text-orange-500', external: true },
+  Lists: { icon: ListChecks, path: '/', color: 'text-emerald-500', external: true },
   Recipes: { icon: BookOpen, path: '/', color: 'text-orange-500', external: true },
   Fridges: { icon: Refrigerator, path: '/', color: 'text-blue-500', external: true },
   'AI Assistant': { icon: Sparkles, path: '/', color: 'text-violet-500', external: true },

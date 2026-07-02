@@ -432,75 +432,6 @@ namespace Kin.KinHub.Core.PostgreSql.Migrations
                     b.ToTable("RecipeStepEntity", "kinrecipe");
                 });
 
-            modelBuilder.Entity("Kin.KinHub.Core.PostgreSql.Models.ShoppingListEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("FamilyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id")
-                        .HasName("PK_kinrecipe_ShoppingListEntity");
-
-                    b.HasIndex(new[] { "FamilyId" }, "IX_kinrecipe_ShoppingListEntity_FamilyId");
-
-                    b.ToTable("ShoppingListEntity", "kinrecipe");
-                });
-
-            modelBuilder.Entity("Kin.KinHub.Core.PostgreSql.Models.ShoppingListItemEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<bool>("IsChecked")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("ShoppingListId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id")
-                        .HasName("PK_kinrecipe_ShoppingListItemEntity");
-
-                    b.HasIndex(new[] { "ShoppingListId" }, "IX_kinrecipe_ShoppingListItemEntity_ShoppingListId");
-
-                    b.ToTable("ShoppingListItemEntity", "kinrecipe");
-                });
-
             modelBuilder.Entity("Kin.KinHub.Core.PostgreSql.Models.FamilyMemberEntity", b =>
                 {
                     b.HasOne("Kin.KinHub.Core.PostgreSql.Models.FamilyEntity", "Family")
@@ -575,18 +506,6 @@ namespace Kin.KinHub.Core.PostgreSql.Migrations
                     b.Navigation("Recipe");
                 });
 
-            modelBuilder.Entity("Kin.KinHub.Core.PostgreSql.Models.ShoppingListItemEntity", b =>
-                {
-                    b.HasOne("Kin.KinHub.Core.PostgreSql.Models.ShoppingListEntity", "ShoppingList")
-                        .WithMany("ShoppingListItemEntity")
-                        .HasForeignKey("ShoppingListId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_kinrecipe_ShoppingListItemEntity_ShoppingListId");
-
-                    b.Navigation("ShoppingList");
-                });
-
             modelBuilder.Entity("Kin.KinHub.Core.PostgreSql.Models.FamilyEntity", b =>
                 {
                     b.Navigation("FamilyMemberEntity");
@@ -614,11 +533,6 @@ namespace Kin.KinHub.Core.PostgreSql.Migrations
                     b.Navigation("RecipeIngredientEntity");
 
                     b.Navigation("RecipeStepEntity");
-                });
-
-            modelBuilder.Entity("Kin.KinHub.Core.PostgreSql.Models.ShoppingListEntity", b =>
-                {
-                    b.Navigation("ShoppingListItemEntity");
                 });
 #pragma warning restore 612, 618
         }

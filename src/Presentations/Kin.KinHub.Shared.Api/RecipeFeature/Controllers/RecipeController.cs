@@ -36,37 +36,37 @@ public sealed class RecipeController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _createValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _recipeService.CreateAsync(request, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToCreatedActionResult(result);
+        return HttpResultMapper.ToCreatedActionResult(this, result);
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAllAsync(Guid recipeBookId, CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _recipeService.GetAllAsync(recipeBookId, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetByIdAsync(Guid recipeBookId, Guid id, CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _recipeService.GetByIdAsync(id, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("{id:guid}")]
@@ -77,27 +77,27 @@ public sealed class RecipeController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         if (request is null)
-            return BadRequest(new { message = "Invalid request body." });
+            return ApiProblemDetails.InvalidRequestBody(this);
 
         var validation = await _updateValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
-            return BadRequest(new { errors = validation.Errors });
+            return ApiProblemDetails.Validation(this, validation.Errors);
 
         var result = await _recipeService.UpdateAsync(id, request, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid recipeBookId, Guid id, CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var result = await _recipeService.DeleteAsync(id, _currentUser.UserId, cancellationToken);
-        return HttpResultMapper.ToActionResult(result);
+        return HttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("{id:guid}/missing-ingredients")]
@@ -108,15 +108,15 @@ public sealed class RecipeController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (!_currentUser.IsAuthenticated)
-            return Unauthorized(new { message = "Missing or invalid Authorization header." });
+            return ApiProblemDetails.AuthenticationRequired(this);
 
         var recipeResult = await _recipeService.GetByIdAsync(id, _currentUser.UserId, cancellationToken);
         if (!recipeResult.IsSuccess)
-            return HttpResultMapper.ToActionResult(recipeResult);
+            return HttpResultMapper.ToActionResult(this, recipeResult);
 
         var fridgeResult = await _fridgeService.GetByIdAsync(fridgeId, _currentUser.UserId, cancellationToken);
         if (!fridgeResult.IsSuccess)
-            return HttpResultMapper.ToActionResult(fridgeResult);
+            return HttpResultMapper.ToActionResult(this, fridgeResult);
 
         var missing = await _missingIngredientsService.GetMissingIngredientsAsync(id, fridgeId, cancellationToken);
         return Ok(new { missingIngredients = missing });

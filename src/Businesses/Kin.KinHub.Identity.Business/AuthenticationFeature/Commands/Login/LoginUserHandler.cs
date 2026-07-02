@@ -9,20 +9,14 @@ public interface ILoginUserHandler
 
 public sealed class LoginUserHandler : ILoginUserHandler
 {
-    private readonly IKinUserRepository _userRepository;
-    private readonly IUserCredentialRepository _credentialRepository;
-    private readonly IPasswordHasher _passwordHasher;
+    private readonly IIdentityProviderRegistry _providerRegistry;
     private readonly ILoginResponseFactory _loginResponseFactory;
 
     public LoginUserHandler(
-        IKinUserRepository userRepository,
-        IUserCredentialRepository credentialRepository,
-        IPasswordHasher passwordHasher,
+        IIdentityProviderRegistry providerRegistry,
         ILoginResponseFactory loginResponseFactory)
     {
-        _userRepository = userRepository;
-        _credentialRepository = credentialRepository;
-        _passwordHasher = passwordHasher;
+        _providerRegistry = providerRegistry;
         _loginResponseFactory = loginResponseFactory;
     }
 
@@ -30,22 +24,21 @@ public sealed class LoginUserHandler : ILoginUserHandler
         LoginRequest request,
         CancellationToken cancellationToken = default)
     {
+        var provider = _providerRegistry.Resolve(IdentityProviderType.KinHub);
+        if (provider is null)
+            return Result<LoginResponse>.UnexpectedError("The KinHub identity provider is not available.");
+
         try
         {
-            var user = await _userRepository.FindByEmailAsync(request.Email);
+            var user = await provider.AuthenticateAsync(
+                new IdentityCredential
+                {
+                    Email = request.Email,
+                    Password = request.Password,
+                },
+                cancellationToken);
 
             if (user is null)
-                return Result<LoginResponse>.Unauthorized("Invalid email or password.");
-
-            if (user.Status is not UserStatus.Active)
-                return Result<LoginResponse>.Unauthorized("Account is not active.");
-
-            var credential = await _credentialRepository.GetByUserIdAsync(user.Id);
-
-            if (credential?.PasswordHash is null)
-                return Result<LoginResponse>.Unauthorized("Invalid email or password.");
-
-            if (!_passwordHasher.Verify(request.Password, credential.PasswordHash))
                 return Result<LoginResponse>.Unauthorized("Invalid email or password.");
 
             return Result<LoginResponse>.Success(

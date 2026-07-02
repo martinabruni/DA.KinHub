@@ -1,0 +1,98 @@
+using Kin.KinHub.KinList.Ai.Common;
+using System.Text.Json;
+
+namespace Kin.KinHub.KinList.Ai.KinListFeature;
+
+public sealed class AzureOpenAiKinListAudioPromptInterpreter : IKinListAudioPromptInterpreter
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private readonly IKinListChatCompletionClient _chatCompletionClient;
+    private readonly KinListAudioPromptOptions _promptOptions;
+
+    public AzureOpenAiKinListAudioPromptInterpreter(
+        IKinListChatCompletionClient chatCompletionClient,
+        KinListAudioPromptOptions promptOptions)
+    {
+        _chatCompletionClient = chatCompletionClient;
+        _promptOptions = promptOptions;
+    }
+
+    public async Task<Result<ParsedKinListAudioDraft>> InterpretAsync(SpeechTranscriptionResult transcription, CancellationToken cancellationToken = default)
+    {
+        var request = JsonSerializer.Serialize(new
+        {
+            task = "kin_list_audio_draft",
+            transcript = transcription.Transcript,
+            detected_language = transcription.DetectedLanguage,
+        }, JsonOptions);
+
+        string responseJson;
+        try
+        {
+            responseJson = await _chatCompletionClient.CompleteAsync(_promptOptions.SystemPrompt, request, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring timed out.",
+                "audio_processing_timeout");
+        }
+        catch (Exception)
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio draft processing is currently unavailable.",
+                "audio_processing_unavailable");
+        }
+
+        ParsedResponse? parsedResponse;
+        try
+        {
+            parsedResponse = JsonSerializer.Deserialize<ParsedResponse>(responseJson, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring returned an invalid response.",
+                "audio_processing_invalid_response");
+        }
+
+        if (parsedResponse is null)
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring returned an empty response.",
+                "audio_processing_invalid_response");
+        }
+
+        var normalizedItems = parsedResponse.Items
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var title = parsedResponse.Title?.Trim() ?? string.Empty;
+        if (normalizedItems.Count > 0 && string.IsNullOrWhiteSpace(title))
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring returned an invalid title.",
+                "audio_processing_invalid_response");
+        }
+
+        return Result<ParsedKinListAudioDraft>.Success(new ParsedKinListAudioDraft
+        {
+            Title = title,
+            Items = normalizedItems,
+            DetectedLanguage = transcription.DetectedLanguage,
+            PromptVersion = _promptOptions.PromptVersion,
+        });
+    }
+
+    private sealed class ParsedResponse
+    {
+        public string? Title { get; set; }
+        public IReadOnlyList<string> Items { get; set; } = [];
+    }
+}

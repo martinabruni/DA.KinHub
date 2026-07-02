@@ -1,7 +1,7 @@
 global using Kin.KinHub.Shared.Api.AuthenticationFeature;
+global using Kin.KinHub.Shared.Api.AccessFeature;
 global using Kin.KinHub.Shared.Api.Common;
 global using Kin.KinHub.Shared.Api.Common.Configuration;
-global using Kin.KinHub.Shared.Api.Common.Mcp;
 global using Kin.KinHub.Shared.Api.FamilyFeature;
 global using Kin.KinHub.Shared.Api.RecipeFeature;
 global using Kin.KinHub.Shared.Api.RecipeAssistantFeature;

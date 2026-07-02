@@ -15,6 +15,9 @@ param identityStaticWebAppName string
 @description('KinRecipe Static Web App name.')
 param kinRecipeStaticWebAppName string
 
+@description('KinList Static Web App name.')
+param kinListStaticWebAppName string
+
 @description('Container Apps environment name.')
 param containerAppsEnvironmentName string
 
@@ -24,6 +27,12 @@ param identityContainerAppName string
 @description('KinRecipe backend container app name.')
 param kinRecipeContainerAppName string
 
+@description('KinList backend container app name.')
+param kinListContainerAppName string
+
+@description('KinList expand/contract migration Container Apps Job name.')
+param kinListMigrationJobName string
+
 @description('Core frontend origin allowed by backend CORS.')
 param coreFrontendOrigin string
 
@@ -32,6 +41,9 @@ param identityFrontendOrigin string
 
 @description('KinRecipe frontend origin allowed by backend CORS.')
 param kinRecipeFrontendOrigin string
+
+@description('KinList frontend origin allowed by backend CORS.')
+param kinListFrontendOrigin string
 
 @description('Application Insights name.')
 param applicationInsightsName string
@@ -62,6 +74,25 @@ param openAiAccountName string
 
 @description('Azure OpenAI SKU name.')
 param openAiSkuName string = 'S0'
+
+@description('Azure AI Speech account name used by the KinList audio pipeline.')
+param speechAccountName string
+
+@description('Azure AI Speech SKU name.')
+param speechSkuName string = 'S0'
+
+@description('OpenAI chat model deployment name used by the KinList audio pipeline.')
+param kinListOpenAiModelDeploymentName string = 'gpt-4o-mini'
+
+@description('Ordered candidate speech-to-text locales for the KinList audio pipeline.')
+param kinListSpeechCandidateLocales array = [
+  'it-IT'
+  'en-US'
+  'en-GB'
+  'fr-FR'
+  'de-DE'
+  'es-ES'
+]
 
 @description('JWT secret key shared across KinHub services.')
 @secure()
@@ -96,13 +127,90 @@ param identityImage string
 @minLength(1)
 param kinRecipeImage string
 
+@description('Full image reference for the KinList backend.')
+@minLength(1)
+param kinListImage string
+
+@description('Full image reference for the KinList expand/contract migration job (owned by t06-mig).')
+@minLength(1)
+param kinListMigrationImage string
+
+@description('KinList CoreApi base URL. Defaults to the KinRecipe/Core hub API for family ownership checks.')
+param kinListCoreApiBaseUrl string
+
+@description('KinList CoreApi HTTP timeout in seconds.')
+param kinListCoreApiTimeoutSeconds string = '10'
+
+@description('KinList maximum list title length.')
+param kinListMaxTitleLength string = '100'
+
+@description('KinList maximum item length.')
+param kinListMaxItemLength string = '200'
+
+@description('KinList maximum items per list.')
+param kinListMaxItemsPerList string = '100'
+
+@description('KinList maximum items accepted per bulk-confirm / recording.')
+param kinListMaxItemsPerBulkConfirm string = '50'
+
+@description('KinList idempotency record retention in hours.')
+param kinListIdempotencyRetentionHours string = '24'
+
+@description('KinList idempotency cleanup interval in minutes.')
+param kinListIdempotencyCleanupIntervalMinutes string = '60'
+
+@description('KinList maximum audio duration in seconds.')
+param kinListMaxAudioDurationSeconds string = '60'
+
+@description('KinList maximum audio payload size in bytes.')
+param kinListMaxAudioBytes string = '10485760'
+
+@description('KinList audio processing timeout in seconds.')
+param kinListAudioProcessingTimeoutSeconds string = '30'
+
+@description('KinList transient retry maximum attempts.')
+param kinListTransientRetryMaxAttempts string = '3'
+
+@description('KinList transient retry base backoff delay in milliseconds.')
+param kinListTransientRetryBaseDelayMilliseconds string = '250'
+
+@description('KinList transient retry maximum backoff delay in milliseconds.')
+param kinListTransientRetryMaxDelayMilliseconds string = '5000'
+
+@description('KinList allowed audio MIME types accepted by the API.')
+param kinListAllowedAudioMimeTypes array = [
+  'audio/webm'
+  'video/webm'
+  'audio/mp4'
+  'audio/x-m4a'
+  'audio/m4a'
+  'audio/ogg'
+  'application/ogg'
+]
+
 var postgresConnectionString = 'Server=${postgresServer.properties.fullyQualifiedDomainName};Database=${postgresDatabaseName};Port=5432;User Id=${postgresAdministratorLogin};Password=${postgresAdministratorPassword};Ssl Mode=Require;'
 var sqlConnectionStringSecretName = 'database-connection-string'
 var jwtSecretSecretName = 'jwt-secret'
 var openAiEndpointSecretName = 'openai-endpoint'
 var openAiKeySecretName = 'openai-key'
+var speechEndpointSecretName = 'speech-endpoint'
+var speechKeySecretName = 'speech-key'
 var ghcrUsernameSecretName = 'ghcr-username'
 var ghcrPasswordSecretName = 'ghcr-password'
+
+// Built-in Azure RBAC role definition IDs.
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+
+var kinListCorsAllowedOrigins = [
+  coreFrontendOrigin
+  identityFrontendOrigin
+  kinRecipeFrontendOrigin
+  kinListFrontendOrigin
+  'https://${coreStaticWebApp.properties.defaultHostname}'
+  'https://${identityStaticWebApp.properties.defaultHostname}'
+  'https://${kinRecipeStaticWebApp.properties.defaultHostname}'
+  'https://${kinListStaticWebApp.properties.defaultHostname}'
+]
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsWorkspaceName
@@ -195,6 +303,19 @@ resource openAiAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
+resource speechAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+  name: speechAccountName
+  location: location
+  kind: 'SpeechServices'
+  sku: {
+    name: speechSkuName
+  }
+  properties: {
+    customSubDomainName: speechAccountName
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
 resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAiAccount
   name: 'gpt-4o-mini'
@@ -252,6 +373,22 @@ resource openAiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+resource speechEndpointSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: speechEndpointSecretName
+  properties: {
+    value: speechAccount.properties.endpoint
+  }
+}
+
+resource speechKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: speechKeySecretName
+  properties: {
+    value: speechAccount.listKeys().key1
+  }
+}
+
 resource jwtSecretKvSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: jwtSecretSecretName
@@ -306,6 +443,20 @@ resource identityStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
 
 resource kinRecipeStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
   name: kinRecipeStaticWebAppName
+  location: staticWebAppLocation
+  sku: {
+    name: 'Standard'
+    tier: 'Standard'
+  }
+  properties: {
+    allowConfigFileUpdates: true
+    publicNetworkAccess: 'Enabled'
+    stagingEnvironmentPolicy: 'Disabled'
+  }
+}
+
+resource kinListStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
+  name: kinListStaticWebAppName
   location: staticWebAppLocation
   sku: {
     name: 'Standard'
@@ -602,9 +753,336 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
+// User-assigned managed identity shared by the KinList API container app and the
+// expand/contract migration job. It is granted Key Vault Secrets User so that
+// Container Apps can resolve keyVaultUrl secret references without inline secrets,
+// and it is the identity used for registry/Key Vault access.
+resource kinListIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${kinListContainerAppName}-identity'
+  location: location
+}
+
+resource kinListMigrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${kinListMigrationJobName}-identity'
+  location: location
+}
+
+resource kinListKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, kinListIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: kinListIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource kinListMigrationKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, kinListMigrationIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: kinListMigrationIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: kinListContainerAppName
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${kinListIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    kinListKeyVaultSecretsUser
+  ]
+  properties: {
+    managedEnvironmentId: containerAppsEnvironment.id
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        allowInsecure: false
+        external: true
+        targetPort: 8080
+        transport: 'auto'
+      }
+      registries: [
+        {
+          server: ghcrServer
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'db-connection-string'
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+        {
+          name: 'jwt-secret'
+          keyVaultUrl: jwtSecretKvSecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+        {
+          name: 'openai-endpoint'
+          keyVaultUrl: openAiEndpointSecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+        {
+          name: 'openai-key'
+          keyVaultUrl: openAiKeySecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+        {
+          name: 'speech-endpoint'
+          keyVaultUrl: speechEndpointSecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+        {
+          name: 'speech-key'
+          keyVaultUrl: speechKeySecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+        {
+          name: 'ghcr-password'
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: kinListIdentity.id
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'kinlist'
+          image: kinListImage
+          env: concat([
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsights.properties.ConnectionString
+            }
+            {
+              name: 'ASPNETCORE_URLS'
+              value: 'http://+:8080'
+            }
+            {
+              name: 'ConnectionStrings__KinHub'
+              secretRef: 'db-connection-string'
+            }
+            {
+              name: 'Jwt__Secret'
+              secretRef: 'jwt-secret'
+            }
+            {
+              name: 'Jwt__Issuer'
+              value: jwtIssuer
+            }
+            {
+              name: 'Jwt__AccessTokenExpiryMinutes'
+              value: jwtAccessTokenExpiryMinutes
+            }
+            {
+              name: 'Jwt__RefreshTokenExpiryDays'
+              value: jwtRefreshTokenExpiryDays
+            }
+            {
+              name: 'CoreApi__BaseUrl'
+              value: kinListCoreApiBaseUrl
+            }
+            {
+              name: 'CoreApi__TimeoutSeconds'
+              value: kinListCoreApiTimeoutSeconds
+            }
+            {
+              name: 'OpenAi__Endpoint'
+              secretRef: 'openai-endpoint'
+            }
+            {
+              name: 'OpenAi__ApiKey'
+              secretRef: 'openai-key'
+            }
+            {
+              name: 'OpenAi__ModelDeploymentName'
+              value: kinListOpenAiModelDeploymentName
+            }
+            {
+              name: 'Speech__Endpoint'
+              secretRef: 'speech-endpoint'
+            }
+            {
+              name: 'Speech__ApiKey'
+              secretRef: 'speech-key'
+            }
+            {
+              name: 'KinList__MaxTitleLength'
+              value: kinListMaxTitleLength
+            }
+            {
+              name: 'KinList__MaxItemLength'
+              value: kinListMaxItemLength
+            }
+            {
+              name: 'KinList__MaxItemsPerList'
+              value: kinListMaxItemsPerList
+            }
+            {
+              name: 'KinList__MaxItemsPerBulkConfirm'
+              value: kinListMaxItemsPerBulkConfirm
+            }
+            {
+              name: 'KinList__IdempotencyRetentionHours'
+              value: kinListIdempotencyRetentionHours
+            }
+            {
+              name: 'KinList__IdempotencyCleanupIntervalMinutes'
+              value: kinListIdempotencyCleanupIntervalMinutes
+            }
+            {
+              name: 'KinList__MaxAudioDurationSeconds'
+              value: kinListMaxAudioDurationSeconds
+            }
+            {
+              name: 'KinList__MaxAudioBytes'
+              value: kinListMaxAudioBytes
+            }
+            {
+              name: 'KinList__AudioProcessingTimeoutSeconds'
+              value: kinListAudioProcessingTimeoutSeconds
+            }
+            {
+              name: 'KinList__TransientRetryMaxAttempts'
+              value: kinListTransientRetryMaxAttempts
+            }
+            {
+              name: 'KinList__TransientRetryBaseDelayMilliseconds'
+              value: kinListTransientRetryBaseDelayMilliseconds
+            }
+            {
+              name: 'KinList__TransientRetryMaxDelayMilliseconds'
+              value: kinListTransientRetryMaxDelayMilliseconds
+            }
+            {
+              name: 'Cors__AllowAnyOrigin'
+              value: 'false'
+            }
+          ],
+          map(range(0, length(kinListCorsAllowedOrigins)), i => {
+            name: 'Cors__AllowedOrigins__${i}'
+            value: kinListCorsAllowedOrigins[i]
+          }),
+          map(range(0, length(kinListSpeechCandidateLocales)), i => {
+            name: 'Speech__CandidateLocales__${i}'
+            value: kinListSpeechCandidateLocales[i]
+          }),
+          map(range(0, length(kinListAllowedAudioMimeTypes)), i => {
+            name: 'KinList__AllowedAudioMimeTypes__${i}'
+            value: kinListAllowedAudioMimeTypes[i]
+          }))
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 8080
+              }
+              initialDelaySeconds: 10
+              periodSeconds: 30
+            }
+          ]
+          resources: {
+            cpu: json('0.5')
+            memory: '1.0Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+// Expand/contract migration job. The image and command are owned by t06-mig; this
+// template keeps the job definition infra-only and parameterizes the image. It is a
+// manual-trigger job so CI/CD can invoke it (az containerapp job start) before rollout.
+resource kinListMigrationJob 'Microsoft.App/jobs@2024-03-01' = {
+  name: kinListMigrationJobName
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${kinListMigrationIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    kinListMigrationKeyVaultSecretsUser
+  ]
+  properties: {
+    environmentId: containerAppsEnvironment.id
+    configuration: {
+      triggerType: 'Manual'
+      replicaTimeout: 1800
+      replicaRetryLimit: 1
+      manualTriggerConfig: {
+        parallelism: 1
+        replicaCompletionCount: 1
+      }
+      registries: [
+        {
+          server: ghcrServer
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'db-connection-string'
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: kinListMigrationIdentity.id
+        }
+        {
+          name: 'ghcr-password'
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: kinListMigrationIdentity.id
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'kinlist-migration'
+          image: kinListMigrationImage
+          env: [
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsights.properties.ConnectionString
+            }
+            {
+              name: 'ConnectionStrings__KinHub'
+              secretRef: 'db-connection-string'
+            }
+          ]
+          resources: {
+            cpu: json('0.5')
+            memory: '1.0Gi'
+          }
+        }
+      ]
+    }
+  }
+}
+
 output coreStaticWebAppDefaultHostname string = coreStaticWebApp.properties.defaultHostname
 output identityStaticWebAppDefaultHostname string = identityStaticWebApp.properties.defaultHostname
 output kinRecipeStaticWebAppDefaultHostname string = kinRecipeStaticWebApp.properties.defaultHostname
+output kinListStaticWebAppDefaultHostname string = kinListStaticWebApp.properties.defaultHostname
 output identityApiUrl string = 'https://${identityContainerApp.properties.configuration.ingress.fqdn}'
 output kinRecipeApiUrl string = 'https://${kinRecipeContainerApp.properties.configuration.ingress.fqdn}'
+output kinListApiUrl string = 'https://${kinListContainerApp.properties.configuration.ingress.fqdn}'
+output kinListMigrationJobName string = kinListMigrationJob.name
 output openAiEndpoint string = openAiAccount.properties.endpoint
+output speechEndpoint string = speechAccount.properties.endpoint

@@ -21,8 +21,10 @@ env:
   GHCR_SERVER: ghcr.io
   IDENTITY_API_PROJECT: src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj
   KINRECIPE_API_PROJECT: src/Presentations/Kin.KinHub.KinRecipe.Api/Kin.KinHub.KinRecipe.Api.csproj
+  KINLIST_API_PROJECT: src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj
   IDENTITY_DOCKERFILE: src/Presentations/Kin.KinHub.Identity.Api/Dockerfile
   KINRECIPE_DOCKERFILE: src/Presentations/Kin.KinHub.KinRecipe.Api/Dockerfile
+  KINLIST_DOCKERFILE: src/Presentations/Kin.KinHub.KinList.Api/Dockerfile
 
 concurrency:
   group: backend-${{ github.ref }}
@@ -36,6 +38,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Guard against Model Context Protocol references
+        run: bash scripts/verify-no-mcp.sh
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -135,6 +140,39 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.kinrecipe_image.outputs.image }}
 
+  package_kinlist_image:
+    name: Package KinList Image
+    runs-on: ubuntu-latest
+    needs:
+      - backend_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: kinlist_image
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-api:${GITHUB_SHA}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_SERVER }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+
+      - name: Build and push KinList image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.KINLIST_DOCKERFILE }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.kinlist_image.outputs.image }}
+
   deploy_dev:
     name: Deploy Dev
     if: github.event_name != 'pull_request'
@@ -144,6 +182,7 @@ jobs:
       - validate_bicep
       - package_identity_image
       - package_kinrecipe_image
+      - package_kinlist_image
 
     steps:
       - name: Checkout repository
@@ -154,6 +193,12 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           echo "IDENTITY_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
           echo "KINRECIPE_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "KINLIST_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          migration_image="${{ vars.KINLIST_MIGRATION_IMAGE }}"
+          if [ -z "${migration_image}" ]; then
+            migration_image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-migration:${GITHUB_SHA}"
+          fi
+          echo "KINLIST_MIGRATION_IMAGE=${migration_image}" >> "$GITHUB_ENV"
 
       - name: Validate deployment inputs
         run: |
@@ -164,18 +209,24 @@ jobs:
             "${{ vars.CORE_STATIC_WEB_APP_NAME }}"
             "${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
             "${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.KINLIST_STATIC_WEB_APP_NAME }}"
             "${{ vars.VITE_CORE_URL }}"
             "${{ vars.VITE_IDENTITY_URL }}"
             "${{ vars.VITE_KINRECIPE_URL }}"
+            "${{ vars.VITE_KINLIST_URL }}"
             "${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
             "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
+            "${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+            "${{ vars.KINLIST_CORE_API_BASE_URL }}"
             "${{ vars.APPLICATION_INSIGHTS_NAME }}"
             "${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
             "${{ vars.KEY_VAULT_NAME }}"
             "${{ vars.POSTGRES_SERVER_NAME }}"
             "${{ vars.POSTGRES_DATABASE_NAME }}"
             "${{ vars.OPEN_AI_ACCOUNT_NAME }}"
+            "${{ vars.SPEECH_ACCOUNT_NAME }}"
             "${{ vars.JWT_ISSUER }}"
             "${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}"
             "${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}"
@@ -184,6 +235,8 @@ jobs:
             "${{ secrets.GHCR_PASSWORD }}"
             "${IDENTITY_IMAGE}"
             "${KINRECIPE_IMAGE}"
+            "${KINLIST_IMAGE}"
+            "${KINLIST_MIGRATION_IMAGE}"
           )
 
           for value in "${required_values[@]}"; do
@@ -193,21 +246,15 @@ jobs:
             fi
           done
 
-          case "${IDENTITY_IMAGE}" in
-            ghcr.io/*) ;;
-            *)
-              echo "IDENTITY_IMAGE must start with ghcr.io/: ${IDENTITY_IMAGE}"
-              exit 1
-              ;;
-          esac
-
-          case "${KINRECIPE_IMAGE}" in
-            ghcr.io/*) ;;
-            *)
-              echo "KINRECIPE_IMAGE must start with ghcr.io/: ${KINRECIPE_IMAGE}"
-              exit 1
-              ;;
-          esac
+          for image in "${IDENTITY_IMAGE}" "${KINRECIPE_IMAGE}" "${KINLIST_IMAGE}" "${KINLIST_MIGRATION_IMAGE}"; do
+            case "${image}" in
+              ghcr.io/*) ;;
+              *)
+                echo "Image must start with ghcr.io/: ${image}"
+                exit 1
+                ;;
+            esac
+          done
 
       - name: Azure login
         uses: azure/login@v2
@@ -218,65 +265,57 @@ jobs:
 
       - name: Deploy infrastructure
         run: |
+          deploy_parameters=(
+            location="${{ vars.AZURE_LOCATION }}"
+            staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}"
+            coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}"
+            identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
+            kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            kinListStaticWebAppName="${{ vars.KINLIST_STATIC_WEB_APP_NAME }}"
+            coreFrontendOrigin="${{ vars.VITE_CORE_URL }}"
+            identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}"
+            kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}"
+            kinListFrontendOrigin="${{ vars.VITE_KINLIST_URL }}"
+            containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
+            identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
+            kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
+            kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+            kinListCoreApiBaseUrl="${{ vars.KINLIST_CORE_API_BASE_URL }}"
+            applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}"
+            logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
+            keyVaultName="${{ vars.KEY_VAULT_NAME }}"
+            postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}"
+            postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}"
+            postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}"
+            postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}"
+            openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}"
+            speechAccountName="${{ vars.SPEECH_ACCOUNT_NAME }}"
+            jwtSecret="${{ secrets.JWT_SECRET }}"
+            jwtIssuer="${{ vars.JWT_ISSUER }}"
+            ghcrUsername="${{ secrets.GHCR_USERNAME }}"
+            ghcrPassword="${{ secrets.GHCR_PASSWORD }}"
+            identityImage="${IDENTITY_IMAGE}"
+            kinRecipeImage="${KINRECIPE_IMAGE}"
+            kinListImage="${KINLIST_IMAGE}"
+            kinListMigrationImage="${KINLIST_MIGRATION_IMAGE}"
+          )
+
           az deployment group what-if \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file "${{ env.BICEP_FILE }}" \
-            --parameters \
-              location="${{ vars.AZURE_LOCATION }}" \
-              staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
-              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
-              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
-              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
-              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
-              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
-              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
-              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
-              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
-              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
-              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
-              keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
-              postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
-              postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
-              postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
-              postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-              openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}" \
-              jwtIssuer="${{ vars.JWT_ISSUER }}" \
-              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
-              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${IDENTITY_IMAGE}" \
-              kinRecipeImage="${KINRECIPE_IMAGE}"
+            --parameters "${deploy_parameters[@]}"
 
           az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file "${{ env.BICEP_FILE }}" \
-            --parameters \
-              location="${{ vars.AZURE_LOCATION }}" \
-              staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
-              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
-              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
-              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
-              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
-              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
-              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
-              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
-              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
-              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
-              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
-              keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
-              postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
-              postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
-              postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
-              postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-              openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}" \
-              jwtIssuer="${{ vars.JWT_ISSUER }}" \
-              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
-              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${IDENTITY_IMAGE}" \
-              kinRecipeImage="${KINRECIPE_IMAGE}"
+            --parameters "${deploy_parameters[@]}"
+
+      - name: Run KinList expand/contract migration
+        run: |
+          az containerapp job start \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
 
   deploy_prod:
     name: Deploy Prod
@@ -287,6 +326,7 @@ jobs:
       - deploy_dev
       - package_identity_image
       - package_kinrecipe_image
+      - package_kinlist_image
 
     steps:
       - name: Checkout repository
@@ -297,6 +337,12 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           echo "IDENTITY_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
           echo "KINRECIPE_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "KINLIST_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          migration_image="${{ vars.KINLIST_MIGRATION_IMAGE }}"
+          if [ -z "${migration_image}" ]; then
+            migration_image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-migration:${GITHUB_SHA}"
+          fi
+          echo "KINLIST_MIGRATION_IMAGE=${migration_image}" >> "$GITHUB_ENV"
 
       - name: Validate deployment inputs
         run: |
@@ -307,18 +353,24 @@ jobs:
             "${{ vars.CORE_STATIC_WEB_APP_NAME }}"
             "${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
             "${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            "${{ vars.KINLIST_STATIC_WEB_APP_NAME }}"
             "${{ vars.VITE_CORE_URL }}"
             "${{ vars.VITE_IDENTITY_URL }}"
             "${{ vars.VITE_KINRECIPE_URL }}"
+            "${{ vars.VITE_KINLIST_URL }}"
             "${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
             "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
+            "${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+            "${{ vars.KINLIST_CORE_API_BASE_URL }}"
             "${{ vars.APPLICATION_INSIGHTS_NAME }}"
             "${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
             "${{ vars.KEY_VAULT_NAME }}"
             "${{ vars.POSTGRES_SERVER_NAME }}"
             "${{ vars.POSTGRES_DATABASE_NAME }}"
             "${{ vars.OPEN_AI_ACCOUNT_NAME }}"
+            "${{ vars.SPEECH_ACCOUNT_NAME }}"
             "${{ vars.JWT_ISSUER }}"
             "${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}"
             "${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}"
@@ -327,6 +379,8 @@ jobs:
             "${{ secrets.GHCR_PASSWORD }}"
             "${IDENTITY_IMAGE}"
             "${KINRECIPE_IMAGE}"
+            "${KINLIST_IMAGE}"
+            "${KINLIST_MIGRATION_IMAGE}"
           )
 
           for value in "${required_values[@]}"; do
@@ -336,21 +390,15 @@ jobs:
             fi
           done
 
-          case "${IDENTITY_IMAGE}" in
-            ghcr.io/*) ;;
-            *)
-              echo "IDENTITY_IMAGE must start with ghcr.io/: ${IDENTITY_IMAGE}"
-              exit 1
-              ;;
-          esac
-
-          case "${KINRECIPE_IMAGE}" in
-            ghcr.io/*) ;;
-            *)
-              echo "KINRECIPE_IMAGE must start with ghcr.io/: ${KINRECIPE_IMAGE}"
-              exit 1
-              ;;
-          esac
+          for image in "${IDENTITY_IMAGE}" "${KINRECIPE_IMAGE}" "${KINLIST_IMAGE}" "${KINLIST_MIGRATION_IMAGE}"; do
+            case "${image}" in
+              ghcr.io/*) ;;
+              *)
+                echo "Image must start with ghcr.io/: ${image}"
+                exit 1
+                ;;
+            esac
+          done
 
       - name: Azure login
         uses: azure/login@v2
@@ -361,62 +409,54 @@ jobs:
 
       - name: Deploy infrastructure
         run: |
+          deploy_parameters=(
+            location="${{ vars.AZURE_LOCATION }}"
+            staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}"
+            coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}"
+            identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}"
+            kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}"
+            kinListStaticWebAppName="${{ vars.KINLIST_STATIC_WEB_APP_NAME }}"
+            coreFrontendOrigin="${{ vars.VITE_CORE_URL }}"
+            identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}"
+            kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}"
+            kinListFrontendOrigin="${{ vars.VITE_KINLIST_URL }}"
+            containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}"
+            identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
+            kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
+            kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+            kinListCoreApiBaseUrl="${{ vars.KINLIST_CORE_API_BASE_URL }}"
+            applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}"
+            logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
+            keyVaultName="${{ vars.KEY_VAULT_NAME }}"
+            postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}"
+            postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}"
+            postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}"
+            postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}"
+            openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}"
+            speechAccountName="${{ vars.SPEECH_ACCOUNT_NAME }}"
+            jwtSecret="${{ secrets.JWT_SECRET }}"
+            jwtIssuer="${{ vars.JWT_ISSUER }}"
+            ghcrUsername="${{ secrets.GHCR_USERNAME }}"
+            ghcrPassword="${{ secrets.GHCR_PASSWORD }}"
+            identityImage="${IDENTITY_IMAGE}"
+            kinRecipeImage="${KINRECIPE_IMAGE}"
+            kinListImage="${KINLIST_IMAGE}"
+            kinListMigrationImage="${KINLIST_MIGRATION_IMAGE}"
+          )
+
           az deployment group what-if \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file "${{ env.BICEP_FILE }}" \
-            --parameters \
-              location="${{ vars.AZURE_LOCATION }}" \
-              staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
-              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
-              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
-              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
-              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
-              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
-              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
-              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
-              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
-              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
-              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
-              keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
-              postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
-              postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
-              postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
-              postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-              openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}" \
-              jwtIssuer="${{ vars.JWT_ISSUER }}" \
-              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
-              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${IDENTITY_IMAGE}" \
-              kinRecipeImage="${KINRECIPE_IMAGE}"
+            --parameters "${deploy_parameters[@]}"
 
           az deployment group create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file "${{ env.BICEP_FILE }}" \
-            --parameters \
-              location="${{ vars.AZURE_LOCATION }}" \
-              staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}" \
-              coreStaticWebAppName="${{ vars.CORE_STATIC_WEB_APP_NAME }}" \
-              identityStaticWebAppName="${{ vars.IDENTITY_STATIC_WEB_APP_NAME }}" \
-              kinRecipeStaticWebAppName="${{ vars.KINRECIPE_STATIC_WEB_APP_NAME }}" \
-              coreFrontendOrigin="${{ vars.VITE_CORE_URL }}" \
-              identityFrontendOrigin="${{ vars.VITE_IDENTITY_URL }}" \
-              kinRecipeFrontendOrigin="${{ vars.VITE_KINRECIPE_URL }}" \
-              containerAppsEnvironmentName="${{ vars.CONTAINER_APPS_ENVIRONMENT_NAME }}" \
-              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
-              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
-              applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}" \
-              logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}" \
-              keyVaultName="${{ vars.KEY_VAULT_NAME }}" \
-              postgresServerName="${{ vars.POSTGRES_SERVER_NAME }}" \
-              postgresDatabaseName="${{ vars.POSTGRES_DATABASE_NAME }}" \
-              postgresAdministratorLogin="${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
-              postgresAdministratorPassword="${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-              openAiAccountName="${{ vars.OPEN_AI_ACCOUNT_NAME }}" \
-              jwtSecret="${{ secrets.JWT_SECRET }}" \
-              jwtIssuer="${{ vars.JWT_ISSUER }}" \
-              ghcrUsername="${{ secrets.GHCR_USERNAME }}" \
-              ghcrPassword="${{ secrets.GHCR_PASSWORD }}" \
-              identityImage="${IDENTITY_IMAGE}" \
-              kinRecipeImage="${KINRECIPE_IMAGE}"
+            --parameters "${deploy_parameters[@]}"
+
+      - name: Run KinList expand/contract migration
+        run: |
+          az containerapp job start \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"

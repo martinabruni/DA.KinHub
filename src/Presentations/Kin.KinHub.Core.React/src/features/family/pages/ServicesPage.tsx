@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Settings2 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EntityCard } from '@/components/entity-card'
 import { useServices } from '@/features/family/ServicesProvider'
 import {
   serviceConfig,
@@ -53,22 +53,16 @@ export function ServicesPage() {
                 const href = getServiceHref(service.name, activeMember)
 
                 const content = (
-                  <Card className="h-full border-border/70 bg-card/80 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
-                    <CardContent className="flex aspect-square h-full flex-col p-4 sm:p-5">
+                  <EntityCard
+                    icon={
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted sm:h-11 sm:w-11">
                         <Icon className={`h-5 w-5 ${cfg.color}`} />
                       </div>
-                      <div className="mt-4 flex-1">
-                        <p className="font-semibold leading-tight">{service.name}</p>
-                        <p className="mt-2 text-sm text-muted-foreground line-clamp-3">
-                          {service.description}
-                        </p>
-                      </div>
-                      <span className="mt-4 text-sm font-medium text-primary">
-                        {t('services.open')}
-                      </span>
-                    </CardContent>
-                  </Card>
+                    }
+                    title={service.name}
+                    description={service.description}
+                    footer={<span className="text-sm font-medium text-primary">{t('services.open')}</span>}
+                  />
                 )
 
                 return cfg.external ? (
