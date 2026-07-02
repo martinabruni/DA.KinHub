@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace Kin.KinHub.Shared.Api.Common;
 
-internal sealed class FluentRequestValidator<T> : IRequestValidator<T>
+public sealed class FluentRequestValidator<T> : IRequestValidator<T>
 {
     private readonly IValidator<T> _validator;
 

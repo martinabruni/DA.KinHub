@@ -7,10 +7,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Kin.KinHub.Migrations.Runner</RootNamespace>
     <AssemblyName>Kin.KinHub.Migrations.Runner</AssemblyName>
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.PostgreSql\Kin.KinHub.Identity.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
   </ItemGroup>
 

@@ -1,9 +1,12 @@
+extern alias IdentityApi;
+
 using Kin.KinHub.Core.Business.FamilyFeature;
 using Kin.KinHub.Core.Domain.FamilyFeature;
 using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Business.Common;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
-using Kin.KinHub.Shared.Api.AuthenticationFeature;
+using Kin.KinHub.Identity.Api.AuthenticationFeature;
+using Kin.KinHub.Identity.Jwt.AuthenticationFeature;
 using Kin.KinHub.Shared.Api.Common.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -170,6 +173,28 @@ public sealed class OAuthAndAccessIntegrationTests
     }
 
     [Fact]
+    public async Task ProtectedEndpoint_RejectsMissingApiScope()
+    {
+        using var client = _familyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Authorization = new("Bearer", _familyFactory.CreateAccessToken([]));
+
+        var response = await client.GetAsync("/api/access/family-context");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedEndpoint_RejectsWrongAudience()
+    {
+        using var client = _familyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        client.DefaultRequestHeaders.Authorization = new("Bearer", _familyFactory.CreateAccessToken([OAuthScopes.Read], "wrong.api"));
+
+        var response = await client.GetAsync("/api/access/family-context");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task FamilyContext_WhenFamilyMissing_ReturnsFamilyRequiredProblemDetails()
     {
         var factory = _noFamilyFactory;
@@ -199,7 +224,7 @@ public sealed class OAuthAndAccessIntegrationTests
     }
 
     [Fact]
-    public async Task AuthLogin_WhenValidationFails_ReturnsProblemDetails()
+    public async Task LegacyAuthLogin_IsNotExposed()
     {
         var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -212,11 +237,7 @@ public sealed class OAuthAndAccessIntegrationTests
                 password = string.Empty,
             });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("validation_error", body.GetProperty("code").GetString());
-        Assert.True(body.GetProperty("errors").GetArrayLength() > 0);
-        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private static async Task<HttpResponseMessage> AuthorizeAsync(HttpClient client, string clientId, string redirectUri, string codeVerifier)
@@ -246,10 +267,11 @@ public sealed class OAuthAndAccessIntegrationTests
     }
 }
 
-public class OAuthApiFactory : WebApplicationFactory<Program>
+public class OAuthApiFactory : WebApplicationFactory<IdentityApi::Program>
 {
     internal const string ClientId = "integration-client";
     internal const string RedirectUri = "http://127.0.0.1/callback";
+    internal const string PostLogoutRedirectUri = "http://127.0.0.1/logout-complete";
     internal static readonly Guid UserId = Guid.Parse("5fb90fe2-31fd-4295-a81f-421fd3e8b8d2");
     internal static readonly Guid FamilyId = Guid.Parse("b5f1c687-3a8f-44cf-b75f-caa1f8c5b755");
 
@@ -260,10 +282,18 @@ public class OAuthApiFactory : WebApplicationFactory<Program>
         _hasFamilyContext = hasFamilyContext;
     }
 
-    public string CreateAccessToken()
+    public string CreateAccessToken(IReadOnlyList<string>? scopes = null, string audience = "kinhub.api")
     {
         using var scope = Services.CreateScope();
-        var tokenGenerator = scope.ServiceProvider.GetRequiredService<ITokenGenerator>();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var tokenGenerator = new JwtTokenGenerator(new JwtOptions
+        {
+            Secret = configuration["Jwt:Secret"] is { Length: > 0 } configuredSecret
+                ? configuredSecret
+                : "development-only-kinhub-jwt-secret-0001",
+            Issuer = configuration["Jwt:Issuer"] ?? "http://localhost",
+            Audience = audience,
+        });
         return tokenGenerator.GenerateAccessToken(
             new KinUser
             {
@@ -274,12 +304,16 @@ public class OAuthApiFactory : WebApplicationFactory<Program>
                 UpdatedAt = DateTime.UtcNow,
             },
             [],
-            [OAuthScopes.Read]);
+            scopes ?? [OAuthScopes.Read]);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        Environment.SetEnvironmentVariable("KINHUB_OAuth__AuthorizationServerUrl", "http://localhost");
+        Environment.SetEnvironmentVariable("KINHUB_ConnectionStrings__KinHub", "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub");
+        Environment.SetEnvironmentVariable("KINHUB_Jwt__Issuer", "http://localhost");
+        Environment.SetEnvironmentVariable("KINHUB_Jwt__Secret", "integration-only-kinhub-jwt-secret-000000000001");
         builder.ConfigureAppConfiguration(configuration =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -291,6 +325,7 @@ public class OAuthApiFactory : WebApplicationFactory<Program>
                 ["OAuth:Clients:0:ClientId"] = ClientId,
                 ["OAuth:Clients:0:ClientName"] = "Integration Client",
                 ["OAuth:Clients:0:RedirectUris:0"] = RedirectUri,
+                ["OAuth:Clients:0:RedirectUris:1"] = PostLogoutRedirectUri,
                 ["OAuth:Clients:0:GrantTypes:0"] = "authorization_code",
                 ["OAuth:Clients:0:ResponseTypes:0"] = "code",
                 ["OAuth:Clients:0:TokenEndpointAuthMethod"] = "none",
@@ -403,8 +438,8 @@ internal sealed class FixedOAuthClientStore : IOAuthClientStore
     private readonly OAuthRegisteredClient _client = new(
         OAuthApiFactory.ClientId,
         "Integration Client",
-        [OAuthApiFactory.RedirectUri],
-        ["authorization_code", "refresh_token"],
+        [OAuthApiFactory.RedirectUri, OAuthApiFactory.PostLogoutRedirectUri],
+        ["authorization_code"],
         ["code"],
         "none",
         OAuthScopes.Read,

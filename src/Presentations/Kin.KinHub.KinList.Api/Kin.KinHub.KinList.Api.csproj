@@ -1,10 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Npgsql" Version="9.*" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.*" />
@@ -17,23 +16,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\..\Businesses\Kin.KinHub.Core.Business\Kin.KinHub.Core.Business.csproj" />
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Identity.Domain\Kin.KinHub.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
+    <ProjectReference Include="..\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\ApiProblemDetails.cs" Link="Common\ApiProblemDetails.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\CorsOptions.cs" Link="Common\Configuration\CorsOptions.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\JwtSettings.cs" Link="Common\Configuration\JwtSettings.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Middlewares\JwtAuthenticationMiddleware.cs" Link="Common\Middlewares\JwtAuthenticationMiddleware.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\FluentRequestValidator.cs" Link="Common\Validators\FluentRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\IRequestValidator.cs" Link="Common\Validators\IRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\RequestValidationResult.cs" Link="Common\Validators\RequestValidationResult.cs" />
-  </ItemGroup>
+  <ItemGroup></ItemGroup>
 </Project>

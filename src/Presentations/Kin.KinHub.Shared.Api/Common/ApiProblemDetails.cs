@@ -2,39 +2,39 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.Shared.Api.Common;
 
-internal static class ApiProblemDetails
+public static class ApiProblemDetails
 {
-    internal static IActionResult InvalidRequestBody(ControllerBase controller) =>
+    public static IActionResult InvalidRequestBody(ControllerBase controller) =>
         BadRequest(controller, "invalid_request_body", "Invalid request body.");
 
-    internal static IActionResult Validation(ControllerBase controller, IReadOnlyList<string> errors) =>
+    public static IActionResult Validation(ControllerBase controller, IReadOnlyList<string> errors) =>
         BadRequest(controller, "validation_error", errors);
 
-    internal static IActionResult AuthenticationRequired(ControllerBase controller) =>
+    public static IActionResult AuthenticationRequired(ControllerBase controller) =>
         Unauthorized(controller, "authentication_required", "Missing or invalid Authorization header.");
 
-    internal static IActionResult BadRequest(ControllerBase controller, string code, string detail) =>
+    public static IActionResult BadRequest(ControllerBase controller, string code, string detail) =>
         controller.BadRequest(Create(controller, StatusCodes.Status400BadRequest, code, detail));
 
-    internal static IActionResult BadRequest(ControllerBase controller, string code, IReadOnlyList<string> errors) =>
+    public static IActionResult BadRequest(ControllerBase controller, string code, IReadOnlyList<string> errors) =>
         controller.BadRequest(Create(controller, StatusCodes.Status400BadRequest, code, "One or more validation errors occurred.", errors));
 
-    internal static IActionResult Unauthorized(ControllerBase controller, string code, string detail) =>
+    public static IActionResult Unauthorized(ControllerBase controller, string code, string detail) =>
         controller.Unauthorized(Create(controller, StatusCodes.Status401Unauthorized, code, detail));
 
-    internal static IActionResult Forbidden(ControllerBase controller, string code, string detail) =>
+    public static IActionResult Forbidden(ControllerBase controller, string code, string detail) =>
         new ObjectResult(Create(controller, StatusCodes.Status403Forbidden, code, detail))
         {
             StatusCode = StatusCodes.Status403Forbidden,
         };
 
-    internal static IActionResult ServiceUnavailable(ControllerBase controller, string code, string detail) =>
+    public static IActionResult ServiceUnavailable(ControllerBase controller, string code, string detail) =>
         new ObjectResult(Create(controller, StatusCodes.Status503ServiceUnavailable, code, detail))
         {
             StatusCode = StatusCodes.Status503ServiceUnavailable,
         };
 
-    internal static ProblemDetails Create(
+    public static ProblemDetails Create(
         ControllerBase controller,
         int status,
         string code,
@@ -42,7 +42,7 @@ internal static class ApiProblemDetails
         IReadOnlyList<string>? errors = null) =>
         Create(controller.HttpContext, status, code, detail, errors);
 
-    internal static ProblemDetails Create(
+    public static ProblemDetails Create(
         HttpContext httpContext,
         int status,
         string code,
@@ -73,7 +73,7 @@ internal static class ApiProblemDetails
     /// Writes an RFC 9457 problem detail directly to the response (for use outside MVC actions,
     /// e.g. authorization middleware).
     /// </summary>
-    internal static Task WriteAsync(
+    public static Task WriteAsync(
         HttpContext httpContext,
         int status,
         string code,

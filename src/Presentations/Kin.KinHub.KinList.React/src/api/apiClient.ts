@@ -2,7 +2,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 import { redirectToIdentityLogin } from '@/config/appLinks'
 import { getStatusAwareErrorMessage } from '@/lib/errors'
-import { clearAccessToken, getAccessToken } from '@shared/oauth/tokenStore'
+import { attachOAuthInterceptors } from '@shared/oauth/oauthApiClient'
 
 const getEnvUrl = (value: unknown, fallback: string) => {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
@@ -18,40 +18,17 @@ const IDENTITY_API_URL = getEnvUrl(
 )
 
 function createApiClient(baseURL: string) {
-  const client = axios.create({
+  return attachOAuthInterceptors(axios.create({
     baseURL,
     headers: { 'Content-Type': 'application/json' },
-  })
-
-  client.interceptors.request.use((config) => {
-    const token = getAccessToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-
-    return config
-  })
-
-  client.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const status = error.response?.status
-
-      if (status === 401) {
-        clearAccessToken()
-        redirectToIdentityLogin(window.location.href)
-        return Promise.reject(error)
-      }
-
-      if (status !== undefined && status >= 400) {
-        toast.error(getStatusAwareErrorMessage(error, status))
-      }
-
-      return Promise.reject(error)
+  }), {
+    onAuthenticationRequired: (returnTo) => {
+      redirectToIdentityLogin(returnTo)
     },
-  )
-
-  return client
+    onHttpError: (status, error) => {
+      toast.error(getStatusAwareErrorMessage(error, status))
+    },
+  })
 }
 
 export const apiClient = createApiClient(KINLIST_API_URL)

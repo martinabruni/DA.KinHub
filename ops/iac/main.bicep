@@ -135,11 +135,8 @@ param kinListImage string
 @minLength(1)
 param kinListMigrationImage string
 
-@description('KinList CoreApi base URL. Defaults to the KinRecipe/Core hub API for family ownership checks.')
-param kinListCoreApiBaseUrl string
-
-@description('KinList CoreApi HTTP timeout in seconds.')
-param kinListCoreApiTimeoutSeconds string = '10'
+@description('Family context API HTTP timeout in seconds.')
+param familyContextApiTimeoutSeconds string = '10'
 
 @description('KinList maximum list title length.')
 param kinListMaxTitleLength string = '100'
@@ -483,9 +480,46 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01'
   }
 }
 
+resource identityIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: '${identityContainerAppName}-identity'
+}
+
+resource kinRecipeIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: '${kinRecipeContainerAppName}-identity'
+}
+
+resource identityKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, identityIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: identityIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource kinRecipeKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, kinRecipeIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: kinRecipeIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
 resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: identityContainerAppName
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${identityIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    identityKeyVaultSecretsUser
+  ]
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -506,15 +540,18 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'db-connection-string'
-          value: postgresConnectionString
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: identityIdentity.id
         }
         {
           name: 'jwt-secret'
-          value: jwtSecret
+          keyVaultUrl: jwtSecretKvSecret.properties.secretUri
+          identity: identityIdentity.id
         }
         {
           name: 'ghcr-password'
-          value: ghcrPassword
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: identityIdentity.id
         }
       ]
     }
@@ -545,6 +582,10 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: jwtIssuer
             }
             {
+              name: 'Jwt__Audience'
+              value: 'kinhub.api'
+            }
+            {
               name: 'Jwt__AccessTokenExpiryMinutes'
               value: jwtAccessTokenExpiryMinutes
             }
@@ -570,15 +611,95 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'Cors__AllowedOrigins__3'
-              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
+              value: kinListFrontendOrigin
             }
             {
               name: 'Cors__AllowedOrigins__4'
-              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+              value: 'https://${coreStaticWebApp.properties.defaultHostname}'
             }
             {
               name: 'Cors__AllowedOrigins__5'
+              value: 'https://${identityStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__6'
               value: 'https://${kinRecipeStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'Cors__AllowedOrigins__7'
+              value: 'https://${kinListStaticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'OAuth__AuthorizationServerUrl'
+              value: 'https://${identityContainerAppName}.${containerAppsEnvironment.properties.defaultDomain}'
+            }
+            {
+              name: 'OAuth__RegistrationUiUrl'
+              value: '${identityFrontendOrigin}/register'
+            }
+            {
+              name: 'OAuth__Clients__0__ClientId'
+              value: 'kinhub-core-spa'
+            }
+            {
+              name: 'OAuth__Clients__0__ClientName'
+              value: 'KinHub Core'
+            }
+            {
+              name: 'OAuth__Clients__0__RedirectUris__0'
+              value: '${coreFrontendOrigin}/oauth/callback'
+            }
+            {
+              name: 'OAuth__Clients__0__Scope'
+              value: 'kinhub.api'
+            }
+            {
+              name: 'OAuth__Clients__1__ClientId'
+              value: 'kinhub-identity-spa'
+            }
+            {
+              name: 'OAuth__Clients__1__ClientName'
+              value: 'KinHub Identity'
+            }
+            {
+              name: 'OAuth__Clients__1__RedirectUris__0'
+              value: '${identityFrontendOrigin}/oauth/callback'
+            }
+            {
+              name: 'OAuth__Clients__1__Scope'
+              value: 'kinhub.api'
+            }
+            {
+              name: 'OAuth__Clients__2__ClientId'
+              value: 'kinhub-kinrecipe-spa'
+            }
+            {
+              name: 'OAuth__Clients__2__ClientName'
+              value: 'KinHub KinRecipe'
+            }
+            {
+              name: 'OAuth__Clients__2__RedirectUris__0'
+              value: '${kinRecipeFrontendOrigin}/oauth/callback'
+            }
+            {
+              name: 'OAuth__Clients__2__Scope'
+              value: 'kinhub.api'
+            }
+            {
+              name: 'OAuth__Clients__3__ClientId'
+              value: 'kinhub-kinlist-spa'
+            }
+            {
+              name: 'OAuth__Clients__3__ClientName'
+              value: 'KinHub KinList'
+            }
+            {
+              name: 'OAuth__Clients__3__RedirectUris__0'
+              value: '${kinListFrontendOrigin}/oauth/callback'
+            }
+            {
+              name: 'OAuth__Clients__3__Scope'
+              value: 'kinhub.api'
             }
           ]
           probes: [
@@ -609,6 +730,15 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
 resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: kinRecipeContainerAppName
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${kinRecipeIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    kinRecipeKeyVaultSecretsUser
+  ]
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -629,23 +759,28 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'db-connection-string'
-          value: postgresConnectionString
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'jwt-secret'
-          value: jwtSecret
+          keyVaultUrl: jwtSecretKvSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'openai-endpoint'
-          value: openAiAccount.properties.endpoint
+          keyVaultUrl: openAiEndpointSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'openai-key'
-          value: openAiAccount.listKeys().key1
+          keyVaultUrl: openAiKeySecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'ghcr-password'
-          value: ghcrPassword
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
       ]
     }
@@ -674,6 +809,10 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'Jwt__Issuer'
               value: jwtIssuer
+            }
+            {
+              name: 'Jwt__Audience'
+              value: 'kinhub.api'
             }
             {
               name: 'Jwt__AccessTokenExpiryMinutes'
@@ -878,6 +1017,10 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: jwtIssuer
             }
             {
+              name: 'Jwt__Audience'
+              value: 'kinhub.api'
+            }
+            {
               name: 'Jwt__AccessTokenExpiryMinutes'
               value: jwtAccessTokenExpiryMinutes
             }
@@ -886,12 +1029,12 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: jwtRefreshTokenExpiryDays
             }
             {
-              name: 'CoreApi__BaseUrl'
-              value: kinListCoreApiBaseUrl
+              name: 'FamilyContextApi__BaseUrl'
+              value: 'https://${identityContainerAppName}.${containerAppsEnvironment.properties.defaultDomain}'
             }
             {
-              name: 'CoreApi__TimeoutSeconds'
-              value: kinListCoreApiTimeoutSeconds
+              name: 'FamilyContextApi__TimeoutSeconds'
+              value: familyContextApiTimeoutSeconds
             }
             {
               name: 'OpenAi__Endpoint'

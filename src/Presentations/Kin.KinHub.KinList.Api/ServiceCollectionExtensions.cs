@@ -5,7 +5,9 @@ using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Api.Common;
 using Kin.KinHub.KinList.Api.Common.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
+using Kin.KinHub.Shared.Api.Common.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -22,18 +24,19 @@ public static class ServiceCollectionExtensions
     {
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
-        var coreApiOptions = configuration.GetSection(CoreApiOptions.SectionName).Get<CoreApiOptions>() ?? new();
+        var familyContextApiOptions = configuration.GetSection(FamilyContextApiOptions.SectionName).Get<FamilyContextApiOptions>() ?? new();
         var kinListOptions = configuration.GetSection(KinListOptions.SectionName).Get<KinListOptions>() ?? new();
         var speechOptions = configuration.GetSection(SpeechToTextOptions.SectionName).Get<SpeechToTextOptions>() ?? new();
         var openAiOptions = configuration.GetSection("OpenAi").Get<OpenAiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
-        coreApiOptions.Validate();
+        ValidateProductionSecurity(corsOptions, jwtSettings, familyContextApiOptions, environment);
+        familyContextApiOptions.Validate();
         kinListOptions.Validate();
 
         services.AddSingleton(corsOptions);
-        services.AddSingleton(coreApiOptions);
+        services.AddSingleton(familyContextApiOptions);
         services.AddSingleton(kinListOptions);
 
         services
@@ -49,8 +52,8 @@ public static class ServiceCollectionExtensions
                 o.AccessTokenExpiryMinutes = jwtSettings.AccessTokenExpiryMinutes;
                 o.RefreshTokenExpiryDays = jwtSettings.RefreshTokenExpiryDays;
                 o.Issuer = effectiveJwtIssuer;
+                o.Audience = jwtSettings.Audience;
             })
-            .AddKinHubCoreBusiness()
             .AddKinHubKinListBusiness(o =>
             {
                 o.MaxTitleLength = kinListOptions.MaxTitleLength;
@@ -95,10 +98,9 @@ public static class ServiceCollectionExtensions
                 });
         }
 
-        services.RemoveAll<IFamilyOwnershipService>();
-        services.AddHttpClient<IFamilyOwnershipService, RemoteFamilyOwnershipService>((serviceProvider, client) =>
+        services.AddHttpClient<IFamilyContextResolver, RemoteFamilyContextResolver>((serviceProvider, client) =>
         {
-            var options = serviceProvider.GetRequiredService<CoreApiOptions>();
+            var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });
@@ -118,7 +120,8 @@ public static class ServiceCollectionExtensions
                 {
                     ValidateIssuer = true,
                     ValidIssuer = effectiveJwtIssuer,
-                    ValidateAudience = false,
+                    ValidateAudience = true,
+                    ValidAudience = jwtSettings.Audience,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(effectiveJwtSecret)),
@@ -126,7 +129,22 @@ public static class ServiceCollectionExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireAssertion(HasApiScope)
+                .Build();
+            options.AddPolicy(
+                FamilyContextRequirement.PolicyName,
+                policy =>
+                {
+                    policy.RequireAssertion(HasApiScope);
+                    policy.Requirements.Add(new FamilyContextRequirement());
+                });
+        });
+        services.AddScoped<IAuthorizationHandler, FamilyContextAuthorizationHandler>();
+        services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
         services.AddHostedService<IdempotencyRecordCleanupService>();
@@ -152,6 +170,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    private static bool HasApiScope(AuthorizationHandlerContext context) =>
+        context.User.FindAll("scope")
+            .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Contains(OAuthScopes.Read, StringComparer.Ordinal);
+
     private static string ResolveJwtSecret(string? configuredSecret, IHostEnvironment environment)
     {
         var secret = configuredSecret?.Trim();
@@ -166,6 +189,21 @@ public static class ServiceCollectionExtensions
         }
 
         throw new InvalidOperationException("Jwt:Secret must be configured.");
+    }
+
+    private static void ValidateProductionSecurity(
+        CorsOptions cors,
+        JwtSettings jwt,
+        FamilyContextApiOptions familyContextApi,
+        IHostEnvironment environment)
+    {
+        if (environment.IsDevelopment()) return;
+        if (cors.AllowAnyOrigin || cors.AllowedOrigins.Length == 0)
+            throw new InvalidOperationException("Cors must contain explicit origins outside development.");
+        if (jwt.Secret.Trim().Length < 32 || string.IsNullOrWhiteSpace(jwt.Issuer) || string.IsNullOrWhiteSpace(jwt.Audience))
+            throw new InvalidOperationException("Jwt secret, issuer, and audience must be configured securely.");
+        if (!Uri.TryCreate(familyContextApi.BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("FamilyContextApi:BaseUrl must use HTTPS outside development.");
     }
 
     private static string ResolveJwtIssuer(string? configuredIssuer, IHostEnvironment environment)

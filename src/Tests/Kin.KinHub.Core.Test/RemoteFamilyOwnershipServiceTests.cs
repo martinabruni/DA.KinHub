@@ -8,7 +8,7 @@ using Kin.KinHub.Core.Business.FamilyFeature;
 using Kin.KinHub.Core.Business.RecipeFeature;
 using Kin.KinHub.Identity.Domain.Common;
 using Kin.KinHub.Shared.Api.Common;
-using Kin.KinHub.Shared.Api.RecipeFeature;
+using Kin.KinHub.KinRecipe.Api.RecipeFeature;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;

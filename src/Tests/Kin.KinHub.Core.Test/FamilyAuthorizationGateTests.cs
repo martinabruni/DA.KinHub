@@ -1,8 +1,10 @@
+extern alias IdentityApi;
+
 using Kin.KinHub.Core.Business.FamilyFeature;
 using Kin.KinHub.Core.Domain.FamilyFeature;
 using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
-using Kin.KinHub.Shared.Api.AuthenticationFeature;
+using Kin.KinHub.Identity.Api.AuthenticationFeature;
 using Kin.KinHub.Shared.Api.Common.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -106,7 +108,7 @@ public sealed class FamilyAuthorizationGateTests
         Assert.Equal("family_context_unavailable", body.GetProperty("code").GetString());
     }
 
-    private sealed class GateFactory : WebApplicationFactory<Program>
+    private sealed class GateFactory : WebApplicationFactory<IdentityApi::Program>
     {
         internal const string ClientId = "integration-client";
         internal const string RedirectUri = "http://127.0.0.1/callback";

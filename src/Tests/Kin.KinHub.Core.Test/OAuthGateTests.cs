@@ -1,4 +1,4 @@
-using Kin.KinHub.Shared.Api.AuthenticationFeature;
+using Kin.KinHub.Identity.Api.AuthenticationFeature;
 using Kin.KinHub.Shared.Api.Common.Configuration;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
@@ -82,6 +82,41 @@ public sealed class OAuthGateTests
         var grants = body.GetProperty("grant_types_supported").EnumerateArray().Select(x => x.GetString()).ToList();
         Assert.Contains("authorization_code", grants);
         Assert.DoesNotContain("refresh_token", grants);
+    }
+
+    [Fact]
+    public async Task Logout_WithRegisteredPostLogoutRedirectUri_Redirects()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var authorizeResponse = await AuthorizeAsync(client, "logout-verifier");
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+
+        var response = await client.PostAsync(
+            $"/logout?client_id={Uri.EscapeDataString(OAuthApiFactory.ClientId)}&post_logout_redirect_uri={Uri.EscapeDataString(OAuthApiFactory.PostLogoutRedirectUri)}",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(OAuthApiFactory.PostLogoutRedirectUri, response.Headers.Location?.ToString());
+        Assert.Contains(
+            response.Headers.TryGetValues("Set-Cookie", out var cookies) ? cookies : [],
+            header => header.Contains("expires=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Logout_WithUnregisteredPostLogoutRedirectUri_DoesNotRedirect()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var authorizeResponse = await AuthorizeAsync(client, "logout-verifier");
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+
+        var response = await client.PostAsync(
+            $"/logout?client_id={Uri.EscapeDataString(OAuthApiFactory.ClientId)}&post_logout_redirect_uri={Uri.EscapeDataString("https://evil.example.com/logout")}",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Null(response.Headers.Location);
     }
 
     private static async Task<HttpResponseMessage> AuthorizeAsync(HttpClient client, string codeVerifier)

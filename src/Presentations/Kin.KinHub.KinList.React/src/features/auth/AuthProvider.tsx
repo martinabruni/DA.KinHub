@@ -4,8 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { identityApiClient } from '@/api/apiClient'
+import { oauthClientConfig } from '@/config/oauth'
 import { useAuthContext } from '@/store/authContextValue'
 import { AuthProviderContext } from '@/features/auth/authProviderContext'
+import { startOAuthLogout } from '@shared/oauth/oauthClient'
 import type { User } from '@/types'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -26,12 +28,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await identityApiClient.post('/logout')
-    },
-    onSettled: () => {
       clearAuth()
       queryClient.clear()
       toast.success(t('auth.loggedOut'))
+      startOAuthLogout(oauthClientConfig)
     },
   })
 

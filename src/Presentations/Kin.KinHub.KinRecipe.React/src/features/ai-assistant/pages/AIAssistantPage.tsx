@@ -34,7 +34,7 @@ import {
   RecipeBookProvider,
   useRecipeBooks,
 } from "@/features/recipes/RecipeBookProvider";
-import { apiClient } from "@/api/apiClient";
+import { apiClient, kinListApiClient } from "@/api/apiClient";
 import type {
   AISuggestedRecipe,
   AIParsedRecipe,
@@ -66,10 +66,16 @@ function SuggestTab() {
   });
 
   const { data: shoppingLists = [] } = useQuery({
-    queryKey: ["shopping-lists"],
+    queryKey: ["kin-lists"],
     queryFn: async () => {
-      const { data } = await apiClient.get<ShoppingList[]>("/api/shopping-lists");
-      return data;
+      const { data } = await kinListApiClient.get<Array<{ id: string; title: string; totalItems: number; completedItems: number; etag: string }>>("/api/lists");
+      return data.map((list): ShoppingList => ({
+        id: list.id,
+        name: list.title,
+        itemCount: list.totalItems,
+        checkedCount: list.completedItems,
+        etag: list.etag,
+      }));
     },
   });
 
@@ -99,7 +105,12 @@ function SuggestTab() {
     if (!listId || !names.length || addStates[key] === "loading") return;
     setAddStates((prev) => ({ ...prev, [key]: "loading" }));
     try {
-      await apiClient.post(`/api/shopping-lists/${listId}/items/bulk`, { names, shoppingListId: listId });
+      const { data: list } = await kinListApiClient.get<{ etag: string }>(`/api/lists/${listId}`);
+      await kinListApiClient.post(
+        `/api/lists/${listId}/items/confirm`,
+        { items: names },
+        { headers: { "If-Match": list.etag } },
+      );
       setAddStates((prev) => ({ ...prev, [key]: "added" }));
     } catch {
       setAddStates((prev) => ({ ...prev, [key]: "idle" }));

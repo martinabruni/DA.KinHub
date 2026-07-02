@@ -35,7 +35,10 @@ export function createFakeStream(): FakeMediaStream {
 }
 
 export class FakeMediaRecorder {
-  static isTypeSupported = vi.fn((): boolean => true)
+  static isTypeSupported = vi.fn((type: string): boolean => {
+    void type
+    return true
+  })
 
   static instances: FakeMediaRecorder[] = []
 

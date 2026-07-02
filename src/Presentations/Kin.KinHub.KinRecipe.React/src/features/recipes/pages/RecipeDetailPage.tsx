@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { RecipeBookProvider, useRecipeBooks } from '@/features/recipes/RecipeBookProvider'
 import { RecipeProvider, useRecipes } from '@/features/recipes/RecipeProvider'
-import { apiClient } from '@/api/apiClient'
+import { apiClient, kinListApiClient } from '@/api/apiClient'
 import { hashColor } from '@/lib/utils'
 import type { Fridge, ShoppingList } from '@/types'
 
@@ -42,8 +42,17 @@ function RecipeDetailContent() {
   })
 
   const { data: shoppingLists = [] } = useQuery({
-    queryKey: ['shopping-lists'],
-    queryFn: async () => { const { data } = await apiClient.get<ShoppingList[]>('/api/shopping-lists'); return data },
+    queryKey: ['kin-lists'],
+    queryFn: async () => {
+      const { data } = await kinListApiClient.get<Array<{ id: string; title: string; totalItems: number; completedItems: number; etag: string }>>('/api/lists')
+      return data.map((list): ShoppingList => ({
+        id: list.id,
+        name: list.title,
+        itemCount: list.totalItems,
+        checkedCount: list.completedItems,
+        etag: list.etag,
+      }))
+    },
   })
 
   const recipe = getRecipe(recipeId!)
@@ -64,7 +73,12 @@ function RecipeDetailContent() {
     if (!selectedListId || !missingIngredients?.length || addState === 'loading') return
     setAddState('loading')
     try {
-      await apiClient.post(`/api/shopping-lists/${selectedListId}/items/bulk`, { names: missingIngredients, shoppingListId: selectedListId })
+      const { data: list } = await kinListApiClient.get<{ etag: string }>(`/api/lists/${selectedListId}`)
+      await kinListApiClient.post(
+        `/api/lists/${selectedListId}/items/confirm`,
+        { items: missingIngredients },
+        { headers: { 'If-Match': list.etag } },
+      )
       setAddState('added')
     } catch {
       setAddState('idle')

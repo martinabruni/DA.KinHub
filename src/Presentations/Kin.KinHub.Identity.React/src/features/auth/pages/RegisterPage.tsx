@@ -14,6 +14,20 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAuth } from '@/features/auth/AuthProvider'
 import { extractApiError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import { oauthClientConfig } from '@/config/oauth'
+
+function getValidatedAuthorizeReturnTo(value: string | null) {
+  if (!value) return null
+  try {
+    const target = new URL(value)
+    const authorizationServer = new URL(oauthClientConfig.authorizationServerUrl)
+    return target.origin === authorizationServer.origin && target.pathname === '/authorize'
+      ? target.toString()
+      : null
+  } catch {
+    return null
+  }
+}
 
 const schema = z
   .object({
@@ -63,7 +77,7 @@ export function RegisterPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       await register({ email: values.email, password: values.password })
-      const returnTo = searchParams.get('returnTo')
+      const returnTo = getValidatedAuthorizeReturnTo(searchParams.get('returnTo'))
       if (returnTo) {
         window.location.assign(returnTo)
         return

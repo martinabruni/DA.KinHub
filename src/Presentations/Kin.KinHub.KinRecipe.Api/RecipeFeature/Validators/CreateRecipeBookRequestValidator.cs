@@ -1,0 +1,17 @@
+using FluentValidation;
+
+namespace Kin.KinHub.KinRecipe.Api.RecipeFeature;
+
+internal sealed class CreateRecipeBookRequestValidator : AbstractValidator<CreateRecipeBookRequest>
+{
+    public CreateRecipeBookRequestValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .MaximumLength(200);
+
+        RuleFor(x => x.Description)
+            .MaximumLength(1000)
+            .When(x => x.Description is not null);
+    }
+}

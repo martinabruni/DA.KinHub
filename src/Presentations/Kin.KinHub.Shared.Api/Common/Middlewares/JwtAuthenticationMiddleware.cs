@@ -1,18 +1,19 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Kin.KinHub.Shared.Api.Common.Authorization;
 
 namespace Kin.KinHub.Shared.Api.Common;
 
 public sealed class JwtAuthenticationMiddleware : IMiddleware
 {
-    private readonly IFamilyOwnershipService _familyOwnershipService;
+    private readonly IFamilyContextResolver _familyContextResolver;
     private readonly ILogger<JwtAuthenticationMiddleware> _logger;
 
     public JwtAuthenticationMiddleware(
-        IFamilyOwnershipService familyOwnershipService,
+        IFamilyContextResolver familyContextResolver,
         ILogger<JwtAuthenticationMiddleware> logger)
     {
-        _familyOwnershipService = familyOwnershipService;
+        _familyContextResolver = familyContextResolver;
         _logger = logger;
     }
 
@@ -57,17 +58,17 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware
 
     private async Task TrySetFamilyContextAsync(HttpContext context, CurrentUser currentUser, CancellationToken cancellationToken)
     {
-        var familyResult = await _familyOwnershipService.GetCurrentFamilyAsync(currentUser.UserId, cancellationToken);
-        context.Items[FamilyAccessStatusItemKey] = familyResult.Status;
+        var familyResult = await _familyContextResolver.ResolveAsync(currentUser.UserId, cancellationToken);
+        context.Items[FamilyAccessStatusItemKey] = familyResult.Outcome;
 
-        if (!familyResult.IsSuccess || familyResult.Family is null)
+        if (familyResult.Outcome is not FamilyContextOutcome.Success || familyResult.FamilyId is null)
         {
             return;
         }
 
         // familyId is only ever set on the request-scoped principal from the repository/Core
         // resolution here; it is never read from the JWT, route, or request body.
-        currentUser.SetFamilyContext(familyResult.Family.Id);
-        _logger.LogDebug("Resolved family context {FamilyId} for user {UserId}.", familyResult.Family.Id, currentUser.UserId);
+        currentUser.SetFamilyContext(familyResult.FamilyId.Value);
+        _logger.LogDebug("Resolved family context {FamilyId} for user {UserId}.", familyResult.FamilyId, currentUser.UserId);
     }
 }

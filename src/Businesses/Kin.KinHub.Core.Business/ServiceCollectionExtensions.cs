@@ -15,15 +15,7 @@ public static class ServiceCollectionExtensions
         configure?.Invoke(options);
         options.Validate();
 
-        services.AddScoped<IFamilyOwnershipService, FamilyOwnershipService>();
-        services.AddScoped<ICreateFamilyHandler, CreateFamilyHandler>();
-        services.AddScoped<IAddFamilyMemberHandler, AddFamilyMemberHandler>();
-        services.AddScoped<IGetFamilyHandler, GetFamilyHandler>();
-        services.AddScoped<IDeleteFamilyMemberHandler, DeleteFamilyMemberHandler>();
-        services.AddScoped<IUpdateFamilyMemberHandler, UpdateFamilyMemberHandler>();
-        services.AddScoped<IUpdateFamilyHandler, UpdateFamilyHandler>();
-        services.AddScoped<IDeleteFamilyHandler, DeleteFamilyHandler>();
-        services.AddScoped<IFamilyService, KinHubFamilyService>();
+        services.AddKinHubFamilyBusiness();
         services.AddScoped<IRecipeBookAccessService, RecipeBookAccessService>();
         services.AddScoped<IRecipeAccessService, RecipeAccessService>();
         services.AddScoped<IRecipeResponseMapper, RecipeResponseMapper>();
@@ -52,7 +44,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGetRecipeStepByIdHandler, GetRecipeStepByIdHandler>();
         services.AddScoped<IUpdateRecipeStepHandler, UpdateRecipeStepHandler>();
         services.AddScoped<IDeleteRecipeStepHandler, DeleteRecipeStepHandler>();
-        services.AddScoped<IKinHubServiceService, KinHubServiceService>();
         services.AddScoped<IRecipeBookService>(serviceProvider => new KinHubRecipeBookService(
             serviceProvider.GetRequiredService<ICreateRecipeBookHandler>(),
             serviceProvider.GetRequiredService<IGetRecipeBooksHandler>(),
@@ -81,6 +72,25 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFridgeIngredientService, KinHubFridgeIngredientService>();
         services.AddScoped<IRecipeAssistantManager, KinHubRecipeAssistantManager>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers only family ownership, family management, and service catalog behavior.
+    /// Identity.Api uses this subset so recipe and assistant graphs are never present there.
+    /// </summary>
+    public static IServiceCollection AddKinHubFamilyBusiness(this IServiceCollection services)
+    {
+        services.AddScoped<IFamilyOwnershipService, FamilyOwnershipService>();
+        services.AddScoped<ICreateFamilyHandler, CreateFamilyHandler>();
+        services.AddScoped<IAddFamilyMemberHandler, AddFamilyMemberHandler>();
+        services.AddScoped<IGetFamilyHandler, GetFamilyHandler>();
+        services.AddScoped<IDeleteFamilyMemberHandler, DeleteFamilyMemberHandler>();
+        services.AddScoped<IUpdateFamilyMemberHandler, UpdateFamilyMemberHandler>();
+        services.AddScoped<IUpdateFamilyHandler, UpdateFamilyHandler>();
+        services.AddScoped<IDeleteFamilyHandler, DeleteFamilyHandler>();
+        services.AddScoped<IFamilyService, KinHubFamilyService>();
+        services.AddScoped<IKinHubServiceService, KinHubServiceService>();
         return services;
     }
 }

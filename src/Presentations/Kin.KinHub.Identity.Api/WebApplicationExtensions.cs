@@ -1,4 +1,4 @@
-namespace Kin.KinHub.Shared.Api.Common.Configuration;
+namespace Kin.KinHub.Identity.Api;
 
 public static class WebApplicationExtensions
 {
@@ -9,8 +9,10 @@ public static class WebApplicationExtensions
             app.MapOpenApi();
         }
 
+        app.UseForwardedHeaders();
         app.UseHttpsRedirection();
         app.UseCors(CorsOptions.PolicyName);
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseMiddleware<JwtAuthenticationMiddleware>();
         app.UseAuthorization();

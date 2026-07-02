@@ -1,11 +1,14 @@
 using Kin.KinHub.KinList.Api.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
+using Kin.KinHub.Shared.Api.Common.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.KinList.Api.KinListFeature;
 
 [ApiController]
 [Route("api/lists")]
+[Authorize(Policy = FamilyContextRequirement.PolicyName)]
 public sealed class ListsController : ControllerBase
 {
     private readonly IKinListService _service;
