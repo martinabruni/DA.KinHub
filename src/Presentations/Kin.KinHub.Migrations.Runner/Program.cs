@@ -1,4 +1,5 @@
 using Kin.KinHub.Core.PostgreSql.Models;
+using Kin.KinHub.Identity.PostgreSql.Models;
 using Kin.KinHub.KinList.PostgreSql.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,17 @@ try
 {
     var connectionString = ResolveConnectionString();
 
-    Console.WriteLine("[migrations] Applying KinListDbContext migrations (step 1/2)...");
+    Console.WriteLine("[migrations] Applying IdentityDbContext migrations (step 1/3)...");
+    var identityOptions = new DbContextOptionsBuilder<IdentityDbContext>()
+        .UseNpgsql(connectionString)
+        .Options;
+    await using (var identityContext = new IdentityDbContext(identityOptions))
+    {
+        await identityContext.Database.MigrateAsync();
+    }
+    Console.WriteLine("[migrations] IdentityDbContext migrations applied.");
+
+    Console.WriteLine("[migrations] Applying KinListDbContext migrations (step 2/3)...");
     var kinListOptions = new DbContextOptionsBuilder<KinListDbContext>()
         .UseNpgsql(connectionString)
         .Options;
@@ -43,7 +54,7 @@ try
     }
     Console.WriteLine("[migrations] KinListDbContext migrations applied.");
 
-    Console.WriteLine("[migrations] Applying CoreDbContext migrations (step 2/2)...");
+    Console.WriteLine("[migrations] Applying CoreDbContext migrations (step 3/3)...");
     var coreOptions = new DbContextOptionsBuilder<CoreDbContext>()
         .UseNpgsql(connectionString)
         .Options;

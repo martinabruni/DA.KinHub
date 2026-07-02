@@ -4,7 +4,6 @@ public sealed class OAuthServerOptions
 {
     public const string RateLimitPolicyName = "KinHubOAuthPolicy";
     public const string SectionName = "OAuth";
-
     public string AuthorizationServerUrl { get; set; } = "https://localhost";
     public string DocumentationUrl { get; set; } = "https://github.com/martinabruni/Kin.KinHub";
     public string RegistrationUiUrl { get; set; } = string.Empty;

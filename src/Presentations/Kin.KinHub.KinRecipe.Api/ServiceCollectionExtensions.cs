@@ -24,14 +24,14 @@ public static class ServiceCollectionExtensions
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
-        var coreApiOptions = configuration.GetSection(CoreApiOptions.SectionName).Get<CoreApiOptions>() ?? new();
+        var familyContextApiOptions = configuration.GetSection(FamilyContextApiOptions.SectionName).Get<FamilyContextApiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
-        coreApiOptions.Validate();
+        familyContextApiOptions.Validate();
 
         services.AddSingleton(corsOptions);
-        services.AddSingleton(coreApiOptions);
+        services.AddSingleton(familyContextApiOptions);
 
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
                 o.AccessTokenExpiryMinutes = jwtSettings.AccessTokenExpiryMinutes;
                 o.RefreshTokenExpiryDays = jwtSettings.RefreshTokenExpiryDays;
                 o.Issuer = effectiveJwtIssuer;
+                o.Audience = jwtSettings.Audience;
             })
             .AddKinHubCoreBusiness()
             .AddKinHubCoreOpenAiInfrastructure(o =>
@@ -59,7 +60,7 @@ public static class ServiceCollectionExtensions
         services.RemoveAll<IFamilyOwnershipService>();
         services.AddHttpClient<IFamilyOwnershipService, RemoteFamilyOwnershipService>((serviceProvider, client) =>
         {
-            var options = serviceProvider.GetRequiredService<CoreApiOptions>();
+            var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });
@@ -79,7 +80,8 @@ public static class ServiceCollectionExtensions
                 {
                     ValidateIssuer = true,
                     ValidIssuer = effectiveJwtIssuer,
-                    ValidateAudience = false,
+                    ValidateAudience = true,
+                    ValidAudience = jwtSettings.Audience,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(effectiveJwtSecret)),
@@ -89,9 +91,17 @@ public static class ServiceCollectionExtensions
 
         services.AddAuthorization(options =>
         {
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireAssertion(HasApiScope)
+                .Build();
             options.AddPolicy(
                 FamilyContextRequirement.PolicyName,
-                policy => policy.Requirements.Add(new FamilyContextRequirement()));
+                policy =>
+                {
+                    policy.RequireAssertion(HasApiScope);
+                    policy.Requirements.Add(new FamilyContextRequirement());
+                });
         });
         services.AddScoped<IAuthorizationHandler, FamilyContextAuthorizationHandler>();
         services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
@@ -118,6 +128,11 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    private static bool HasApiScope(AuthorizationHandlerContext context) =>
+        context.User.FindAll("scope")
+            .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Contains(OAuthScopes.Read, StringComparer.Ordinal);
 
     private static string ResolveJwtSecret(string? configuredSecret, IHostEnvironment environment)
     {

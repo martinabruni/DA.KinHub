@@ -7,7 +7,7 @@ namespace Kin.KinHub.KinList.Api.Common;
 public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService
 {
     private const string MissingAuthorizationMessage = "Missing or invalid Authorization header.";
-    private const string FamilyContextUnavailableMessage = "Family context could not be resolved because Core is unavailable.";
+    private const string FamilyContextUnavailableMessage = "Family context could not be resolved because Identity is unavailable.";
 
     private readonly HttpClient _httpClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -46,7 +46,7 @@ public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService
                 if (!payload.RootElement.TryGetProperty("familyId", out var familyIdElement)
                     || !familyIdElement.TryGetGuid(out var familyId))
                 {
-                    _logger.LogError("Core family-context response did not contain a valid familyId.");
+                    _logger.LogError("Identity family-context response did not contain a valid familyId.");
                     return FamilyAccessResult.ServiceUnavailable(FamilyContextUnavailableMessage);
                 }
 
@@ -70,17 +70,17 @@ public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService
                 return FamilyAccessResult.Unauthorized(MissingAuthorizationMessage);
             }
 
-            _logger.LogWarning("Core family-context request failed with status code {StatusCode}.", (int)response.StatusCode);
+            _logger.LogWarning("Identity family-context request failed with status code {StatusCode}.", (int)response.StatusCode);
             return FamilyAccessResult.ServiceUnavailable(FamilyContextUnavailableMessage);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Core family-context request timed out.");
+            _logger.LogWarning("Identity family-context request timed out.");
             return FamilyAccessResult.ServiceUnavailable(FamilyContextUnavailableMessage);
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "Core family-context request failed.");
+            _logger.LogWarning(ex, "Identity family-context request failed.");
             return FamilyAccessResult.ServiceUnavailable(FamilyContextUnavailableMessage);
         }
     }

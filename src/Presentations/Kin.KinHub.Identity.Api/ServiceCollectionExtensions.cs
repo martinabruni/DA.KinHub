@@ -4,8 +4,11 @@ using Kin.KinHub.Shared.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -20,11 +23,19 @@ public static class ServiceCollectionExtensions
     {
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
+        var oauthOptions = configuration.GetSection(OAuthServerOptions.SectionName).Get<OAuthServerOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
 
         services.AddSingleton(corsOptions);
+        services.AddSingleton(oauthOptions);
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
 
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
@@ -43,8 +54,9 @@ public static class ServiceCollectionExtensions
                 o.AccessTokenExpiryMinutes = jwtSettings.AccessTokenExpiryMinutes;
                 o.RefreshTokenExpiryDays = jwtSettings.RefreshTokenExpiryDays;
                 o.Issuer = effectiveJwtIssuer;
+                o.Audience = jwtSettings.Audience;
             })
-            .AddKinHubCoreBusiness()
+            .AddKinHubFamilyBusiness()
             .AddKinHubIdentityBusiness();
 
         AddAzureMonitorIfConfigured(services, configuration);
@@ -62,24 +74,79 @@ public static class ServiceCollectionExtensions
                 {
                     ValidateIssuer = true,
                     ValidIssuer = effectiveJwtIssuer,
-                    ValidateAudience = false,
+                    ValidateAudience = true,
+                    ValidAudience = jwtSettings.Audience,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(effectiveJwtSecret)),
                     ClockSkew = TimeSpan.Zero,
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        context.HandleResponse();
+                        return ApiProblemDetails.WriteAsync(
+                            context.HttpContext,
+                            StatusCodes.Status401Unauthorized,
+                            "authentication_required",
+                            "Missing or invalid Authorization header.");
+                    },
+                    OnForbidden = context => ApiProblemDetails.WriteAsync(
+                        context.HttpContext,
+                        StatusCodes.Status403Forbidden,
+                        "forbidden",
+                        "You do not have access to this resource."),
+                };
             });
 
         services.AddAuthorization(options =>
         {
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireAssertion(HasApiScope)
+                .Build();
             options.AddPolicy(
                 FamilyContextRequirement.PolicyName,
-                policy => policy.Requirements.Add(new FamilyContextRequirement()));
+                policy =>
+                {
+                    policy.RequireAssertion(HasApiScope);
+                    policy.Requirements.Add(new FamilyContextRequirement());
+                });
         });
         services.AddScoped<IAuthorizationHandler, FamilyContextAuthorizationHandler>();
         services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
+        services.AddSingleton<IOAuthClientStore>(_ => new InMemoryOAuthClientStore(oauthOptions));
+        services.AddSingleton<IOAuthRefreshTokenScopeStore>(_ => new InMemoryOAuthRefreshTokenScopeStore(oauthOptions));
+        if (environment.IsDevelopment())
+        {
+            services.AddSingleton<IOAuthAuthorizationCodeStore>(_ => new InMemoryOAuthAuthorizationCodeStore(oauthOptions));
+            services.AddSingleton<IOAuthIdentitySessionStore>(_ => new InMemoryOAuthIdentitySessionStore(oauthOptions));
+        }
+        else
+        {
+            services.AddSingleton<IOAuthAuthorizationCodeStore>(
+                _ => new PostgreSqlOAuthAuthorizationCodeStore(connectionString));
+            services.AddSingleton<IOAuthIdentitySessionStore>(
+                _ => new PostgreSqlOAuthIdentitySessionStore(connectionString));
+        }
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(
+                OAuthServerOptions.RateLimitPolicyName,
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    $"{context.Connection.RemoteIpAddress}:{context.Request.Path}",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = oauthOptions.RateLimitPermitLimit,
+                        Window = TimeSpan.FromSeconds(oauthOptions.RateLimitWindowSeconds),
+                        QueueLimit = 0,
+                        AutoReplenishment = true,
+                    }));
+        });
         services.AddControllers();
         services.AddOpenApi();
         services.AddCors(options =>
@@ -101,6 +168,11 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    private static bool HasApiScope(AuthorizationHandlerContext context) =>
+        context.User.FindAll("scope")
+            .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Contains(OAuthScopes.Read, StringComparer.Ordinal);
 
     private static string ResolveJwtSecret(string? configuredSecret, IHostEnvironment environment)
     {

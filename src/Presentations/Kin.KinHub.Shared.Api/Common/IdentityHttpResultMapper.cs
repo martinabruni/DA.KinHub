@@ -4,9 +4,9 @@ using IdentityResult = Kin.KinHub.Identity.Business.Common;
 
 namespace Kin.KinHub.Shared.Api.Common;
 
-internal static partial class HttpResultMapper
+public static partial class HttpResultMapper
 {
-    internal static IActionResult ToActionResult<T>(IdentityResult.Result<T> result) =>
+    public static IActionResult ToActionResult<T>(IdentityResult.Result<T> result) =>
         result.Status switch
         {
             IdentityResult.ResultStatus.Success => new OkObjectResult(result.Value),
@@ -17,7 +17,7 @@ internal static partial class HttpResultMapper
             _ => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 
-    internal static IActionResult ToActionResult<T>(ControllerBase controller, IdentityResult.Result<T> result) =>
+    public static IActionResult ToActionResult<T>(ControllerBase controller, IdentityResult.Result<T> result) =>
         result.Status switch
         {
             IdentityResult.ResultStatus.Success => new OkObjectResult(result.Value),
@@ -28,7 +28,7 @@ internal static partial class HttpResultMapper
             _ => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status500InternalServerError, "unexpected_error", result.Message ?? "Unexpected server error.")) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 
-    internal static IActionResult ToCreatedActionResult<T>(ControllerBase controller, IdentityResult.Result<T> result) =>
+    public static IActionResult ToCreatedActionResult<T>(ControllerBase controller, IdentityResult.Result<T> result) =>
         result.Status switch
         {
             IdentityResult.ResultStatus.Success => new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created },

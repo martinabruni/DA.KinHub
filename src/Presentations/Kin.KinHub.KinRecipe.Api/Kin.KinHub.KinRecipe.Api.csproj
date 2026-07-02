@@ -1,10 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.*" />
     <PackageReference Include="AspNetCore.HealthChecks.Npgsql" Version="9.*" />
@@ -13,7 +12,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.Core.Business\Kin.KinHub.Core.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Core.Domain\Kin.KinHub.Core.Domain.csproj" />
@@ -21,49 +19,7 @@
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.OpenAi\Kin.KinHub.Core.OpenAi.csproj" />
+    <ProjectReference Include="..\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\ApiProblemDetails.cs" Link="Common\ApiProblemDetails.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\HttpResultMapper.cs" Link="Common\HttpResultMapper.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\CorsOptions.cs" Link="Common\Configuration\CorsOptions.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\JwtSettings.cs" Link="Common\Configuration\JwtSettings.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Configuration\OpenAiSettings.cs" Link="Common\Configuration\OpenAiSettings.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Middlewares\JwtAuthenticationMiddleware.cs" Link="Common\Middlewares\JwtAuthenticationMiddleware.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Authorization\FamilyContextRequirement.cs" Link="Common\Authorization\FamilyContextRequirement.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Authorization\FamilyContextAuthorizationHandler.cs" Link="Common\Authorization\FamilyContextAuthorizationHandler.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Authorization\FamilyAuthorizationMiddlewareResultHandler.cs" Link="Common\Authorization\FamilyAuthorizationMiddlewareResultHandler.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\FluentRequestValidator.cs" Link="Common\Validators\FluentRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\IRequestValidator.cs" Link="Common\Validators\IRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\Common\Validators\RequestValidationResult.cs" Link="Common\Validators\RequestValidationResult.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Controllers\FamilyController.cs" Link="FamilyFeature\Controllers\FamilyController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Controllers\ServicesController.cs" Link="FamilyFeature\Controllers\ServicesController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Validators\AddFamilyMemberRequestValidator.cs" Link="FamilyFeature\Validators\AddFamilyMemberRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Validators\CreateFamilyRequestValidator.cs" Link="FamilyFeature\Validators\CreateFamilyRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Validators\ToggleFamilyServiceRequestValidator.cs" Link="FamilyFeature\Validators\ToggleFamilyServiceRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Validators\UpdateFamilyMemberRequestValidator.cs" Link="FamilyFeature\Validators\UpdateFamilyMemberRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\FamilyFeature\Validators\UpdateFamilyRequestValidator.cs" Link="FamilyFeature\Validators\UpdateFamilyRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeAssistantFeature\Controllers\RecipeAssistantController.cs" Link="RecipeAssistantFeature\Controllers\RecipeAssistantController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeAssistantFeature\Validators\AdaptRecipeRequestValidator.cs" Link="RecipeAssistantFeature\Validators\AdaptRecipeRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeAssistantFeature\Validators\ParseRecipeRequestValidator.cs" Link="RecipeAssistantFeature\Validators\ParseRecipeRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeAssistantFeature\Validators\SuggestRecipesRequestValidator.cs" Link="RecipeAssistantFeature\Validators\SuggestRecipesRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\FridgeController.cs" Link="RecipeFeature\Controllers\FridgeController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\FridgeIngredientController.cs" Link="RecipeFeature\Controllers\FridgeIngredientController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeBookController.cs" Link="RecipeFeature\Controllers\RecipeBookController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeController.cs" Link="RecipeFeature\Controllers\RecipeController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeIngredientController.cs" Link="RecipeFeature\Controllers\RecipeIngredientController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Controllers\RecipeStepController.cs" Link="RecipeFeature\Controllers\RecipeStepController.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateFridgeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\CreateFridgeIngredientRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateFridgeRequestValidator.cs" Link="RecipeFeature\Validators\CreateFridgeRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeBookRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeBookRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeIngredientRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\CreateRecipeStepRequestValidator.cs" Link="RecipeFeature\Validators\CreateRecipeStepRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateFridgeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\UpdateFridgeIngredientRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateFridgeRequestValidator.cs" Link="RecipeFeature\Validators\UpdateFridgeRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeBookRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeBookRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeIngredientRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeIngredientRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeRequestValidator.cs" />
-    <Compile Include="..\Kin.KinHub.Shared.Api\RecipeFeature\Validators\UpdateRecipeStepRequestValidator.cs" Link="RecipeFeature\Validators\UpdateRecipeStepRequestValidator.cs" />
-  </ItemGroup>
+  <ItemGroup></ItemGroup>
 </Project>
