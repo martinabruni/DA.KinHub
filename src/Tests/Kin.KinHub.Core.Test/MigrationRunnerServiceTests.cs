@@ -87,33 +87,34 @@ public sealed class MigrationRunnerServiceTests
 
         var runner = new MigrationRunnerService(
         [
-            new("IdentityDbContext", (connectionString, _) =>
+            new("IdentityDbContext", (connectionString, timeoutSeconds, _) =>
             {
-                applied.Add($"identity:{connectionString}");
+                applied.Add($"identity:{connectionString}:{timeoutSeconds}");
                 return Task.CompletedTask;
             }),
-            new("KinListDbContext", (connectionString, _) =>
+            new("KinListDbContext", (connectionString, timeoutSeconds, _) =>
             {
-                applied.Add($"kinlist:{connectionString}");
+                applied.Add($"kinlist:{connectionString}:{timeoutSeconds}");
                 return Task.CompletedTask;
             }),
-            new("CoreDbContext", (connectionString, _) =>
+            new("CoreDbContext", (connectionString, timeoutSeconds, _) =>
             {
-                applied.Add($"core:{connectionString}");
+                applied.Add($"core:{connectionString}:{timeoutSeconds}");
                 return Task.CompletedTask;
             }),
         ], writer);
 
-        await runner.RunAsync("Host=test;");
+        await runner.RunAsync("Host=test;Command Timeout=321;");
 
         Assert.Equal(
         [
-            "identity:Host=test;",
-            "kinlist:Host=test;",
-            "core:Host=test;",
+            "identity:Host=test;Command Timeout=321;:321",
+            "kinlist:Host=test;Command Timeout=321;:321",
+            "core:Host=test;Command Timeout=321;:321",
         ], applied);
 
         var log = output.ToString();
+        Assert.Contains("Using PostgreSQL command timeout 321s.", log);
         Assert.Contains("Applying IdentityDbContext migrations (step 1/3)", log);
         Assert.Contains("Applying KinListDbContext migrations (step 2/3)", log);
         Assert.Contains("Applying CoreDbContext migrations (step 3/3)", log);
@@ -131,23 +132,23 @@ public sealed class MigrationRunnerServiceTests
 
         var runner = new MigrationRunnerService(
         [
-            new("IdentityDbContext", (connectionString, _) =>
+            new("IdentityDbContext", (connectionString, timeoutSeconds, _) =>
             {
-                applied.Add($"identity:{connectionString}");
+                applied.Add($"identity:{connectionString}:{timeoutSeconds}");
                 return Task.CompletedTask;
             }),
-            new("KinListDbContext", (_, _) => throw new InvalidOperationException("boom")),
-            new("CoreDbContext", (connectionString, _) =>
+            new("KinListDbContext", (_, _, _) => throw new InvalidOperationException("boom")),
+            new("CoreDbContext", (connectionString, timeoutSeconds, _) =>
             {
-                applied.Add($"core:{connectionString}");
+                applied.Add($"core:{connectionString}:{timeoutSeconds}");
                 return Task.CompletedTask;
             }),
         ], writer);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync("Host=test;"));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync("Host=test;Command Timeout=222;"));
 
         Assert.Equal("boom", exception.Message);
-        Assert.Equal(["identity:Host=test;"], applied);
+        Assert.Equal(["identity:Host=test;Command Timeout=222;:222"], applied);
     }
 
     [Fact]
@@ -158,13 +159,14 @@ public sealed class MigrationRunnerServiceTests
 
         var runner = new MigrationRunnerService(
         [
-            new("IdentityDbContext", (_, _) => Task.CompletedTask),
-            new("KinListDbContext", (_, _) => throw new InvalidOperationException("boom")),
+            new("IdentityDbContext", (_, _, _) => Task.CompletedTask),
+            new("KinListDbContext", (_, _, _) => throw new InvalidOperationException("boom")),
         ], writer);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync("Host=test;"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync("Host=test;Command Timeout=123;"));
 
         var log = output.ToString();
+        Assert.Contains("Using PostgreSQL command timeout 123s.", log);
         Assert.Contains("KinListDbContext migrations failed after", log);
         Assert.Contains("InvalidOperationException: boom", log);
     }

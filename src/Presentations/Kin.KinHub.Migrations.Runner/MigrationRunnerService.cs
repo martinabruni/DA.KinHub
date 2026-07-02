@@ -2,7 +2,7 @@ namespace Kin.KinHub.Migrations.Runner;
 
 public sealed record MigrationStep(
     string Name,
-    Func<string, CancellationToken, Task> ApplyAsync);
+    Func<string, int, CancellationToken, Task> ApplyAsync);
 
 public static class MigrationRunnerConfiguration
 {
@@ -72,6 +72,10 @@ public sealed class MigrationRunnerService
 
     public async Task RunAsync(string connectionString, CancellationToken cancellationToken = default)
     {
+        var commandTimeoutSeconds = new Npgsql.NpgsqlConnectionStringBuilder(connectionString).CommandTimeout;
+        await _stdout.WriteLineAsync(
+            $"[migrations] Using PostgreSQL command timeout {commandTimeoutSeconds}s.");
+
         for (var index = 0; index < _steps.Count; index++)
         {
             var step = _steps[index];
@@ -80,7 +84,7 @@ public sealed class MigrationRunnerService
 
             try
             {
-                await step.ApplyAsync(connectionString, cancellationToken);
+                await step.ApplyAsync(connectionString, commandTimeoutSeconds, cancellationToken);
                 var elapsed = DateTimeOffset.UtcNow - startedAt;
                 await _stdout.WriteLineAsync(
                     $"[migrations] {step.Name} migrations applied in {elapsed.TotalSeconds:F1}s.");
