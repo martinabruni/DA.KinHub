@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { redirectToIdentityLogin } from '@/config/appLinks'
-import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuth } from '@/features/auth/authProviderContext'
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoadingUser } = useAuth()

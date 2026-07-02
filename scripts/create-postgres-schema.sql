@@ -367,6 +367,7 @@ INSERT INTO core."KinHubServiceEntity"
     ("Id", "Name", "BaseUrl", "IsActive", "CreatedAt", "UpdatedAt")
 VALUES
     (1, 'KinConsole', '/kin-console', TRUE,  '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
-    (2, 'KinRecipe',  '/kin-recipe',  TRUE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+    (2, 'KinRecipe',  '/kin-recipe',  TRUE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+    (3, 'KinList',    '/kin-list',    TRUE, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 
 COMMIT;

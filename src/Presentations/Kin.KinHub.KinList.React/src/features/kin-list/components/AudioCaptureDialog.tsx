@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Mic, RotateCcw, Square, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -59,7 +59,8 @@ export function AudioCaptureDialog({
 
   const mimeType = useMemo(() => pickSupportedMimeType(), [])
 
-  function disposeMedia() {
+  // Releases the MediaRecorder, microphone stream and timers (external resources only).
+  const cleanupMedia = useCallback(() => {
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current)
       timeoutRef.current = null
@@ -74,42 +75,34 @@ export function AudioCaptureDialog({
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
     chunksRef.current = []
-  }
-
-  function cleanupMedia() {
-    disposeMedia()
     setIsRecording(false)
-  }
+  }, [])
 
-  function resetCapture() {
-    disposeMedia()
+  const resetCapture = useCallback(() => {
+    cleanupMedia()
     setBlob(null)
     setError(null)
     setElapsedSeconds(0)
-    setIsRecording(false)
     setIsSubmitting(false)
-  }
+  }, [cleanupMedia])
 
+  // When the dialog closes (and on unmount) release the microphone and discard the
+  // in-memory blob so nothing survives between sessions. The teardown runs in the
+  // effect cleanup so it fires exactly on the open -> closed transition.
   useEffect(() => {
-    return () => {
-      disposeMedia()
+    if (!open) {
+      return
     }
-  }, [])
 
-  function stopRecording() {
+    return () => resetCapture()
+  }, [open, resetCapture])
+
+  const stopRecording = () => {
     if (recorderRef.current?.state === 'recording') {
       recorderRef.current.stop()
     } else {
       cleanupMedia()
     }
-  }
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      resetCapture()
-    }
-
-    onOpenChange(nextOpen)
   }
 
   const startRecording = async () => {
@@ -181,7 +174,7 @@ export function AudioCaptureDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -237,7 +230,7 @@ export function AudioCaptureDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button type="button" onClick={confirmAudio} disabled={!blob || isSubmitting}>

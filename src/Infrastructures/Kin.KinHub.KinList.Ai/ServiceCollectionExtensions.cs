@@ -29,7 +29,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IKinListSpeechTranscriber, AzureSpeechKinListTranscriber>();
         services.AddScoped<IKinListChatCompletionClient, AzureOpenAiKinListChatCompletionClient>();
         services.AddScoped<IKinListAudioPromptInterpreter, AzureOpenAiKinListAudioPromptInterpreter>();
-        services.AddScoped<IKinListAudioDraftGenerator, AzureSpeechOpenAiKinListAudioDraftGenerator>();
+        services.AddScoped<AzureSpeechOpenAiKinListAudioDraftGenerator>();
+        services.AddScoped<IKinListAudioDraftGenerator>(sp => new TelemetryKinListAudioDraftGenerator(
+            sp.GetRequiredService<AzureSpeechOpenAiKinListAudioDraftGenerator>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TelemetryKinListAudioDraftGenerator>>()));
 
         return services;
     }

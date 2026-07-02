@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const authProviderPath = join(process.cwd(), 'src', 'features', 'auth', 'AuthProvider.tsx')
@@ -7,59 +7,78 @@ const distAssetsPath = join(process.cwd(), 'dist', 'assets')
 
 const authProvider = readFileSync(authProviderPath, 'utf8')
 const apiClient = readFileSync(apiClientPath, 'utf8')
-const distBundle = readdirSync(distAssetsPath)
-  .filter((file) => file.endsWith('.js'))
-  .map((file) => readFileSync(join(distAssetsPath, file), 'utf8'))
-  .join('\n')
 
+// 1. Identity-bound auth calls must go through the dedicated identity client so that
+//    authentication is centralized in KinHub Identity and never handled by the KinRecipe API.
 const identityClientChecks = [
-  'identityApiClient.get<User>("/api/auth/me")',
-  'identityApiClient.post<AuthTokens>(',
-  'identityApiClient.post("/api/auth/register", payload)',
-  'identityApiClient.post("/api/auth/logout", { refreshToken })',
+  "identityApiClient.get<User>('/api/auth/me')",
+  "identityApiClient.post('/logout')",
 ]
 
 for (const check of identityClientChecks) {
   if (!authProvider.includes(check)) {
-    throw new Error(`Missing KinRecipe auth verification marker: ${check}`)
+    throw new Error(`Missing KinRecipe identity auth marker: ${check}`)
   }
 }
 
+// 2. The KinRecipe API client must never handle authentication endpoints, and the SPA must not
+//    perform password login/registration or hold refresh tokens: KinHub Identity is the OAuth
+//    broker and renewal happens via a silent top-level authorize, not a SPA refresh_token grant.
 const forbiddenChecks = [
-  'apiClient.get<User>("/api/auth/me")',
-  'apiClient.post<AuthTokens>(',
-  'apiClient.post("/api/auth/register", payload)',
-  'apiClient.post("/api/auth/logout", { refreshToken })',
+  "apiClient.get<User>('/api/auth/me')",
+  "apiClient.post('/logout')",
+  '/api/auth/login',
+  '/api/auth/register',
+  'post<AuthTokens>',
+  'refreshToken',
 ]
 
 for (const check of forbiddenChecks) {
   if (authProvider.includes(check)) {
-    throw new Error(`KinRecipe API client must not handle auth endpoint: ${check}`)
+    throw new Error(`KinRecipe AuthProvider must not reference forbidden auth construct: ${check}`)
   }
 }
 
-if (!apiClient.includes('baseURL: KINRECIPE_API_URL')) {
+// 3. The two axios clients must target the correct origins via the shared factory.
+if (!apiClient.includes('createApiClient(KINRECIPE_API_URL)')) {
   throw new Error('KinRecipe apiClient must use VITE_KINRECIPE_API_URL.')
 }
 
-if (!apiClient.includes('baseURL: IDENTITY_API_URL')) {
+if (!apiClient.includes('createApiClient(IDENTITY_API_URL)')) {
   throw new Error('identityApiClient must use VITE_IDENTITY_API_URL.')
 }
 
-const identityApiUrl = process.env.VITE_IDENTITY_API_URL
-const kinRecipeApiUrl = process.env.VITE_KINRECIPE_API_URL
-
-if (identityApiUrl && !distBundle.includes(identityApiUrl)) {
-  throw new Error('Built bundle does not contain the configured identity API URL.')
+// 4. The access token must be held in memory via the shared OAuth token store, never in localStorage.
+if (apiClient.includes('localStorage')) {
+  throw new Error('KinRecipe apiClient must not read/write the access token from localStorage.')
 }
 
-if (kinRecipeApiUrl && !distBundle.includes(kinRecipeApiUrl)) {
-  throw new Error('Built bundle does not contain the configured KinRecipe API URL.')
+if (!apiClient.includes('@shared/oauth/tokenStore')) {
+  throw new Error('KinRecipe apiClient must read the access token from the shared in-memory token store.')
 }
 
-for (const endpoint of ['/api/auth/me', '/api/auth/login', '/api/auth/register', '/api/auth/logout']) {
-  if (kinRecipeApiUrl && distBundle.includes(`${kinRecipeApiUrl}${endpoint}`)) {
-    throw new Error(`Built bundle still points ${endpoint} at the KinRecipe API URL.`)
+// 5. When a built bundle is present, make sure auth endpoints are not pinned to the KinRecipe API.
+if (existsSync(distAssetsPath)) {
+  const distBundle = readdirSync(distAssetsPath)
+    .filter((file) => file.endsWith('.js'))
+    .map((file) => readFileSync(join(distAssetsPath, file), 'utf8'))
+    .join('\n')
+
+  const identityApiUrl = process.env.VITE_IDENTITY_API_URL
+  const kinRecipeApiUrl = process.env.VITE_KINRECIPE_API_URL
+
+  if (identityApiUrl && !distBundle.includes(identityApiUrl)) {
+    throw new Error('Built bundle does not contain the configured identity API URL.')
+  }
+
+  if (kinRecipeApiUrl && !distBundle.includes(kinRecipeApiUrl)) {
+    throw new Error('Built bundle does not contain the configured KinRecipe API URL.')
+  }
+
+  for (const endpoint of ['/api/auth/me', '/logout']) {
+    if (kinRecipeApiUrl && distBundle.includes(`${kinRecipeApiUrl}${endpoint}`)) {
+      throw new Error(`Built bundle still points ${endpoint} at the KinRecipe API URL.`)
+    }
   }
 }
 

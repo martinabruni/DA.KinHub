@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { completeOAuthLogin } from '@shared/oauth/oauthClient'
 import { oauthClientConfig } from '@/config/oauth'
-import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuth } from '@/features/auth/authProviderContext'
 
 export function OAuthCallbackPage() {
   const navigate = useNavigate()

@@ -5,49 +5,67 @@ import {
   createEmptyDraft,
   readDraftSession,
   saveDraftSession,
-} from '@/features/kin-list/draftSessionStore'
+} from './draftSessionStore'
+
+afterEach(() => {
+  clearDraftSession()
+  localStorage.clear()
+  sessionStorage.clear()
+})
 
 describe('draftSessionStore', () => {
-  afterEach(() => {
-    clearDraftSession()
-  })
-
-  it('creates a fresh manual draft with an idempotency key', () => {
+  it('creates an empty manual draft with a fresh idempotency key', () => {
     const draft = createEmptyDraft()
 
     expect(draft.source).toBe('manual')
-    expect(draft.idempotencyKey).toBeTruthy()
-    expect(readDraftSession()).toEqual(draft)
+    expect(draft.title).toBe('')
+    expect(draft.items).toEqual([])
+    expect(draft.idempotencyKey).toMatch(/[0-9a-f-]{36}/i)
+    expect(readDraftSession()).toBe(draft)
   })
 
-  it('maps audio items into selected draft entries', () => {
+  it('maps audio items to selected editable items by default', () => {
     const draft = createDraftFromAudio({
-      title: 'Spesa settimanale',
-      items: ['Latte', 'Pane'],
-      detectedLanguage: 'it-IT',
-      promptVersion: 'kin-list-v1',
+      title: 'Groceries',
+      items: ['2 packs of milk', 'bread'],
+      detectedLanguage: 'en',
+      promptVersion: 'v1',
     })
 
     expect(draft.source).toBe('audio')
+    expect(draft.detectedLanguage).toBe('en')
+    expect(draft.promptVersion).toBe('v1')
     expect(draft.items).toHaveLength(2)
     expect(draft.items.every((item) => item.isSelected)).toBe(true)
-    expect(draft.detectedLanguage).toBe('it-IT')
-    expect(draft.promptVersion).toBe('kin-list-v1')
+    expect(draft.items[0].text).toBe('2 packs of milk')
+    // Each generated item id is unique.
+    expect(new Set(draft.items.map((item) => item.id)).size).toBe(2)
   })
 
-  it('replaces the current draft when saving an updated session', () => {
-    const draft = createEmptyDraft()
+  it('gives every draft a distinct idempotency key', () => {
+    const first = createEmptyDraft().idempotencyKey
+    const second = createDraftFromAudio({ title: 't', items: ['x'] }).idempotencyKey
 
+    expect(first).not.toBe(second)
+  })
+
+  it('does not persist the draft to web storage before save', () => {
+    createDraftFromAudio({ title: 'Secret list', items: ['private item'] })
     saveDraftSession({
-      ...draft,
-      title: 'Weekend',
-      items: [{ id: 'item-1', text: 'Pomodori', isSelected: true }],
+      title: 'Secret list',
+      items: [{ id: '1', text: 'private item', isSelected: true }],
+      source: 'audio',
+      idempotencyKey: 'key',
     })
 
-    expect(readDraftSession()).toEqual({
-      ...draft,
-      title: 'Weekend',
-      items: [{ id: 'item-1', text: 'Pomodori', isSelected: true }],
-    })
+    expect(localStorage.length).toBe(0)
+    expect(sessionStorage.length).toBe(0)
+  })
+
+  it('clears the in-memory draft', () => {
+    createEmptyDraft()
+    clearDraftSession()
+
+    expect(readDraftSession()).toBeNull()
   })
 })

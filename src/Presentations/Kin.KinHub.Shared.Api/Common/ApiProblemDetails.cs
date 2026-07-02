@@ -39,6 +39,14 @@ internal static class ApiProblemDetails
         int status,
         string code,
         string detail,
+        IReadOnlyList<string>? errors = null) =>
+        Create(controller.HttpContext, status, code, detail, errors);
+
+    internal static ProblemDetails Create(
+        HttpContext httpContext,
+        int status,
+        string code,
+        string detail,
         IReadOnlyList<string>? errors = null)
     {
         var problem = new ProblemDetails
@@ -47,11 +55,11 @@ internal static class ApiProblemDetails
             Title = GetTitle(status),
             Detail = detail,
             Type = $"https://httpstatuses.com/{status}",
-            Instance = controller.HttpContext.Request.Path,
+            Instance = httpContext.Request.Path,
         };
 
         problem.Extensions["code"] = code;
-        problem.Extensions["correlationId"] = controller.HttpContext.TraceIdentifier;
+        problem.Extensions["correlationId"] = httpContext.TraceIdentifier;
 
         if (errors is not null && errors.Count > 0)
         {
@@ -59,6 +67,22 @@ internal static class ApiProblemDetails
         }
 
         return problem;
+    }
+
+    /// <summary>
+    /// Writes an RFC 9457 problem detail directly to the response (for use outside MVC actions,
+    /// e.g. authorization middleware).
+    /// </summary>
+    internal static Task WriteAsync(
+        HttpContext httpContext,
+        int status,
+        string code,
+        string detail)
+    {
+        var problem = Create(httpContext, status, code, detail);
+        httpContext.Response.StatusCode = status;
+        httpContext.Response.ContentType = "application/problem+json";
+        return httpContext.Response.WriteAsJsonAsync(problem, problem.GetType(), options: null, contentType: "application/problem+json");
     }
 
     private static string GetTitle(int status) =>

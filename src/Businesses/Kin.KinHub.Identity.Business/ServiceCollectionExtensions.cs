@@ -8,6 +8,9 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddKinHubIdentityBusiness(this IServiceCollection services)
     {
+        services.AddScoped<IIdentityProvider, KinHubPasswordIdentityProvider>();
+        services.AddScoped<IIdentityProviderRegistry, IdentityProviderRegistry>();
+        services.AddScoped<IUserProviderService, UserProviderService>();
         services.AddScoped<ILoginResponseFactory, LoginResponseFactory>();
         services.AddScoped<IRegisterUserHandler, RegisterUserHandler>();
         services.AddScoped<ILoginUserHandler, LoginUserHandler>();

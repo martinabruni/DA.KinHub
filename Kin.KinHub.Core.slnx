@@ -48,6 +48,7 @@
     <Project Path="src\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.KinList.Api\Kin.KinHub.KinList.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" />
+    <Project Path="src\Presentations\Kin.KinHub.Migrations.Runner\Kin.KinHub.Migrations.Runner.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
   </Folder>
   <Folder Name="/src/Tests/">

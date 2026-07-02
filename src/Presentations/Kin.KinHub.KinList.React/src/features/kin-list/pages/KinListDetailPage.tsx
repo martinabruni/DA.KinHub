@@ -39,8 +39,7 @@ export function KinListDetailPage() {
   const isDraftMode = !id
 
   const draftSession = isDraftMode ? readDraftSession() : null
-  const [draftTitle, setDraftTitle] = useState(draftSession?.title ?? '')
-  const [persistedTitleDraft, setPersistedTitleDraft] = useState<string | null>(null)
+  const [title, setTitle] = useState(draftSession?.title ?? '')
   const [draftItems, setDraftItems] = useState<EditableDraftItem[]>(draftSession?.items ?? [])
   const [newItemText, setNewItemText] = useState('')
   const [appendAudioOpen, setAppendAudioOpen] = useState(false)
@@ -80,7 +79,7 @@ export function KinListDetailPage() {
     }
 
     draftBlocker.reset()
-  }, [confirmDiscardDraft, draftBlocker])
+  }, [draftBlocker, confirmDiscardDraft])
 
   useEffect(() => {
     if (!dirty) {
@@ -105,19 +104,23 @@ export function KinListDetailPage() {
     },
   })
 
+  // Sync the editable title from the freshly loaded server snapshot. Adjusting state
+  // during render (guarded by the last-synced snapshot held in state) is the recommended
+  // alternative to a setState-in-effect: https://react.dev/learn/you-might-not-need-an-effect
+  const [syncedDetail, setSyncedDetail] = useState<KinListDetail | null>(null)
+  if (!isDraftMode && detailQuery.data && detailQuery.data !== syncedDetail) {
+    setSyncedDetail(detailQuery.data)
+    setTitle(detailQuery.data.title)
+    setDirty(false)
+  }
+
   const handleConflict = async () => {
     toast.error('This list changed elsewhere. Reloading the latest version.')
     setEditingItemId(null)
     setEditingItemText('')
-    setPersistedTitleDraft(null)
-    setDirty(false)
     await queryClient.invalidateQueries({ queryKey: ['kin-list-detail', id] })
     await queryClient.invalidateQueries({ queryKey: ['kin-lists'] })
   }
-
-  const title = isDraftMode
-    ? draftTitle
-    : persistedTitleDraft ?? detailQuery.data?.title ?? ''
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -154,7 +157,6 @@ export function KinListDetailPage() {
     onSuccess: (data) => {
       queryClient.setQueryData(['kin-list-detail', data.id], data)
       queryClient.invalidateQueries({ queryKey: ['kin-lists'] })
-      setPersistedTitleDraft(null)
       setDirty(false)
     },
     onError: async (error) => {
@@ -354,7 +356,7 @@ export function KinListDetailPage() {
             <Input
               value={title}
               onChange={(event) => {
-                setDraftTitle(event.target.value)
+                setTitle(event.target.value)
                 setDirty(true)
               }}
               placeholder="List title"
@@ -457,7 +459,7 @@ export function KinListDetailPage() {
             })
 
             const audioDraft = createDraftFromAudio({
-              title: draftTitle.trim() || data.title,
+              title: title.trim() || data.title,
               items: data.items,
               detectedLanguage: data.detectedLanguage,
               promptVersion: data.promptVersion,
@@ -467,11 +469,11 @@ export function KinListDetailPage() {
             const mergedItems = [...draftItems, ...audioDraft.items]
             saveDraftSession({
               ...audioDraft,
-              title: draftTitle.trim() || audioDraft.title,
+              title: title.trim() || audioDraft.title,
               items: mergedItems,
             })
 
-            setDraftTitle((current) => current.trim() || data.title)
+            setTitle((current) => current.trim() || data.title)
             setDraftItems(mergedItems)
             setDirty(true)
           }}
@@ -500,7 +502,7 @@ export function KinListDetailPage() {
             <Input
               value={title}
               onChange={(event) => {
-                setPersistedTitleDraft(event.target.value)
+                setTitle(event.target.value)
                 setDirty(true)
               }}
             />

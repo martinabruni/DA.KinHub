@@ -16,7 +16,7 @@ import {
   buildCoreServicesUrl,
   buildIdentityLoginUrl,
 } from '@/config/appLinks'
-import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuth } from '@/features/auth/authProviderContext'
 import { getInitials } from '@/lib/utils'
 
 function MenuLinkRow({

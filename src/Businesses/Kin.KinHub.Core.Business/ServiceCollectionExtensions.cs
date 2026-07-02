@@ -79,8 +79,6 @@ public static class ServiceCollectionExtensions
             serviceProvider.GetRequiredService<IDeleteRecipeStepHandler>()));
         services.AddScoped<IFridgeService, KinHubFridgeService>();
         services.AddScoped<IFridgeIngredientService, KinHubFridgeIngredientService>();
-        services.AddScoped<IShoppingListService, KinHubShoppingListService>();
-        services.AddScoped<IShoppingListItemService, KinHubShoppingListItemService>();
         services.AddScoped<IRecipeAssistantManager, KinHubRecipeAssistantManager>();
 
         return services;

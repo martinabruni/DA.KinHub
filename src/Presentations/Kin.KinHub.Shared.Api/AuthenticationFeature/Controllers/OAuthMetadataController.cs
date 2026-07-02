@@ -26,7 +26,7 @@ public sealed class OAuthMetadataController : ControllerBase
             token_endpoint = $"{issuer}/token",
             registration_endpoint = _oauthOptions.EnableDynamicClientRegistration ? $"{issuer}/register" : null,
             response_types_supported = new[] { "code" },
-            grant_types_supported = new[] { "authorization_code", "refresh_token" },
+            grant_types_supported = new[] { "authorization_code" },
             token_endpoint_auth_methods_supported = new[] { "none" },
             code_challenge_methods_supported = new[] { "S256" },
             response_modes_supported = new[] { "query" },

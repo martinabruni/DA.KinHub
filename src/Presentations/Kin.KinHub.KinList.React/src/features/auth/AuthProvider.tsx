@@ -1,21 +1,12 @@
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext } from 'react'
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { identityApiClient } from '@/api/apiClient'
-import { useAuthContext } from '@/store/authContext'
+import { useAuthContext } from '@/store/authContextValue'
+import { AuthProviderContext } from '@/features/auth/authProviderContext'
 import type { User } from '@/types'
-
-interface AuthProviderValue {
-  user: User | null
-  isAuthenticated: boolean
-  isLoadingUser: boolean
-  completeLogin: (accessToken: string) => Promise<void>
-  logout: () => Promise<void>
-}
-
-const AuthProviderContext = createContext<AuthProviderValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -65,10 +56,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthProviderContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthProviderContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
 }

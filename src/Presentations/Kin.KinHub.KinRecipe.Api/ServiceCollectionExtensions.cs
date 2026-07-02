@@ -2,7 +2,10 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
 using Kin.KinHub.KinRecipe.Api.Common;
 using Kin.KinHub.KinRecipe.Api.Common.Configuration;
+using Kin.KinHub.Shared.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -84,7 +87,14 @@ public static class ServiceCollectionExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(
+                FamilyContextRequirement.PolicyName,
+                policy => policy.Requirements.Add(new FamilyContextRequirement()));
+        });
+        services.AddScoped<IAuthorizationHandler, FamilyContextAuthorizationHandler>();
+        services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
         services.AddControllers();
