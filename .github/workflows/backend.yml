@@ -420,6 +420,11 @@ jobs:
                 ;;
               Failed|Canceled|Cancelled)
                 echo "Migration execution ended with status ${status}."
+                az containerapp job execution show \
+                  --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                  --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}" \
+                  --job-execution-name "${execution_name}" \
+                  --output json
                 exit 1
                 ;;
             esac
@@ -657,6 +662,11 @@ jobs:
                 ;;
               Failed|Canceled|Cancelled)
                 echo "Migration execution ended with status ${status}."
+                az containerapp job execution show \
+                  --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                  --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}" \
+                  --job-execution-name "${execution_name}" \
+                  --output json
                 exit 1
                 ;;
             esac

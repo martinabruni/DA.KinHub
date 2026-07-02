@@ -45,6 +45,40 @@ public sealed class MigrationRunnerServiceTests
     }
 
     [Fact]
+    public void BuildMigrationConnectionString_UsesDefaultCommandTimeout()
+    {
+        var result = MigrationRunnerConfiguration.BuildMigrationConnectionString(
+            "Host=test;Database=kinhub;",
+            _ => null);
+
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(result);
+
+        Assert.Equal(MigrationRunnerConfiguration.DefaultCommandTimeoutSeconds, builder.CommandTimeout);
+    }
+
+    [Fact]
+    public void BuildMigrationConnectionString_UsesConfiguredCommandTimeout()
+    {
+        var result = MigrationRunnerConfiguration.BuildMigrationConnectionString(
+            "Host=test;Database=kinhub;",
+            key => key == "KINHUB_MIGRATION_COMMAND_TIMEOUT_SECONDS" ? "600" : null);
+
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(result);
+
+        Assert.Equal(600, builder.CommandTimeout);
+    }
+
+    [Fact]
+    public void ResolveCommandTimeoutSeconds_Throws_WhenConfiguredValueIsInvalid()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => MigrationRunnerConfiguration.ResolveCommandTimeoutSeconds(
+                key => key == "KINHUB_MIGRATION_COMMAND_TIMEOUT_SECONDS" ? "abc" : null));
+
+        Assert.Contains("Invalid migration command timeout configured", exception.Message);
+    }
+
+    [Fact]
     public async Task RunAsync_AppliesSteps_InDeclaredOrder_AndLogsProgress()
     {
         var applied = new List<string>();
@@ -83,6 +117,9 @@ public sealed class MigrationRunnerServiceTests
         Assert.Contains("Applying IdentityDbContext migrations (step 1/3)", log);
         Assert.Contains("Applying KinListDbContext migrations (step 2/3)", log);
         Assert.Contains("Applying CoreDbContext migrations (step 3/3)", log);
+        Assert.Contains("IdentityDbContext migrations applied in", log);
+        Assert.Contains("KinListDbContext migrations applied in", log);
+        Assert.Contains("CoreDbContext migrations applied in", log);
         Assert.Contains("All migrations applied successfully.", log);
     }
 
@@ -111,5 +148,24 @@ public sealed class MigrationRunnerServiceTests
 
         Assert.Equal("boom", exception.Message);
         Assert.Equal(["identity:Host=test;"], applied);
+    }
+
+    [Fact]
+    public async Task RunAsync_LogsFailingStepName()
+    {
+        var output = new StringBuilder();
+        using var writer = new StringWriter(output);
+
+        var runner = new MigrationRunnerService(
+        [
+            new("IdentityDbContext", (_, _) => Task.CompletedTask),
+            new("KinListDbContext", (_, _) => throw new InvalidOperationException("boom")),
+        ], writer);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync("Host=test;"));
+
+        var log = output.ToString();
+        Assert.Contains("KinListDbContext migrations failed after", log);
+        Assert.Contains("InvalidOperationException: boom", log);
     }
 }
