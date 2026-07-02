@@ -35,29 +35,41 @@ catch (Exception ex)
     return 1;
 }
 
-static async Task ApplyIdentityMigrationsAsync(string connectionString, CancellationToken cancellationToken)
+static async Task ApplyIdentityMigrationsAsync(
+    string connectionString,
+    int commandTimeoutSeconds,
+    CancellationToken cancellationToken)
 {
     var identityOptions = new DbContextOptionsBuilder<IdentityDbContext>()
-        .UseNpgsql(connectionString)
+        .UseNpgsql(connectionString, options => options.CommandTimeout(commandTimeoutSeconds))
         .Options;
     await using var identityContext = new IdentityDbContext(identityOptions);
+    identityContext.Database.SetCommandTimeout(commandTimeoutSeconds);
     await identityContext.Database.MigrateAsync(cancellationToken);
 }
 
-static async Task ApplyKinListMigrationsAsync(string connectionString, CancellationToken cancellationToken)
+static async Task ApplyKinListMigrationsAsync(
+    string connectionString,
+    int commandTimeoutSeconds,
+    CancellationToken cancellationToken)
 {
     var kinListOptions = new DbContextOptionsBuilder<KinListDbContext>()
-        .UseNpgsql(connectionString)
+        .UseNpgsql(connectionString, options => options.CommandTimeout(commandTimeoutSeconds))
         .Options;
     await using var kinListContext = new KinListDbContext(kinListOptions);
+    kinListContext.Database.SetCommandTimeout(commandTimeoutSeconds);
     await kinListContext.Database.MigrateAsync(cancellationToken);
 }
 
-static async Task ApplyCoreMigrationsAsync(string connectionString, CancellationToken cancellationToken)
+static async Task ApplyCoreMigrationsAsync(
+    string connectionString,
+    int commandTimeoutSeconds,
+    CancellationToken cancellationToken)
 {
     var coreOptions = new DbContextOptionsBuilder<CoreDbContext>()
-        .UseNpgsql(connectionString)
+        .UseNpgsql(connectionString, options => options.CommandTimeout(commandTimeoutSeconds))
         .Options;
     await using var coreContext = new CoreDbContext(coreOptions);
+    coreContext.Database.SetCommandTimeout(commandTimeoutSeconds);
     await coreContext.Database.MigrateAsync(cancellationToken);
 }
