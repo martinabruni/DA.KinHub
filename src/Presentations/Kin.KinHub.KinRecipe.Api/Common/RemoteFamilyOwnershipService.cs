@@ -2,10 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Kin.KinHub.KinRecipe.Api.Common.Configuration;
+using Kin.KinHub.Shared.Api.Common.Authorization;
 
 namespace Kin.KinHub.KinRecipe.Api.Common;
 
-public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService
+public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService, IFamilyContextResolver
 {
     private const string MissingAuthorizationMessage = "Missing or invalid Authorization header.";
     private const string FamilyContextUnavailableMessage = "Family context could not be resolved because Identity is unavailable.";
@@ -94,6 +95,21 @@ public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService
             _logger.LogWarning(ex, "Identity family-context request failed.");
             return FamilyAccessResult.ServiceUnavailable(FamilyContextUnavailableMessage);
         }
+    }
+
+    public async Task<FamilyContextResolution> ResolveAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await GetCurrentFamilyAsync(userId, cancellationToken);
+        return result.Status switch
+        {
+            Kin.KinHub.Core.Business.Common.ResultStatus.Success when result.Family is not null =>
+                FamilyContextResolution.Success(result.Family.Id),
+            Kin.KinHub.Core.Business.Common.ResultStatus.NotFound => FamilyContextResolution.NoFamily(),
+            Kin.KinHub.Core.Business.Common.ResultStatus.Unauthorized => FamilyContextResolution.Forbidden(),
+            _ => FamilyContextResolution.Unavailable(),
+        };
     }
 
     public async Task<FamilyAccessResult> EnsureOwnershipAsync(

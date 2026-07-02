@@ -4,8 +4,10 @@ WORKDIR /src
 COPY ["Kin.KinHub.Core.slnx", "./"]
 COPY ["src/Businesses/Kin.KinHub.KinList.Business/Kin.KinHub.KinList.Business.csproj", "src/Businesses/Kin.KinHub.KinList.Business/"]
 COPY ["src/Domains/Kin.KinHub.Core.Domain/Kin.KinHub.Core.Domain.csproj", "src/Domains/Kin.KinHub.Core.Domain/"]
+COPY ["src/Domains/Kin.KinHub.Identity.Domain/Kin.KinHub.Identity.Domain.csproj", "src/Domains/Kin.KinHub.Identity.Domain/"]
 COPY ["src/Domains/Kin.KinHub.KinList.Domain/Kin.KinHub.KinList.Domain.csproj", "src/Domains/Kin.KinHub.KinList.Domain/"]
 COPY ["src/Infrastructures/Kin.KinHub.Core.PostgreSql/Kin.KinHub.Core.PostgreSql.csproj", "src/Infrastructures/Kin.KinHub.Core.PostgreSql/"]
+COPY ["src/Infrastructures/Kin.KinHub.Identity.PostgreSql/Kin.KinHub.Identity.PostgreSql.csproj", "src/Infrastructures/Kin.KinHub.Identity.PostgreSql/"]
 COPY ["src/Infrastructures/Kin.KinHub.KinList.PostgreSql/Kin.KinHub.KinList.PostgreSql.csproj", "src/Infrastructures/Kin.KinHub.KinList.PostgreSql/"]
 COPY ["src/Presentations/Kin.KinHub.Migrations.Runner/Kin.KinHub.Migrations.Runner.csproj", "src/Presentations/Kin.KinHub.Migrations.Runner/"]
 

@@ -12,7 +12,7 @@ const apiClient = readFileSync(apiClientPath, 'utf8')
 //    authentication is centralized in KinHub Identity and never handled by the Kin List API.
 const identityClientChecks = [
   "identityApiClient.get<User>('/api/auth/me')",
-  "identityApiClient.post('/logout')",
+  "startOAuthLogout(oauthClientConfig)",
 ]
 
 for (const check of identityClientChecks) {
@@ -24,7 +24,6 @@ for (const check of identityClientChecks) {
 // 2. The Kin List API client must never be used for authentication endpoints.
 const forbiddenChecks = [
   "apiClient.get<User>('/api/auth/me')",
-  "apiClient.post('/logout')",
   "apiClient.post('/api/auth/login'",
   "apiClient.post('/api/auth/register'",
 ]
@@ -50,8 +49,8 @@ if (apiClient.includes('localStorage') || apiClient.includes('sessionStorage')) 
   throw new Error('Kin List apiClient must not read/write the access token from web storage.')
 }
 
-if (!apiClient.includes('@shared/oauth/tokenStore')) {
-  throw new Error('Kin List apiClient must read the access token from the shared in-memory token store.')
+if (!apiClient.includes('@shared/oauth/oauthApiClient')) {
+  throw new Error('Kin List apiClient must use the shared OAuth API client.')
 }
 
 // 5. When a built bundle is present, make sure auth endpoints are not pinned to the Kin List API.

@@ -15,4 +15,5 @@ export const oauthClientConfig: OAuthClientConfig = {
   redirectUri: new URL('/oauth/callback', window.location.origin).toString(),
   scope: 'kinhub.api',
   postLoginPath: '/services',
+  postLogoutPath: '/',
 }

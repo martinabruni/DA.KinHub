@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Kin.KinHub.Migrations.Runner</RootNamespace>
     <AssemblyName>Kin.KinHub.Migrations.Runner</AssemblyName>
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>

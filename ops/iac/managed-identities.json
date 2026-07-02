@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "13428149932877984496"
+      "templateHash": "15565902414522215841"
     }
   },
   "parameters": {
@@ -14,6 +14,18 @@
       "defaultValue": "[resourceGroup().location]",
       "metadata": {
         "description": "Azure region where the managed identities are provisioned."
+      }
+    },
+    "identityContainerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Identity API Container App."
+      }
+    },
+    "kinRecipeContainerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the KinRecipe API Container App."
       }
     },
     "kinListContainerAppName": {
@@ -39,6 +51,18 @@
     {
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-01-31",
+      "name": "[format('{0}-identity', parameters('identityContainerAppName'))]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-identity', parameters('kinRecipeContainerAppName'))]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
       "name": "[format('{0}-identity', parameters('kinListMigrationJobName'))]",
       "location": "[parameters('location')]"
     }
@@ -51,6 +75,14 @@
     "kinListMigrationIdentityId": {
       "type": "string",
       "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListMigrationJobName')))]"
+    },
+    "identityIdentityId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('identityContainerAppName')))]"
+    },
+    "kinRecipeIdentityId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinRecipeContainerAppName')))]"
     }
   }
 }

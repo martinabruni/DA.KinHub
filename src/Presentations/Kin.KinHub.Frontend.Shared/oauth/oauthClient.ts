@@ -4,6 +4,7 @@ export interface OAuthClientConfig {
   redirectUri: string
   scope: string
   postLoginPath: string
+  postLogoutPath?: string
 }
 
 interface OAuthTransaction {
@@ -89,6 +90,10 @@ function resolveSameOriginReturnTo(returnTo: string | null | undefined, fallback
   }
 }
 
+function resolvePostLogoutPath(config: OAuthClientConfig, returnTo?: string) {
+  return resolveSameOriginReturnTo(returnTo, config.postLogoutPath ?? config.postLoginPath)
+}
+
 export async function startOAuthLogin(
   config: OAuthClientConfig,
   returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`,
@@ -114,6 +119,25 @@ export async function startOAuthLogin(
   authorizeUrl.searchParams.set('code_challenge_method', 'S256')
 
   window.location.assign(authorizeUrl.toString())
+}
+
+export function startOAuthLogout(
+  config: OAuthClientConfig,
+  returnTo = config.postLogoutPath ?? config.postLoginPath,
+) {
+  const logoutUrl = new URL('/logout', config.authorizationServerUrl)
+  logoutUrl.searchParams.set('client_id', config.clientId)
+  logoutUrl.searchParams.set(
+    'post_logout_redirect_uri',
+    new URL(resolvePostLogoutPath(config, returnTo), window.location.origin).toString(),
+  )
+
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = logoutUrl.toString()
+  form.style.display = 'none'
+  document.body.appendChild(form)
+  form.submit()
 }
 
 export async function completeOAuthLogin(config: OAuthClientConfig) {

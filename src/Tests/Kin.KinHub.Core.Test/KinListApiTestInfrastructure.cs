@@ -5,6 +5,7 @@ using Kin.KinHub.Identity.Domain.Common;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
 using Kin.KinHub.KinList.Domain.KinListFeature;
+using Kin.KinHub.Shared.Api.Common.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
@@ -125,8 +126,8 @@ public sealed class KinListApiFactory : WebApplicationFactory<KinListApiProgram>
             // no-ops; the controller reads our controllable current user directly.
             services.RemoveAll<ICurrentUser>();
             services.AddScoped<ICurrentUser>(_ => CurrentUser);
-            services.RemoveAll<IFamilyOwnershipService>();
-            services.AddSingleton<IFamilyOwnershipService>(new StubFamilyOwnershipService());
+            services.RemoveAll<IFamilyContextResolver>();
+            services.AddSingleton<IFamilyContextResolver>(new StubFamilyContextResolver(CurrentUser));
 
             // Audio generator: deterministic fake (T03 covers audio behavior in isolation).
             services.RemoveAll<IKinListAudioDraftGenerator>();
@@ -146,13 +147,17 @@ public sealed class MutableCurrentUser : ICurrentUser
     public bool HasFamilyContext { get; set; }
 }
 
-internal sealed class StubFamilyOwnershipService : IFamilyOwnershipService
+internal sealed class StubFamilyContextResolver : IFamilyContextResolver
 {
-    public Task<FamilyAccessResult> GetCurrentFamilyAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(FamilyAccessResult.NotFound("Family resolution is bypassed in integration tests."));
+    private readonly MutableCurrentUser _currentUser;
 
-    public Task<FamilyAccessResult> EnsureOwnershipAsync(Guid familyId, Guid userId, CancellationToken cancellationToken = default) =>
-        GetCurrentFamilyAsync(userId, cancellationToken);
+    public StubFamilyContextResolver(MutableCurrentUser currentUser) => _currentUser = currentUser;
+
+    public Task<FamilyContextResolution> ResolveAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(
+            _currentUser.HasFamilyContext
+                ? FamilyContextResolution.Success(_currentUser.FamilyId)
+                : FamilyContextResolution.NoFamily());
 }
 
 /// <summary>Configurable audio draft generator whose parse result each test controls.</summary>

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
-using CoreResultStatus = Kin.KinHub.Core.Business.Common.ResultStatus;
 
 namespace Kin.KinHub.Shared.Api.Common.Authorization;
 
@@ -41,13 +40,13 @@ public sealed class FamilyAuthorizationMiddlewareResultHandler : IAuthorizationM
                 return;
             }
 
-            if (GetFamilyAccessStatus(context) is CoreResultStatus.ServiceUnavailable)
+            if (GetFamilyAccessStatus(context) is FamilyContextOutcome.Unavailable)
             {
                 await ApiProblemDetails.WriteAsync(
                     context,
                     StatusCodes.Status503ServiceUnavailable,
                     "family_context_unavailable",
-                    "Family context could not be resolved because Core is unavailable.");
+                    "Family context could not be resolved because Identity is unavailable.");
                 return;
             }
 
@@ -62,9 +61,9 @@ public sealed class FamilyAuthorizationMiddlewareResultHandler : IAuthorizationM
         await _defaultHandler.HandleAsync(next, context, policy, authorizeResult);
     }
 
-    private static CoreResultStatus? GetFamilyAccessStatus(HttpContext context) =>
+    private static FamilyContextOutcome? GetFamilyAccessStatus(HttpContext context) =>
         context.Items.TryGetValue(JwtAuthenticationMiddleware.FamilyAccessStatusItemKey, out var value)
-            && value is CoreResultStatus status
+            && value is FamilyContextOutcome status
                 ? status
                 : null;
 }

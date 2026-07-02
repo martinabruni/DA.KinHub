@@ -62,6 +62,7 @@ public sealed class ExpandContractMigrationTests
 
             // 2. Core migrations up to the one just BEFORE the reconcile.
             var previous = await MigrateCoreToPreviousAsync(connectionString);
+            await CreateLegacyShoppingListSchemaAsync(connectionString);
 
             // 3. Seed prior kinrecipe state.
             await SeedLegacyRowsAsync(connectionString, familyId, listId, itemAId, itemBId);
@@ -69,7 +70,7 @@ public sealed class ExpandContractMigrationTests
             // 4. Apply the reconcile migration (full up).
             await using (var core = NewCoreContext(connectionString))
             {
-                await core.Database.MigrateAsync();
+                await core.GetService<IMigrator>().MigrateAsync(ReconcileMigration);
             }
 
             // 5. Data landed in kinlist with the correct mapping/state.
@@ -129,6 +130,51 @@ public sealed class ExpandContractMigrationTests
                 Assert.Equal("Hardware", inserted.Title);
                 Assert.False(inserted.IsDeleted);
                 Assert.NotEqual(Guid.Empty, inserted.Version);
+            }
+
+            // 6c. Updates and deletes through the compat views preserve kinlist semantics.
+            var newItemId = Guid.NewGuid();
+            await using (var conn = new NpgsqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                await ExecAsync(
+                    conn,
+                    @"UPDATE kinrecipe.""ShoppingListEntity""
+                      SET ""Name"" = 'Hardware & Tools', ""UpdatedAt"" = now()
+                      WHERE ""Id"" = @id",
+                    ("id", newListId));
+
+                await ExecAsync(
+                    conn,
+                    @"INSERT INTO kinrecipe.""ShoppingListItemEntity"" (""Id"", ""ShoppingListId"", ""IsChecked"", ""Name"", ""CreatedAt"", ""UpdatedAt"")
+                      VALUES (@id, @list, false, 'Screws', now(), now())",
+                    ("id", newItemId), ("list", newListId));
+
+                await ExecAsync(
+                    conn,
+                    @"UPDATE kinrecipe.""ShoppingListItemEntity""
+                      SET ""IsChecked"" = true, ""Name"" = 'Wood screws', ""UpdatedAt"" = now()
+                      WHERE ""Id"" = @id",
+                    ("id", newItemId));
+
+                await ExecAsync(
+                    conn,
+                    @"DELETE FROM kinrecipe.""ShoppingListItemEntity"" WHERE ""Id"" = @id",
+                    ("id", itemAId));
+            }
+            await using (var kinList = NewKinListContext(connectionString))
+            {
+                var updatedList = await kinList.Lists.SingleAsync(x => x.Id == newListId);
+                Assert.Equal("Hardware & Tools", updatedList.Title);
+
+                var insertedItem = await kinList.Items.SingleAsync(x => x.Id == newItemId);
+                Assert.Equal("Wood screws", insertedItem.Text);
+                Assert.True(insertedItem.IsCompleted);
+                Assert.Equal(1, insertedItem.ActivationOrder);
+                Assert.False(insertedItem.IsDeleted);
+
+                var softDeletedItem = await kinList.Items.SingleAsync(x => x.Id == itemAId);
+                Assert.True(softDeletedItem.IsDeleted);
             }
 
             // 7. Roll back the reconcile: real tables and data return.
@@ -208,6 +254,32 @@ public sealed class ExpandContractMigrationTests
             @"INSERT INTO kinrecipe.""ShoppingListItemEntity"" (""Id"", ""ShoppingListId"", ""IsChecked"", ""Name"", ""CreatedAt"", ""UpdatedAt"")
               VALUES (@id, @list, true, 'Bread', now() - interval '1 hour', now())",
             ("id", itemBId), ("list", listId));
+    }
+
+    private static async Task CreateLegacyShoppingListSchemaAsync(string connectionString)
+    {
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+        await ExecAsync(
+            conn,
+            """
+            CREATE SCHEMA IF NOT EXISTS kinrecipe;
+            CREATE TABLE kinrecipe."ShoppingListEntity" (
+                "Id" uuid PRIMARY KEY,
+                "FamilyId" uuid NOT NULL,
+                "Name" varchar(200) NOT NULL,
+                "CreatedAt" timestamptz NOT NULL,
+                "UpdatedAt" timestamptz NOT NULL
+            );
+            CREATE TABLE kinrecipe."ShoppingListItemEntity" (
+                "Id" uuid PRIMARY KEY,
+                "ShoppingListId" uuid NOT NULL REFERENCES kinrecipe."ShoppingListEntity"("Id") ON DELETE CASCADE,
+                "IsChecked" boolean NOT NULL,
+                "Name" varchar(200) NOT NULL,
+                "CreatedAt" timestamptz NOT NULL,
+                "UpdatedAt" timestamptz NOT NULL
+            );
+            """);
     }
 
     private static async Task<string> CreateDatabaseAsync(string databaseName)

@@ -480,9 +480,46 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01'
   }
 }
 
+resource identityIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: '${identityContainerAppName}-identity'
+}
+
+resource kinRecipeIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: '${kinRecipeContainerAppName}-identity'
+}
+
+resource identityKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, identityIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: identityIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource kinRecipeKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, kinRecipeIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: kinRecipeIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
 resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: identityContainerAppName
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${identityIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    identityKeyVaultSecretsUser
+  ]
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -503,15 +540,18 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'db-connection-string'
-          value: postgresConnectionString
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: identityIdentity.id
         }
         {
           name: 'jwt-secret'
-          value: jwtSecret
+          keyVaultUrl: jwtSecretKvSecret.properties.secretUri
+          identity: identityIdentity.id
         }
         {
           name: 'ghcr-password'
-          value: ghcrPassword
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: identityIdentity.id
         }
       ]
     }
@@ -690,6 +730,15 @@ resource identityContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
 resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: kinRecipeContainerAppName
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${kinRecipeIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    kinRecipeKeyVaultSecretsUser
+  ]
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -710,23 +759,28 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
       secrets: [
         {
           name: 'db-connection-string'
-          value: postgresConnectionString
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'jwt-secret'
-          value: jwtSecret
+          keyVaultUrl: jwtSecretKvSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'openai-endpoint'
-          value: openAiAccount.properties.endpoint
+          keyVaultUrl: openAiEndpointSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'openai-key'
-          value: openAiAccount.listKeys().key1
+          keyVaultUrl: openAiKeySecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
         {
           name: 'ghcr-password'
-          value: ghcrPassword
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: kinRecipeIdentity.id
         }
       ]
     }

@@ -163,7 +163,7 @@ public sealed class OAuthController : ControllerBase
             }
         }
 
-        return Content(RenderLoginPage(request, client!, scope, _oauthOptions.RegistrationUiUrl), "text/html");
+        return Content(RenderLoginPage(request, client!, scope, _oauthOptions.AuthorizationServerUrl, _oauthOptions.RegistrationUiUrl), "text/html");
     }
 
     [HttpPost("authorize")]
@@ -194,7 +194,7 @@ public sealed class OAuthController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return Content(RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.RegistrationUiUrl, "Email and password are required."), "text/html");
+            return Content(RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.AuthorizationServerUrl, _oauthOptions.RegistrationUiUrl, "Email and password are required."), "text/html");
         }
 
         var result = await _authenticationService.LoginAsync(
@@ -208,14 +208,14 @@ public sealed class OAuthController : ControllerBase
         if (!result.IsSuccess || result.Value is null)
         {
             return Content(
-                RenderLoginPage(authorizeRequest, client!, scope, result.Message ?? "Authentication failed."),
+                RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.AuthorizationServerUrl, _oauthOptions.RegistrationUiUrl, result.Message ?? "Authentication failed."),
                 "text/html");
         }
 
         if (RequiresElevatedConsent(scope) && !request.ApproveElevatedAccess)
         {
             return Content(
-                RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.RegistrationUiUrl, "You must explicitly approve elevated write access before continuing."),
+                RenderLoginPage(authorizeRequest, client!, scope, _oauthOptions.AuthorizationServerUrl, _oauthOptions.RegistrationUiUrl, "You must explicitly approve elevated write access before continuing."),
                 "text/html");
         }
 
@@ -289,7 +289,10 @@ public sealed class OAuthController : ControllerBase
 
     [HttpPost("logout")]
     [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
-    public async Task<IActionResult> LogoutAsync(CancellationToken cancellationToken)
+    public async Task<IActionResult> LogoutAsync(
+        [FromQuery(Name = "client_id")] string? clientId,
+        [FromQuery(Name = "post_logout_redirect_uri")] string? postLogoutRedirectUri,
+        CancellationToken cancellationToken)
     {
         if (TryGetIdentitySessionId(out var sessionId)
             && _identitySessionStore.TryRemove(sessionId, out var session)
@@ -299,6 +302,15 @@ public sealed class OAuthController : ControllerBase
         }
 
         DeleteIdentitySessionCookie();
+        if (!string.IsNullOrWhiteSpace(clientId)
+            && !string.IsNullOrWhiteSpace(postLogoutRedirectUri)
+            && _clientStore.TryGet(clientId, out var client)
+            && client is not null
+            && client.RedirectUris.Contains(postLogoutRedirectUri, StringComparer.Ordinal))
+        {
+            return Redirect(postLogoutRedirectUri);
+        }
+
         return NoContent();
     }
 
@@ -636,6 +648,7 @@ public sealed class OAuthController : ControllerBase
         OAuthAuthorizeRequest request,
         OAuthRegisteredClient client,
         string scope,
+        string authorizationServerUrl,
         string registrationUiUrl,
         string? errorMessage = null)
     {
@@ -662,7 +675,7 @@ public sealed class OAuthController : ControllerBase
             : $$"""
         <p style="margin:16px 0 0;font-size:14px;color:#475569;">
             Need an account?
-            <a href="{{Encode(QueryHelpers.AddQueryString(registrationUiUrl, "returnTo", QueryHelpers.AddQueryString(request.RedirectUri!, new Dictionary<string, string?>
+            <a href="{{Encode(QueryHelpers.AddQueryString(registrationUiUrl, "returnTo", QueryHelpers.AddQueryString(new Uri(new Uri(authorizationServerUrl), "/authorize").ToString(), new Dictionary<string, string?>
             {
                 ["response_type"] = request.ResponseType,
                 ["client_id"] = request.ClientId,

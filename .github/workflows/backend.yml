@@ -25,6 +25,7 @@ env:
   IDENTITY_DOCKERFILE: src/Presentations/Kin.KinHub.Identity.Api/Dockerfile
   KINRECIPE_DOCKERFILE: src/Presentations/Kin.KinHub.KinRecipe.Api/Dockerfile
   KINLIST_DOCKERFILE: src/Presentations/Kin.KinHub.KinList.Api/Dockerfile
+  MIGRATION_DOCKERFILE: src/Presentations/Kin.KinHub.Migrations.Runner/Dockerfile
 
 concurrency:
   group: backend-${{ github.ref }}
@@ -41,6 +42,9 @@ jobs:
 
       - name: Guard against Model Context Protocol references
         run: bash scripts/verify-no-mcp.sh
+
+      - name: Guard migration and IaC rollout contract
+        run: bash scripts/verify-migration-iac.sh
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -173,6 +177,39 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.kinlist_image.outputs.image }}
 
+  package_migration_image:
+    name: Package Migration Runner Image
+    runs-on: ubuntu-latest
+    needs:
+      - backend_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: migration_image
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-migration:${GITHUB_SHA}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_SERVER }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+
+      - name: Build and push Migration Runner image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.MIGRATION_DOCKERFILE }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.migration_image.outputs.image }}
+
   deploy_dev:
     name: Deploy Dev
     if: github.event_name != 'pull_request'
@@ -183,6 +220,7 @@ jobs:
       - package_identity_image
       - package_kinrecipe_image
       - package_kinlist_image
+      - package_migration_image
 
     steps:
       - name: Checkout repository
@@ -262,6 +300,33 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Resolve current backend images
+        run: |
+          resolve_rollout_image() {
+            local app_name="$1"
+            local fallback_image="$2"
+            local resolved_image
+
+            resolved_image="$(
+              az containerapp show \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --name "${app_name}" \
+                --query "properties.template.containers[0].image" \
+                --output tsv \
+                2>/dev/null || true
+            )"
+
+            if [ -z "${resolved_image}" ]; then
+              resolved_image="${fallback_image}"
+            fi
+
+            printf '%s' "${resolved_image}"
+          }
+
+          echo "IDENTITY_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.IDENTITY_CONTAINER_APP_NAME }}" "${IDENTITY_IMAGE}")" >> "$GITHUB_ENV"
+          echo "KINRECIPE_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" "${KINRECIPE_IMAGE}")" >> "$GITHUB_ENV"
+          echo "KINLIST_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINLIST_CONTAINER_APP_NAME }}" "${KINLIST_IMAGE}")" >> "$GITHUB_ENV"
+
       - name: Deploy infrastructure
         run: |
           az deployment group create \
@@ -270,6 +335,8 @@ jobs:
             --template-file "ops/iac/managed-identities.bicep" \
             --parameters \
               location="${{ vars.AZURE_LOCATION }}" \
+              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
               kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
               kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
 
@@ -302,9 +369,9 @@ jobs:
             jwtIssuer="${{ vars.JWT_ISSUER }}"
             ghcrUsername="${{ secrets.GHCR_USERNAME }}"
             ghcrPassword="${{ secrets.GHCR_PASSWORD }}"
-            identityImage="${IDENTITY_IMAGE}"
-            kinRecipeImage="${KINRECIPE_IMAGE}"
-            kinListImage="${KINLIST_IMAGE}"
+            identityImage="${IDENTITY_ROLLOUT_IMAGE}"
+            kinRecipeImage="${KINRECIPE_ROLLOUT_IMAGE}"
+            kinListImage="${KINLIST_ROLLOUT_IMAGE}"
             kinListMigrationImage="${KINLIST_MIGRATION_IMAGE}"
           )
 
@@ -320,9 +387,65 @@ jobs:
 
       - name: Run KinList expand/contract migration
         run: |
-          az containerapp job start \
+          execution_name="$(
+            az containerapp job start \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}" \
+              --query name \
+              --output tsv
+          )"
+
+          if [ -z "${execution_name}" ]; then
+            echo "Failed to resolve the migration job execution name."
+            exit 1
+          fi
+
+          echo "Started migration execution: ${execution_name}"
+
+          for attempt in $(seq 1 90); do
+            status="$(
+              az containerapp job execution show \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}" \
+                --job-execution-name "${execution_name}" \
+                --query "properties.status" \
+                --output tsv
+            )"
+
+            echo "Migration execution status: ${status}"
+
+            case "${status}" in
+              Succeeded)
+                exit 0
+                ;;
+              Failed|Canceled|Cancelled)
+                echo "Migration execution ended with status ${status}."
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Timed out while waiting for migration execution ${execution_name}."
+          exit 1
+
+      - name: Roll out backend revisions after migration success
+        run: |
+          az containerapp update \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+            --name "${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+            --image "${IDENTITY_IMAGE}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
+            --image "${KINRECIPE_IMAGE}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
+            --image "${KINLIST_IMAGE}"
 
   deploy_prod:
     name: Deploy Prod
@@ -334,6 +457,7 @@ jobs:
       - package_identity_image
       - package_kinrecipe_image
       - package_kinlist_image
+      - package_migration_image
 
     steps:
       - name: Checkout repository
@@ -413,6 +537,33 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Resolve current backend images
+        run: |
+          resolve_rollout_image() {
+            local app_name="$1"
+            local fallback_image="$2"
+            local resolved_image
+
+            resolved_image="$(
+              az containerapp show \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --name "${app_name}" \
+                --query "properties.template.containers[0].image" \
+                --output tsv \
+                2>/dev/null || true
+            )"
+
+            if [ -z "${resolved_image}" ]; then
+              resolved_image="${fallback_image}"
+            fi
+
+            printf '%s' "${resolved_image}"
+          }
+
+          echo "IDENTITY_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.IDENTITY_CONTAINER_APP_NAME }}" "${IDENTITY_IMAGE}")" >> "$GITHUB_ENV"
+          echo "KINRECIPE_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" "${KINRECIPE_IMAGE}")" >> "$GITHUB_ENV"
+          echo "KINLIST_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINLIST_CONTAINER_APP_NAME }}" "${KINLIST_IMAGE}")" >> "$GITHUB_ENV"
+
       - name: Deploy infrastructure
         run: |
           az deployment group create \
@@ -421,6 +572,8 @@ jobs:
             --template-file "ops/iac/managed-identities.bicep" \
             --parameters \
               location="${{ vars.AZURE_LOCATION }}" \
+              identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+              kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
               kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
               kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
 
@@ -453,9 +606,9 @@ jobs:
             jwtIssuer="${{ vars.JWT_ISSUER }}"
             ghcrUsername="${{ secrets.GHCR_USERNAME }}"
             ghcrPassword="${{ secrets.GHCR_PASSWORD }}"
-            identityImage="${IDENTITY_IMAGE}"
-            kinRecipeImage="${KINRECIPE_IMAGE}"
-            kinListImage="${KINLIST_IMAGE}"
+            identityImage="${IDENTITY_ROLLOUT_IMAGE}"
+            kinRecipeImage="${KINRECIPE_ROLLOUT_IMAGE}"
+            kinListImage="${KINLIST_ROLLOUT_IMAGE}"
             kinListMigrationImage="${KINLIST_MIGRATION_IMAGE}"
           )
 
@@ -471,6 +624,62 @@ jobs:
 
       - name: Run KinList expand/contract migration
         run: |
-          az containerapp job start \
+          execution_name="$(
+            az containerapp job start \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}" \
+              --query name \
+              --output tsv
+          )"
+
+          if [ -z "${execution_name}" ]; then
+            echo "Failed to resolve the migration job execution name."
+            exit 1
+          fi
+
+          echo "Started migration execution: ${execution_name}"
+
+          for attempt in $(seq 1 90); do
+            status="$(
+              az containerapp job execution show \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}" \
+                --job-execution-name "${execution_name}" \
+                --query "properties.status" \
+                --output tsv
+            )"
+
+            echo "Migration execution status: ${status}"
+
+            case "${status}" in
+              Succeeded)
+                exit 0
+                ;;
+              Failed|Canceled|Cancelled)
+                echo "Migration execution ended with status ${status}."
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Timed out while waiting for migration execution ${execution_name}."
+          exit 1
+
+      - name: Roll out backend revisions after migration success
+        run: |
+          az containerapp update \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+            --name "${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
+            --image "${IDENTITY_IMAGE}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
+            --image "${KINRECIPE_IMAGE}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
+            --image "${KINLIST_IMAGE}"

@@ -12,7 +12,7 @@ const apiClient = readFileSync(apiClientPath, 'utf8')
 //    authentication is centralized in KinHub Identity and never handled by the KinRecipe API.
 const identityClientChecks = [
   "identityApiClient.get<User>('/api/auth/me')",
-  "identityApiClient.post('/logout')",
+  "startOAuthLogout(oauthClientConfig)",
 ]
 
 for (const check of identityClientChecks) {
@@ -26,7 +26,6 @@ for (const check of identityClientChecks) {
 //    broker and renewal happens via a silent top-level authorize, not a SPA refresh_token grant.
 const forbiddenChecks = [
   "apiClient.get<User>('/api/auth/me')",
-  "apiClient.post('/logout')",
   '/api/auth/login',
   '/api/auth/register',
   'post<AuthTokens>',
@@ -53,8 +52,8 @@ if (apiClient.includes('localStorage')) {
   throw new Error('KinRecipe apiClient must not read/write the access token from localStorage.')
 }
 
-if (!apiClient.includes('@shared/oauth/tokenStore')) {
-  throw new Error('KinRecipe apiClient must read the access token from the shared in-memory token store.')
+if (!apiClient.includes('@shared/oauth/oauthApiClient')) {
+  throw new Error('KinRecipe apiClient must use the shared OAuth API client.')
 }
 
 // 5. When a built bundle is present, make sure auth endpoints are not pinned to the KinRecipe API.

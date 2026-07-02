@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
+        ValidateProductionSecurity(corsOptions, jwtSettings, familyContextApiOptions, environment);
         familyContextApiOptions.Validate();
 
         services.AddSingleton(corsOptions);
@@ -59,6 +60,12 @@ public static class ServiceCollectionExtensions
 
         services.RemoveAll<IFamilyOwnershipService>();
         services.AddHttpClient<IFamilyOwnershipService, RemoteFamilyOwnershipService>((serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        });
+        services.AddHttpClient<IFamilyContextResolver, RemoteFamilyOwnershipService>((serviceProvider, client) =>
         {
             var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
@@ -148,6 +155,21 @@ public static class ServiceCollectionExtensions
         }
 
         throw new InvalidOperationException("Jwt:Secret must be configured.");
+    }
+
+    private static void ValidateProductionSecurity(
+        CorsOptions cors,
+        JwtSettings jwt,
+        FamilyContextApiOptions familyContextApi,
+        IHostEnvironment environment)
+    {
+        if (environment.IsDevelopment()) return;
+        if (cors.AllowAnyOrigin || cors.AllowedOrigins.Length == 0)
+            throw new InvalidOperationException("Cors must contain explicit origins outside development.");
+        if (jwt.Secret.Trim().Length < 32 || string.IsNullOrWhiteSpace(jwt.Issuer) || string.IsNullOrWhiteSpace(jwt.Audience))
+            throw new InvalidOperationException("Jwt secret, issuer, and audience must be configured securely.");
+        if (!Uri.TryCreate(familyContextApi.BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("FamilyContextApi:BaseUrl must use HTTPS outside development.");
     }
 
     private static string ResolveJwtIssuer(string? configuredIssuer, IHostEnvironment environment)

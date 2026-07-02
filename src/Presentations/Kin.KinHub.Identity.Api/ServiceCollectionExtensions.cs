@@ -1,6 +1,7 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
 using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Identity.Api.Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -27,6 +28,7 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
+        ValidateProductionSecurity(corsOptions, jwtSettings, oauthOptions, environment);
 
         services.AddSingleton(corsOptions);
         services.AddSingleton(oauthOptions);
@@ -118,6 +120,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
+        services.AddScoped<IFamilyContextResolver, IdentityFamilyContextResolver>();
         services.AddSingleton<IOAuthClientStore>(_ => new InMemoryOAuthClientStore(oauthOptions));
         services.AddSingleton<IOAuthRefreshTokenScopeStore>(_ => new InMemoryOAuthRefreshTokenScopeStore(oauthOptions));
         if (environment.IsDevelopment())
@@ -188,6 +191,23 @@ public static class ServiceCollectionExtensions
         }
 
         throw new InvalidOperationException("Jwt:Secret must be configured.");
+    }
+
+    private static void ValidateProductionSecurity(
+        CorsOptions cors,
+        JwtSettings jwt,
+        OAuthServerOptions oauth,
+        IHostEnvironment environment)
+    {
+        if (environment.IsDevelopment()) return;
+        if (cors.AllowAnyOrigin || cors.AllowedOrigins.Length == 0)
+            throw new InvalidOperationException("Cors must contain explicit origins outside development.");
+        if (jwt.Secret.Trim().Length < 32 || string.IsNullOrWhiteSpace(jwt.Issuer) || string.IsNullOrWhiteSpace(jwt.Audience))
+            throw new InvalidOperationException("Jwt secret, issuer, and audience must be configured securely.");
+        if (!Uri.TryCreate(oauth.AuthorizationServerUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("OAuth:AuthorizationServerUrl must use HTTPS outside development.");
+        if (oauth.Clients.Length != 4)
+            throw new InvalidOperationException("OAuth must configure exactly the four KinHub SPA clients.");
     }
 
     private static string ResolveJwtIssuer(string? configuredIssuer, IHostEnvironment environment)

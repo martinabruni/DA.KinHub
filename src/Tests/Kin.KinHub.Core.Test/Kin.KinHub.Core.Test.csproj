@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" Aliases="global,IdentityApi" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" Aliases="global,KinRecipeApi" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinList.Api\Kin.KinHub.KinList.Api.csproj" Aliases="KinListApi" />
+    <ProjectReference Include="..\..\Presentations\Kin.KinHub.Migrations.Runner\Kin.KinHub.Migrations.Runner.csproj" />
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.KinList.Domain\Kin.KinHub.KinList.Domain.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
