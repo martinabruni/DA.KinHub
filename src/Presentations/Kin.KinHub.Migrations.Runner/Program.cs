@@ -16,7 +16,9 @@ using Microsoft.EntityFrameworkCore;
 
 try
 {
-    var connectionString = MigrationRunnerConfiguration.ResolveConnectionString(Environment.GetEnvironmentVariable);
+    var connectionString = MigrationRunnerConfiguration.BuildMigrationConnectionString(
+        MigrationRunnerConfiguration.ResolveConnectionString(Environment.GetEnvironmentVariable),
+        Environment.GetEnvironmentVariable);
     var runner = new MigrationRunnerService(
     [
         new("IdentityDbContext", ApplyIdentityMigrationsAsync),
