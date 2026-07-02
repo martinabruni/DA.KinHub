@@ -24,7 +24,8 @@ public sealed class JwtTokenGenerator : ITokenGenerator, ITokenValidator
         {
             ValidateIssuer = true,
             ValidIssuer = _options.Issuer,
-            ValidateAudience = false,
+            ValidateAudience = true,
+            ValidAudience = _options.Audience,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = key,
@@ -64,6 +65,7 @@ public sealed class JwtTokenGenerator : ITokenGenerator, ITokenValidator
         var now = DateTime.UtcNow;
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
+            audience: _options.Audience,
             expires: now.AddMinutes(_options.AccessTokenExpiryMinutes),
             claims: claims,
             signingCredentials: _signingCredentials);
