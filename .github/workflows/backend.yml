@@ -265,6 +265,15 @@ jobs:
 
       - name: Deploy infrastructure
         run: |
+          az deployment group create \
+            --name managed-identities \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file "ops/iac/managed-identities.bicep" \
+            --parameters \
+              location="${{ vars.AZURE_LOCATION }}" \
+              kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
+              kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+
           deploy_parameters=(
             location="${{ vars.AZURE_LOCATION }}"
             staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}"
@@ -409,6 +418,15 @@ jobs:
 
       - name: Deploy infrastructure
         run: |
+          az deployment group create \
+            --name managed-identities \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file "ops/iac/managed-identities.bicep" \
+            --parameters \
+              location="${{ vars.AZURE_LOCATION }}" \
+              kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
+              kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
+
           deploy_parameters=(
             location="${{ vars.AZURE_LOCATION }}"
             staticWebAppLocation="${{ vars.STATIC_WEB_APP_LOCATION }}"

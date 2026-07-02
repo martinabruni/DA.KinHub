@@ -753,18 +753,15 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-// User-assigned managed identity shared by the KinList API container app and the
-// expand/contract migration job. It is granted Key Vault Secrets User so that
-// Container Apps can resolve keyVaultUrl secret references without inline secrets,
-// and it is the identity used for registry/Key Vault access.
-resource kinListIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+// Provisioned by managed-identities.bicep in a separate deployment so the
+// Managed Identity resource provider has completed replication before Key Vault
+// role assignments and Container Apps resolve these identities.
+resource kinListIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: '${kinListContainerAppName}-identity'
-  location: location
 }
 
-resource kinListMigrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+resource kinListMigrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: '${kinListMigrationJobName}-identity'
-  location: location
 }
 
 resource kinListKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
