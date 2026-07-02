@@ -17,7 +17,7 @@ COPY . .
 WORKDIR "/src/src/Presentations/Kin.KinHub.Migrations.Runner"
 RUN dotnet publish "Kin.KinHub.Migrations.Runner.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
