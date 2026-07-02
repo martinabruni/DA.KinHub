@@ -10,8 +10,9 @@ const getEnvUrl = (value: unknown, fallback: string) => {
 
 const BASE_URL = getEnvUrl(
   import.meta.env.VITE_IDENTITY_API_URL,
-  'http://localhost:5000',
+  'http://localhost:5001',
 )
+let loginRedirectStarted = false
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -35,7 +36,10 @@ apiClient.interceptors.response.use(
     if (status === 401) {
       clearAccessToken()
       sessionStorage.removeItem('activeMember')
-      redirectToIdentityLogin(window.location.href)
+      if (!loginRedirectStarted) {
+        loginRedirectStarted = true
+        redirectToIdentityLogin(window.location.href)
+      }
       return Promise.reject(error)
     }
 

@@ -9,7 +9,7 @@ const getEnvUrl = (value: unknown, fallback: string) => {
 
 const BASE_URL = getEnvUrl(
   import.meta.env.VITE_IDENTITY_API_URL,
-  'http://localhost:5000',
+  'http://localhost:5001',
 )
 
 export const apiClient = axios.create({

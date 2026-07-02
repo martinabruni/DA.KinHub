@@ -126,9 +126,9 @@ export interface AIAdaptedRecipe {
 export interface ShoppingList {
   id: string;
   name: string;
-  familyId: string;
   itemCount: number;
   checkedCount: number;
+  etag: string;
 }
 
 export interface ShoppingListItem {

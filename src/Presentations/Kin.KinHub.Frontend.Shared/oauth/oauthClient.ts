@@ -18,6 +18,7 @@ interface OAuthTokenResponse {
 }
 
 const transactionKeyPrefix = 'kinhub.oauth.transaction'
+const transactionLifetimeMs = 10 * 60 * 1000
 
 function getTransactionKey(clientId: string) {
   return `${transactionKeyPrefix}.${clientId}`
@@ -49,7 +50,14 @@ function readTransaction(clientId: string) {
   }
 
   try {
-    return JSON.parse(raw) as OAuthTransaction
+    const transaction = JSON.parse(raw) as OAuthTransaction
+    const createdAt = Date.parse(transaction.createdAt)
+    if (!Number.isFinite(createdAt) || Date.now() - createdAt > transactionLifetimeMs) {
+      sessionStorage.removeItem(getTransactionKey(clientId))
+      return null
+    }
+
+    return transaction
   } catch {
     sessionStorage.removeItem(getTransactionKey(clientId))
     return null

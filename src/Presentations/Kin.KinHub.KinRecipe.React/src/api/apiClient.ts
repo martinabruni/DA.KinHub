@@ -14,8 +14,13 @@ const KINRECIPE_API_URL = getEnvUrl(
 )
 const IDENTITY_API_URL = getEnvUrl(
   import.meta.env.VITE_IDENTITY_API_URL,
-  KINRECIPE_API_URL,
+  'http://localhost:5001',
 )
+const KINLIST_API_URL = getEnvUrl(
+  import.meta.env.VITE_KINLIST_API_URL,
+  'http://localhost:5002',
+)
+let loginRedirectStarted = false
 
 function createApiClient(baseURL: string) {
   const client = axios.create({
@@ -40,7 +45,10 @@ function createApiClient(baseURL: string) {
       if (status === 401) {
         clearAccessToken()
         sessionStorage.removeItem('activeMember')
-        redirectToIdentityLogin(window.location.href)
+        if (!loginRedirectStarted) {
+          loginRedirectStarted = true
+          redirectToIdentityLogin(window.location.href)
+        }
         return Promise.reject(error)
       }
 
@@ -57,3 +65,4 @@ function createApiClient(baseURL: string) {
 
 export const apiClient = createApiClient(KINRECIPE_API_URL)
 export const identityApiClient = createApiClient(IDENTITY_API_URL)
+export const kinListApiClient = createApiClient(KINLIST_API_URL)
