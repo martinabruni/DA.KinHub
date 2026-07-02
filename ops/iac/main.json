@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "15313791042936575128"
+      "templateHash": "6189189625105622384"
     }
   },
   "parameters": {
@@ -1012,18 +1012,6 @@
       ]
     },
     {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[format('{0}-identity', parameters('kinListContainerAppName'))]",
-      "location": "[parameters('location')]"
-    },
-    {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[format('{0}-identity', parameters('kinListMigrationJobName'))]",
-      "location": "[parameters('location')]"
-    },
-    {
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
@@ -1034,8 +1022,7 @@
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     },
     {
@@ -1049,8 +1036,7 @@
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListMigrationJobName')))]"
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     },
     {
@@ -1155,7 +1141,6 @@
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('ghcrPasswordSecretName'))]",
         "[resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('jwtSecretSecretName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]",
         "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('keyVaultSecretsUserRoleId')))]",
         "[resourceId('Microsoft.Web/staticSites', parameters('kinListStaticWebAppName'))]",
         "[resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName'))]",
@@ -1234,7 +1219,6 @@
         "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
         "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('ghcrPasswordSecretName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListMigrationJobName')))]",
         "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListMigrationJobName'))), variables('keyVaultSecretsUserRoleId')))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]"
       ]
