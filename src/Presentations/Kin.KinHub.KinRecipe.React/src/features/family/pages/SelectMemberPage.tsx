@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { apiClient } from '@/api/apiClient'
+import { identityApiClient } from '@/api/apiClient'
 import { useAuthContext } from '@/store/authContext'
 import { getInitials } from '@/lib/utils'
 import type { Family, FamilyMember } from '@/types'
@@ -16,7 +16,7 @@ export function SelectMemberPage() {
   const { data: family, isLoading } = useQuery({
     queryKey: ['family'],
     queryFn: async () => {
-      const { data } = await apiClient.get<Family>('/api/families')
+      const { data } = await identityApiClient.get<Family>('/api/families')
       return data
     },
     retry: false,

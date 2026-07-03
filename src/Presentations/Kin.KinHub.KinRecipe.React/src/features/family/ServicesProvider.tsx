@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { apiClient } from "@/api/apiClient";
+import { identityApiClient } from "@/api/apiClient";
 import { isServiceToggleable, normalizeServiceState } from "@/config/serviceConfig";
 import { useAuth } from "@/features/auth/AuthProvider";
 import type { Family, Service } from "@/types";
@@ -24,7 +24,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
   const { data: family, isLoading: isLoadingFamily } = useQuery({
     queryKey: ["family"],
     queryFn: async () => {
-      const { data } = await apiClient.get<Family>("/api/families");
+      const { data } = await identityApiClient.get<Family>("/api/families");
       return data;
     },
     enabled: isAuthenticated,
@@ -36,7 +36,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
   const { data: services = [], isLoading: isLoadingServices } = useQuery({
     queryKey: qKey,
     queryFn: async () => {
-      const { data } = await apiClient.get<Service[]>(
+      const { data } = await identityApiClient.get<Service[]>(
         `/api/services/family/${family!.id}`,
       );
       return data.map(normalizeServiceState);
@@ -56,7 +56,7 @@ export function ServicesProvider({ children }: { children: ReactNode }) {
       serviceId: number;
       enabled: boolean;
     }) => {
-      await apiClient.post(`/api/services/family/${family!.id}/toggle`, {
+      await identityApiClient.post(`/api/services/family/${family!.id}/toggle`, {
         serviceId,
         isActive: enabled,
       });
