@@ -32,6 +32,10 @@ function getProblemCode(error: unknown) {
   return (error as { response?: { data?: ProblemDetailsError } })?.response?.data?.code
 }
 
+function getAudioFileName(blob: Blob, baseName: string) {
+  return blob.type.includes('mp4') || blob.type.includes('m4a') ? `${baseName}.m4a` : `${baseName}.webm`
+}
+
 export function KinListDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -271,10 +275,8 @@ export function KinListDetailPage() {
       }
 
       const formData = new FormData()
-      formData.append('audio', blob, blob.type.includes('mp4') ? 'append.m4a' : 'append.webm')
-      const { data } = await apiClient.post<KinListItemDraftsFromAudioResponse>(`/api/lists/${id}/item-drafts/from-audio`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      formData.append('audio', blob, getAudioFileName(blob, 'append'))
+      const { data } = await apiClient.post<KinListItemDraftsFromAudioResponse>(`/api/lists/${id}/item-drafts/from-audio`, formData)
       return data
     },
     onSuccess: (data) => {
@@ -453,10 +455,8 @@ export function KinListDetailPage() {
           description="The recording stays in memory only until the draft is updated."
           onConfirm={async (blob) => {
             const formData = new FormData()
-            formData.append('audio', blob, blob.type.includes('mp4') ? 'draft.m4a' : 'draft.webm')
-            const { data } = await apiClient.post<KinListDraftFromAudioResponse>('/api/list-drafts/from-audio', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            })
+            formData.append('audio', blob, getAudioFileName(blob, 'draft'))
+            const { data } = await apiClient.post<KinListDraftFromAudioResponse>('/api/list-drafts/from-audio', formData)
 
             const audioDraft = createDraftFromAudio({
               title: title.trim() || data.title,

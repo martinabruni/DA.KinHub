@@ -18,6 +18,10 @@ function getProblemCode(error: unknown) {
   return response?.code
 }
 
+function getAudioFileName(blob: Blob) {
+  return blob.type.includes('mp4') || blob.type.includes('m4a') ? 'recording.m4a' : 'recording.webm'
+}
+
 export function KinListsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -34,10 +38,8 @@ export function KinListsPage() {
   const audioDraftMutation = useMutation({
     mutationFn: async (blob: Blob) => {
       const formData = new FormData()
-      formData.append('audio', blob, blob.type.includes('mp4') ? 'recording.m4a' : 'recording.webm')
-      const { data } = await apiClient.post<KinListDraftFromAudioResponse>('/api/list-drafts/from-audio', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      formData.append('audio', blob, getAudioFileName(blob))
+      const { data } = await apiClient.post<KinListDraftFromAudioResponse>('/api/list-drafts/from-audio', formData)
       return { data, blob }
     },
     onSuccess: ({ data, blob }) => {

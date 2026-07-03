@@ -1,6 +1,7 @@
 using FluentValidation;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
+using Microsoft.Net.Http.Headers;
 
 namespace Kin.KinHub.KinList.Api.KinListFeature;
 
@@ -61,8 +62,23 @@ public sealed class KinListAudioFormRequestValidator : AbstractValidator<KinList
             .When(x => x.Audio is not null)
             .WithMessage($"Audio payload cannot exceed {options.MaxAudioBytes} bytes.");
         RuleFor(x => x.Audio!)
-            .Must(file => options.AllowedAudioMimeTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+            .Must(file => HasAllowedAudioContentType(file.ContentType, options.AllowedAudioMimeTypes))
             .When(x => x.Audio is not null)
             .WithMessage($"Audio content type must be one of: {string.Join(", ", options.AllowedAudioMimeTypes)}.");
+    }
+
+    private static bool HasAllowedAudioContentType(string? contentType, string[] allowedMimeTypes)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        if (!MediaTypeHeaderValue.TryParse(contentType, out var parsed) || string.IsNullOrWhiteSpace(parsed.MediaType.Value))
+        {
+            return false;
+        }
+
+        return allowedMimeTypes.Contains(parsed.MediaType.Value, StringComparer.OrdinalIgnoreCase);
     }
 }

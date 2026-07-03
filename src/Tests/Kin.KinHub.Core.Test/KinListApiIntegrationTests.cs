@@ -447,6 +447,25 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
     }
 
     [Fact]
+    public async Task ListDraftFromAudio_WithAllowedMimeParameters_ReturnsDraft()
+    {
+        using var client = _factory.CreateClient();
+        _factory.AudioGenerator.Result = Kin.KinHub.KinList.Business.Common.Result<Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft>.Success(
+            new Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft
+            {
+                Title = "Spesa",
+                Items = ["Latte", "Pane"],
+                DetectedLanguage = "it-IT",
+                PromptVersion = "kinlist-audio-v1",
+            });
+
+        using var form = BuildAudioForm("audio/webm;codecs=opus", "draft.webm");
+        var response = await client.PostAsync("/api/list-drafts/from-audio", form);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task ListDraftFromAudio_WithDisallowedMime_ReturnsValidationError()
     {
         using var client = _factory.CreateClient();
@@ -465,7 +484,7 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
     {
         var form = new MultipartFormDataContent();
         var audio = new ByteArrayContent([1, 2, 3, 4]);
-        audio.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        audio.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(contentType);
         form.Add(audio, "Audio", fileName);
         return form;
     }
