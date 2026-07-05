@@ -22,9 +22,11 @@ env:
   IDENTITY_API_PROJECT: src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj
   KINRECIPE_API_PROJECT: src/Presentations/Kin.KinHub.KinRecipe.Api/Kin.KinHub.KinRecipe.Api.csproj
   KINLIST_API_PROJECT: src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj
+  KINLIST_AUDIO_WORKER_PROJECT: src/Presentations/Kin.KinHub.KinList.AudioWorker/Kin.KinHub.KinList.AudioWorker.csproj
   IDENTITY_DOCKERFILE: src/Presentations/Kin.KinHub.Identity.Api/Dockerfile
   KINRECIPE_DOCKERFILE: src/Presentations/Kin.KinHub.KinRecipe.Api/Dockerfile
   KINLIST_DOCKERFILE: src/Presentations/Kin.KinHub.KinList.Api/Dockerfile
+  KINLIST_AUDIO_WORKER_DOCKERFILE: src/Presentations/Kin.KinHub.KinList.AudioWorker/Dockerfile
   MIGRATION_DOCKERFILE: src/Presentations/Kin.KinHub.Migrations.Runner/Dockerfile
 
 concurrency:
@@ -210,6 +212,39 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.migration_image.outputs.image }}
 
+  package_kinlist_audio_worker_image:
+    name: Package KinList Audio Worker Image
+    runs-on: ubuntu-latest
+    needs:
+      - backend_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: kinlist_audio_worker_image
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-audio-worker:${GITHUB_SHA}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_SERVER }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PASSWORD }}
+
+      - name: Build and push KinList audio worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.KINLIST_AUDIO_WORKER_DOCKERFILE }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.kinlist_audio_worker_image.outputs.image }}
+
   deploy_dev:
     name: Deploy Dev
     if: github.event_name != 'pull_request'
@@ -220,6 +255,7 @@ jobs:
       - package_identity_image
       - package_kinrecipe_image
       - package_kinlist_image
+      - package_kinlist_audio_worker_image
       - package_migration_image
 
     steps:
@@ -232,6 +268,7 @@ jobs:
           echo "IDENTITY_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
           echo "KINRECIPE_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
           echo "KINLIST_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "KINLIST_AUDIO_WORKER_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-audio-worker:${GITHUB_SHA}" >> "$GITHUB_ENV"
           migration_image="${{ vars.KINLIST_MIGRATION_IMAGE }}"
           if [ -z "${migration_image}" ]; then
             migration_image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-migration:${GITHUB_SHA}"
@@ -256,6 +293,7 @@ jobs:
             "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
             "${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            "${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}"
             "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
             "${{ vars.APPLICATION_INSIGHTS_NAME }}"
             "${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
@@ -273,6 +311,7 @@ jobs:
             "${IDENTITY_IMAGE}"
             "${KINRECIPE_IMAGE}"
             "${KINLIST_IMAGE}"
+            "${KINLIST_AUDIO_WORKER_IMAGE}"
             "${KINLIST_MIGRATION_IMAGE}"
           )
 
@@ -283,7 +322,7 @@ jobs:
             fi
           done
 
-          for image in "${IDENTITY_IMAGE}" "${KINRECIPE_IMAGE}" "${KINLIST_IMAGE}" "${KINLIST_MIGRATION_IMAGE}"; do
+          for image in "${IDENTITY_IMAGE}" "${KINRECIPE_IMAGE}" "${KINLIST_IMAGE}" "${KINLIST_AUDIO_WORKER_IMAGE}" "${KINLIST_MIGRATION_IMAGE}"; do
             case "${image}" in
               ghcr.io/*) ;;
               *)
@@ -326,6 +365,7 @@ jobs:
           echo "IDENTITY_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.IDENTITY_CONTAINER_APP_NAME }}" "${IDENTITY_IMAGE}")" >> "$GITHUB_ENV"
           echo "KINRECIPE_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" "${KINRECIPE_IMAGE}")" >> "$GITHUB_ENV"
           echo "KINLIST_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINLIST_CONTAINER_APP_NAME }}" "${KINLIST_IMAGE}")" >> "$GITHUB_ENV"
+          echo "KINLIST_AUDIO_WORKER_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}" "${KINLIST_AUDIO_WORKER_IMAGE}")" >> "$GITHUB_ENV"
 
       - name: Deploy infrastructure
         run: |
@@ -338,6 +378,7 @@ jobs:
               identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
               kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
               kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
+              kinListAudioWorkerContainerAppName="${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}" \
               kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
 
           deploy_parameters=(
@@ -355,6 +396,7 @@ jobs:
             identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
             kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            kinListAudioWorkerContainerAppName="${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}"
             kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
             applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}"
             logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
@@ -372,6 +414,7 @@ jobs:
             identityImage="${IDENTITY_ROLLOUT_IMAGE}"
             kinRecipeImage="${KINRECIPE_ROLLOUT_IMAGE}"
             kinListImage="${KINLIST_ROLLOUT_IMAGE}"
+            kinListAudioWorkerImage="${KINLIST_AUDIO_WORKER_ROLLOUT_IMAGE}"
             kinListMigrationImage="${KINLIST_MIGRATION_IMAGE}"
           )
 
@@ -467,6 +510,11 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --name "${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
             --image "${KINLIST_IMAGE}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}" \
+            --image "${KINLIST_AUDIO_WORKER_IMAGE}"
 
   deploy_prod:
     name: Deploy Prod
@@ -478,6 +526,7 @@ jobs:
       - package_identity_image
       - package_kinrecipe_image
       - package_kinlist_image
+      - package_kinlist_audio_worker_image
       - package_migration_image
 
     steps:
@@ -490,6 +539,7 @@ jobs:
           echo "IDENTITY_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-identity-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
           echo "KINRECIPE_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
           echo "KINLIST_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "KINLIST_AUDIO_WORKER_IMAGE=${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-audio-worker:${GITHUB_SHA}" >> "$GITHUB_ENV"
           migration_image="${{ vars.KINLIST_MIGRATION_IMAGE }}"
           if [ -z "${migration_image}" ]; then
             migration_image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-migration:${GITHUB_SHA}"
@@ -514,6 +564,7 @@ jobs:
             "${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
             "${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            "${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}"
             "${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
             "${{ vars.APPLICATION_INSIGHTS_NAME }}"
             "${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
@@ -531,6 +582,7 @@ jobs:
             "${IDENTITY_IMAGE}"
             "${KINRECIPE_IMAGE}"
             "${KINLIST_IMAGE}"
+            "${KINLIST_AUDIO_WORKER_IMAGE}"
             "${KINLIST_MIGRATION_IMAGE}"
           )
 
@@ -541,7 +593,7 @@ jobs:
             fi
           done
 
-          for image in "${IDENTITY_IMAGE}" "${KINRECIPE_IMAGE}" "${KINLIST_IMAGE}" "${KINLIST_MIGRATION_IMAGE}"; do
+          for image in "${IDENTITY_IMAGE}" "${KINRECIPE_IMAGE}" "${KINLIST_IMAGE}" "${KINLIST_AUDIO_WORKER_IMAGE}" "${KINLIST_MIGRATION_IMAGE}"; do
             case "${image}" in
               ghcr.io/*) ;;
               *)
@@ -584,6 +636,7 @@ jobs:
           echo "IDENTITY_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.IDENTITY_CONTAINER_APP_NAME }}" "${IDENTITY_IMAGE}")" >> "$GITHUB_ENV"
           echo "KINRECIPE_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" "${KINRECIPE_IMAGE}")" >> "$GITHUB_ENV"
           echo "KINLIST_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINLIST_CONTAINER_APP_NAME }}" "${KINLIST_IMAGE}")" >> "$GITHUB_ENV"
+          echo "KINLIST_AUDIO_WORKER_ROLLOUT_IMAGE=$(resolve_rollout_image "${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}" "${KINLIST_AUDIO_WORKER_IMAGE}")" >> "$GITHUB_ENV"
 
       - name: Deploy infrastructure
         run: |
@@ -596,6 +649,7 @@ jobs:
               identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}" \
               kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}" \
               kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
+              kinListAudioWorkerContainerAppName="${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}" \
               kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
 
           deploy_parameters=(
@@ -613,6 +667,7 @@ jobs:
             identityContainerAppName="${{ vars.IDENTITY_CONTAINER_APP_NAME }}"
             kinRecipeContainerAppName="${{ vars.KINRECIPE_CONTAINER_APP_NAME }}"
             kinListContainerAppName="${{ vars.KINLIST_CONTAINER_APP_NAME }}"
+            kinListAudioWorkerContainerAppName="${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}"
             kinListMigrationJobName="${{ vars.KINLIST_MIGRATION_JOB_NAME }}"
             applicationInsightsName="${{ vars.APPLICATION_INSIGHTS_NAME }}"
             logAnalyticsWorkspaceName="${{ vars.LOG_ANALYTICS_WORKSPACE_NAME }}"
@@ -630,6 +685,7 @@ jobs:
             identityImage="${IDENTITY_ROLLOUT_IMAGE}"
             kinRecipeImage="${KINRECIPE_ROLLOUT_IMAGE}"
             kinListImage="${KINLIST_ROLLOUT_IMAGE}"
+            kinListAudioWorkerImage="${KINLIST_AUDIO_WORKER_ROLLOUT_IMAGE}"
             kinListMigrationImage="${KINLIST_MIGRATION_IMAGE}"
           )
 
@@ -725,3 +781,8 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --name "${{ vars.KINLIST_CONTAINER_APP_NAME }}" \
             --image "${KINLIST_IMAGE}"
+
+          az containerapp update \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.KINLIST_AUDIO_WORKER_CONTAINER_APP_NAME }}" \
+            --image "${KINLIST_AUDIO_WORKER_IMAGE}"
