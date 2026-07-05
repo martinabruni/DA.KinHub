@@ -16,7 +16,12 @@ Perché esiste: fornire un'esperienza collaborativa affidabile su dati condivisi
 Parti coinvolte:
 
 - **Presentation** — `ListsController`, `AudioOperationsController` (`KinList.Api/KinListFeature`), `KinListValidators`, `KinListHttpResultMapper`, `IdempotencyRecordCleanupService`, `RemoteFamilyContextResolver`; e l'host worker `KinList.AudioWorker` (`AudioProcessingWorkerService`, `AudioProcessingQueuePump`).
-- **Business** — `KinList.Business/KinListFeature`: `KinListService` (implementa sia `IKinListService` sia `IAudioOperationProcessor`), interfacce (`IAudioProcessingQueue`, `IAudioProcessingBlobStorage`, `IKinListAudioDraftGenerator`), telemetria (`KinListAudioTelemetry`), e le implementazioni "Unavailable" di default; `IKinListTransactionExecutor`.
+- **Business** — `KinList.Business/KinListFeature`:
+  - `KinListService` (527 righe, implementa `IKinListService`) — CRUD liste, item, idempotenza e mapping.
+  - `KinListAudioService` (implementa `IKinListAudioService` e `IAudioOperationProcessor`) — ciclo di vita delle operazioni audio e elaborazione worker.
+  - `KinListItemDeduplicator` — logica di confronto tra item proposti e item esistenti (usata da `KinListAudioService`).
+  - `KinListMapper` — conversione entità↔DTO condivisa tra i due service.
+  - Interfacce (`IAudioProcessingQueue`, `IAudioProcessingBlobStorage`, `IKinListAudioDraftGenerator`), telemetria (`KinListAudioTelemetry`), e le implementazioni "Unavailable" di default; `IKinListTransactionExecutor`.
 - **Domain** — `KinList.Domain/KinListFeature`: entità `KinList`, `KinListItem`, `AudioProcessingOperation`, `IdempotencyRecord`; enum `AudioProcessingOperationType/Status`; interfacce repository.
 - **Infrastructure** — `KinList.PostgreSql` (repository, `EfKinListTransactionExecutor`, `TryStartProcessingAsync` via SQL), `KinList.Ai` (trascrizione + interpretazione), `KinList.AzureStorage` (Blob + Queue).
 
@@ -30,7 +35,7 @@ Dipendenze: EF Core/Npgsql, Azure Blob/Queue Storage, Azure AI Speech, Azure Ope
 - **Lettura liste / lista** — *Output*: elenco ordinato (non completate prima) o dettaglio. *Errore*: lista di un'altra famiglia → 403; inesistente/eliminata → 404.
 - **Aggiornamento/eliminazione/ripristino lista** — *Input*: header `If-Match` obbligatorio (ETag). *Errore*: `If-Match` assente → 400; ETag non combaciante → 409 `etag_conflict`.
 - **Aggiunta / update / delete / restore item, bulk confirm** — analoghi, con `If-Match` e limiti (`MaxItemsPerList`, `MaxItemsPerBulkConfirm`).
-- **Operazione audio: creazione** — *Output*: 202 Accepted con `UploadUrl` (SAS) + header `Location`/`Retry-After`. *Validazioni*: tipo operazione (`NewList`/`AppendItems`), MIME ammesso, dimensione dichiarata nei limiti; per `AppendItems` la lista deve esistere ed essere della famiglia.
+- **Operazione audio: creazione** — *Output*: 202 Accepted con `UploadUrl` (SAS) + header `Location`/`Retry-After`. *Validazioni*: tipo operazione (`NewList`/`AppendItems`), MIME ammesso (con `NormalizeMimeType` e validazione robusta tramite `MediaTypeHeaderValue.TryParse`), dimensione dichiarata nei limiti; per `AppendItems` la lista deve esistere ed essere della famiglia.
 - **Operazione audio: completamento upload** — verifica che il blob esista e sia entro i limiti, marca `Queued` e **accoda** il messaggio.
 - **Operazione audio: polling** — restituisce lo stato; se scaduta e non terminale, la marca `Expired`.
 - **Operazione audio: cancellazione** — cancella il blob e marca `Cancelled`.
@@ -40,7 +45,7 @@ Dipendenze: EF Core/Npgsql, Azure Blob/Queue Storage, Azure AI Speech, Azure Ope
 
 ## 1. Punto di ingresso
 
-- CRUD liste: `ListsController` su `api/lists`, protetto a livello di classe da `[Authorize(Policy = FamilyContextRequirement.PolicyName)]`.
+- CRUD liste: `ListsController` su `api/lists`, protetto a livello di classe da `[Authorize(Policy = FamilyContextRequirement.PolicyName)]` — nessuna guardia inline per azione.
 - Operazioni audio (lato API): `AudioOperationsController` su `api/audio-operations` (`CreateAsync`, `CompleteUploadAsync`, `GetAsync`, `DeleteAsync`).
 - Elaborazione asincrona (worker): `AudioProcessingWorkerService.ExecuteAsync` (un `BackgroundService`) che riceve messaggi dalla coda tramite `IAudioProcessingQueuePump`.
 
@@ -48,16 +53,17 @@ L'host API è bootstrappato da `AddKinHubKinListApi`; il worker da `Program.cs` 
 
 ## 2. Validazione iniziale
 
-- Ogni action di `ListsController` verifica `IsAuthenticated` e `HasFamilyContext` (403 `family_required` se manca il contesto), poi legge gli header obbligatori: `Idempotency-Key` (creazione) o `If-Match` (mutazioni).
+- `ListsController` è protetto a livello di classe da `[Authorize(Policy = FamilyContextRequirement.PolicyName)]`; le action leggono direttamente gli header obbligatori: `Idempotency-Key` (creazione) o `If-Match` (mutazioni), senza guardie `IsAuthenticated`/`HasFamilyContext` ripetute per ogni action.
 - Validazione FluentValidation via `IRequestValidator<T>` (`KinListValidators`).
-- Per le operazioni audio: `CreateAudioOperationAsync` valida tipo operazione, MIME (`AllowedAudioMimeTypes`, normalizzato togliendo i parametri dopo `;`) e dimensione (`MaxAudioBytes`); per `AppendItems` valida esistenza/possesso della lista.
+- Per le operazioni audio: `CreateAudioOperationAsync` valida tipo operazione, MIME tramite `NormalizeMimeType` (normalizza i parametri MIME) + `MediaTypeHeaderValue.TryParse` (validazione robusta contro `AllowedAudioMimeTypes`) e dimensione (`MaxAudioBytes`); per `AppendItems` valida esistenza/possesso della lista.
 
 ## 3. Orchestrazione applicativa
 
-- Il controller chiama `IKinListService` (`KinListService`).
-- Le mutazioni di lista/item sono eseguite dentro `IKinListTransactionExecutor.ExecuteAsync(...)` (una transazione EF con strategia di retry) e seguono lo schema: carica → `ValidateListMutation` (esistenza + possesso + ETag) → applica → `TouchList` (nuova `Version`, timestamp) → salva → rimappa.
-- **Creazione idempotente** (`CreateAsync`): normalizza gli item (trim + distinct), calcola un `requestHash` (SHA-256 di title+items), elimina i record idempotenti scaduti, poi cerca un record attivo con la stessa chiave: se esiste con stesso hash → **replay** della `ResponseJson`; se con hash diverso → 409; altrimenti crea lista + item + salva un `IdempotencyRecord` con la risposta serializzata (TTL `IdempotencyRetentionHours`).
-- **Operazioni audio** (`AudioOperationsController` → `KinListService`): `CreateAudioOperationAsync` genera un `blobName = {familyId}/{operationId}`, crea un **SAS di upload** e persiste l'operazione in stato `AwaitingUpload`; `CompleteAudioOperationUploadAsync` verifica il blob, passa a `Queued` e chiama `_audioQueue.EnqueueAsync`.
+- Il controller chiama `IKinListService` (`KinListService`) per le operazioni su liste e item.
+- Il controller chiama `IKinListAudioService` (`KinListAudioService`) per le operazioni audio.
+- Le mutazioni di lista/item (in `KinListService`) sono eseguite dentro `IKinListTransactionExecutor.ExecuteAsync(...)` (una transazione EF con strategia di retry) e seguono lo schema: carica → `ValidateListMutation` (esistenza + possesso + ETag) → applica → `TouchList` (nuova `Version`, timestamp) → salva → rimappa tramite `KinListMapper`.
+- **Creazione idempotente** (`KinListService.CreateAsync`): normalizza gli item (trim + distinct via `KinListItemDeduplicator`), calcola un `requestHash` (SHA-256 di title+items), elimina i record idempotenti scaduti, poi cerca un record attivo con la stessa chiave: se esiste con stesso hash → **replay** della `ResponseJson`; se con hash diverso → 409; altrimenti crea lista + item + salva un `IdempotencyRecord` con la risposta serializzata (TTL `IdempotencyRetentionHours`).
+- **Operazioni audio** (`KinListAudioService`): `CreateAudioOperationAsync` genera un `blobName = {familyId}/{operationId}`, crea un **SAS di upload** e persiste l'operazione in stato `AwaitingUpload`; `CompleteAudioOperationUploadAsync` verifica il blob, passa a `Queued` e chiama `_audioQueue.EnqueueAsync`.
 
 ## 4. Logica di dominio
 
@@ -87,7 +93,7 @@ L'host API è bootstrappato da `AddKinHubKinListApi`; il worker da `Program.cs` 
 ## 7. Gestione errori
 
 - **API sincrona**: `KinListHttpResultMapper` traduce `Result<T>` (che qui ha stati aggiuntivi come `UnprocessableEntity`) in HTTP; gli errori includono un `code` applicativo (`etag_conflict`, `idempotency_conflict`, `list_item_limit_exceeded`, `invalid_audio_mime_type`, …).
-- **Elaborazione asincrona** (`ProcessAudioOperationAsync`): distingue **fallimenti terminali** (`ValidationError`/`UnprocessableEntity`/`Unauthorized`/`NotFound`/`Conflict` → `IsTerminalAudioFailure`) che marcano l'operazione `Failed`, dai **fallimenti transitori** (es. servizio non disponibile) che richiamano `RequeueOperationAsync` (torna `Queued`) e restituiscono `ServiceUnavailable`, così il messaggio viene ritentato. Un'eccezione inattesa provoca requeue.
+- **Elaborazione asincrona** (`KinListAudioService.ProcessAudioOperationAsync`): distingue **fallimenti terminali** (`ValidationError`/`UnprocessableEntity`/`Unauthorized`/`NotFound`/`Conflict` → `IsTerminalAudioFailure`) che marcano l'operazione `Failed`, dai **fallimenti transitori** (es. servizio non disponibile) che richiamano `RequeueOperationAsync` (torna `Queued`) e restituiscono `ServiceUnavailable`, così il messaggio viene ritentato. Eccezioni inattese che non rientrano nei casi noti provocano requeue controllato anziché propagazione cieca.
 - **Worker** (`AudioProcessingWorkerService.ProcessMessageAsync`): payload non deserializzabile o `ContractVersion` non supportata → **poison queue**; superamento di `AudioProcessingMaxDequeues` → marca `Failed` e sposta in poison; esito `Succeeded`/`Failed` → cancella il messaggio; altri esiti → lascia il messaggio (verrà ritentato). La **visibilità** del messaggio è rinnovata da `RenewVisibilityAsync` finché il processing è in corso.
 - **Timeout trascrizione**: `AzureSpeechKinListTranscriber.ExecuteWithTimeoutAsync` mappa il timeout in `ServiceUnavailable` (`audio_processing_timeout`), quindi ritentabile.
 
@@ -96,7 +102,7 @@ L'host API è bootstrappato da `AddKinHubKinListApi`; il worker da `Program.cs` 
 - Mutazioni lista/item: entità aggiornate in transazione, nuova `Version`/ETag restituito nell'header `ETag` (`ApplyEtag`), corpo `KinListDetailResponse`.
 - Creazione operazione audio: 202 Accepted, `AudioProcessingOperation` in `AwaitingUpload`, `UploadUrl` (SAS) + `Location`/`Retry-After`.
 - Completamento upload: operazione `Queued` + **messaggio accodato**.
-- Elaborazione riuscita: operazione `Succeeded` con `Title`, `ProposedItemsJson`, `DetectedLanguage`, `PromptVersion`; il blob viene cancellato; per `AppendItems` la risposta di polling arricchisce gli item con proposte e **duplicati** rispetto alla lista esistente.
+- Elaborazione riuscita: operazione `Succeeded` con `Title`, `ProposedItemsJson`, `DetectedLanguage`, `PromptVersion`; il blob viene cancellato; per `AppendItems` la risposta di polling arricchisce gli item con proposte e **duplicati** rispetto alla lista esistente (tramite `KinListItemDeduplicator`).
 - Elaborazione fallita/terminale: `Failed` con `ErrorCode`/`ErrorMessage`; messaggio cancellato o spostato in poison.
 
 # Pattern correttamente implementati
@@ -105,25 +111,21 @@ L'host API è bootstrappato da `AddKinHubKinListApi`; il worker da `Program.cs` 
 
 - **Idempotency Pattern** — *File*: `KinListService.CreateAsync` + `IdempotencyRecordRepository` + `IdempotencyRecordCleanupService`. *Perché corretto*: chiave client + hash del payload; stessa chiave/stesso payload → replay, payload diverso → conflitto; i record scadono e vengono ripuliti. Risolve i retry di rete sulle creazioni.
 
-- **Transaction Script + Unit of Work esplicito** — *File*: `EfKinListTransactionExecutor` (interfaccia `IKinListTransactionExecutor`). *Perché corretto*: ogni caso d'uso mutante è avvolto in una transazione con execution strategy (retry sui transitori DB); a differenza di Family/Recipe, qui l'atomicità multi-scrittura è garantita.
+- **Transaction Script + Unit of Work esplicito** — *File*: `EfKinListTransactionExecutor` (interfaccia `IKinListTransactionExecutor`). *Perché corretto*: ogni caso d'uso mutante è avvolto in una transazione con execution strategy (retry sui transitori DB); a differenza di Family/Recipe — che ora usano `EfCoreTransactionExecutor` — qui l'esecutore è specifico del contesto KinList.
 
 - **Claim atomico / Competing Consumers** — *File*: `AudioProcessingOperationRepository.TryStartProcessingAsync` (UPDATE condizionale su `Status=Queued`). *Perché corretto*: garantisce che una sola esecuzione elabori l'operazione anche con più worker/più dequeue, senza lock applicativi.
 
-- **Retry + Poison Queue + Dead-lettering** — *File*: `AudioProcessingWorkerService` (dequeue limit → poison), `KinListService.RequeueOperationAsync`, `TransientExecutionHelper`. *Perché corretto*: separa fallimenti terminali (non ritentare) da transitori (ritentare) e isola i messaggi "velenosi", evitando loop infiniti.
+- **Retry + Poison Queue + Dead-lettering** — *File*: `AudioProcessingWorkerService` (dequeue limit → poison), `KinListAudioService.RequeueOperationAsync`, `TransientExecutionHelper`. *Perché corretto*: separa fallimenti terminali (non ritentare) da transitori (ritentare) e isola i messaggi "velenosi", evitando loop infiniti.
 
 - **Adapter / Strategy sull'infrastruttura** — interfacce `IAudioProcessingBlobStorage`, `IAudioProcessingQueue`, `IKinListAudioDraftGenerator`, `IKinListSpeechTranscriber` con implementazioni Azure e **Null Object** di default (`Unavailable…`, `NoOp…`). *Perché corretto*: il Business è testabile senza Azure e degrada in modo controllato se l'infrastruttura non è configurata.
 
 - **Pipeline (trascrizione → interpretazione)** — *File*: `AzureSpeechOpenAiKinListAudioDraftGenerator.ParseAsync` compone `IKinListSpeechTranscriber` + `IKinListAudioPromptInterpreter`. *Correttezza*: passi disaccoppiati e sostituibili; il decorator `TelemetryKinListAudioDraftGenerator` aggiunge osservabilità senza toccare la logica.
 
+- **Decomposizione del service** — `KinListService` (CRUD liste/item/idempotenza) + `KinListAudioService` (ciclo di vita audio + elaborazione worker) + `KinListItemDeduplicator` + `KinListMapper`. *Correttezza*: ogni classe ha una singola responsabilità; l'elaborazione audio (consumata dal worker) è separata dal servizio CRUD (consumato dall'API).
+
 - **Options Pattern con validazione** — `KinListOptions.Validate()`, `AudioStorageOptions.Validate()` invocati all'avvio del worker/API.
 
 # Anti-pattern
-
-- **God Service / doppia responsabilità di `KinListService`** — *File*: `KinListService.cs` (~1075 righe) implementa **sia** `IKinListService` (API CRUD) **sia** `IAudioOperationProcessor` (elaborazione worker), coprendo liste, item, idempotenza, operazioni audio, mapping e deduplica. *Problema*: classe molto grande con responsabilità eterogenee. *Impatto*: manutenibilità e testabilità; ogni modifica tocca un file critico e condiviso tra API e worker. *Gravità*: media. *Direzione*: separare l'elaborazione audio (processor) dal servizio liste in classi distinte.
-
-- **Cattura generica delle eccezioni nel processing** — *File*: `KinListService.ProcessAudioOperationAsync` (`catch (Exception ex) → RequeueOperationAsync`). *Problema*: qualsiasi eccezione (anche non transitoria, es. bug di serializzazione) viene trattata come transitoria e ritentata fino al limite di dequeue. *Impatto*: possibili retry inutili e ritardi prima del poison. *Gravità*: bassa/media. *Direzione*: distinguere le eccezioni realmente transitorie da quelle definitive.
-
-- **Deduplica degli item duplicata in due punti** — *File*: `KinListService.CreateItemDraftsFromAudioAsync` e `MapAudioOperationAsync` implementano quasi la stessa logica di confronto con gli item esistenti (proposte + `ExistingDuplicates`). *Problema*: duplicazione di logica non banale. *Impatto*: rischio di divergenza. *Gravità*: bassa. *Direzione*: estrarre un helper condiviso.
 
 - **`NoOpKinListTransactionExecutor` come default silenzioso** — *File*: `ServiceCollectionExtensions` di `KinList.Business` (`TryAddScoped<IKinListTransactionExecutor, NoOpKinListTransactionExecutor>`). *Problema*: se un host dimentica di registrare l'esecutore EF reale, le mutazioni girano **senza transazione** senza alcun errore evidente. *Impatto*: potenziale perdita di atomicità in configurazioni errate. *Gravità*: media. *Direzione*: rendere esplicito/loggato il fallback o fallire fast in produzione.
 

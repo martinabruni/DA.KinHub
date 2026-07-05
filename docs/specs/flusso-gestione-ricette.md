@@ -33,11 +33,10 @@ Controller REST in `KinRecipe.Api/RecipeFeature`. Esempio rappresentativo, `Reci
 
 - `CreateAsync` (POST), `GetAllAsync` (GET), `GetByIdAsync` (GET `{id}`), `UpdateAsync` (PUT `{id}`), `DeleteAsync` (DELETE `{id}`), `GetMissingIngredientsAsync` (POST `{id}/missing-ingredients`).
 
-L'utente arriva da `ICurrentUser.UserId`; l'host è bootstrappato da `AddKinHubKinRecipeApi` che registra `AddKinHubCoreBusiness()`, l'infrastruttura PostgreSQL, l'infrastruttura OpenAI e sostituisce `IFamilyOwnershipService` con `RemoteFamilyOwnershipService` (client HTTP verso Identity).
+I controller ricette usano `[Authorize]` a livello di classe; l'autenticazione è garantita dalla pipeline JWT senza guardie inline per azione. L'utente arriva da `ICurrentUser.UserId`; l'host è bootstrappato da `AddKinHubKinRecipeApi` che registra `AddKinHubCoreBusiness()`, l'infrastruttura PostgreSQL, l'infrastruttura OpenAI e sostituisce `IFamilyOwnershipService` con `RemoteFamilyOwnershipService` (client HTTP verso Identity).
 
 ## 2. Validazione iniziale
 
-- I controller controllano esplicitamente `if (!_currentUser.IsAuthenticated) return ApiProblemDetails.AuthenticationRequired(this);` (oltre alla protezione JWT a livello di pipeline).
 - Null-check del body → `InvalidRequestBody`.
 - Validazione FluentValidation via `IRequestValidator<T>` (es. `CreateRecipeRequestValidator`) → 400 con errori.
 - **Autorizzazione di dominio**: delegata agli *access service* nel Business (non solo alla policy HTTP).
@@ -47,9 +46,8 @@ L'utente arriva da `ICurrentUser.UserId`; l'host è bootstrappato da `AddKinHubK
 - Il controller chiama il service facciata (`IRecipeService` → `KinHubRecipeService`), che inoltra all'handler (`CreateRecipeHandler`, `GetRecipesHandler`, …).
 - `CreateRecipeHandler.HandleAsync`:
   1. verifica l'accesso al libro con `IRecipeBookAccessService.GetAccessibleRecipeBookAsync(recipeBookId, userId)`; se fallisce, ritorna `access.ToResult<RecipeResponse>()`;
-  2. crea la `Recipe` (`_recipeRepository.AddAsync`);
-  3. crea gli ingredienti e i passi inline in due `foreach`;
-  4. mappa il risultato con `IRecipeResponseMapper.MapAsync` e restituisce `Result.Success`.
+  2. avvolge la creazione in `ICoreTransactionExecutor.ExecuteAsync`: crea la `Recipe` (`_recipeRepository.AddAsync`), crea ingredienti e passi inline in batch (`AddRangeAsync`), garantendo atomicità;
+  3. mappa il risultato con `IRecipeResponseMapper.MapAsync` e restituisce `Result.Success`.
 - La trasformazione entità→DTO è centralizzata nei **mapper** dedicati (`RecipeResponseMapper`, `RecipeBookResponseMapper`, ecc.), iniettati via DI.
 
 ## 4. Logica di dominio
@@ -62,9 +60,9 @@ L'utente arriva da `ICurrentUser.UserId`; l'host è bootstrappato da `AddKinHubK
 
 ## 5. Accesso ai dati
 
-- Repository in `Core.PostgreSql/RecipeFeature`: `RecipeRepository`, `RecipeBookRepository`, `RecipeIngredientRepository`, `RecipeStepRepository`, `FridgeRepository`, `FridgeIngredientRepository`. Metodi tipici: `AddAsync`, `GetByIdAsync`, `GetAllByFamilyIdAsync`.
-- Letture: caricamento di famiglia, libro, ricetta e collezioni figlie separatamente (gli ingredienti/passi vengono caricati con chiamate dedicate `GetAllByFamilyIdAsync(recipeId, …)`).
-- Scritture: creazione ricetta + N ingredienti + N passi in loop separati; update/delete tramite i repository.
+- Repository in `Core.PostgreSql/RecipeFeature`: `RecipeRepository`, `RecipeBookRepository`, `RecipeIngredientRepository`, `RecipeStepRepository`, `FridgeRepository`, `FridgeIngredientRepository`. Metodi tipici: `AddAsync`, `AddRangeAsync`, `GetByIdAsync`, `GetAllByFamilyIdAsync`.
+- Letture: caricamento di famiglia, libro, ricetta e collezioni figlie separatamente (gli ingredienti/passi vengono caricati con chiamate dedicate).
+- Scritture: la creazione ricetta + ingredienti + passi è eseguita dentro `ICoreTransactionExecutor.ExecuteAsync` con inserimento batch (`AddRangeAsync`); update/delete tramite i repository.
 - Gli ingredienti supportano un **embedding** (`float[]`, colonna vettoriale via Pgvector) usato per il calcolo degli ingredienti mancanti.
 
 ## 6. Integrazioni esterne
@@ -80,13 +78,13 @@ L'utente arriva da `ICurrentUser.UserId`; l'host è bootstrappato da `AddKinHubK
 
 ## 8. Output finale
 
-- Creazione: `Recipe` + `RecipeIngredient` + `RecipeStep` persistiti; 201 con `RecipeResponse` (mappata) contenente id, dati e collezioni.
+- Creazione: `Recipe` + `RecipeIngredient` + `RecipeStep` persistiti in transazione; 201 con `RecipeResponse` (mappata) contenente id, dati e collezioni.
 - Letture: 200 con DTO; mutazioni: 200 con l'entità aggiornata; delete: esito.
 - `missing-ingredients`: 200 con `{ missingIngredients: [...] }`.
 
 # Pattern correttamente implementati
 
-- **Repository Pattern** — interfacce di dominio (`IRecipeRepository`, `IRecipeBookRepository`, …) con implementazioni EF Core in `Core.PostgreSql`. *Correttezza*: i repository espongono metodi orientati al dominio (`GetAllByFamilyIdAsync`) e nascondono `DbContext`/LINQ al Business.
+- **Repository Pattern** — interfacce di dominio (`IRecipeRepository`, `IRecipeBookRepository`, …) con implementazioni EF Core in `Core.PostgreSql`. *Correttezza*: i repository espongono metodi orientati al dominio (`GetAllByFamilyIdAsync`, `AddRangeAsync`) e nascondono `DbContext`/LINQ al Business.
 
 - **Domain/Access Service** — `RecipeAccessService`, `RecipeBookAccessService`, `RecipeIngredientAccessService`, `RecipeStepAccessService` centralizzano il controllo di accesso a cascata (entità → libro → famiglia). *Perché corretto*: la stessa regola non è duplicata in ogni handler; è testabile e restituisce esiti espliciti. *Problema risolto*: evita accessi cross-famiglia (una forma di IDOR).
 
@@ -96,15 +94,13 @@ L'utente arriva da `ICurrentUser.UserId`; l'host è bootstrappato da `AddKinHubK
 
 - **Adapter (contesto famiglia remoto)** — `RemoteFamilyOwnershipService` implementa l'interfaccia di dominio `IFamilyOwnershipService` traducendo una chiamata HTTP a Identity. *Correttezza*: il Business resta ignaro del fatto che la famiglia provenga da un altro servizio; l'host la sostituisce via `RemoveAll<IFamilyOwnershipService>() + AddHttpClient<…>`.
 
+- **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` avvolgono la creazione ricetta + figli in una transazione atomica con inserimento batch. *Correttezza*: elimina il rischio di ricette parzialmente create e riduce i round-trip di database.
+
 - **Result Pattern** — esiti applicativi tipizzati mappati centralmente in HTTP.
 
 # Anti-pattern
 
-- **Controlli di autenticazione ripetuti nei controller** — *File*: `RecipeController` (e gli altri controller Recipe) ripetono in ogni action `if (!_currentUser.IsAuthenticated) return ApiProblemDetails.AuthenticationRequired(this);`. *Problema*: duplicazione di una guardia che la pipeline `[Authorize]` dovrebbe già garantire. *Impatto*: boilerplate e rischio di dimenticanze/incoerenze. *Gravità*: bassa. *Direzione*: affidarsi all'attributo di autorizzazione o a un filtro comune.
-
-- **Creazione figli in loop (potenziale N+1 in scrittura)** — *File*: `CreateRecipeHandler` (`foreach` su ingredienti e passi con `AddAsync` individuali). *Problema*: più round-trip di scrittura per una singola creazione. *Impatto*: performance su ricette con molti ingredienti/passi; inoltre, come per le famiglie, **non risulta una transazione unica** che avvolga ricetta+figli. *Gravità*: media. *Direzione*: inserimento batch e transazione esplicita.
-
-- **Caricamento delle collezioni con chiamate separate** — *File*: `RecipeAccessService`/handler e `KinHubRecipeAssistantManager` caricano ingredienti/passi con `GetAllByFamilyIdAsync` per ogni ricetta. *Problema*: in scenari che iterano molte ricette (es. suggerimenti) si generano N+1 letture. *Impatto*: performance su dataset grandi. *Gravità*: media (più evidente nell'assistente). *Direzione*: proiezioni/`Include` o query aggregate.
+- **Caricamento delle collezioni con chiamate separate** — *File*: `RecipeAccessService`/handler e `KinHubRecipeAssistantManager` caricano ingredienti/passi con chiamate separate per ogni ricetta. *Problema*: in scenari che iterano molte ricette (es. suggerimenti) si generano N+1 letture. *Impatto*: performance su dataset grandi. *Gravità*: media (più evidente nell'assistente, dove il `GetAllByRecipeIdsAsync` mitiga il caso suggest ma i passi restano caricati separatamente). *Direzione*: proiezioni/`Include` o query aggregate dove necessario.
 
 - **Naming del metodo repository fuorviante** — *File*: repository Recipe, metodi come `GetAllByFamilyIdAsync(recipeId, …)` in realtà filtrano per `recipeId`/`fridgeId`, non per `familyId`. *Problema*: il nome non riflette il parametro reale, riducendo la leggibilità. *Impatto*: manutenibilità/comprensione. *Gravità*: bassa. *Direzione*: rinominare in modo coerente col filtro applicato.
 

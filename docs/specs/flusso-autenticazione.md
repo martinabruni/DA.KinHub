@@ -15,7 +15,7 @@ Responsabilità e confini: questa feature vive interamente nel contesto **Identi
 
 Parti del backend coinvolte:
 
-- **Presentation** — `AuthController`, `OAuthController`, `OAuthMetadataController`, `AccessController` (`src/Presentations/Kin.KinHub.Identity.Api`), più validator FluentValidation e gli store OAuth (`PostgreSqlOAuthStores`, `OAuthModels`).
+- **Presentation** — `AuthController`, `OAuthController`, `OAuthMetadataController`, `AccessController` (`src/Presentations/Kin.KinHub.Identity.Api`), più validator FluentValidation e gli store OAuth (`PostgreSqlOAuthStores`, `OAuthModels`). I servizi helper OAuth (`OAuthRequestValidator`, `OAuthSessionManager`, `OAuthTokenIssuer`, `OAuthLoginPageRenderer`) vivono in `AuthenticationFeature/Services`.
 - **Business** — `KinHubAuthenticationService` e gli handler in `AuthenticationFeature/Commands` e `Queries` (`Register`, `Login`, `Refresh`, `Logout`, `UpdateUserEmail`, `UpdateUserPassword`, `DeleteUser`, `GetCurrentUser`), più `KinHubPasswordIdentityProvider`, `IdentityProviderRegistry`, `LoginResponseFactory`, `UserProviderService`.
 - **Domain** — entità `KinUser`, `UserCredential`, `UserProvider`, `Provider`, `RefreshToken`, `TokenClaims`; interfacce `IIdentityProvider`, `IIdentityProviderRegistry`, `ITokenGenerator`, `ITokenValidator`, `IPasswordHasher`, i repository, l'enum `UserStatus`, `IdentityProviderType`.
 - **Infrastructure** — `Kin.KinHub.Identity.Jwt` (`JwtTokenGenerator`, `CurrentUser`, `JwtOptions`), `Kin.KinHub.Identity.PostgreSql` (repository, `PasswordHasher`, `IdentityDbContext`).
@@ -26,7 +26,7 @@ Dipendenze principali: `System.IdentityModel.Tokens.Jwt` per i JWT, EF Core/Npgs
 
 # Casi d'uso
 
-- **Registrazione utente** — *Obiettivo*: creare un account. *Attore*: utente anonimo (SPA di registrazione). *Input*: `RegisterRequest` (email, displayName, password). *Output*: `RegisterResponse` (userId, email), HTTP 201. *Condizioni/errori*: email duplicata → 409 Conflict; password mancante → errore di dominio tradotto in errore generico.
+- **Registrazione utente** — *Obiettivo*: creare un account. *Attore*: utente anonimo (SPA di registrazione). *Input*: `RegisterRequest` (email, displayName, password). *Output*: `RegisterResponse` (userId, email), HTTP 201. *Condizioni/errori*: email duplicata → 409 Conflict; password non valida (es. mancante) → `DomainValidationException` → 400 ValidationError.
 - **Login (OAuth Authorization Code + PKCE)** — *Obiettivo*: ottenere un access token. *Attore*: SPA client registrata. *Input*: parametri OAuth su `/authorize` + email/password sul form. *Output*: redirect con `code`, poi `access_token` scambiato su `/token`. *Condizioni*: obbligatori PKCE `S256`, redirect_uri registrato, scope supportato; consenso esplicito per scope elevati (`write`/`admin`).
 - **Refresh del token** — *Obiettivo*: rinnovare l'access token senza reinserire le credenziali. *Attore*: SPA (silent authorize sul cookie di sessione). *Input*: refresh token memorizzato nella sessione OAuth. *Output*: nuovo `LoginResponse`. *Condizioni/errori*: token inesistente/revocato/scaduto o account non attivo → 401.
 - **Logout** — *Obiettivo*: terminare la sessione. *Input*: cookie di sessione (o refresh token). *Output*: revoca del refresh token + cancellazione cookie; redirect o 204.
@@ -48,7 +48,7 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 ## 2. Validazione iniziale
 
 - I controller controllano prima il **null del body** (`ApiProblemDetails.InvalidRequestBody`) e poi eseguono la validazione FluentValidation via `IRequestValidator<T>` (es. `RegisterRequestValidator`, `UpdateUserPasswordRequestValidator`); in caso di errori → 400 con lista errori.
-- L'`OAuthController` valida rigorosamente la richiesta di autorizzazione in `TryValidateAuthorizationRequest`: `response_type=code`, `client_id` conosciuto, `redirect_uri` registrato **e** ammesso (`IsAllowedRedirectUri`: solo HTTPS o localhost/127.0.0.1), `code_challenge` presente con `code_challenge_method=S256`, e scope normalizzato/consentito (`TryNormalizeGrantedScope`).
+- L'`OAuthController` delega la validazione della richiesta di autorizzazione a `OAuthRequestValidator`: `response_type=code`, `client_id` conosciuto, `redirect_uri` registrato **e** ammesso (`IsAllowedRedirectUri`: solo HTTPS o localhost/127.0.0.1), `code_challenge` presente con `code_challenge_method=S256`, e scope normalizzato/consentito.
 - Gli endpoint autenticati usano l'attributo `[Authorize]` (default policy) che richiede utente autenticato **e** scope `read`.
 
 ## 3. Orchestrazione applicativa
@@ -57,7 +57,7 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 - `RegisterUserHandler` risolve il provider dal registry: `_providerRegistry.Resolve(IdentityProviderType.KinHub)` e chiama `provider.RegisterAsync(IdentityRegistration)`.
 - `LoginUserHandler` chiama `provider.AuthenticateAsync(IdentityCredential)`; se l'utente è valido delega a `ILoginResponseFactory.CreateAsync` per generare i token.
 - `LoginResponseFactory` chiama `ITokenGenerator.GenerateAccessToken` + `GenerateRefreshToken`, persiste il `RefreshToken` (scadenza a 7 giorni) e compone `LoginResponse`.
-- Nel flusso OAuth, `OAuthController.AuthorizeAsync` chiama `_authenticationService.LoginAsync`, crea una **sessione di identità** (cookie `HttpOnly`) e un **authorization code ticket** (`IOAuthAuthorizationCodeStore.Create`), poi redirige con `code`. Su `/token`, `ExchangeAuthorizationCode` consuma il ticket, verifica PKCE e produce il token finale con `CreateScopedTokenResponse` (che ri-firma un access token con gli scope concessi). **Non viene emesso refresh_token OAuth**: le SPA rinnovano con un *silent authorize* sul cookie di sessione (`RehydrateLoginResponse` → `RefreshTokenAsync`).
+- Nel flusso OAuth, `OAuthController` è un **thin orchestrator**: `AuthorizeAsync` delega a `OAuthRequestValidator` (validazione), `OAuthSessionManager` (gestione cookie di sessione e rehydration del login — `await _sessionManager.RehydrateLoginResponseAsync(...)` senza più sync-over-async), `OAuthTokenIssuer` (emissione/scambio codice e token) e `OAuthLoginPageRenderer` (rendering HTML della pagina di login). Il flusso `AuthorizeAsync` è interamente asincrono. **Non viene emesso refresh_token OAuth**: le SPA rinnovano con un *silent authorize* sul cookie di sessione.
 
 ## 4. Logica di dominio
 
@@ -78,7 +78,7 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 
 ## 7. Gestione errori
 
-- Gli handler traducono le eccezioni di dominio in `Result<T>`: `DuplicateEntityException` → `Conflict`, `EntityNotFoundException` → `Unauthorized/NotFound` a seconda del caso, `DomainException` → `UnexpectedError`. Le password errate e i token invalidi diventano `Unauthorized` **senza** rivelare quale campo è sbagliato ("Invalid email or password.", "Invalid or expired refresh token.").
+- Gli handler traducono le eccezioni di dominio in `Result<T>`: `DuplicateEntityException` → `Conflict`, `EntityNotFoundException` → `Unauthorized/NotFound` a seconda del caso, `DomainValidationException` → `ValidationError` (400), `DomainException` → `UnexpectedError`. Le password errate e i token invalidi diventano `Unauthorized` **senza** rivelare quale campo è sbagliato ("Invalid email or password.", "Invalid or expired refresh token.").
 - `HttpResultMapper.ToActionResult(controller, result)` mappa `ResultStatus` → HTTP: Success 200/201, NotFound 404, Conflict 409, ValidationError 400, Unauthorized **403**, ServiceUnavailable 503, altro 500; con corpo `ProblemDetails` (RFC 9457) contenente `code`, `correlationId` e opzionalmente `errors`.
 - Sugli errori JWT lato pipeline, `JwtBearerEvents.OnChallenge`/`OnForbidden` scrivono direttamente un problem detail 401/403 via `ApiProblemDetails.WriteAsync`.
 - Gli errori OAuth seguono il formato standard `{ error, error_description }` (`CreateOAuthError`) e, dove appropriato, redirigono l'errore al `redirect_uri`. Il rate limiter risponde 429; gli store possono lanciare `InvalidOperationException` mappata a 429 "slow_down".
@@ -99,20 +99,16 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 
 - **Factory** — `LoginResponseFactory` centralizza la creazione coerente di access token + refresh token + persistenza. *Correttezza*: incapsula la scadenza (7 giorni) e la struttura di `LoginResponse` in un solo punto riusato da login e refresh.
 
-- **Result Pattern** — `Result<T>`/`ResultStatus` separano l'esito applicativo dal trasporto HTTP; gli handler non lanciano eccezioni verso i controller. *Correttezza*: mapping centralizzato e coerente in `HttpResultMapper`.
+- **Result Pattern** — `Result<T>`/`ResultStatus` separano l'esito applicativo dal trasporto HTTP; gli handler non lanciano eccezioni verso i controller. *Correttezza*: mapping centralizzato e coerente in `HttpResultMapper`; `DomainValidationException` è mappata correttamente a `ValidationError` (400).
 
 - **Options Pattern con validazione fail-fast** — `JwtOptions`, `OAuthServerOptions`, `CorsOptions` letti dalla configurazione; `ValidateProductionSecurity` impedisce l'avvio in produzione con segreti deboli o redirect non-HTTPS. *Correttezza*: sposta gli errori di configurazione all'avvio anziché a runtime.
 
 - **PKCE / OAuth Authorization Code** — `OAuthController` implementa `code_challenge_method=S256`, verifica `VerifyPkce` (SHA-256 + Base64Url), consuma il codice una sola volta (`TryConsume`) e vincola client/redirect. *Correttezza*: aderisce alle pratiche OAuth per client pubblici (nessun client secret, PKCE obbligatorio, consenso elevato esplicito per scope `write`/`admin`).
 
+- **Decomposizione del controller OAuth** — `OAuthController` (~344 righe) è un thin orchestrator; la validazione OAuth è in `OAuthRequestValidator`, la gestione cookie/sessione in `OAuthSessionManager`, l'emissione dei token in `OAuthTokenIssuer`, il rendering HTML in `OAuthLoginPageRenderer`. *Correttezza*: ogni servizio ha una singola responsabilità, il controller non conosce i dettagli di implementazione.
+
 # Anti-pattern
 
-- **`OAuthController` come "Fat Controller"** — *File*: `OAuthController.cs` (~730 righe). Contiene validazione OAuth, gestione cookie di sessione, verifica PKCE, ri-firma dei token **e generazione HTML della pagina di login** (`RenderLoginPage`). *Problema*: mescola responsabilità di presentazione (HTML), sicurezza e orchestrazione in un unico controller. *Impatto*: manutenibilità e testabilità ridotte, rischio di regressioni di sicurezza difficili da isolare. *Gravità*: media. *Direzione*: estrarre gli helper (rendering pagina, gestione sessione, scope) in service dedicati.
-
-- **Chiamata sincrona-su-asincrona in `RehydrateLoginResponse`** — *File*: `OAuthController.cs`, metodo `RehydrateLoginResponse` usa `_authenticationService.RefreshTokenAsync(...).GetAwaiter().GetResult()`. *Problema*: blocco sincrono di un'operazione asincrona all'interno di un percorso di richiesta. *Impatto*: rischio di thread starvation/deadlock sotto carico, uso improprio di async/await. *Gravità*: media. *Direzione*: rendere asincrono l'intero percorso `Authorize` in presenza di sessione.
-
 - **Facciata puramente passthrough** — *File*: `KinHubAuthenticationService.cs`. Ogni metodo inoltra 1:1 all'handler. *Problema*: livello di indirezione senza logica propria; duplica le firme. *Impatto*: leggibilità/boilerplate. *Gravità*: bassa. *Direzione*: accettabile come punto di composizione, ma valutabile un'esposizione diretta degli handler.
-
-- **Messaggio d'errore generico che nasconde la causa** — *File*: `RegisterUserHandler.cs` (`catch (DomainException) → UnexpectedError("Registration failed...")`). *Problema*: una `DomainValidationException` (es. password non valida) diventa un errore 500 generico invece di un 400. *Impatto*: DX/UX e diagnosticabilità; l'utente non capisce cosa correggere. *Gravità*: bassa/media. *Direzione*: mappare `DomainValidationException` a `ValidationError`.
 
 > Dove il comportamento dipende da configurazione di ambiente (es. store OAuth in-memory vs PostgreSQL, abilitazione della registrazione dinamica dei client) i dettagli runtime non sono deducibili con certezza dalla codebase analizzata.

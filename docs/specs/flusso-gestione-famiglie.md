@@ -52,7 +52,7 @@ Dipendenze: EF Core/Npgsql per la persistenza, FluentValidation, l'autorizzazion
 ## 3. Orchestrazione applicativa
 
 - `FamilyController` → `IFamilyService` (`KinHubFamilyService`, facciata) → handler specifico.
-- **Creazione** (`CreateFamilyHandler`): verifica assenza di famiglia esistente (`FindByUserIdAsync`), crea `Family`, crea il `FamilyMember` proprietario, crea i membri aggiuntivi, poi legge **tutti** i `KinHubService` del catalogo e per ciascuno crea un `FamilyService` con `IsActive = true`. Restituisce `CreateFamilyResponse`.
+- **Creazione** (`CreateFamilyHandler`): verifica assenza di famiglia esistente (`FindByUserIdAsync`), crea `Family`, poi avvolge l'intera creazione di membri e servizi in `ICoreTransactionExecutor.ExecuteAsync`. All'interno della transazione: crea il membro proprietario e i membri aggiuntivi in batch (`CreateRangeAsync`), poi legge **tutti** i `KinHubService` del catalogo e crea i `FamilyService` corrispondenti in batch (`CreateRangeAsync`) con `IsActive = true`. Restituisce `CreateFamilyResponse`.
 - **Aggiunta membro** (`AddFamilyMemberHandler`): prima `EnsureOwnershipAsync`; se ok, crea il `FamilyMember`.
 - **Lettura** (`GetFamilyHandler`): recupera famiglia + membri + servizi e li mappa in `FamilyDetailResponse`.
 - La conversione tra entità e DTO avviene negli handler/service (nessun mapper centralizzato per questa feature).
@@ -65,8 +65,8 @@ Dipendenze: EF Core/Npgsql per la persistenza, FluentValidation, l'autorizzazion
 
 ## 5. Accesso ai dati
 
-- Repository in `Core.PostgreSql/FamilyFeature`: `FamilyRepository` (`FindByUserIdAsync`, `CreateAsync`), `FamilyMemberRepository`, `FamilyServiceRepository`, `KinHubServiceRepository` (`GetAllAsync`). Persistenza su `CoreDbContext`.
-- Scritture: in creazione famiglia si eseguono **più `CreateAsync` separati** (famiglia, ogni membro, ogni FamilyService) — ognuno con il proprio `SaveChanges` sottostante. **Non c'è una transazione esplicita** che avvolga l'intera creazione (vedi Anti-pattern).
+- Repository in `Core.PostgreSql/FamilyFeature`: `FamilyRepository` (`FindByUserIdAsync`, `CreateAsync`, `CreateRangeAsync`), `FamilyMemberRepository`, `FamilyServiceRepository`, `KinHubServiceRepository` (`GetAllAsync`). Persistenza su `CoreDbContext`.
+- Scritture: la creazione famiglia è eseguita in `ICoreTransactionExecutor.ExecuteAsync` (transazione EF con execution strategy per retry); i membri e i `FamilyService` sono creati con `CreateRangeAsync` (inserimento batch) dentro la stessa transazione, garantendo atomicità dell'intera operazione.
 - Il repository base `PostgreSqlRepository<TEntity,TDomain,TKey>` usa **Mapster** per mappare dominio↔entità e lancia `EntityNotFoundException` se l'update/delete non trova la riga.
 
 ## 6. Integrazioni esterne
@@ -84,13 +84,13 @@ Dipendenze: EF Core/Npgsql per la persistenza, FluentValidation, l'autorizzazion
 
 ## 8. Output finale
 
-- Creazione: `Family` + `FamilyMember` (proprietario e aggiuntivi) + N `FamilyService` persistiti; 201 con `CreateFamilyResponse`.
+- Creazione: `Family` + `FamilyMember` (proprietario e aggiuntivi) + N `FamilyService` persistiti in un'unica transazione; 201 con `CreateFamilyResponse`.
 - Mutazioni: entità membro/famiglia aggiornate o marcate eliminate; risposta 200/201.
 - Side effect trasversale: una volta creata la famiglia, il `family-context` inizia a risolversi con successo, sbloccando l'accesso a ricette e liste.
 
 # Pattern correttamente implementati
 
-- **Repository Pattern** — interfacce nel Domain (`IFamilyRepository`, ecc.) implementate in `Core.PostgreSql`; il Business non conosce EF Core. *Correttezza*: separazione netta persistenza/logica, con un metodo di dominio significativo (`FindByUserIdAsync`) anziché solo CRUD generico.
+- **Repository Pattern** — interfacce nel Domain (`IFamilyRepository`, ecc.) implementate in `Core.PostgreSql`; il Business non conosce EF Core. *Correttezza*: separazione netta persistenza/logica, con metodi orientati al dominio (`FindByUserIdAsync`, `CreateRangeAsync`) anziché solo CRUD generico.
 
 - **Domain Service (ownership)** — `FamilyOwnershipService` incapsula la regola "l'utente possiede questa famiglia" ed espone un risultato ricco (`FamilyAccessResult` con `ToResult<T>()`). *Perché corretto*: la regola è riusata da più handler (`AddFamilyMemberHandler`, update/delete) senza duplicazione ed è testabile in isolamento.
 
@@ -98,13 +98,11 @@ Dipendenze: EF Core/Npgsql per la persistenza, FluentValidation, l'autorizzazion
 
 - **Application Service / Facade** — `KinHubFamilyService` come punto unico per il controller. *Correttezza*: firma stabile, deleghe pulite agli handler.
 
+- **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` avvolgono la creazione famiglia in una transazione atomica con inserimento batch (`CreateRangeAsync`) per membri e servizi. *Correttezza*: elimina il rischio di inserimenti parziali e riduce i round-trip di database.
+
 - **Result Pattern** — `Result<T>` + `FamilyAccessResult` per esiti tipizzati senza eccezioni di controllo di flusso.
 
 # Anti-pattern
-
-- **Mancanza di transazione nella creazione famiglia** — *File*: `CreateFamilyHandler.HandleAsync`. La famiglia, i membri e gli N `FamilyService` sono creati con `CreateAsync` separati, ciascuno con il proprio `SaveChanges`, senza una transazione unica. *Problema*: un errore a metà (es. dopo aver creato la famiglia ma prima dei servizi) lascia dati **parzialmente inseriti** e incoerenti. *Impatto*: integrità dei dati. *Gravità*: media/alta. *Direzione*: avvolgere l'intera creazione in una transazione (come già fatto in KinList con `IKinListTransactionExecutor`).
-
-- **N+1 query nella creazione dei servizi** — *File*: `CreateFamilyHandler` (loop `foreach (service in allServices) CreateAsync(...)`) e loop analoghi sui membri. *Problema*: una `INSERT` (con round-trip) per ogni servizio/membro invece di un inserimento batch. *Impatto*: performance sulla creazione. *Gravità*: bassa (operazione poco frequente). *Direzione*: inserimento in blocco / `AddRange` + un solo `SaveChanges`.
 
 - **Anemic Domain Model** — *File*: `Family.cs`, `FamilyMember.cs`, ecc. Le entità sono soli contenitori di proprietà; tutte le regole (una-famiglia-per-utente, ownership) vivono negli handler/service. *Problema*: il dominio non protegge da sé le proprie invarianti. *Impatto*: la coerenza dipende dalla disciplina del layer applicativo. *Gravità*: bassa (scelta stilistica diffusa e coerente in tutto il progetto). *Direzione*: eventuali metodi/factory di dominio per incapsulare le invarianti.
 
