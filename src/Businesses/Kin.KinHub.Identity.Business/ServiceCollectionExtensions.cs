@@ -20,7 +20,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUpdateUserEmailHandler, UpdateUserEmailHandler>();
         services.AddScoped<IUpdateUserPasswordHandler, UpdateUserPasswordHandler>();
         services.AddScoped<IDeleteUserHandler, DeleteUserHandler>();
-        services.AddScoped<IAuthenticationService, KinHubAuthenticationService>();
 
         return services;
     }

@@ -15,7 +15,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
         services.TryAddScoped<IKinListTransactionExecutor, NoOpKinListTransactionExecutor>();
         services.TryAddScoped<IKinListAudioDraftGenerator, UnavailableKinListAudioDraftGenerator>();
-        services.AddScoped<IKinListService, KinListService>();
+        services.TryAddScoped<IAudioProcessingBlobStorage, UnavailableAudioProcessingBlobStorage>();
+        services.TryAddScoped<IAudioProcessingQueue, UnavailableAudioProcessingQueue>();
+        services.AddScoped<IKinListMapper, KinListMapper>();
+        services.AddScoped<IKinListItemDeduplicator, KinListItemDeduplicator>();
+        services.AddScoped<IKinListAudioService, KinListAudioService>();
+        services.AddScoped<KinListService>();
+        services.AddScoped<IKinListService>(sp => sp.GetRequiredService<KinListService>());
+        services.AddScoped<IAudioOperationProcessor>(sp => (KinListAudioService)sp.GetRequiredService<IKinListAudioService>());
         return services;
     }
 }

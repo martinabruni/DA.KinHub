@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Domains\Kin.KinHub.KinList.Domain\Kin.KinHub.KinList.Domain.csproj" />
+    <ProjectReference Include="..\..\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

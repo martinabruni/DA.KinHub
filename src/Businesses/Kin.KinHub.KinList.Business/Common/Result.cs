@@ -1,12 +1,13 @@
 namespace Kin.KinHub.KinList.Business.Common;
 
-public sealed class Result<T>
+public sealed class Result<T> : IResult<T>
 {
     public bool IsSuccess => Status is ResultStatus.Success;
     public ResultStatus Status { get; private init; }
     public string? Code { get; private init; }
     public string? Message { get; private init; }
     public T? Value { get; private init; }
+    object? IResult.Value => Value;
 
     private Result() { }
 

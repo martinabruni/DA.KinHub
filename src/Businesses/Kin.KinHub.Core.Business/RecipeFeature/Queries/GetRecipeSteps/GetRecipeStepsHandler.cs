@@ -33,7 +33,7 @@ public sealed class GetRecipeStepsHandler : IGetRecipeStepsHandler
         if (!access.IsSuccess)
             return access.ToResult<IReadOnlyList<RecipeStepResponse>>();
 
-        var recipeSteps = await _recipeStepRepository.GetAllByFamilyIdAsync(recipeId, cancellationToken);
+        var recipeSteps = await _recipeStepRepository.GetAllByRecipeIdAsync(recipeId, cancellationToken);
         return Result<IReadOnlyList<RecipeStepResponse>>.Success(recipeSteps.Select(_recipeStepResponseMapper.Map).ToList());
     }
 }

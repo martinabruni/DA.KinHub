@@ -12,6 +12,10 @@ public sealed class KinListOptions
     public int MaxAudioDurationSeconds { get; set; } = 60;
     public long MaxAudioBytes { get; set; } = 10 * 1024 * 1024;
     public int AudioProcessingTimeoutSeconds { get; set; } = 30;
+    public int AudioUploadSasTtlMinutes { get; set; } = 10;
+    public int AudioOperationRetentionHours { get; set; } = 24;
+    public int AudioPollingRetryAfterSeconds { get; set; } = 2;
+    public int AudioProcessingMaxDequeues { get; set; } = 5;
     public int TransientRetryMaxAttempts { get; set; } = 3;
     public int TransientRetryBaseDelayMilliseconds { get; set; } = 250;
     public int TransientRetryMaxDelayMilliseconds { get; set; } = 5000;
@@ -72,6 +76,26 @@ public sealed class KinListOptions
         if (AudioProcessingTimeoutSeconds <= 0)
         {
             throw new InvalidOperationException("KinList:AudioProcessingTimeoutSeconds must be greater than zero.");
+        }
+
+        if (AudioUploadSasTtlMinutes <= 0)
+        {
+            throw new InvalidOperationException("KinList:AudioUploadSasTtlMinutes must be greater than zero.");
+        }
+
+        if (AudioOperationRetentionHours <= 0)
+        {
+            throw new InvalidOperationException("KinList:AudioOperationRetentionHours must be greater than zero.");
+        }
+
+        if (AudioPollingRetryAfterSeconds <= 0)
+        {
+            throw new InvalidOperationException("KinList:AudioPollingRetryAfterSeconds must be greater than zero.");
+        }
+
+        if (AudioProcessingMaxDequeues <= 0)
+        {
+            throw new InvalidOperationException("KinList:AudioProcessingMaxDequeues must be greater than zero.");
         }
 
         if (TransientRetryMaxAttempts <= 0)

@@ -40,6 +40,29 @@ public sealed class FamilyAccessResult
             ResultStatus.ServiceUnavailable => Result<T>.ServiceUnavailable(Message!),
             _ => Result<T>.UnexpectedError(Message ?? "Unexpected family access state."),
         };
+
+    /// <summary>
+    /// Verifies the resolved family owns <paramref name="requestedFamilyId"/>. Failed results are
+    /// returned unchanged; a mismatch yields <see cref="Unauthorized"/>. The single source of truth
+    /// for the ownership rule shared by local and remote ownership services.
+    /// </summary>
+    /// <param name="requestedFamilyId">The family id the caller is trying to act on.</param>
+    /// <param name="onDenied">Optional callback invoked with the owned family id when access is denied.</param>
+    public FamilyAccessResult EnsureOwnership(Guid requestedFamilyId, Action<Guid>? onDenied = null)
+    {
+        if (!IsSuccess)
+        {
+            return this;
+        }
+
+        if (Family!.Id != requestedFamilyId)
+        {
+            onDenied?.Invoke(Family.Id);
+            return Unauthorized("You do not own this family.");
+        }
+
+        return this;
+    }
 }
 
 public interface IFamilyOwnershipService
@@ -87,19 +110,12 @@ public sealed class FamilyOwnershipService : IFamilyOwnershipService
         CancellationToken cancellationToken = default)
     {
         var currentFamily = await GetCurrentFamilyAsync(userId, cancellationToken);
-        if (!currentFamily.IsSuccess)
-            return currentFamily;
-
-        if (currentFamily.Family!.Id != familyId)
-        {
-            _logger.LogWarning(
+        return currentFamily.EnsureOwnership(
+            familyId,
+            ownedFamilyId => _logger.LogWarning(
                 "Family ownership denied for user {UserId}. Requested family {RequestedFamilyId}, owned family {OwnedFamilyId}.",
                 userId,
                 familyId,
-                currentFamily.Family.Id);
-            return FamilyAccessResult.Unauthorized("You do not own this family.");
-        }
-
-        return currentFamily;
+                ownedFamilyId));
     }
 }

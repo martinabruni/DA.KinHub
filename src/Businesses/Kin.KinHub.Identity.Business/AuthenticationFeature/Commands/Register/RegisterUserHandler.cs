@@ -45,6 +45,10 @@ public sealed class RegisterUserHandler : IRegisterUserHandler
         {
             return Result<RegisterResponse>.Conflict(ex.Message);
         }
+        catch (DomainValidationException ex)
+        {
+            return Result<RegisterResponse>.ValidationError(ex.Message);
+        }
         catch (DomainException)
         {
             return Result<RegisterResponse>.UnexpectedError("Registration failed. Please try again.");

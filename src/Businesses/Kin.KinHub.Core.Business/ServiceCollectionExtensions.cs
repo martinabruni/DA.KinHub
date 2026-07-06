@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         configure?.Invoke(options);
         options.Validate();
 
+        services.AddScoped<ICoreTransactionExecutor, NoOpCoreTransactionExecutor>();
         services.AddKinHubFamilyBusiness();
         services.AddScoped<IRecipeBookAccessService, RecipeBookAccessService>();
         services.AddScoped<IRecipeAccessService, RecipeAccessService>();

@@ -29,6 +29,45 @@ public sealed class KinListAudioCommand
     public string FileName { get; set; } = "audio";
 }
 
+public sealed class CreateAudioProcessingOperationRequest
+{
+    public required string Type { get; set; }
+    public required string ContentType { get; set; }
+    public long DeclaredByteSize { get; set; }
+    public Guid? ListId { get; set; }
+}
+
+public sealed class CompleteAudioProcessingOperationUploadRequest
+{
+}
+
+public sealed class CreateAudioProcessingOperationResponse
+{
+    public required Guid Id { get; set; }
+    public required Uri UploadUrl { get; set; }
+    public required DateTime UploadExpiresAt { get; set; }
+    public required string BlobName { get; set; }
+    public int RetryAfterSeconds { get; set; }
+}
+
+public sealed class AudioProcessingOperationResponse
+{
+    public required Guid Id { get; set; }
+    public required string Type { get; set; }
+    public required string Status { get; set; }
+    public Guid? ListId { get; set; }
+    public string? Title { get; set; }
+    public IReadOnlyList<string> Items { get; set; } = [];
+    public IReadOnlyList<KinListItemDraftProposalResponse> ItemProposals { get; set; } = [];
+    public IReadOnlyList<KinListExistingDuplicateResponse> ExistingDuplicates { get; set; } = [];
+    public string? DetectedLanguage { get; set; }
+    public string? PromptVersion { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ErrorMessage { get; set; }
+    public int RetryAfterSeconds { get; set; }
+    public DateTime ExpiresAt { get; set; }
+}
+
 public sealed class ParsedKinListAudioDraft
 {
     public required string Title { get; set; }

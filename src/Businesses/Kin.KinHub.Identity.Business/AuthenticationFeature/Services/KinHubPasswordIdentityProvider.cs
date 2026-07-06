@@ -2,7 +2,7 @@ namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
 /// <summary>
 /// The built-in email + password identity provider. Wraps the KinUser / UserCredential /
-/// UserProvider repositories so that <see cref="KinHubAuthenticationService"/> and the
+/// UserProvider repositories so that the authentication handlers and the
 /// provider link/unlink flow never talk to those repositories directly.
 /// </summary>
 public sealed class KinHubPasswordIdentityProvider : IIdentityProvider

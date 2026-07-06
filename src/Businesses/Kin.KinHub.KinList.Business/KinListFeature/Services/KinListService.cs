@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Kin.KinHub.KinList.Business.Common;
-using Kin.KinHub.KinList.Domain.KinListFeature;
 using DomainKinList = Kin.KinHub.KinList.Domain.KinListFeature.KinList;
 using DomainKinListItem = Kin.KinHub.KinList.Domain.KinListFeature.KinListItem;
 
@@ -16,22 +15,38 @@ public sealed class KinListService : IKinListService
     private readonly IKinListItemRepository _itemRepository;
     private readonly IIdempotencyRecordRepository _idempotencyRepository;
     private readonly IKinListTransactionExecutor _transactionExecutor;
-    private readonly IKinListAudioDraftGenerator _audioDraftGenerator;
+    private readonly IKinListAudioService _audioService;
+    private readonly IKinListMapper _mapper;
     private readonly KinListOptions _options;
 
     public KinListService(
         IKinListRepository listRepository,
         IKinListItemRepository itemRepository,
         IIdempotencyRecordRepository idempotencyRepository,
+        IAudioProcessingOperationRepository audioOperationRepository,
         IKinListTransactionExecutor transactionExecutor,
         IKinListAudioDraftGenerator audioDraftGenerator,
-        KinListOptions options)
+        IAudioProcessingBlobStorage blobStorage,
+        IAudioProcessingQueue audioQueue,
+        KinListOptions options,
+        IKinListMapper? mapper = null,
+        IKinListItemDeduplicator? deduplicator = null,
+        IKinListAudioService? audioService = null)
     {
         _listRepository = listRepository;
         _itemRepository = itemRepository;
         _idempotencyRepository = idempotencyRepository;
         _transactionExecutor = transactionExecutor;
-        _audioDraftGenerator = audioDraftGenerator;
+        _mapper = mapper ?? new KinListMapper();
+        _audioService = audioService ?? new KinListAudioService(
+            listRepository,
+            itemRepository,
+            audioOperationRepository,
+            audioDraftGenerator,
+            blobStorage,
+            audioQueue,
+            deduplicator ?? new KinListItemDeduplicator(),
+            options);
         _options = options;
     }
 
@@ -43,7 +58,7 @@ public sealed class KinListService : IKinListService
         foreach (var list in lists.Where(l => !l.IsDeleted))
         {
             var items = await _itemRepository.GetAllByListIdAsync(list.Id, cancellationToken);
-            responses.Add(MapSummary(list, items));
+            responses.Add(_mapper.MapSummary(list, items));
         }
 
         var ordered = responses
@@ -68,7 +83,7 @@ public sealed class KinListService : IKinListService
         }
 
         var items = await _itemRepository.GetAllByListIdAsync(listId, cancellationToken);
-        return Result<KinListDetailResponse>.Success(MapDetail(list, items));
+        return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list, items));
     }
 
     public async Task<Result<KinListDetailResponse>> CreateAsync(CreateKinListRequest request, Guid familyId, Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)
@@ -138,7 +153,7 @@ public sealed class KinListService : IKinListService
             }
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            var response = MapDetail(list, items);
+            var response = _mapper.MapDetail(list, items);
 
             await _idempotencyRepository.AddAsync(new IdempotencyRecord
             {
@@ -170,7 +185,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> DeleteAsync(Guid listId, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -188,7 +203,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> RestoreAsync(Guid listId, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -215,7 +230,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> AddItemAsync(Guid listId, CreateKinListItemRequest request, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -255,7 +270,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list!, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list!, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list!, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> BulkConfirmItemsAsync(Guid listId, BulkConfirmKinListItemsRequest request, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -306,7 +321,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list!, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list!, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list!, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> UpdateItemAsync(Guid listId, Guid itemId, UpdateKinListItemRequest request, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -338,7 +353,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list!, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list!, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list!, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> DeleteItemAsync(Guid listId, Guid itemId, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -359,7 +374,7 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list!, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list!, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list!, items));
         }, cancellationToken);
 
     public async Task<Result<KinListDetailResponse>> RestoreItemAsync(Guid listId, Guid itemId, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
@@ -398,105 +413,32 @@ public sealed class KinListService : IKinListService
             await _listRepository.UpdateAsync(list, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(MapDetail(list, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list, items));
         }, cancellationToken);
 
-    public async Task<Result<KinListDraftFromAudioResponse>> CreateDraftFromAudioAsync(KinListAudioCommand command, CancellationToken cancellationToken = default)
-    {
-        var parsedResult = await _audioDraftGenerator.ParseAsync(command, cancellationToken);
-        if (!parsedResult.IsSuccess || parsedResult.Value is null)
-        {
-            return MapAudioDraftFailure<KinListDraftFromAudioResponse>(parsedResult);
-        }
+    public Task<Result<CreateAudioProcessingOperationResponse>> CreateAudioOperationAsync(CreateAudioProcessingOperationRequest request, Guid familyId, Guid userId, CancellationToken cancellationToken = default) =>
+        _audioService.CreateAudioOperationAsync(request, familyId, userId, cancellationToken);
 
-        var parsed = parsedResult.Value;
-        var normalizedItems = NormalizeDistinctItems(parsed.Items);
-        if (normalizedItems.Count is 0)
-        {
-            return Result<KinListDraftFromAudioResponse>.UnprocessableEntity("No actionable list items were detected in the audio.", "no_items_detected");
-        }
+    public Task<Result<AudioProcessingOperationResponse>> CompleteAudioOperationUploadAsync(Guid operationId, Guid familyId, CancellationToken cancellationToken = default) =>
+        _audioService.CompleteAudioOperationUploadAsync(operationId, familyId, cancellationToken);
 
-        return Result<KinListDraftFromAudioResponse>.Success(new KinListDraftFromAudioResponse
-        {
-            Title = parsed.Title.Trim(),
-            Items = normalizedItems,
-            DetectedLanguage = parsed.DetectedLanguage,
-            PromptVersion = parsed.PromptVersion,
-        });
-    }
+    public Task<Result<AudioProcessingOperationResponse>> GetAudioOperationAsync(Guid operationId, Guid familyId, CancellationToken cancellationToken = default) =>
+        _audioService.GetAudioOperationAsync(operationId, familyId, cancellationToken);
 
-    public async Task<Result<KinListItemDraftsFromAudioResponse>> CreateItemDraftsFromAudioAsync(Guid listId, Guid familyId, KinListAudioCommand command, CancellationToken cancellationToken = default)
-    {
-        var list = await _listRepository.GetByIdAsync(listId, cancellationToken);
-        if (list is null || list.IsDeleted)
-        {
-            return Result<KinListItemDraftsFromAudioResponse>.NotFound("List not found.");
-        }
+    public Task<Result<bool>> DeleteAudioOperationAsync(Guid operationId, Guid familyId, CancellationToken cancellationToken = default) =>
+        _audioService.DeleteAudioOperationAsync(operationId, familyId, cancellationToken);
 
-        if (list.FamilyId != familyId)
-        {
-            return Result<KinListItemDraftsFromAudioResponse>.Unauthorized("The authenticated family cannot access this list.");
-        }
+    public Task<Result<AudioProcessingOperationResponse>> ProcessAudioOperationAsync(Guid operationId, CancellationToken cancellationToken = default) =>
+        _audioService.ProcessAudioOperationAsync(operationId, cancellationToken);
 
-        var parsedResult = await _audioDraftGenerator.ParseAsync(command, cancellationToken);
-        if (!parsedResult.IsSuccess || parsedResult.Value is null)
-        {
-            return MapAudioDraftFailure<KinListItemDraftsFromAudioResponse>(parsedResult);
-        }
+    public Task<Result<AudioProcessingOperationResponse>> MarkAudioOperationFailedAsync(Guid operationId, string code, string message, CancellationToken cancellationToken = default) =>
+        _audioService.MarkAudioOperationFailedAsync(operationId, code, message, cancellationToken);
 
-        var parsed = parsedResult.Value;
-        var normalizedItems = NormalizeDistinctItems(parsed.Items);
-        if (normalizedItems.Count is 0)
-        {
-            return Result<KinListItemDraftsFromAudioResponse>.UnprocessableEntity("No actionable list items were detected in the audio.", "no_items_detected");
-        }
+    public Task<Result<KinListDraftFromAudioResponse>> CreateDraftFromAudioAsync(KinListAudioCommand command, CancellationToken cancellationToken = default) =>
+        _audioService.CreateDraftFromAudioAsync(command, cancellationToken);
 
-        var existingItems = (await _itemRepository.GetAllByListIdAsync(listId, cancellationToken))
-            .Where(x => !x.IsDeleted)
-            .ToList();
-        var normalizedExistingItems = existingItems
-            .GroupBy(x => NormalizeText(x.Text), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
-
-        var proposals = new List<KinListItemDraftProposalResponse>(normalizedItems.Count);
-        var duplicates = new List<KinListExistingDuplicateResponse>();
-        foreach (var text in normalizedItems)
-        {
-            var normalizedText = NormalizeText(text);
-            if (normalizedExistingItems.TryGetValue(normalizedText, out var duplicateItem))
-            {
-                proposals.Add(new KinListItemDraftProposalResponse
-                {
-                    Text = text,
-                    IsSelectedByDefault = false,
-                    DuplicateOfItemId = duplicateItem.Id,
-                });
-
-                duplicates.Add(new KinListExistingDuplicateResponse
-                {
-                    ItemId = duplicateItem.Id,
-                    Text = duplicateItem.Text,
-                    IsCompleted = duplicateItem.IsCompleted,
-                });
-
-                continue;
-            }
-
-            proposals.Add(new KinListItemDraftProposalResponse
-            {
-                Text = text,
-                IsSelectedByDefault = true,
-            });
-        }
-
-        return Result<KinListItemDraftsFromAudioResponse>.Success(new KinListItemDraftsFromAudioResponse
-        {
-            Items = proposals,
-            ExistingDuplicates = duplicates,
-            DetectedLanguage = parsed.DetectedLanguage,
-            PromptVersion = parsed.PromptVersion,
-        });
-    }
+    public Task<Result<KinListItemDraftsFromAudioResponse>> CreateItemDraftsFromAudioAsync(Guid listId, Guid familyId, KinListAudioCommand command, CancellationToken cancellationToken = default) =>
+        _audioService.CreateItemDraftsFromAudioAsync(listId, familyId, command, cancellationToken);
 
     private async Task<(DomainKinList? List, DomainKinListItem? Item, Result<KinListDetailResponse>? Error)> GetItemForMutationAsync(
         Guid listId,
@@ -530,7 +472,7 @@ public sealed class KinListService : IKinListService
         return (list, item, null);
     }
 
-    private static Result<KinListDetailResponse>? ValidateListMutation(DomainKinList? list, Guid familyId, string ifMatch)
+    private Result<KinListDetailResponse>? ValidateListMutation(DomainKinList? list, Guid familyId, string ifMatch)
     {
         if (list is null || list.IsDeleted)
         {
@@ -550,8 +492,8 @@ public sealed class KinListService : IKinListService
         return null;
     }
 
-    private static bool MatchesEtag(Guid version, string ifMatch) =>
-        string.Equals(ToEtag(version), ifMatch.Trim(), StringComparison.Ordinal);
+    private bool MatchesEtag(Guid version, string ifMatch) =>
+        string.Equals(_mapper.ToEtag(version), ifMatch.Trim(), StringComparison.Ordinal);
 
     private static void TouchList(DomainKinList list)
     {
@@ -560,59 +502,6 @@ public sealed class KinListService : IKinListService
         list.UpdatedAt = now;
         list.LastModifiedAt = now;
     }
-
-    private static KinListResponse MapSummary(DomainKinList list, IReadOnlyList<DomainKinListItem> items)
-    {
-        var activeItems = items.Where(i => !i.IsDeleted).ToList();
-        var completedItems = activeItems.Count(i => i.IsCompleted);
-        return new KinListResponse
-        {
-            Id = list.Id,
-            Title = list.Title,
-            ETag = ToEtag(list.Version),
-            TotalItems = activeItems.Count,
-            CompletedItems = completedItems,
-            IsCompleted = activeItems.Count > 0 && completedItems == activeItems.Count,
-            LastModifiedAt = list.LastModifiedAt,
-        };
-    }
-
-    private static KinListDetailResponse MapDetail(DomainKinList list, IReadOnlyList<DomainKinListItem> items)
-    {
-        var visibleItems = items
-            .Where(i => !i.IsDeleted)
-            .OrderBy(i => i.IsCompleted)
-            .ThenByDescending(i => i.ActivationOrder)
-            .ThenBy(i => i.CreatedAt)
-            .Select(MapItem)
-            .ToList();
-
-        var completedItems = visibleItems.Count(i => i.IsCompleted);
-        return new KinListDetailResponse
-        {
-            Id = list.Id,
-            Title = list.Title,
-            ETag = ToEtag(list.Version),
-            TotalItems = visibleItems.Count,
-            CompletedItems = completedItems,
-            IsCompleted = visibleItems.Count > 0 && completedItems == visibleItems.Count,
-            LastModifiedAt = list.LastModifiedAt,
-            Items = visibleItems,
-        };
-    }
-
-    private static KinListItemResponse MapItem(DomainKinListItem item) =>
-        new()
-        {
-            Id = item.Id,
-            Text = item.Text,
-            ETag = ToEtag(item.Version),
-            IsCompleted = item.IsCompleted,
-            CreatedAt = item.CreatedAt,
-            UpdatedAt = item.UpdatedAt,
-        };
-
-    private static string ToEtag(Guid version) => $"\"{version:D}\"";
 
     private async Task<int> CountVisibleItemsAsync(Guid listId, CancellationToken cancellationToken)
     {
@@ -628,18 +517,6 @@ public sealed class KinListService : IKinListService
             .ToList();
 
     private static string NormalizeText(string text) => text.Trim();
-
-    private static Result<T> MapAudioDraftFailure<T>(Result<ParsedKinListAudioDraft> result) =>
-        result.Status switch
-        {
-            ResultStatus.Conflict => Result<T>.Conflict(result.Message ?? "Audio draft request conflicted with the current state.", result.Code ?? "conflict"),
-            ResultStatus.ValidationError => Result<T>.ValidationError(result.Message ?? "Audio draft request is invalid.", result.Code ?? "validation_error"),
-            ResultStatus.UnprocessableEntity => Result<T>.UnprocessableEntity(result.Message ?? "Audio draft request could not be processed.", result.Code ?? "unprocessable_entity"),
-            ResultStatus.Unauthorized => Result<T>.Unauthorized(result.Message ?? "The authenticated user cannot access this resource.", result.Code ?? "forbidden"),
-            ResultStatus.ServiceUnavailable => Result<T>.ServiceUnavailable(result.Message ?? "Audio draft processing is unavailable.", result.Code ?? "service_unavailable"),
-            ResultStatus.NotFound => Result<T>.NotFound(result.Message ?? "Audio draft dependency was not found.", result.Code ?? "not_found"),
-            _ => Result<T>.UnexpectedError(result.Message ?? "Unexpected audio draft processing error.", result.Code ?? "unexpected_error"),
-        };
 
     private static string ComputeHash(string title, IReadOnlyList<string> items)
     {

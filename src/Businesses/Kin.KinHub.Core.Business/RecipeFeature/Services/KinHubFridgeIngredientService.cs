@@ -70,7 +70,7 @@ public sealed class KinHubFridgeIngredientService : IFridgeIngredientService
         if (fridge.FamilyId != family.Id)
             return Result<IReadOnlyList<FridgeIngredientResponse>>.Unauthorized("Access denied.");
 
-        var ingredients = await _fridgeIngredientRepository.GetAllByFamilyIdAsync(fridgeId, cancellationToken);
+        var ingredients = await _fridgeIngredientRepository.GetAllByFridgeIdAsync(fridgeId, cancellationToken);
         return Result<IReadOnlyList<FridgeIngredientResponse>>.Success(ingredients.Select(Map).ToList());
     }
 

@@ -15,19 +15,22 @@ public sealed class CreateRecipeHandler : ICreateRecipeHandler
     private readonly IRecipeStepRepository _recipeStepRepository;
     private readonly IRecipeBookAccessService _recipeBookAccessService;
     private readonly IRecipeResponseMapper _recipeResponseMapper;
+    private readonly ICoreTransactionExecutor _transactionExecutor;
 
     public CreateRecipeHandler(
         IRecipeRepository recipeRepository,
         IRecipeIngredientRepository recipeIngredientRepository,
         IRecipeStepRepository recipeStepRepository,
         IRecipeBookAccessService recipeBookAccessService,
-        IRecipeResponseMapper recipeResponseMapper)
+        IRecipeResponseMapper recipeResponseMapper,
+        ICoreTransactionExecutor transactionExecutor)
     {
         _recipeRepository = recipeRepository;
         _recipeIngredientRepository = recipeIngredientRepository;
         _recipeStepRepository = recipeStepRepository;
         _recipeBookAccessService = recipeBookAccessService;
         _recipeResponseMapper = recipeResponseMapper;
+        _transactionExecutor = transactionExecutor;
     }
 
     public async Task<Result<RecipeResponse>> HandleAsync(
@@ -39,26 +42,26 @@ public sealed class CreateRecipeHandler : ICreateRecipeHandler
         if (!access.IsSuccess)
             return access.ToResult<RecipeResponse>();
 
-        var now = DateTime.UtcNow;
-        var recipe = new Recipe
+        return await _transactionExecutor.ExecuteAsync(async ct =>
         {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Backstory = request.Backstory,
-            FinalTime = request.FinalTime,
-            Portions = request.Portions,
-            RecipeBookId = request.RecipeBookId,
-            CreatedAt = now,
-            UpdatedAt = now,
-        };
-
-        var createdRecipe = await _recipeRepository.AddAsync(recipe, cancellationToken);
-
-        if (request.Ingredients is { Count: > 0 })
-        {
-            foreach (var ingredient in request.Ingredients)
+            var now = DateTime.UtcNow;
+            var recipe = new Recipe
             {
-                await _recipeIngredientRepository.AddAsync(new RecipeIngredient
+                Id = Guid.NewGuid(),
+                Name = request.Name,
+                Backstory = request.Backstory,
+                FinalTime = request.FinalTime,
+                Portions = request.Portions,
+                RecipeBookId = request.RecipeBookId,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+
+            var createdRecipe = await _recipeRepository.AddAsync(recipe, ct);
+
+            if (request.Ingredients is { Count: > 0 })
+            {
+                var ingredients = request.Ingredients.Select(ingredient => new RecipeIngredient
                 {
                     Id = Guid.NewGuid(),
                     Name = ingredient.Name,
@@ -67,15 +70,14 @@ public sealed class CreateRecipeHandler : ICreateRecipeHandler
                     RecipeId = createdRecipe.Id,
                     CreatedAt = now,
                     UpdatedAt = now,
-                }, cancellationToken);
-            }
-        }
+                }).ToArray();
 
-        if (request.Steps is { Count: > 0 })
-        {
-            foreach (var step in request.Steps)
+                await _recipeIngredientRepository.AddRangeAsync(ingredients, ct);
+            }
+
+            if (request.Steps is { Count: > 0 })
             {
-                await _recipeStepRepository.AddAsync(new RecipeStep
+                var steps = request.Steps.Select(step => new RecipeStep
                 {
                     Id = Guid.NewGuid(),
                     Order = step.Order,
@@ -83,11 +85,13 @@ public sealed class CreateRecipeHandler : ICreateRecipeHandler
                     RecipeId = createdRecipe.Id,
                     CreatedAt = now,
                     UpdatedAt = now,
-                }, cancellationToken);
-            }
-        }
+                }).ToArray();
 
-        return Result<RecipeResponse>.Success(
-            await _recipeResponseMapper.MapAsync(createdRecipe, cancellationToken));
+                await _recipeStepRepository.AddRangeAsync(steps, ct);
+            }
+
+            return Result<RecipeResponse>.Success(
+                await _recipeResponseMapper.MapAsync(createdRecipe, ct));
+        }, cancellationToken);
     }
 }

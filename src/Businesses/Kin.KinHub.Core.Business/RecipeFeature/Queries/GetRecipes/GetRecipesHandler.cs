@@ -33,10 +33,8 @@ public sealed class GetRecipesHandler : IGetRecipesHandler
         if (!access.IsSuccess)
             return access.ToResult<IReadOnlyList<RecipeResponse>>();
 
-        var recipes = await _recipeRepository.GetAllByFamilyIdAsync(recipeBookId, cancellationToken);
-        var responses = new List<RecipeResponse>(recipes.Count);
-        foreach (var recipe in recipes)
-            responses.Add(await _recipeResponseMapper.MapAsync(recipe, cancellationToken));
+        var recipes = await _recipeRepository.GetAllByRecipeBookIdAsync(recipeBookId, cancellationToken);
+        var responses = await _recipeResponseMapper.MapAsync(recipes, cancellationToken);
 
         return Result<IReadOnlyList<RecipeResponse>>.Success(responses);
     }

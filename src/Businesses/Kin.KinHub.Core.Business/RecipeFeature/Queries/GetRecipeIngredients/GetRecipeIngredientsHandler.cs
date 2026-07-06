@@ -33,7 +33,7 @@ public sealed class GetRecipeIngredientsHandler : IGetRecipeIngredientsHandler
         if (!access.IsSuccess)
             return access.ToResult<IReadOnlyList<RecipeIngredientResponse>>();
 
-        var recipeIngredients = await _recipeIngredientRepository.GetAllByFamilyIdAsync(recipeId, cancellationToken);
+        var recipeIngredients = await _recipeIngredientRepository.GetAllByRecipeIdAsync(recipeId, cancellationToken);
         return Result<IReadOnlyList<RecipeIngredientResponse>>.Success(recipeIngredients.Select(_recipeIngredientResponseMapper.Map).ToList());
     }
 }
