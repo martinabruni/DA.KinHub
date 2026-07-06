@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Kin.KinHub.KinList.AudioWorker</RootNamespace>
     <AssemblyName>Kin.KinHub.KinList.AudioWorker</AssemblyName>
     <UseAppHost>false</UseAppHost>
@@ -10,14 +7,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
+    <ProjectReference Include="..\..\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.AzureStorage\Kin.KinHub.KinList.AzureStorage.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.*" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>

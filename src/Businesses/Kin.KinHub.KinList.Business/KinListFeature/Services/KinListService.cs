@@ -469,7 +469,7 @@ public sealed class KinListService : IKinListService
         return null;
     }
 
-    private static Result<KinListDetailResponse>? ValidateListMutation(DomainKinList? list, Guid familyId, string ifMatch, bool allowDeleted = false)
+    private Result<KinListDetailResponse>? ValidateListMutation(DomainKinList? list, Guid familyId, string ifMatch, bool allowDeleted = false)
     {
         var accessError = ValidateListAccess(list, familyId, allowDeleted);
         if (accessError is not null)

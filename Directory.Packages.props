@@ -15,6 +15,11 @@
     <!-- Security / hashing -->
     <PackageVersion Include="BCrypt.Net-Next" Version="4.1.0" />
 
+    <!-- Azure Storage -->
+    <PackageVersion Include="Azure.Identity" Version="1.13.2" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.2" />
+    <PackageVersion Include="Azure.Storage.Queues" Version="12.20.0" />
+
     <!-- Azure AI -->
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.1.0" />
     <PackageVersion Include="Azure.AI.Speech.Transcription" Version="1.0.0" />
@@ -28,6 +33,10 @@
     <PackageVersion Include="Npgsql" Version="10.0.2" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageVersion Include="Pgvector" Version="0.3.2" />
+
+    <!-- Hosting -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
 
     <!-- ASP.NET Core / OpenApi -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
