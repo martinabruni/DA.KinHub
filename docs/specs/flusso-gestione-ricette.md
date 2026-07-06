@@ -10,7 +10,7 @@ Parti coinvolte:
 
 - **Presentation** — controller in `KinRecipe.Api/RecipeFeature`: `RecipeBookController`, `RecipeController`, `RecipeIngredientController`, `RecipeStepController`, `FridgeController`, `FridgeIngredientController`; validator FluentValidation; `RemoteFamilyOwnershipService` per il contesto famiglia.
 - **Business** — `Core.Business/RecipeFeature`: service facciata (`KinHubRecipeService`, `KinHubRecipeBookService`, `KinHubRecipeIngredientService`, `KinHubRecipeStepService`, `KinHubFridgeService`, `KinHubFridgeIngredientService`), handler `Commands/Queries`, gli **access service** (`RecipeAccessService`, `RecipeBookAccessService`, `RecipeIngredientAccessService`, `RecipeStepAccessService`) e i **mapper** (`RecipeResponseMapper`, …).
-- **Domain** — entità `RecipeBook`, `Recipe`, `RecipeIngredient`, `RecipeStep`, `Fridge`, `FridgeIngredient`; interfacce repository (`IRecipeRepository` con `AddAsync/GetByIdAsync/GetAllByFamilyIdAsync`, ecc.).
+- **Domain** — entità `RecipeBook`, `Recipe`, `RecipeIngredient`, `RecipeStep`, `Fridge`, `FridgeIngredient`; interfacce repository con metodi il cui nome riflette il filtro applicato (`IRecipeRepository` con `AddAsync/GetByIdAsync/GetAllByRecipeBookIdAsync/GetAllByRecipeBookIdsAsync`, `IRecipeStepRepository` con `GetAllByRecipeIdAsync/GetAllByRecipeIdsAsync`, ecc.).
 - **Infrastructure** — repository in `Core.PostgreSql/RecipeFeature`, `CoreDbContext`.
 
 Dati ricevuti: `CreateRecipeRequest` (nome, backstory, tempo, porzioni, `recipeBookId`, ingredienti/passi inline), `UpdateRecipeRequest`, e le analoghe per libri/ingredienti/passi/frigorifero. Dati prodotti: `RecipeResponse`, `RecipeBookResponse`, `RecipeIngredientResponse`, `RecipeStepResponse`, `FridgeResponse`, `FridgeIngredientResponse`.
@@ -19,11 +19,11 @@ Dipendenze: EF Core/Npgsql, FluentValidation, JWT (per `ICurrentUser`), `RemoteF
 
 # Casi d'uso
 
-- **Creazione ricetta** — *Obiettivo*: aggiungere una ricetta a un libro. *Attore*: utente autenticato della famiglia proprietaria del libro. *Input*: `recipeBookId` (route) + `CreateRecipeRequest`. *Output*: 201 con `RecipeResponse`. *Errori*: libro non accessibile → 403/404.
-- **Lettura ricette / ricetta per id** — *Output*: lista o singola `RecipeResponse` filtrata per famiglia. *Errore*: non trovata o non accessibile.
-- **Aggiornamento/eliminazione ricetta** — *Condizione*: la ricetta deve appartenere a un libro della famiglia dell'utente. *Errore*: accesso negato → 403.
+- **Creazione ricetta** — _Obiettivo_: aggiungere una ricetta a un libro. _Attore_: utente autenticato della famiglia proprietaria del libro. _Input_: `recipeBookId` (route) + `CreateRecipeRequest`. _Output_: 201 con `RecipeResponse`. _Errori_: libro non accessibile → 403/404.
+- **Lettura ricette / ricetta per id** — _Output_: lista o singola `RecipeResponse` filtrata per famiglia. _Errore_: non trovata o non accessibile.
+- **Aggiornamento/eliminazione ricetta** — _Condizione_: la ricetta deve appartenere a un libro della famiglia dell'utente. _Errore_: accesso negato → 403.
 - **CRUD libro / ingrediente / passo / frigorifero** — analoghi, ciascuno con il proprio controller, service, access service e validator.
-- **Ingredienti mancanti** — *Endpoint*: `POST api/recipe-books/{recipeBookId}/recipes/{id}/missing-ingredients?fridgeId=…`. *Obiettivo*: dato un frigorifero, elencare gli ingredienti della ricetta non presenti. *Nota*: usa un confronto per **similarità di embedding** (`IRecipeMissingIngredientsService`), quindi è un caso d'uso "di confine" tra questa feature e l'assistente AI.
+- **Ingredienti mancanti** — _Endpoint_: `POST api/recipe-books/{recipeBookId}/recipes/{id}/missing-ingredients?fridgeId=…`. _Obiettivo_: dato un frigorifero, elencare gli ingredienti della ricetta non presenti. _Nota_: usa un confronto per **similarità di embedding** (`IRecipeMissingIngredientsService`), quindi è un caso d'uso "di confine" tra questa feature e l'assistente AI.
 
 # Flusso implementativo
 
@@ -39,7 +39,7 @@ I controller ricette usano `[Authorize]` a livello di classe; l'autenticazione �
 
 - Null-check del body → `InvalidRequestBody`.
 - Validazione FluentValidation via `IRequestValidator<T>` (es. `CreateRecipeRequestValidator`) → 400 con errori.
-- **Autorizzazione di dominio**: delegata agli *access service* nel Business (non solo alla policy HTTP).
+- **Autorizzazione di dominio**: delegata agli _access service_ nel Business (non solo alla policy HTTP).
 
 ## 3. Orchestrazione applicativa
 
@@ -60,8 +60,8 @@ I controller ricette usano `[Authorize]` a livello di classe; l'autenticazione �
 
 ## 5. Accesso ai dati
 
-- Repository in `Core.PostgreSql/RecipeFeature`: `RecipeRepository`, `RecipeBookRepository`, `RecipeIngredientRepository`, `RecipeStepRepository`, `FridgeRepository`, `FridgeIngredientRepository`. Metodi tipici: `AddAsync`, `AddRangeAsync`, `GetByIdAsync`, `GetAllByFamilyIdAsync`.
-- Letture: caricamento di famiglia, libro, ricetta e collezioni figlie separatamente (gli ingredienti/passi vengono caricati con chiamate dedicate).
+- Repository in `Core.PostgreSql/RecipeFeature`: `RecipeRepository`, `RecipeBookRepository`, `RecipeIngredientRepository`, `RecipeStepRepository`, `FridgeRepository`, `FridgeIngredientRepository`. Metodi tipici: `AddAsync`, `AddRangeAsync`, `GetByIdAsync`, e le letture per chiave il cui nome indica il filtro reale (`GetAllByRecipeBookIdAsync`, `GetAllByRecipeIdAsync`, `GetAllByFridgeIdAsync`, `GetAllByFamilyIdAsync`) con le varianti batch `GetAll…IdsAsync` per caricare le collezioni di più entità in una sola query.
+- Letture: quando si elencano più ricette (es. `GetRecipesHandler`) ingredienti e passi sono caricati con **due query batch** (`GetAllByRecipeIdsAsync`) e raggruppati per `RecipeId` dal `RecipeResponseMapper`, evitando letture N+1; per la singola ricetta restano le letture dedicate `GetAllByRecipeIdAsync`.
 - Scritture: la creazione ricetta + ingredienti + passi è eseguita dentro `ICoreTransactionExecutor.ExecuteAsync` con inserimento batch (`AddRangeAsync`); update/delete tramite i repository.
 - Gli ingredienti supportano un **embedding** (`float[]`, colonna vettoriale via Pgvector) usato per il calcolo degli ingredienti mancanti.
 
@@ -84,24 +84,16 @@ I controller ricette usano `[Authorize]` a livello di classe; l'autenticazione �
 
 # Pattern correttamente implementati
 
-- **Repository Pattern** — interfacce di dominio (`IRecipeRepository`, `IRecipeBookRepository`, …) con implementazioni EF Core in `Core.PostgreSql`. *Correttezza*: i repository espongono metodi orientati al dominio (`GetAllByFamilyIdAsync`, `AddRangeAsync`) e nascondono `DbContext`/LINQ al Business.
+- **Repository Pattern** — interfacce di dominio (`IRecipeRepository`, `IRecipeBookRepository`, …) con implementazioni EF Core in `Core.PostgreSql`. _Correttezza_: i repository espongono metodi orientati al dominio il cui nome riflette il filtro (`GetAllByRecipeBookIdAsync`, `GetAllByRecipeIdAsync`, `GetAllByFridgeIdAsync`, `AddRangeAsync`) e nascondono `DbContext`/LINQ al Business.
 
-- **Domain/Access Service** — `RecipeAccessService`, `RecipeBookAccessService`, `RecipeIngredientAccessService`, `RecipeStepAccessService` centralizzano il controllo di accesso a cascata (entità → libro → famiglia). *Perché corretto*: la stessa regola non è duplicata in ogni handler; è testabile e restituisce esiti espliciti. *Problema risolto*: evita accessi cross-famiglia (una forma di IDOR).
+- **Domain/Access Service** — `RecipeAccessService`, `RecipeBookAccessService`, `RecipeIngredientAccessService`, `RecipeStepAccessService` centralizzano il controllo di accesso a cascata (entità → libro → famiglia). _Perché corretto_: la stessa regola non è duplicata in ogni handler; è testabile e restituisce esiti espliciti. _Problema risolto_: evita accessi cross-famiglia (una forma di IDOR).
 
-- **Mapper/Assembler** — `RecipeResponseMapper` e affini incapsulano la conversione entità→DTO. *Correttezza*: mapping coerente e riusato tra creazione, lettura e aggiornamento; iniettato via DI, quindi sostituibile e testabile.
+- **Mapper/Assembler** — `RecipeResponseMapper` e affini incapsulano la conversione entità→DTO. _Correttezza_: mapping coerente e riusato tra creazione, lettura e aggiornamento; iniettato via DI, quindi sostituibile e testabile.
 
 - **Application Service / Facade** — `KinHubRecipeService` & co. come punto stabile per i controller, con deleghe agli handler CRUD.
 
-- **Adapter (contesto famiglia remoto)** — `RemoteFamilyOwnershipService` implementa l'interfaccia di dominio `IFamilyOwnershipService` traducendo una chiamata HTTP a Identity. *Correttezza*: il Business resta ignaro del fatto che la famiglia provenga da un altro servizio; l'host la sostituisce via `RemoveAll<IFamilyOwnershipService>() + AddHttpClient<…>`.
+- **Adapter (contesto famiglia remoto)** — `RemoteFamilyOwnershipService` implementa l'interfaccia di dominio `IFamilyOwnershipService` traducendo una chiamata HTTP a Identity. _Correttezza_: il Business resta ignaro del fatto che la famiglia provenga da un altro servizio; l'host la sostituisce via `RemoveAll<IFamilyOwnershipService>() + AddHttpClient<…>`.
 
-- **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` avvolgono la creazione ricetta + figli in una transazione atomica con inserimento batch. *Correttezza*: elimina il rischio di ricette parzialmente create e riduce i round-trip di database.
+- **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` avvolgono la creazione ricetta + figli in una transazione atomica con inserimento batch. _Correttezza_: elimina il rischio di ricette parzialmente create e riduce i round-trip di database.
 
 - **Result Pattern** — esiti applicativi tipizzati mappati centralmente in HTTP.
-
-# Anti-pattern
-
-- **Caricamento delle collezioni con chiamate separate** — *File*: `RecipeAccessService`/handler e `KinHubRecipeAssistantManager` caricano ingredienti/passi con chiamate separate per ogni ricetta. *Problema*: in scenari che iterano molte ricette (es. suggerimenti) si generano N+1 letture. *Impatto*: performance su dataset grandi. *Gravità*: media (più evidente nell'assistente, dove il `GetAllByRecipeIdsAsync` mitiga il caso suggest ma i passi restano caricati separatamente). *Direzione*: proiezioni/`Include` o query aggregate dove necessario.
-
-- **Naming del metodo repository fuorviante** — *File*: repository Recipe, metodi come `GetAllByFamilyIdAsync(recipeId, …)` in realtà filtrano per `recipeId`/`fridgeId`, non per `familyId`. *Problema*: il nome non riflette il parametro reale, riducendo la leggibilità. *Impatto*: manutenibilità/comprensione. *Gravità*: bassa. *Direzione*: rinominare in modo coerente col filtro applicato.
-
-- **Anemic Domain Model** — entità di dominio prive di comportamento; regole nei service/handler. *Gravità*: bassa (scelta coerente in tutto il backend, vedi [flusso-gestione-famiglie.md](./flusso-gestione-famiglie.md)).

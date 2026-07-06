@@ -125,10 +125,4 @@ L'host API è bootstrappato da `AddKinHubKinListApi`; il worker da `Program.cs` 
 
 - **Options Pattern con validazione** — `KinListOptions.Validate()`, `AudioStorageOptions.Validate()` invocati all'avvio del worker/API.
 
-# Anti-pattern
-
-- **`NoOpKinListTransactionExecutor` come default silenzioso** — *File*: `ServiceCollectionExtensions` di `KinList.Business` (`TryAddScoped<IKinListTransactionExecutor, NoOpKinListTransactionExecutor>`). *Problema*: se un host dimentica di registrare l'esecutore EF reale, le mutazioni girano **senza transazione** senza alcun errore evidente. *Impatto*: potenziale perdita di atomicità in configurazioni errate. *Gravità*: media. *Direzione*: rendere esplicito/loggato il fallback o fallire fast in produzione.
-
-- **Rischio TOCTOU tra `DeclaredByteSize` e blob reale** — *File*: `CreateAudioOperationAsync` valida la dimensione **dichiarata**, poi `CompleteAudioOperationUploadAsync` rivalida quella effettiva del blob. *Nota*: il codice mitiga correttamente rivalidando alla fine (quindi **non** è un difetto conclamato), ma la doppia fonte di verità sulla dimensione va mantenuta allineata. *Gravità*: bassa. *Direzione*: mantenere la validazione post-upload come autorità.
-
 > I valori operativi (limiti item, TTL SAS, numero massimo di dequeue, locali di trascrizione, nomi di coda/container) provengono dalla configurazione e non sono deducibili con certezza dalla codebase analizzata.

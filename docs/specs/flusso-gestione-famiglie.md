@@ -25,12 +25,12 @@ Dipendenze: EF Core/Npgsql per la persistenza, FluentValidation, l'autorizzazion
 
 # Casi d'uso
 
-- **Creazione famiglia** — *Obiettivo*: creare l'unica famiglia dell'utente. *Attore*: utente autenticato senza famiglia. *Input*: `CreateFamilyRequest`. *Output*: 201 con `CreateFamilyResponse`. *Condizione/errore*: se l'utente ha già una famiglia → 409 Conflict ("A family already exists for this user.").
-- **Lettura della propria famiglia** — *Obiettivo*: ottenere famiglia + membri + servizi. *Input*: solo il token. *Output*: `FamilyDetailResponse`. *Errore*: nessuna famiglia → 404.
-- **Aggiunta/aggiornamento/rimozione membro** — *Attore*: proprietario della famiglia. *Input*: `familyId` in route + payload. *Output*: id membro creato o esito. *Condizione*: richiede la policy `FamilyContext` **e** la verifica di proprietà (`EnsureOwnershipAsync`). *Errore*: famiglia non posseduta → 403.
-- **Aggiornamento/eliminazione famiglia** — *Attore*: proprietario. *Condizione*: policy `FamilyContext` + ownership. *Output*: esito.
-- **Attivazione/disattivazione servizio** — *Obiettivo*: abilitare o meno un servizio KinHub (es. KinList) per la famiglia. *Input*: `ToggleFamilyServiceRequest`. *Gestito da*: `ServicesController` + `KinHubServiceService`.
-- **Risoluzione contesto famiglia** — *Obiettivo (trasversale)*: dire "a quale famiglia appartiene l'utente". *Attore*: la pipeline di ogni API (via middleware) e gli altri host (via HTTP su `/api/access/family-context`).
+- **Creazione famiglia** — _Obiettivo_: creare l'unica famiglia dell'utente. _Attore_: utente autenticato senza famiglia. _Input_: `CreateFamilyRequest`. _Output_: 201 con `CreateFamilyResponse`. _Condizione/errore_: se l'utente ha già una famiglia → 409 Conflict ("A family already exists for this user.").
+- **Lettura della propria famiglia** — _Obiettivo_: ottenere famiglia + membri + servizi. _Input_: solo il token. _Output_: `FamilyDetailResponse`. _Errore_: nessuna famiglia → 404.
+- **Aggiunta/aggiornamento/rimozione membro** — _Attore_: proprietario della famiglia. _Input_: `familyId` in route + payload. _Output_: id membro creato o esito. _Condizione_: richiede la policy `FamilyContext` **e** la verifica di proprietà (`EnsureOwnershipAsync`). _Errore_: famiglia non posseduta → 403.
+- **Aggiornamento/eliminazione famiglia** — _Attore_: proprietario. _Condizione_: policy `FamilyContext` + ownership. _Output_: esito.
+- **Attivazione/disattivazione servizio** — _Obiettivo_: abilitare o meno un servizio KinHub (es. KinList) per la famiglia. _Input_: `ToggleFamilyServiceRequest`. _Gestito da_: `ServicesController` + `KinHubServiceService`.
+- **Risoluzione contesto famiglia** — _Obiettivo (trasversale)_: dire "a quale famiglia appartiene l'utente". _Attore_: la pipeline di ogni API (via middleware) e gli altri host (via HTTP su `/api/access/family-context`).
 
 # Flusso implementativo
 
@@ -90,20 +90,14 @@ Dipendenze: EF Core/Npgsql per la persistenza, FluentValidation, l'autorizzazion
 
 # Pattern correttamente implementati
 
-- **Repository Pattern** — interfacce nel Domain (`IFamilyRepository`, ecc.) implementate in `Core.PostgreSql`; il Business non conosce EF Core. *Correttezza*: separazione netta persistenza/logica, con metodi orientati al dominio (`FindByUserIdAsync`, `CreateRangeAsync`) anziché solo CRUD generico.
+- **Repository Pattern** — interfacce nel Domain (`IFamilyRepository`, ecc.) implementate in `Core.PostgreSql`; il Business non conosce EF Core. _Correttezza_: separazione netta persistenza/logica, con metodi orientati al dominio (`FindByUserIdAsync`, `CreateRangeAsync`) anziché solo CRUD generico.
 
-- **Domain Service (ownership)** — `FamilyOwnershipService` incapsula la regola "l'utente possiede questa famiglia" ed espone un risultato ricco (`FamilyAccessResult` con `ToResult<T>()`). *Perché corretto*: la regola è riusata da più handler (`AddFamilyMemberHandler`, update/delete) senza duplicazione ed è testabile in isolamento.
+- **Domain Service (ownership)** — `FamilyOwnershipService` incapsula la regola "l'utente possiede questa famiglia" ed espone un risultato ricco (`FamilyAccessResult` con `ToResult<T>()`). _Perché corretto_: la regola è riusata da più handler (`AddFamilyMemberHandler`, update/delete) senza duplicazione ed è testabile in isolamento.
 
-- **Policy-based Authorization + Requirement/Handler** — `FamilyContextRequirement` + `FamilyContextAuthorizationHandler` + `FamilyAuthorizationMiddlewareResultHandler`. *Correttezza*: usa l'infrastruttura standard di ASP.NET Core; l'handler di risultato mappa i fallimenti in problem detail semanticamente corretti (401/403/503) invece di un generico 403.
+- **Policy-based Authorization + Requirement/Handler** — `FamilyContextRequirement` + `FamilyContextAuthorizationHandler` + `FamilyAuthorizationMiddlewareResultHandler`. _Correttezza_: usa l'infrastruttura standard di ASP.NET Core; l'handler di risultato mappa i fallimenti in problem detail semanticamente corretti (401/403/503) invece di un generico 403.
 
-- **Application Service / Facade** — `KinHubFamilyService` come punto unico per il controller. *Correttezza*: firma stabile, deleghe pulite agli handler.
+- **Application Service / Facade** — `KinHubFamilyService` come punto unico per il controller. _Correttezza_: firma stabile, deleghe pulite agli handler.
 
-- **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` avvolgono la creazione famiglia in una transazione atomica con inserimento batch (`CreateRangeAsync`) per membri e servizi. *Correttezza*: elimina il rischio di inserimenti parziali e riduce i round-trip di database.
+- **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` avvolgono la creazione famiglia in una transazione atomica con inserimento batch (`CreateRangeAsync`) per membri e servizi. _Correttezza_: elimina il rischio di inserimenti parziali e riduce i round-trip di database.
 
 - **Result Pattern** — `Result<T>` + `FamilyAccessResult` per esiti tipizzati senza eccezioni di controllo di flusso.
-
-# Anti-pattern
-
-- **Anemic Domain Model** — *File*: `Family.cs`, `FamilyMember.cs`, ecc. Le entità sono soli contenitori di proprietà; tutte le regole (una-famiglia-per-utente, ownership) vivono negli handler/service. *Problema*: il dominio non protegge da sé le proprie invarianti. *Impatto*: la coerenza dipende dalla disciplina del layer applicativo. *Gravità*: bassa (scelta stilistica diffusa e coerente in tutto il progetto). *Direzione*: eventuali metodi/factory di dominio per incapsulare le invarianti.
-
-- **Duplicazione della logica di ownership** — la verifica "family.Id != familyId → Unauthorized" esiste sia in `FamilyOwnershipService.EnsureOwnershipAsync` sia, in forma remota, in `RemoteFamilyOwnershipService.EnsureOwnershipAsync`. *Problema*: due implementazioni della stessa regola in host diversi. *Impatto*: rischio di divergenza. *Gravità*: bassa (giustificata dalla separazione local/remote). *Direzione*: test di caratterizzazione condivisi per mantenerle allineate (in parte già presenti nei test).

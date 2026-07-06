@@ -16,7 +16,7 @@ Responsabilità e confini: questa feature vive interamente nel contesto **Identi
 Parti del backend coinvolte:
 
 - **Presentation** — `AuthController`, `OAuthController`, `OAuthMetadataController`, `AccessController` (`src/Presentations/Kin.KinHub.Identity.Api`), più validator FluentValidation e gli store OAuth (`PostgreSqlOAuthStores`, `OAuthModels`). I servizi helper OAuth (`OAuthRequestValidator`, `OAuthSessionManager`, `OAuthTokenIssuer`, `OAuthLoginPageRenderer`) vivono in `AuthenticationFeature/Services`.
-- **Business** — `KinHubAuthenticationService` e gli handler in `AuthenticationFeature/Commands` e `Queries` (`Register`, `Login`, `Refresh`, `Logout`, `UpdateUserEmail`, `UpdateUserPassword`, `DeleteUser`, `GetCurrentUser`), più `KinHubPasswordIdentityProvider`, `IdentityProviderRegistry`, `LoginResponseFactory`, `UserProviderService`.
+- **Business** — gli handler in `AuthenticationFeature/Commands` e `Queries` (`Register`, `Login`, `Refresh`, `Logout`, `UpdateUserEmail`, `UpdateUserPassword`, `DeleteUser`, `GetCurrentUser`), invocati direttamente dai controller, più `KinHubPasswordIdentityProvider`, `IdentityProviderRegistry`, `LoginResponseFactory`, `UserProviderService`.
 - **Domain** — entità `KinUser`, `UserCredential`, `UserProvider`, `Provider`, `RefreshToken`, `TokenClaims`; interfacce `IIdentityProvider`, `IIdentityProviderRegistry`, `ITokenGenerator`, `ITokenValidator`, `IPasswordHasher`, i repository, l'enum `UserStatus`, `IdentityProviderType`.
 - **Infrastructure** — `Kin.KinHub.Identity.Jwt` (`JwtTokenGenerator`, `CurrentUser`, `JwtOptions`), `Kin.KinHub.Identity.PostgreSql` (repository, `PasswordHasher`, `IdentityDbContext`).
 
@@ -53,7 +53,7 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 
 ## 3. Orchestrazione applicativa
 
-- `AuthController` delega a `IAuthenticationService` → `KinHubAuthenticationService`, che è una **facciata** che inoltra ad ogni handler dedicato (es. `RegisterAsync` → `RegisterUserHandler`).
+- `AuthController` dipende direttamente dagli handler di cui ha bisogno (`IRegisterUserHandler`, `IGetCurrentUserHandler`, `IUpdateUserEmailHandler`, `IUpdateUserPasswordHandler`, `IDeleteUserHandler`) e li invoca via `HandleAsync`; `OAuthController` usa `ILoginUserHandler`/`ILogoutUserHandler` e `OAuthSessionManager` usa `IRefreshTokenHandler`. I controller dipendono direttamente dagli handler di cui hanno bisogno.
 - `RegisterUserHandler` risolve il provider dal registry: `_providerRegistry.Resolve(IdentityProviderType.KinHub)` e chiama `provider.RegisterAsync(IdentityRegistration)`.
 - `LoginUserHandler` chiama `provider.AuthenticateAsync(IdentityCredential)`; se l'utente è valido delega a `ILoginResponseFactory.CreateAsync` per generare i token.
 - `LoginResponseFactory` chiama `ITokenGenerator.GenerateAccessToken` + `GenerateRefreshToken`, persiste il `RefreshToken` (scadenza a 7 giorni) e compone `LoginResponse`.
@@ -95,7 +95,7 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 
 - **Strategy + Registry (provider di identità)** — `IIdentityProvider` (Domain) con implementazione `KinHubPasswordIdentityProvider` e risoluzione via `IdentityProviderRegistry` (`Resolve(IdentityProviderType)`). *Perché è presente*: gli handler non conoscono l'implementazione, chiedono al registry per tipo. *Problema risolto*: rende estendibile l'autenticazione con nuovi provider senza toccare gli handler. *Correttezza*: il registry costruisce un dizionario per `ProviderType` da tutti gli `IIdentityProvider` iniettati; l'aggiunta di un provider è una sola registrazione DI. *Limite*: esiste un solo provider concreto, quindi il beneficio è potenziale.
 
-- **Facade / Application Service** — `KinHubAuthenticationService` implementa `IAuthenticationService` inoltrando ad handler specifici. *Perché corretto*: unica superficie stabile per i controller, single responsibility per ciascun handler. *Limite*: è puro passthrough (nessuna orchestrazione aggiuntiva), quindi aggiunge un livello di indirezione.
+- **Command/Query Handler diretti** — ogni caso d'uso è un handler dedicato (`RegisterUserHandler`, `LoginUserHandler`, …) con una singola responsabilità, invocato direttamente dal controller che ne ha bisogno. *Perché corretto*: nessun livello di indirezione superfluo; le dipendenze del controller dichiarano esattamente gli use case che usa.
 
 - **Factory** — `LoginResponseFactory` centralizza la creazione coerente di access token + refresh token + persistenza. *Correttezza*: incapsula la scadenza (7 giorni) e la struttura di `LoginResponse` in un solo punto riusato da login e refresh.
 
@@ -106,9 +106,5 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 - **PKCE / OAuth Authorization Code** — `OAuthController` implementa `code_challenge_method=S256`, verifica `VerifyPkce` (SHA-256 + Base64Url), consuma il codice una sola volta (`TryConsume`) e vincola client/redirect. *Correttezza*: aderisce alle pratiche OAuth per client pubblici (nessun client secret, PKCE obbligatorio, consenso elevato esplicito per scope `write`/`admin`).
 
 - **Decomposizione del controller OAuth** — `OAuthController` (~344 righe) è un thin orchestrator; la validazione OAuth è in `OAuthRequestValidator`, la gestione cookie/sessione in `OAuthSessionManager`, l'emissione dei token in `OAuthTokenIssuer`, il rendering HTML in `OAuthLoginPageRenderer`. *Correttezza*: ogni servizio ha una singola responsabilità, il controller non conosce i dettagli di implementazione.
-
-# Anti-pattern
-
-- **Facciata puramente passthrough** — *File*: `KinHubAuthenticationService.cs`. Ogni metodo inoltra 1:1 all'handler. *Problema*: livello di indirezione senza logica propria; duplica le firme. *Impatto*: leggibilità/boilerplate. *Gravità*: bassa. *Direzione*: accettabile come punto di composizione, ma valutabile un'esposizione diretta degli handler.
 
 > Dove il comportamento dipende da configurazione di ambiente (es. store OAuth in-memory vs PostgreSQL, abilitazione della registrazione dinamica dei client) i dettagli runtime non sono deducibili con certezza dalla codebase analizzata.

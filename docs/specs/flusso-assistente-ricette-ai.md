@@ -73,7 +73,7 @@ Tutte delegano a `IRecipeAssistantManager` (`KinHubRecipeAssistantManager`). L'e
 
 ## 5. Accesso ai dati
 
-- Letture dai repository del Core: `IFamilyRepository`, `IFridgeRepository`, `IFridgeIngredientRepository`, `IRecipeBookRepository`, `IRecipeRepository`, `IRecipeIngredientRepository` (con metodo batch `GetAllByRecipeIdsAsync`), `IRecipeStepRepository`.
+- Letture dai repository del Core: `IFamilyRepository`, `IFridgeRepository`, `IFridgeIngredientRepository`, `IRecipeBookRepository`, `IRecipeRepository`, `IRecipeIngredientRepository` e `IRecipeStepRepository` (entrambi con metodo batch `GetAllByRecipeIdsAsync` e la variante per singola ricetta `GetAllByRecipeIdAsync`).
 - Gli embedding degli ingredienti (`float[]`) sono persistiti tramite Pgvector e letti per il calcolo della similarità.
 - **Nessuna scrittura**: l'assistente produce bozze/suggerimenti; la persistenza avviene solo se l'utente poi crea la ricetta tramite la feature ricette.
 
@@ -86,7 +86,7 @@ Tutte delegano a `IRecipeAssistantManager` (`KinHubRecipeAssistantManager`). L'e
 ## 7. Gestione errori
 
 - Il manager ritorna `Result<T>` con `NotFound`/`Unauthorized` per i controlli famiglia/possesso; mappati in HTTP da `HttpResultMapper` (Unauthorized→403).
-- Le chiamate AI sono avvolte da gestione errori tipizzata nel manager: `RecipeAssistantUnavailableException` (errore SDK o timeout) → `ServiceUnavailable` (503); `RecipeAssistantInvalidResponseException` (JSON non conforme o campo richiesto assente) → `UnprocessableEntity` (422). Non esistono più eccezioni non gestite a 500 per i fallimenti AI tipici.
+- Le chiamate AI sono avvolte da gestione errori tipizzata nel manager: `RecipeAssistantUnavailableException` (errore SDK o timeout) → `ServiceUnavailable` (503); `RecipeAssistantInvalidResponseException` (JSON non conforme o campo richiesto assente) → `UnprocessableEntity` (422). I fallimenti AI tipici producono esiti tipizzati, non eccezioni non gestite a 500.
 - Il parsing può legittimamente restituire `null` (nessuna ricetta riconosciuta) → 200 con corpo nullo, non un errore.
 
 ## 8. Output finale
@@ -111,9 +111,5 @@ Tutte delegano a `IRecipeAssistantManager` (`KinHubRecipeAssistantManager`). L'e
 - **Options Pattern** — `OpenAiOptions` (endpoint, api key, deployment, prompt) da configurazione. *Correttezza*: nessun segreto/prompt hardcoded nel codice applicativo.
 
 - **DTO Pattern + Mapper** — record interni per il JSON dell'AI e modelli di dominio separati, con mapping esplicito (`MapToRecipe`, ecc.) e Mapster verso i DTO di risposta.
-
-# Anti-pattern
-
-- **Caricamento passi separato per `adapt`** — *File*: `KinHubRecipeAssistantManager.BuildAiRecipeAsync`. I passi della ricetta da adattare sono caricati con una chiamata separata rispetto agli ingredienti. *Problema*: in un contesto di adattamento su ricette con molti ingredienti/passi il numero di chiamate è ancora O(1) per ricetta singola, ma il pattern rimane inconsistente rispetto al batch usato per `suggest`. *Gravità*: bassa. *Direzione*: uniformare con un caricamento aggregato se il numero di ricette adattate in batch dovesse crescere.
 
 > I contenuti esatti dei system prompt e i nomi dei deployment del modello dipendono dalla configurazione e non sono deducibili con certezza dalla codebase analizzata.

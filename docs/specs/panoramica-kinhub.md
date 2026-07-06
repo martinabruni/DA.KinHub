@@ -52,7 +52,7 @@ Il codice sorgente vive sotto `src/` ed è raggruppato in sei famiglie di proget
 
 - **`src/Businesses/`** — il livello applicativo (use case).
   - `Kin.KinHub.Core.Business`, `Kin.KinHub.Identity.Business`, `Kin.KinHub.KinList.Business`
-  - Contiene handler di comando/query (es. `CreateFamilyHandler`, `RegisterUserHandler`), *application service* facciata (es. `KinHubFamilyService`, `KinHubAuthenticationService`, `KinListService`), i modelli di richiesta/risposta (DTO) e il tipo `Result<T>` con l'enum `ResultStatus` che rappresenta l'esito applicativo senza usare eccezioni per il controllo di flusso. I tipi base (`IResult`, `ResultStatus`) risiedono nel kernel condiviso (`Shared.Kernel`) e sono specializzati in ogni Business.
+  - Contiene handler di comando/query (es. `CreateFamilyHandler`, `RegisterUserHandler`), *application service* facciata dove aggiungono valore (es. `KinHubFamilyService`, `KinListService`; l'autenticazione invece invoca gli handler direttamente, senza facciata), i modelli di richiesta/risposta (DTO) e il tipo `Result<T>` con l'enum `ResultStatus` che rappresenta l'esito applicativo senza usare eccezioni per il controllo di flusso. I tipi base (`IResult`, `ResultStatus`) risiedono nel kernel condiviso (`Shared.Kernel`) e sono specializzati in ogni Business.
 
 - **`src/Infrastructures/`** — le implementazioni concrete delle interfacce di Domain/Business.
   - Persistenza: `Kin.KinHub.Core.PostgreSql`, `Kin.KinHub.Identity.PostgreSql`, `Kin.KinHub.KinList.PostgreSql` (EF Core + Npgsql, con `DbContext`, entità di persistenza separate dalle entità di dominio, e migrazioni).
@@ -77,7 +77,7 @@ Un punto architetturale importante: i tre contesti sono **fisicamente separati a
 
 - **Clean/Layered Architecture** con separazione Domain/Business/Infrastructure/Presentation (presente in modo netto e coerente).
 - **Repository Pattern** — interfacce nel Domain (`IRepository<TModel,TKey>` e repository specifici), implementazioni in `*.PostgreSql`. Nel Core esiste una base generica `PostgreSqlRepository<TEntity,TDomain,TKey>` che usa Mapster per mappare entità↔dominio.
-- **Application Service / Facade** — service come `KinHubFamilyService`, `KinHubAuthenticationService`, `KinListService` fanno da facciata verso un insieme di handler.
+- **Application Service / Facade** — service come `KinHubFamilyService` e `KinListService` fanno da facciata verso un insieme di handler. L'autenticazione **non** usa una facciata: i controller (`AuthController`, `OAuthController`) e `OAuthSessionManager` dipendono direttamente dagli handler (`IRegisterUserHandler`, `ILoginUserHandler`, …), evitando un passthrough senza logica.
 - **Command/Query Handler** — organizzazione per feature con cartelle `Commands/` e `Queries/` e handler dedicati (es. `CreateRecipeHandler`, `GetFamilyHandler`). **Non** è presente un vero *Mediator* (nessun MediatR): gli handler sono invocati direttamente dai service facciata, quindi il pattern CQRS/Mediator è solo parzialmente presente (separazione dei comandi ma senza dispatcher).
 - **Result Pattern** — `Result<T>` + `ResultStatus` (da `Shared.Kernel`) per veicolare successo/errore applicativo, poi tradotto in HTTP da `SharedHttpResultMapper` (centralizza il mapping comune) con specializzazioni per contesto (`HttpResultMapper`, `IdentityHttpResultMapper`, `KinListHttpResultMapper`).
 - **Transaction Executor** — `ICoreTransactionExecutor`/`EfCoreTransactionExecutor` (Core) e `IKinListTransactionExecutor`/`EfKinListTransactionExecutor` (KinList) avvolgono le scritture multi-entità in transazioni EF con execution strategy per retry automatico sui transitori di database.
@@ -86,7 +86,7 @@ Un punto architetturale importante: i tre contesti sono **fisicamente separati a
 - **Adapter** — `RemoteFamilyOwnershipService` adatta l'API Identity a `IFamilyOwnershipService`; gli SDK Azure sono incapsulati dietro interfacce (`IKinListSpeechTranscriber`, `IAudioProcessingBlobStorage`).
 - **Pipeline/Middleware** — middleware ASP.NET (`JwtAuthenticationMiddleware`) + handler di autorizzazione custom.
 - **Background Worker** — `AudioProcessingWorkerService` (BackgroundService che consuma una coda) e `IdempotencyRecordCleanupService` (pulizia periodica).
-- **Null Object** — implementazioni "Unavailable" (`UnavailableAudioProcessingQueue`, `UnavailableKinListAudioDraftGenerator`, `NoOpKinListTransactionExecutor`) registrate come default quando l'infrastruttura reale non è presente.
+- **Null Object** — implementazioni "Unavailable" (`UnavailableAudioProcessingQueue`, `UnavailableKinListAudioDraftGenerator`, `NoOpKinListTransactionExecutor`) registrate come default quando l'infrastruttura reale non è presente. Per il transaction executor un guard di avvio (`KinListTransactionExecutorGuard`) fa **fail-fast** se il NoOp resta attivo fuori da development, così il default non può causare mutazioni senza transazione in produzione.
 
 ## Configurazione, DI, logging, validazione, error handling, autorizzazione, persistenza, integrazioni
 
