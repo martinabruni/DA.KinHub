@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Kin.KinHub.Shared.Kernel</RootNamespace>
+    <AssemblyName>Kin.KinHub.Shared.Kernel</AssemblyName>
+  </PropertyGroup>
+</Project>
