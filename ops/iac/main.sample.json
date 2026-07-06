@@ -1,0 +1,201 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westeurope"
+    },
+    "staticWebAppLocation": {
+      "value": "westeurope"
+    },
+    "coreStaticWebAppName": {
+      "value": "kinhub-core-web-dev"
+    },
+    "identityStaticWebAppName": {
+      "value": "kinhub-identity-web-dev"
+    },
+    "kinRecipeStaticWebAppName": {
+      "value": "kinhub-kinrecipe-web-dev"
+    },
+    "kinListStaticWebAppName": {
+      "value": "kinhub-kinlist-web-dev"
+    },
+    "containerAppsEnvironmentName": {
+      "value": "kinhub-apps-dev"
+    },
+    "identityContainerAppName": {
+      "value": "kinhub-identity-api-dev"
+    },
+    "kinRecipeContainerAppName": {
+      "value": "kinhub-kinrecipe-api-dev"
+    },
+    "kinListContainerAppName": {
+      "value": "kinhub-kinlist-api-dev"
+    },
+    "kinListAudioWorkerContainerAppName": {
+      "value": "kinhub-kinlist-audio-worker-dev"
+    },
+    "kinListMigrationJobName": {
+      "value": "kinhub-kinlist-migrations-dev"
+    },
+    "coreFrontendOrigin": {
+      "value": "https://core-dev.example.com"
+    },
+    "identityFrontendOrigin": {
+      "value": "https://identity-dev.example.com"
+    },
+    "kinRecipeFrontendOrigin": {
+      "value": "https://kinrecipe-dev.example.com"
+    },
+    "kinListFrontendOrigin": {
+      "value": "https://kinlist-dev.example.com"
+    },
+    "applicationInsightsName": {
+      "value": "kinhub-ai-dev"
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "kinhub-logs-dev"
+    },
+    "keyVaultName": {
+      "value": "kinhub-kv-dev"
+    },
+    "postgresServerName": {
+      "value": "kinhub-pg-dev"
+    },
+    "postgresDatabaseName": {
+      "value": "kinhub"
+    },
+    "postgresAdministratorLogin": {
+      "value": "kinhubadmin"
+    },
+    "postgresAdministratorPassword": {
+      "value": "<set-secure-postgres-password>"
+    },
+    "openAiAccountName": {
+      "value": "kinhub-openai-dev"
+    },
+    "openAiSkuName": {
+      "value": "S0"
+    },
+    "speechAccountName": {
+      "value": "kinhub-speech-dev"
+    },
+    "speechSkuName": {
+      "value": "S0"
+    },
+    "kinListOpenAiModelDeploymentName": {
+      "value": "gpt-4o-mini"
+    },
+    "kinListSpeechCandidateLocales": {
+      "value": [
+        "it-IT",
+        "en-US",
+        "en-GB",
+        "fr-FR",
+        "de-DE",
+        "es-ES"
+      ]
+    },
+    "jwtSecret": {
+      "value": "<set-secure-jwt-secret>"
+    },
+    "jwtIssuer": {
+      "value": "kinhub"
+    },
+    "jwtAccessTokenExpiryMinutes": {
+      "value": "15"
+    },
+    "jwtRefreshTokenExpiryDays": {
+      "value": "7"
+    },
+    "ghcrServer": {
+      "value": "ghcr.io"
+    },
+    "ghcrUsername": {
+      "value": "<set-ghcr-username>"
+    },
+    "ghcrPassword": {
+      "value": "<set-ghcr-pat>"
+    },
+    "identityImage": {
+      "value": "ghcr.io/example/kinhub-identity:latest"
+    },
+    "kinRecipeImage": {
+      "value": "ghcr.io/example/kinhub-kinrecipe:latest"
+    },
+    "kinListImage": {
+      "value": "ghcr.io/example/kinhub-kinlist:latest"
+    },
+    "kinListAudioWorkerImage": {
+      "value": "ghcr.io/example/kinhub-kinlist-audio-worker:latest"
+    },
+    "kinListMigrationImage": {
+      "value": "ghcr.io/example/kinhub-kinlist-migrations:latest"
+    },
+    "familyContextApiTimeoutSeconds": {
+      "value": "10"
+    },
+    "kinListMaxTitleLength": {
+      "value": "100"
+    },
+    "kinListMaxItemLength": {
+      "value": "200"
+    },
+    "kinListMaxItemsPerList": {
+      "value": "100"
+    },
+    "kinListMaxItemsPerBulkConfirm": {
+      "value": "50"
+    },
+    "kinListIdempotencyRetentionHours": {
+      "value": "24"
+    },
+    "kinListIdempotencyCleanupIntervalMinutes": {
+      "value": "60"
+    },
+    "kinListMaxAudioDurationSeconds": {
+      "value": "60"
+    },
+    "kinListMaxAudioBytes": {
+      "value": "10485760"
+    },
+    "kinListAudioProcessingTimeoutSeconds": {
+      "value": "30"
+    },
+    "kinListAudioUploadSasTtlMinutes": {
+      "value": "10"
+    },
+    "kinListAudioOperationRetentionHours": {
+      "value": "24"
+    },
+    "kinListAudioPollingRetryAfterSeconds": {
+      "value": "2"
+    },
+    "kinListAudioProcessingMaxDequeues": {
+      "value": "5"
+    },
+    "kinListTransientRetryMaxAttempts": {
+      "value": "3"
+    },
+    "kinListTransientRetryBaseDelayMilliseconds": {
+      "value": "250"
+    },
+    "kinListTransientRetryMaxDelayMilliseconds": {
+      "value": "5000"
+    },
+    "kinListAllowedAudioMimeTypes": {
+      "value": [
+        "audio/webm",
+        "video/webm",
+        "audio/mp4",
+        "audio/x-m4a",
+        "audio/m4a",
+        "audio/ogg",
+        "application/ogg"
+      ]
+    },
+    "kinListAudioStorageAccountName": {
+      "value": "kinhubaudiodev"
+    }
+  }
+}

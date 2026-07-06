@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "15565902414522215841"
+      "templateHash": "13656841457728156737"
     }
   },
   "parameters": {
@@ -34,6 +34,12 @@
         "description": "Name of the KinList API Container App."
       }
     },
+    "kinListAudioWorkerContainerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the KinList audio worker Container App."
+      }
+    },
     "kinListMigrationJobName": {
       "type": "string",
       "metadata": {
@@ -46,6 +52,12 @@
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-01-31",
       "name": "[format('{0}-identity', parameters('kinListContainerAppName'))]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))]",
       "location": "[parameters('location')]"
     },
     {
@@ -71,6 +83,10 @@
     "kinListIdentityId": {
       "type": "string",
       "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
+    },
+    "kinListAudioWorkerIdentityId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName')))]"
     },
     "kinListMigrationIdentityId": {
       "type": "string",

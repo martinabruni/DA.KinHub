@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "8741522272078924387"
+      "templateHash": "11634507180333004417"
     }
   },
   "parameters": {
@@ -69,6 +69,12 @@
       "type": "string",
       "metadata": {
         "description": "KinList backend container app name."
+      }
+    },
+    "kinListAudioWorkerContainerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "KinList audio worker container app name."
       }
     },
     "kinListMigrationJobName": {
@@ -240,6 +246,34 @@
         "description": "Container registry password or PAT used by Container Apps to pull private images."
       }
     },
+    "staticSitesRepositoryUrl": {
+      "type": "string",
+      "defaultValue": "https://github.com/martinabruni/Kin.KinHub",
+      "metadata": {
+        "description": "Source repository URL connected to the Static Web Apps."
+      }
+    },
+    "staticSitesProvider": {
+      "type": "string",
+      "defaultValue": "GitHub",
+      "metadata": {
+        "description": "Source control provider connected to the Static Web Apps."
+      }
+    },
+    "staticSitesBranch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "Source branch connected to the Static Web Apps."
+      }
+    },
+    "staticSitesDeploymentAuthPolicy": {
+      "type": "string",
+      "defaultValue": "DeploymentToken",
+      "metadata": {
+        "description": "Deployment auth policy for the Static Web Apps."
+      }
+    },
     "identityImage": {
       "type": "string",
       "minLength": 1,
@@ -259,6 +293,13 @@
       "minLength": 1,
       "metadata": {
         "description": "Full image reference for the KinList backend."
+      }
+    },
+    "kinListAudioWorkerImage": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Full image reference for the KinList audio worker."
       }
     },
     "kinListMigrationImage": {
@@ -338,6 +379,34 @@
         "description": "KinList audio processing timeout in seconds."
       }
     },
+    "kinListAudioUploadSasTtlMinutes": {
+      "type": "string",
+      "defaultValue": "10",
+      "metadata": {
+        "description": "KinList upload SAS TTL in minutes."
+      }
+    },
+    "kinListAudioOperationRetentionHours": {
+      "type": "string",
+      "defaultValue": "24",
+      "metadata": {
+        "description": "KinList audio operation retention in hours."
+      }
+    },
+    "kinListAudioPollingRetryAfterSeconds": {
+      "type": "string",
+      "defaultValue": "2",
+      "metadata": {
+        "description": "KinList audio polling retry-after in seconds."
+      }
+    },
+    "kinListAudioProcessingMaxDequeues": {
+      "type": "string",
+      "defaultValue": "5",
+      "metadata": {
+        "description": "KinList audio processing max dequeue count."
+      }
+    },
     "kinListTransientRetryMaxAttempts": {
       "type": "string",
       "defaultValue": "3",
@@ -373,6 +442,12 @@
       "metadata": {
         "description": "KinList allowed audio MIME types accepted by the API."
       }
+    },
+    "kinListAudioStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage account name dedicated to KinList audio."
+      }
     }
   },
   "variables": {
@@ -384,7 +459,15 @@
     "speechKeySecretName": "speech-key",
     "ghcrUsernameSecretName": "ghcr-username",
     "ghcrPasswordSecretName": "ghcr-password",
-    "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6"
+    "kinListAudioContainerName": "kinlist-audio",
+    "kinListAudioProcessingQueueName": "kinlist-audio-processing",
+    "kinListAudioPoisonQueueName": "kinlist-audio-poison",
+    "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6",
+    "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+    "storageQueueDataContributorRoleId": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
+    "storageQueueDataMessageProcessorRoleId": "8a0f0c08-91a1-4084-bc3d-661d67233fed",
+    "cognitiveServicesUserRoleId": "a97b65f3-24c7-4388-baec-2e87135dc908",
+    "cognitiveServicesOpenAiUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
   },
   "resources": [
     {
@@ -647,7 +730,11 @@
       },
       "properties": {
         "allowConfigFileUpdates": true,
+        "branch": "[parameters('staticSitesBranch')]",
+        "deploymentAuthPolicy": "[parameters('staticSitesDeploymentAuthPolicy')]",
+        "provider": "[parameters('staticSitesProvider')]",
         "publicNetworkAccess": "Enabled",
+        "repositoryUrl": "[parameters('staticSitesRepositoryUrl')]",
         "stagingEnvironmentPolicy": "Disabled"
       }
     },
@@ -662,7 +749,11 @@
       },
       "properties": {
         "allowConfigFileUpdates": true,
+        "branch": "[parameters('staticSitesBranch')]",
+        "deploymentAuthPolicy": "[parameters('staticSitesDeploymentAuthPolicy')]",
+        "provider": "[parameters('staticSitesProvider')]",
         "publicNetworkAccess": "Enabled",
+        "repositoryUrl": "[parameters('staticSitesRepositoryUrl')]",
         "stagingEnvironmentPolicy": "Disabled"
       }
     },
@@ -677,7 +768,11 @@
       },
       "properties": {
         "allowConfigFileUpdates": true,
+        "branch": "[parameters('staticSitesBranch')]",
+        "deploymentAuthPolicy": "[parameters('staticSitesDeploymentAuthPolicy')]",
+        "provider": "[parameters('staticSitesProvider')]",
         "publicNetworkAccess": "Enabled",
+        "repositoryUrl": "[parameters('staticSitesRepositoryUrl')]",
         "stagingEnvironmentPolicy": "Disabled"
       }
     },
@@ -692,7 +787,11 @@
       },
       "properties": {
         "allowConfigFileUpdates": true,
+        "branch": "[parameters('staticSitesBranch')]",
+        "deploymentAuthPolicy": "[parameters('staticSitesDeploymentAuthPolicy')]",
+        "provider": "[parameters('staticSitesProvider')]",
         "publicNetworkAccess": "Enabled",
+        "repositoryUrl": "[parameters('staticSitesRepositoryUrl')]",
         "stagingEnvironmentPolicy": "Disabled"
       }
     },
@@ -726,6 +825,102 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('kinListAudioStorageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "allowBlobPublicAccess": false,
+        "minimumTlsVersion": "TLS1_2",
+        "publicNetworkAccess": "Enabled",
+        "supportsHttpsTrafficOnly": true,
+        "accessTier": "Hot"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('kinListAudioStorageAccountName'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('kinListAudioStorageAccountName'), 'default', variables('kinListAudioContainerName'))]",
+      "properties": {
+        "publicAccess": "None"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('kinListAudioStorageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/managementPolicies",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('kinListAudioStorageAccountName'), 'default')]",
+      "properties": {
+        "policy": {
+          "rules": [
+            {
+              "name": "DeleteExpiredKinListAudioBlobs",
+              "enabled": true,
+              "type": "Lifecycle",
+              "definition": {
+                "filters": {
+                  "blobTypes": [
+                    "blockBlob"
+                  ],
+                  "prefixMatch": [
+                    "[format('{0}/', variables('kinListAudioContainerName'))]"
+                  ]
+                },
+                "actions": {
+                  "baseBlob": {
+                    "delete": {
+                      "daysAfterModificationGreaterThan": 1
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('kinListAudioStorageAccountName'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('kinListAudioStorageAccountName'), 'default', variables('kinListAudioProcessingQueueName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/queueServices', parameters('kinListAudioStorageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('kinListAudioStorageAccountName'), 'default', variables('kinListAudioPoisonQueueName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/queueServices', parameters('kinListAudioStorageAccountName'), 'default')]"
       ]
     },
     {
@@ -1070,8 +1265,8 @@
                   "secretRef": "openai-endpoint"
                 },
                 {
-                  "name": "OpenAi__ApiKey",
-                  "secretRef": "openai-key"
+                  "name": "OpenAi__UseManagedIdentity",
+                  "value": "true"
                 },
                 {
                   "name": "OpenAi__EmbeddingDeploymentName",
@@ -1222,18 +1417,8 @@
               "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
             },
             {
-              "name": "openai-key",
-              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('openAiKeySecretName')), '2023-07-01').secretUri]",
-              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
-            },
-            {
               "name": "speech-endpoint",
               "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('speechEndpointSecretName')), '2023-07-01').secretUri]",
-              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
-            },
-            {
-              "name": "speech-key",
-              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('speechKeySecretName')), '2023-07-01').secretUri]",
               "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
             },
             {
@@ -1248,7 +1433,7 @@
             {
               "name": "kinlist",
               "image": "[parameters('kinListImage')]",
-              "env": "[concat(createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString), createObject('name', 'ASPNETCORE_URLS', 'value', 'http://+:8080'), createObject('name', 'ConnectionStrings__KinHub', 'secretRef', 'db-connection-string'), createObject('name', 'Jwt__Secret', 'secretRef', 'jwt-secret'), createObject('name', 'Jwt__Issuer', 'value', parameters('jwtIssuer')), createObject('name', 'Jwt__Audience', 'value', 'kinhub.api'), createObject('name', 'Jwt__AccessTokenExpiryMinutes', 'value', parameters('jwtAccessTokenExpiryMinutes')), createObject('name', 'Jwt__RefreshTokenExpiryDays', 'value', parameters('jwtRefreshTokenExpiryDays')), createObject('name', 'FamilyContextApi__BaseUrl', 'value', format('https://{0}.{1}', parameters('identityContainerAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2024-03-01').defaultDomain)), createObject('name', 'FamilyContextApi__TimeoutSeconds', 'value', parameters('familyContextApiTimeoutSeconds')), createObject('name', 'OpenAi__Endpoint', 'secretRef', 'openai-endpoint'), createObject('name', 'OpenAi__ApiKey', 'secretRef', 'openai-key'), createObject('name', 'OpenAi__ModelDeploymentName', 'value', parameters('kinListOpenAiModelDeploymentName')), createObject('name', 'Speech__Endpoint', 'secretRef', 'speech-endpoint'), createObject('name', 'Speech__ApiKey', 'secretRef', 'speech-key'), createObject('name', 'KinList__MaxTitleLength', 'value', parameters('kinListMaxTitleLength')), createObject('name', 'KinList__MaxItemLength', 'value', parameters('kinListMaxItemLength')), createObject('name', 'KinList__MaxItemsPerList', 'value', parameters('kinListMaxItemsPerList')), createObject('name', 'KinList__MaxItemsPerBulkConfirm', 'value', parameters('kinListMaxItemsPerBulkConfirm')), createObject('name', 'KinList__IdempotencyRetentionHours', 'value', parameters('kinListIdempotencyRetentionHours')), createObject('name', 'KinList__IdempotencyCleanupIntervalMinutes', 'value', parameters('kinListIdempotencyCleanupIntervalMinutes')), createObject('name', 'KinList__MaxAudioDurationSeconds', 'value', parameters('kinListMaxAudioDurationSeconds')), createObject('name', 'KinList__MaxAudioBytes', 'value', parameters('kinListMaxAudioBytes')), createObject('name', 'KinList__AudioProcessingTimeoutSeconds', 'value', parameters('kinListAudioProcessingTimeoutSeconds')), createObject('name', 'KinList__TransientRetryMaxAttempts', 'value', parameters('kinListTransientRetryMaxAttempts')), createObject('name', 'KinList__TransientRetryBaseDelayMilliseconds', 'value', parameters('kinListTransientRetryBaseDelayMilliseconds')), createObject('name', 'KinList__TransientRetryMaxDelayMilliseconds', 'value', parameters('kinListTransientRetryMaxDelayMilliseconds')), createObject('name', 'Cors__AllowAnyOrigin', 'value', 'false')), map(range(0, length(createArray(parameters('coreFrontendOrigin'), parameters('identityFrontendOrigin'), parameters('kinRecipeFrontendOrigin'), parameters('kinListFrontendOrigin'), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinListStaticWebAppName')), '2024-04-01').defaultHostname)))), lambda('i', createObject('name', format('Cors__AllowedOrigins__{0}', lambdaVariables('i')), 'value', createArray(parameters('coreFrontendOrigin'), parameters('identityFrontendOrigin'), parameters('kinRecipeFrontendOrigin'), parameters('kinListFrontendOrigin'), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinListStaticWebAppName')), '2024-04-01').defaultHostname))[lambdaVariables('i')]))), map(range(0, length(parameters('kinListSpeechCandidateLocales'))), lambda('i', createObject('name', format('Speech__CandidateLocales__{0}', lambdaVariables('i')), 'value', parameters('kinListSpeechCandidateLocales')[lambdaVariables('i')]))), map(range(0, length(parameters('kinListAllowedAudioMimeTypes'))), lambda('i', createObject('name', format('KinList__AllowedAudioMimeTypes__{0}', lambdaVariables('i')), 'value', parameters('kinListAllowedAudioMimeTypes')[lambdaVariables('i')]))))]",
+              "env": "[concat(createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString), createObject('name', 'ASPNETCORE_URLS', 'value', 'http://+:8080'), createObject('name', 'ConnectionStrings__KinHub', 'secretRef', 'db-connection-string'), createObject('name', 'Jwt__Secret', 'secretRef', 'jwt-secret'), createObject('name', 'Jwt__Issuer', 'value', parameters('jwtIssuer')), createObject('name', 'Jwt__Audience', 'value', 'kinhub.api'), createObject('name', 'Jwt__AccessTokenExpiryMinutes', 'value', parameters('jwtAccessTokenExpiryMinutes')), createObject('name', 'Jwt__RefreshTokenExpiryDays', 'value', parameters('jwtRefreshTokenExpiryDays')), createObject('name', 'FamilyContextApi__BaseUrl', 'value', format('https://{0}.{1}', parameters('identityContainerAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2024-03-01').defaultDomain)), createObject('name', 'FamilyContextApi__TimeoutSeconds', 'value', parameters('familyContextApiTimeoutSeconds')), createObject('name', 'OpenAi__Endpoint', 'secretRef', 'openai-endpoint'), createObject('name', 'OpenAi__UseManagedIdentity', 'value', 'true'), createObject('name', 'OpenAi__ModelDeploymentName', 'value', parameters('kinListOpenAiModelDeploymentName')), createObject('name', 'Speech__Endpoint', 'secretRef', 'speech-endpoint'), createObject('name', 'Speech__UseManagedIdentity', 'value', 'true'), createObject('name', 'KinList__MaxTitleLength', 'value', parameters('kinListMaxTitleLength')), createObject('name', 'KinList__MaxItemLength', 'value', parameters('kinListMaxItemLength')), createObject('name', 'KinList__MaxItemsPerList', 'value', parameters('kinListMaxItemsPerList')), createObject('name', 'KinList__MaxItemsPerBulkConfirm', 'value', parameters('kinListMaxItemsPerBulkConfirm')), createObject('name', 'KinList__IdempotencyRetentionHours', 'value', parameters('kinListIdempotencyRetentionHours')), createObject('name', 'KinList__IdempotencyCleanupIntervalMinutes', 'value', parameters('kinListIdempotencyCleanupIntervalMinutes')), createObject('name', 'KinList__MaxAudioDurationSeconds', 'value', parameters('kinListMaxAudioDurationSeconds')), createObject('name', 'KinList__MaxAudioBytes', 'value', parameters('kinListMaxAudioBytes')), createObject('name', 'KinList__AudioProcessingTimeoutSeconds', 'value', parameters('kinListAudioProcessingTimeoutSeconds')), createObject('name', 'KinList__AudioUploadSasTtlMinutes', 'value', parameters('kinListAudioUploadSasTtlMinutes')), createObject('name', 'KinList__AudioOperationRetentionHours', 'value', parameters('kinListAudioOperationRetentionHours')), createObject('name', 'KinList__AudioPollingRetryAfterSeconds', 'value', parameters('kinListAudioPollingRetryAfterSeconds')), createObject('name', 'KinList__AudioProcessingMaxDequeues', 'value', parameters('kinListAudioProcessingMaxDequeues')), createObject('name', 'KinList__TransientRetryMaxAttempts', 'value', parameters('kinListTransientRetryMaxAttempts')), createObject('name', 'KinList__TransientRetryBaseDelayMilliseconds', 'value', parameters('kinListTransientRetryBaseDelayMilliseconds')), createObject('name', 'KinList__TransientRetryMaxDelayMilliseconds', 'value', parameters('kinListTransientRetryMaxDelayMilliseconds')), createObject('name', 'Cors__AllowAnyOrigin', 'value', 'false'), createObject('name', 'AudioStorage__BlobServiceUri', 'value', format('https://{0}.blob.{1}', parameters('kinListAudioStorageAccountName'), environment().suffixes.storage)), createObject('name', 'AudioStorage__QueueServiceUri', 'value', format('https://{0}.queue.{1}', parameters('kinListAudioStorageAccountName'), environment().suffixes.storage)), createObject('name', 'AudioStorage__ContainerName', 'value', variables('kinListAudioContainerName')), createObject('name', 'AudioStorage__ProcessingQueueName', 'value', variables('kinListAudioProcessingQueueName')), createObject('name', 'AudioStorage__PoisonQueueName', 'value', variables('kinListAudioPoisonQueueName'))), map(range(0, length(createArray(parameters('coreFrontendOrigin'), parameters('identityFrontendOrigin'), parameters('kinRecipeFrontendOrigin'), parameters('kinListFrontendOrigin'), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinListStaticWebAppName')), '2024-04-01').defaultHostname)))), lambda('i', createObject('name', format('Cors__AllowedOrigins__{0}', lambdaVariables('i')), 'value', createArray(parameters('coreFrontendOrigin'), parameters('identityFrontendOrigin'), parameters('kinRecipeFrontendOrigin'), parameters('kinListFrontendOrigin'), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('coreStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName')), '2024-04-01').defaultHostname), format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('kinListStaticWebAppName')), '2024-04-01').defaultHostname))[lambdaVariables('i')]))), map(range(0, length(parameters('kinListSpeechCandidateLocales'))), lambda('i', createObject('name', format('Speech__CandidateLocales__{0}', lambdaVariables('i')), 'value', parameters('kinListSpeechCandidateLocales')[lambdaVariables('i')]))), map(range(0, length(parameters('kinListAllowedAudioMimeTypes'))), lambda('i', createObject('name', format('KinList__AllowedAudioMimeTypes__{0}', lambdaVariables('i')), 'value', parameters('kinListAllowedAudioMimeTypes')[lambdaVariables('i')]))))]",
               "probes": [
                 {
                   "type": "Liveness",
@@ -1279,13 +1464,220 @@
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('ghcrPasswordSecretName'))]",
         "[resourceId('Microsoft.Web/staticSites', parameters('identityStaticWebAppName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('jwtSecretSecretName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]",
         "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('keyVaultSecretsUserRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('cognitiveServicesOpenAiUserRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('cognitiveServicesUserRoleId')))]",
         "[resourceId('Microsoft.Web/staticSites', parameters('kinListStaticWebAppName'))]",
+        "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('storageBlobDataContributorRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('storageQueueDataContributorRoleId')))]",
         "[resourceId('Microsoft.Web/staticSites', parameters('kinRecipeStaticWebAppName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('openAiEndpointSecretName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('openAiKeySecretName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('speechEndpointSecretName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('speechKeySecretName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('keyVaultSecretsUserRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('storageBlobDataContributorRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('storageQueueDataContributorRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageQueueDataContributorRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('storageBlobDataContributorRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('storageQueueDataMessageProcessorRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageQueueDataMessageProcessorRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('cognitiveServicesUserRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), variables('cognitiveServicesOpenAiUserRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAiUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('cognitiveServicesUserRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('cognitiveServicesOpenAiUserRoleId'))]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAiUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('kinListAudioWorkerContainerAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[parameters('ghcrServer')]",
+              "username": "[parameters('ghcrUsername')]",
+              "passwordSecretRef": "ghcr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "db-connection-string",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('sqlConnectionStringSecretName')), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName')))]"
+            },
+            {
+              "name": "openai-endpoint",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('openAiEndpointSecretName')), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName')))]"
+            },
+            {
+              "name": "speech-endpoint",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('speechEndpointSecretName')), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName')))]"
+            },
+            {
+              "name": "ghcr-password",
+              "keyVaultUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('ghcrPasswordSecretName')), '2023-07-01').secretUri]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName')))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "kinlist-audio-worker",
+              "image": "[parameters('kinListAudioWorkerImage')]",
+              "env": "[concat(createArray(createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2020-02-02').ConnectionString), createObject('name', 'ConnectionStrings__KinHub', 'secretRef', 'db-connection-string'), createObject('name', 'OpenAi__Endpoint', 'secretRef', 'openai-endpoint'), createObject('name', 'OpenAi__UseManagedIdentity', 'value', 'true'), createObject('name', 'OpenAi__ModelDeploymentName', 'value', parameters('kinListOpenAiModelDeploymentName')), createObject('name', 'Speech__Endpoint', 'secretRef', 'speech-endpoint'), createObject('name', 'Speech__UseManagedIdentity', 'value', 'true'), createObject('name', 'AudioStorage__BlobServiceUri', 'value', format('https://{0}.blob.{1}', parameters('kinListAudioStorageAccountName'), environment().suffixes.storage)), createObject('name', 'AudioStorage__QueueServiceUri', 'value', format('https://{0}.queue.{1}', parameters('kinListAudioStorageAccountName'), environment().suffixes.storage)), createObject('name', 'AudioStorage__ContainerName', 'value', variables('kinListAudioContainerName')), createObject('name', 'AudioStorage__ProcessingQueueName', 'value', variables('kinListAudioProcessingQueueName')), createObject('name', 'AudioStorage__PoisonQueueName', 'value', variables('kinListAudioPoisonQueueName')), createObject('name', 'KinList__MaxTitleLength', 'value', parameters('kinListMaxTitleLength')), createObject('name', 'KinList__MaxItemLength', 'value', parameters('kinListMaxItemLength')), createObject('name', 'KinList__MaxItemsPerList', 'value', parameters('kinListMaxItemsPerList')), createObject('name', 'KinList__MaxItemsPerBulkConfirm', 'value', parameters('kinListMaxItemsPerBulkConfirm')), createObject('name', 'KinList__IdempotencyRetentionHours', 'value', parameters('kinListIdempotencyRetentionHours')), createObject('name', 'KinList__IdempotencyCleanupIntervalMinutes', 'value', parameters('kinListIdempotencyCleanupIntervalMinutes')), createObject('name', 'KinList__MaxAudioDurationSeconds', 'value', parameters('kinListMaxAudioDurationSeconds')), createObject('name', 'KinList__MaxAudioBytes', 'value', parameters('kinListMaxAudioBytes')), createObject('name', 'KinList__AudioProcessingTimeoutSeconds', 'value', parameters('kinListAudioProcessingTimeoutSeconds')), createObject('name', 'KinList__AudioUploadSasTtlMinutes', 'value', parameters('kinListAudioUploadSasTtlMinutes')), createObject('name', 'KinList__AudioOperationRetentionHours', 'value', parameters('kinListAudioOperationRetentionHours')), createObject('name', 'KinList__AudioPollingRetryAfterSeconds', 'value', parameters('kinListAudioPollingRetryAfterSeconds')), createObject('name', 'KinList__AudioProcessingMaxDequeues', 'value', parameters('kinListAudioProcessingMaxDequeues')), createObject('name', 'KinList__TransientRetryMaxAttempts', 'value', parameters('kinListTransientRetryMaxAttempts')), createObject('name', 'KinList__TransientRetryBaseDelayMilliseconds', 'value', parameters('kinListTransientRetryBaseDelayMilliseconds')), createObject('name', 'KinList__TransientRetryMaxDelayMilliseconds', 'value', parameters('kinListTransientRetryMaxDelayMilliseconds'))), map(range(0, length(parameters('kinListSpeechCandidateLocales'))), lambda('i', createObject('name', format('Speech__CandidateLocales__{0}', lambdaVariables('i')), 'value', parameters('kinListSpeechCandidateLocales')[lambdaVariables('i')]))), map(range(0, length(parameters('kinListAllowedAudioMimeTypes'))), lambda('i', createObject('name', format('KinList__AllowedAudioMimeTypes__{0}', lambdaVariables('i')), 'value', parameters('kinListAllowedAudioMimeTypes')[lambdaVariables('i')]))))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1.0Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 1
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('ghcrPasswordSecretName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName'))]",
+        "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('keyVaultSecretsUserRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('cognitiveServicesOpenAiUserRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('cognitiveServicesUserRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('storageBlobDataContributorRoleId')))]",
+        "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('kinListAudioStorageAccountName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))), variables('storageQueueDataMessageProcessorRoleId')))]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('openAiEndpointSecretName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('speechEndpointSecretName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('sqlConnectionStringSecretName'))]"
       ]
     },

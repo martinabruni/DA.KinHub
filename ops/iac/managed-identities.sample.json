@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westeurope"
+    },
+    "identityContainerAppName": {
+      "value": "kinhub-identity-api-dev"
+    },
+    "kinRecipeContainerAppName": {
+      "value": "kinhub-kinrecipe-api-dev"
+    },
+    "kinListContainerAppName": {
+      "value": "kinhub-kinlist-api-dev"
+    },
+    "kinListAudioWorkerContainerAppName": {
+      "value": "kinhub-kinlist-audio-worker-dev"
+    },
+    "kinListMigrationJobName": {
+      "value": "kinhub-kinlist-migrations-dev"
+    }
+  }
+}

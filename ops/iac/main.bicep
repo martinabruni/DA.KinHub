@@ -30,6 +30,9 @@ param kinRecipeContainerAppName string
 @description('KinList backend container app name.')
 param kinListContainerAppName string
 
+@description('KinList audio worker container app name.')
+param kinListAudioWorkerContainerAppName string
+
 @description('KinList expand/contract migration Container Apps Job name.')
 param kinListMigrationJobName string
 
@@ -119,6 +122,18 @@ param ghcrUsername string
 @minLength(1)
 param ghcrPassword string
 
+@description('Source repository URL connected to the Static Web Apps.')
+param staticSitesRepositoryUrl string = 'https://github.com/martinabruni/Kin.KinHub'
+
+@description('Source control provider connected to the Static Web Apps.')
+param staticSitesProvider string = 'GitHub'
+
+@description('Source branch connected to the Static Web Apps.')
+param staticSitesBranch string = 'main'
+
+@description('Deployment auth policy for the Static Web Apps.')
+param staticSitesDeploymentAuthPolicy string = 'DeploymentToken'
+
 @description('Full image reference for the Identity backend.')
 @minLength(1)
 param identityImage string
@@ -130,6 +145,10 @@ param kinRecipeImage string
 @description('Full image reference for the KinList backend.')
 @minLength(1)
 param kinListImage string
+
+@description('Full image reference for the KinList audio worker.')
+@minLength(1)
+param kinListAudioWorkerImage string
 
 @description('Full image reference for the KinList expand/contract migration job (owned by t06-mig).')
 @minLength(1)
@@ -165,6 +184,18 @@ param kinListMaxAudioBytes string = '10485760'
 @description('KinList audio processing timeout in seconds.')
 param kinListAudioProcessingTimeoutSeconds string = '30'
 
+@description('KinList upload SAS TTL in minutes.')
+param kinListAudioUploadSasTtlMinutes string = '10'
+
+@description('KinList audio operation retention in hours.')
+param kinListAudioOperationRetentionHours string = '24'
+
+@description('KinList audio polling retry-after in seconds.')
+param kinListAudioPollingRetryAfterSeconds string = '2'
+
+@description('KinList audio processing max dequeue count.')
+param kinListAudioProcessingMaxDequeues string = '5'
+
 @description('KinList transient retry maximum attempts.')
 param kinListTransientRetryMaxAttempts string = '3'
 
@@ -185,6 +216,9 @@ param kinListAllowedAudioMimeTypes array = [
   'application/ogg'
 ]
 
+@description('Storage account name dedicated to KinList audio.')
+param kinListAudioStorageAccountName string
+
 var postgresConnectionString = 'Server=${postgresServer.properties.fullyQualifiedDomainName};Database=${postgresDatabaseName};Port=5432;User Id=${postgresAdministratorLogin};Password=${postgresAdministratorPassword};Ssl Mode=Require;'
 var sqlConnectionStringSecretName = 'database-connection-string'
 var jwtSecretSecretName = 'jwt-secret'
@@ -194,9 +228,17 @@ var speechEndpointSecretName = 'speech-endpoint'
 var speechKeySecretName = 'speech-key'
 var ghcrUsernameSecretName = 'ghcr-username'
 var ghcrPasswordSecretName = 'ghcr-password'
+var kinListAudioContainerName = 'kinlist-audio'
+var kinListAudioProcessingQueueName = 'kinlist-audio-processing'
+var kinListAudioPoisonQueueName = 'kinlist-audio-poison'
 
 // Built-in Azure RBAC role definition IDs.
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+var storageQueueDataMessageProcessorRoleId = '8a0f0c08-91a1-4084-bc3d-661d67233fed'
+var cognitiveServicesUserRoleId = 'a97b65f3-24c7-4388-baec-2e87135dc908'
+var cognitiveServicesOpenAiUserRoleId = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 
 var kinListCorsAllowedOrigins = [
   coreFrontendOrigin
@@ -417,11 +459,15 @@ resource coreStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
     name: 'Standard'
     tier: 'Standard'
   }
-  properties: {
+  properties: any({
     allowConfigFileUpdates: true
+    branch: staticSitesBranch
+    deploymentAuthPolicy: staticSitesDeploymentAuthPolicy
+    provider: staticSitesProvider
     publicNetworkAccess: 'Enabled'
+    repositoryUrl: staticSitesRepositoryUrl
     stagingEnvironmentPolicy: 'Disabled'
-  }
+  })
 }
 
 resource identityStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
@@ -431,11 +477,15 @@ resource identityStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
     name: 'Standard'
     tier: 'Standard'
   }
-  properties: {
+  properties: any({
     allowConfigFileUpdates: true
+    branch: staticSitesBranch
+    deploymentAuthPolicy: staticSitesDeploymentAuthPolicy
+    provider: staticSitesProvider
     publicNetworkAccess: 'Enabled'
+    repositoryUrl: staticSitesRepositoryUrl
     stagingEnvironmentPolicy: 'Disabled'
-  }
+  })
 }
 
 resource kinRecipeStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
@@ -445,11 +495,15 @@ resource kinRecipeStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
     name: 'Standard'
     tier: 'Standard'
   }
-  properties: {
+  properties: any({
     allowConfigFileUpdates: true
+    branch: staticSitesBranch
+    deploymentAuthPolicy: staticSitesDeploymentAuthPolicy
+    provider: staticSitesProvider
     publicNetworkAccess: 'Enabled'
+    repositoryUrl: staticSitesRepositoryUrl
     stagingEnvironmentPolicy: 'Disabled'
-  }
+  })
 }
 
 resource kinListStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
@@ -459,11 +513,15 @@ resource kinListStaticWebApp 'Microsoft.Web/staticSites@2024-04-01' = {
     name: 'Standard'
     tier: 'Standard'
   }
-  properties: {
+  properties: any({
     allowConfigFileUpdates: true
+    branch: staticSitesBranch
+    deploymentAuthPolicy: staticSitesDeploymentAuthPolicy
+    provider: staticSitesProvider
     publicNetworkAccess: 'Enabled'
+    repositoryUrl: staticSitesRepositoryUrl
     stagingEnvironmentPolicy: 'Disabled'
-  }
+  })
 }
 
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -496,6 +554,83 @@ resource identityKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@20
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
   }
+}
+
+resource kinListAudioStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: kinListAudioStorageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    allowBlobPublicAccess: false
+    minimumTlsVersion: 'TLS1_2'
+    publicNetworkAccess: 'Enabled'
+    supportsHttpsTrafficOnly: true
+    accessTier: 'Hot'
+  }
+}
+
+resource kinListAudioBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: kinListAudioStorageAccount
+  name: 'default'
+}
+
+resource kinListAudioBlobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: kinListAudioBlobService
+  name: kinListAudioContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+resource kinListAudioManagementPolicy 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-01' = {
+  parent: kinListAudioStorageAccount
+  name: 'default'
+  properties: {
+    policy: {
+      rules: [
+        {
+          name: 'DeleteExpiredKinListAudioBlobs'
+          enabled: true
+          type: 'Lifecycle'
+          definition: {
+            filters: {
+              blobTypes: [
+                'blockBlob'
+              ]
+              prefixMatch: [
+                '${kinListAudioContainerName}/'
+              ]
+            }
+            actions: {
+              baseBlob: {
+                delete: {
+                  daysAfterModificationGreaterThan: 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+resource kinListAudioQueueService 'Microsoft.Storage/storageAccounts/queueServices@2023-05-01' = {
+  parent: kinListAudioStorageAccount
+  name: 'default'
+}
+
+resource kinListAudioProcessingQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
+  parent: kinListAudioQueueService
+  name: kinListAudioProcessingQueueName
+}
+
+resource kinListAudioPoisonQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
+  parent: kinListAudioQueueService
+  name: kinListAudioPoisonQueueName
 }
 
 resource kinRecipeKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -827,8 +962,8 @@ resource kinRecipeContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               secretRef: 'openai-endpoint'
             }
             {
-              name: 'OpenAi__ApiKey'
-              secretRef: 'openai-key'
+              name: 'OpenAi__UseManagedIdentity'
+              value: 'true'
             }
             {
               name: 'OpenAi__EmbeddingDeploymentName'
@@ -899,6 +1034,10 @@ resource kinListIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   name: '${kinListContainerAppName}-identity'
 }
 
+resource kinListAudioWorkerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: '${kinListAudioWorkerContainerAppName}-identity'
+}
+
 resource kinListMigrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: '${kinListMigrationJobName}-identity'
 }
@@ -934,6 +1073,10 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
   dependsOn: [
     kinListKeyVaultSecretsUser
+    kinListStorageBlobContributorForApi
+    kinListStorageQueueContributorForApi
+    kinListSpeechUserForApi
+    kinListOpenAiUserForApi
   ]
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
@@ -969,18 +1112,8 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
           identity: kinListIdentity.id
         }
         {
-          name: 'openai-key'
-          keyVaultUrl: openAiKeySecret.properties.secretUri
-          identity: kinListIdentity.id
-        }
-        {
           name: 'speech-endpoint'
           keyVaultUrl: speechEndpointSecret.properties.secretUri
-          identity: kinListIdentity.id
-        }
-        {
-          name: 'speech-key'
-          keyVaultUrl: speechKeySecret.properties.secretUri
           identity: kinListIdentity.id
         }
         {
@@ -1041,8 +1174,8 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               secretRef: 'openai-endpoint'
             }
             {
-              name: 'OpenAi__ApiKey'
-              secretRef: 'openai-key'
+              name: 'OpenAi__UseManagedIdentity'
+              value: 'true'
             }
             {
               name: 'OpenAi__ModelDeploymentName'
@@ -1053,8 +1186,8 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               secretRef: 'speech-endpoint'
             }
             {
-              name: 'Speech__ApiKey'
-              secretRef: 'speech-key'
+              name: 'Speech__UseManagedIdentity'
+              value: 'true'
             }
             {
               name: 'KinList__MaxTitleLength'
@@ -1093,6 +1226,22 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: kinListAudioProcessingTimeoutSeconds
             }
             {
+              name: 'KinList__AudioUploadSasTtlMinutes'
+              value: kinListAudioUploadSasTtlMinutes
+            }
+            {
+              name: 'KinList__AudioOperationRetentionHours'
+              value: kinListAudioOperationRetentionHours
+            }
+            {
+              name: 'KinList__AudioPollingRetryAfterSeconds'
+              value: kinListAudioPollingRetryAfterSeconds
+            }
+            {
+              name: 'KinList__AudioProcessingMaxDequeues'
+              value: kinListAudioProcessingMaxDequeues
+            }
+            {
               name: 'KinList__TransientRetryMaxAttempts'
               value: kinListTransientRetryMaxAttempts
             }
@@ -1107,6 +1256,26 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'Cors__AllowAnyOrigin'
               value: 'false'
+            }
+            {
+              name: 'AudioStorage__BlobServiceUri'
+              value: 'https://${kinListAudioStorageAccount.name}.blob.${environment().suffixes.storage}'
+            }
+            {
+              name: 'AudioStorage__QueueServiceUri'
+              value: 'https://${kinListAudioStorageAccount.name}.queue.${environment().suffixes.storage}'
+            }
+            {
+              name: 'AudioStorage__ContainerName'
+              value: kinListAudioContainerName
+            }
+            {
+              name: 'AudioStorage__ProcessingQueueName'
+              value: kinListAudioProcessingQueueName
+            }
+            {
+              name: 'AudioStorage__PoisonQueueName'
+              value: kinListAudioPoisonQueueName
             }
           ],
           map(range(0, length(kinListCorsAllowedOrigins)), i => {
@@ -1132,6 +1301,287 @@ resource kinListContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               periodSeconds: 30
             }
           ]
+          resources: {
+            cpu: json('0.5')
+            memory: '1.0Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+      }
+    }
+  }
+}
+
+resource kinListAudioWorkerKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault
+  name: guid(keyVault.id, kinListAudioWorkerIdentity.id, keyVaultSecretsUserRoleId)
+  properties: {
+    principalId: kinListAudioWorkerIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+  }
+}
+
+resource kinListStorageBlobContributorForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: kinListAudioStorageAccount
+  name: guid(kinListAudioStorageAccount.id, kinListIdentity.id, storageBlobDataContributorRoleId)
+  properties: {
+    principalId: kinListIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+  }
+}
+
+resource kinListStorageQueueContributorForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: kinListAudioStorageAccount
+  name: guid(kinListAudioStorageAccount.id, kinListIdentity.id, storageQueueDataContributorRoleId)
+  properties: {
+    principalId: kinListIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId)
+  }
+}
+
+resource kinListStorageBlobContributorForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: kinListAudioStorageAccount
+  name: guid(kinListAudioStorageAccount.id, kinListAudioWorkerIdentity.id, storageBlobDataContributorRoleId)
+  properties: {
+    principalId: kinListAudioWorkerIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+  }
+}
+
+resource kinListStorageQueueProcessorForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: kinListAudioStorageAccount
+  name: guid(kinListAudioStorageAccount.id, kinListAudioWorkerIdentity.id, storageQueueDataMessageProcessorRoleId)
+  properties: {
+    principalId: kinListAudioWorkerIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataMessageProcessorRoleId)
+  }
+}
+
+resource kinListSpeechUserForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: speechAccount
+  name: guid(speechAccount.id, kinListIdentity.id, cognitiveServicesUserRoleId)
+  properties: {
+    principalId: kinListIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
+  }
+}
+
+resource kinListOpenAiUserForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: openAiAccount
+  name: guid(openAiAccount.id, kinListIdentity.id, cognitiveServicesOpenAiUserRoleId)
+  properties: {
+    principalId: kinListIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAiUserRoleId)
+  }
+}
+
+resource kinListSpeechUserForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: speechAccount
+  name: guid(speechAccount.id, kinListAudioWorkerIdentity.id, cognitiveServicesUserRoleId)
+  properties: {
+    principalId: kinListAudioWorkerIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
+  }
+}
+
+resource kinListOpenAiUserForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: openAiAccount
+  name: guid(openAiAccount.id, kinListAudioWorkerIdentity.id, cognitiveServicesOpenAiUserRoleId)
+  properties: {
+    principalId: kinListAudioWorkerIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAiUserRoleId)
+  }
+}
+
+resource kinListAudioWorkerContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
+  name: kinListAudioWorkerContainerAppName
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${kinListAudioWorkerIdentity.id}': {}
+    }
+  }
+  dependsOn: [
+    kinListAudioWorkerKeyVaultSecretsUser
+    kinListStorageBlobContributorForWorker
+    kinListStorageQueueProcessorForWorker
+    kinListSpeechUserForWorker
+    kinListOpenAiUserForWorker
+  ]
+  properties: {
+    managedEnvironmentId: containerAppsEnvironment.id
+    configuration: {
+      activeRevisionsMode: 'Single'
+      registries: [
+        {
+          server: ghcrServer
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'db-connection-string'
+          keyVaultUrl: sqlConnectionStringSecret.properties.secretUri
+          identity: kinListAudioWorkerIdentity.id
+        }
+        {
+          name: 'openai-endpoint'
+          keyVaultUrl: openAiEndpointSecret.properties.secretUri
+          identity: kinListAudioWorkerIdentity.id
+        }
+        {
+          name: 'speech-endpoint'
+          keyVaultUrl: speechEndpointSecret.properties.secretUri
+          identity: kinListAudioWorkerIdentity.id
+        }
+        {
+          name: 'ghcr-password'
+          keyVaultUrl: ghcrPasswordSecret.properties.secretUri
+          identity: kinListAudioWorkerIdentity.id
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'kinlist-audio-worker'
+          image: kinListAudioWorkerImage
+          env: concat([
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsights.properties.ConnectionString
+            }
+            {
+              name: 'ConnectionStrings__KinHub'
+              secretRef: 'db-connection-string'
+            }
+            {
+              name: 'OpenAi__Endpoint'
+              secretRef: 'openai-endpoint'
+            }
+            {
+              name: 'OpenAi__UseManagedIdentity'
+              value: 'true'
+            }
+            {
+              name: 'OpenAi__ModelDeploymentName'
+              value: kinListOpenAiModelDeploymentName
+            }
+            {
+              name: 'Speech__Endpoint'
+              secretRef: 'speech-endpoint'
+            }
+            {
+              name: 'Speech__UseManagedIdentity'
+              value: 'true'
+            }
+            {
+              name: 'AudioStorage__BlobServiceUri'
+              value: 'https://${kinListAudioStorageAccount.name}.blob.${environment().suffixes.storage}'
+            }
+            {
+              name: 'AudioStorage__QueueServiceUri'
+              value: 'https://${kinListAudioStorageAccount.name}.queue.${environment().suffixes.storage}'
+            }
+            {
+              name: 'AudioStorage__ContainerName'
+              value: kinListAudioContainerName
+            }
+            {
+              name: 'AudioStorage__ProcessingQueueName'
+              value: kinListAudioProcessingQueueName
+            }
+            {
+              name: 'AudioStorage__PoisonQueueName'
+              value: kinListAudioPoisonQueueName
+            }
+            {
+              name: 'KinList__MaxTitleLength'
+              value: kinListMaxTitleLength
+            }
+            {
+              name: 'KinList__MaxItemLength'
+              value: kinListMaxItemLength
+            }
+            {
+              name: 'KinList__MaxItemsPerList'
+              value: kinListMaxItemsPerList
+            }
+            {
+              name: 'KinList__MaxItemsPerBulkConfirm'
+              value: kinListMaxItemsPerBulkConfirm
+            }
+            {
+              name: 'KinList__IdempotencyRetentionHours'
+              value: kinListIdempotencyRetentionHours
+            }
+            {
+              name: 'KinList__IdempotencyCleanupIntervalMinutes'
+              value: kinListIdempotencyCleanupIntervalMinutes
+            }
+            {
+              name: 'KinList__MaxAudioDurationSeconds'
+              value: kinListMaxAudioDurationSeconds
+            }
+            {
+              name: 'KinList__MaxAudioBytes'
+              value: kinListMaxAudioBytes
+            }
+            {
+              name: 'KinList__AudioProcessingTimeoutSeconds'
+              value: kinListAudioProcessingTimeoutSeconds
+            }
+            {
+              name: 'KinList__AudioUploadSasTtlMinutes'
+              value: kinListAudioUploadSasTtlMinutes
+            }
+            {
+              name: 'KinList__AudioOperationRetentionHours'
+              value: kinListAudioOperationRetentionHours
+            }
+            {
+              name: 'KinList__AudioPollingRetryAfterSeconds'
+              value: kinListAudioPollingRetryAfterSeconds
+            }
+            {
+              name: 'KinList__AudioProcessingMaxDequeues'
+              value: kinListAudioProcessingMaxDequeues
+            }
+            {
+              name: 'KinList__TransientRetryMaxAttempts'
+              value: kinListTransientRetryMaxAttempts
+            }
+            {
+              name: 'KinList__TransientRetryBaseDelayMilliseconds'
+              value: kinListTransientRetryBaseDelayMilliseconds
+            }
+            {
+              name: 'KinList__TransientRetryMaxDelayMilliseconds'
+              value: kinListTransientRetryMaxDelayMilliseconds
+            }
+          ],
+          map(range(0, length(kinListSpeechCandidateLocales)), i => {
+            name: 'Speech__CandidateLocales__${i}'
+            value: kinListSpeechCandidateLocales[i]
+          }),
+          map(range(0, length(kinListAllowedAudioMimeTypes)), i => {
+            name: 'KinList__AllowedAudioMimeTypes__${i}'
+            value: kinListAllowedAudioMimeTypes[i]
+          }))
           resources: {
             cpu: json('0.5')
             memory: '1.0Gi'
