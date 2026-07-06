@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Identity.Domain\Kin.KinHub.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.AzureStorage\Kin.KinHub.KinList.AzureStorage.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
     <ProjectReference Include="..\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
   </ItemGroup>

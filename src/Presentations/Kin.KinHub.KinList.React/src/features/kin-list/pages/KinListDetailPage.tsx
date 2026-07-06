@@ -9,15 +9,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  clearPendingAudioOperation,
+  completeAudioOperation,
+  createAudioOperation,
+  deleteAudioOperation,
+  readPendingAudioOperation,
+  savePendingAudioOperation,
+  uploadAudioToSas,
+  waitForAudioOperation,
+} from '@/features/kin-list/audioOperationClient'
 import { AudioCaptureDialog } from '@/features/kin-list/components/AudioCaptureDialog'
 import { clearDraftSession, createDraftFromAudio, readDraftSession, saveDraftSession } from '@/features/kin-list/draftSessionStore'
 import { randomUUID } from '@/lib/utils'
 import type {
+  AudioOperationResponse,
   KinListDetail,
-  KinListDraftFromAudioResponse,
   KinListExistingDuplicate,
   KinListItem,
-  KinListItemDraftsFromAudioResponse,
   ProblemDetailsError,
 } from '@/types'
 
@@ -32,8 +41,30 @@ function getProblemCode(error: unknown) {
   return (error as { response?: { data?: ProblemDetailsError } })?.response?.data?.code
 }
 
-function getAudioFileName(blob: Blob, baseName: string) {
-  return blob.type.includes('mp4') || blob.type.includes('m4a') ? `${baseName}.m4a` : `${baseName}.webm`
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function getDraftAudioOperationKey() {
+  return 'kinlist:draft-audio-operation'
+}
+
+function getAppendAudioOperationKey(listId: string) {
+  return `kinlist:append-audio-operation:${listId}`
+}
+
+function mergeAudioOperationIntoDraft(operation: AudioOperationResponse, currentTitle: string, currentItems: EditableDraftItem[]) {
+  const audioDraft = createDraftFromAudio({
+    title: currentTitle.trim() || operation.title || 'New list',
+    items: operation.items,
+    detectedLanguage: operation.detectedLanguage,
+    promptVersion: operation.promptVersion,
+  })
+
+  return {
+    audioDraft,
+    mergedItems: [...currentItems, ...audioDraft.items],
+  }
 }
 
 export function KinListDetailPage() {
@@ -62,8 +93,52 @@ export function KinListDetailPage() {
   }, [dirty])
 
   useEffect(() => {
-    if (isDraftMode && !draftSession) {
+    if (!isDraftMode || draftSession) {
+      return
+    }
+
+    const pendingOperationId = readPendingAudioOperation(getDraftAudioOperationKey())
+    if (!pendingOperationId) {
       navigate('/', { replace: true })
+      return
+    }
+
+    let cancelled = false
+    void waitForAudioOperation(pendingOperationId)
+      .then((operation) => {
+        if (cancelled) {
+          return
+        }
+
+        clearPendingAudioOperation(getDraftAudioOperationKey())
+        if (operation.status !== 'Succeeded') {
+          toast.error(operation.errorMessage ?? 'Audio processing failed.')
+          navigate('/', { replace: true })
+          return
+        }
+
+        const audioDraft = createDraftFromAudio({
+          title: operation.title ?? 'New list',
+          items: operation.items,
+          detectedLanguage: operation.detectedLanguage,
+          promptVersion: operation.promptVersion,
+        })
+        setTitle(audioDraft.title)
+        setDraftItems(audioDraft.items)
+        setDirty(false)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
+
+        clearPendingAudioOperation(getDraftAudioOperationKey())
+        toast.error(error instanceof Error ? error.message : 'Audio processing failed.')
+        navigate('/', { replace: true })
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [draftSession, isDraftMode, navigate])
 
@@ -269,19 +344,44 @@ export function KinListDetailPage() {
   })
 
   const audioAppendMutation = useMutation({
-    mutationFn: async (blob: Blob) => {
+    mutationFn: async ({ blob, signal }: { blob: Blob; signal: AbortSignal }) => {
       if (!id) {
         throw new Error('List id is required.')
       }
 
-      const formData = new FormData()
-      formData.append('audio', blob, getAudioFileName(blob, 'append'))
-      const { data } = await apiClient.post<KinListItemDraftsFromAudioResponse>(`/api/lists/${id}/item-drafts/from-audio`, formData)
-      return data
+      let operationId: string | null = null
+      try {
+        const operation = await createAudioOperation({
+          type: 'AppendItems',
+          contentType: blob.type,
+          declaredByteSize: blob.size,
+          listId: id,
+        }, signal)
+        operationId = operation.id
+        savePendingAudioOperation(getAppendAudioOperationKey(id), operation.id)
+        await uploadAudioToSas(operation.uploadUrl, blob, signal)
+        await completeAudioOperation(operation.id, signal)
+        return await waitForAudioOperation(operation.id, 120000, signal)
+      } catch (error) {
+        if (operationId) {
+          try {
+            await deleteAudioOperation(operationId)
+          } catch {
+            // Best effort cleanup: the expired/failed operation is still swept server-side.
+          }
+        }
+
+        throw error
+      }
     },
     onSuccess: (data) => {
+      if (!id) {
+        return
+      }
+
+      clearPendingAudioOperation(getAppendAudioOperationKey(id))
       setPendingAudioItems(
-        data.items.map((item) => ({
+        data.itemProposals.map((item) => ({
           id: randomUUID(),
           text: item.text,
           isSelected: item.isSelectedByDefault,
@@ -291,11 +391,67 @@ export function KinListDetailPage() {
       setPendingDuplicates(data.existingDuplicates)
     },
     onError: (error) => {
+      if (id) {
+        clearPendingAudioOperation(getAppendAudioOperationKey(id))
+      }
+
+      if (isAbortError(error)) {
+        return
+      }
+
       if (getProblemCode(error) === 'no_items_detected') {
         toast.error('No new items were detected from the recording.')
+        return
       }
+
+      toast.error(error instanceof Error ? error.message : 'Audio processing failed.')
     },
   })
+
+  useEffect(() => {
+    if (!id) {
+      return
+    }
+
+    const pendingOperationId = readPendingAudioOperation(getAppendAudioOperationKey(id))
+    if (!pendingOperationId || audioAppendMutation.isPending) {
+      return
+    }
+
+    let cancelled = false
+    void waitForAudioOperation(pendingOperationId)
+      .then((operation) => {
+        if (cancelled) {
+          return
+        }
+
+        clearPendingAudioOperation(getAppendAudioOperationKey(id))
+        if (operation.status !== 'Succeeded') {
+          toast.error(operation.errorMessage ?? 'Audio processing failed.')
+          return
+        }
+
+        setPendingAudioItems(operation.itemProposals.map((item) => ({
+          id: randomUUID(),
+          text: item.text,
+          isSelected: item.isSelectedByDefault,
+          duplicateOfItemId: item.duplicateOfItemId,
+        })))
+        setPendingDuplicates(operation.existingDuplicates)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
+
+        clearPendingAudioOperation(getAppendAudioOperationKey(id))
+        toast.error(error instanceof Error ? error.message : 'Audio processing failed.')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [audioAppendMutation.isPending, id])
 
   const confirmAudioItemsMutation = useMutation({
     mutationFn: async (list: KinListDetail) => {
@@ -416,7 +572,7 @@ export function KinListDetailPage() {
               </Button>
               <Button type="button" variant="outline" onClick={() => setAppendAudioOpen(true)}>
                 <Mic className="mr-2 h-4 w-4" />
-                {draftSession?.audioBlob ? 'Retry audio' : 'Add from audio'}
+                Add from audio
               </Button>
               <Button type="button" variant="ghost" onClick={handleBackToLists}>
                 Discard
@@ -452,30 +608,45 @@ export function KinListDetailPage() {
           open={appendAudioOpen}
           onOpenChange={setAppendAudioOpen}
           title="Add audio to this draft"
-          description="The recording stays in memory only until the draft is updated."
-          onConfirm={async (blob) => {
-            const formData = new FormData()
-            formData.append('audio', blob, getAudioFileName(blob, 'draft'))
-            const { data } = await apiClient.post<KinListDraftFromAudioResponse>('/api/list-drafts/from-audio', formData)
+          description="After upload, only the processing operation id survives refresh."
+          onConfirm={async (blob, signal) => {
+            let operationId: string | null = null
+            try {
+              const operation = await createAudioOperation({
+                type: 'NewList',
+                contentType: blob.type,
+                declaredByteSize: blob.size,
+              }, signal)
+              operationId = operation.id
+              savePendingAudioOperation(getDraftAudioOperationKey(), operation.id)
+              await uploadAudioToSas(operation.uploadUrl, blob, signal)
+              await completeAudioOperation(operation.id, signal)
+              const completed = await waitForAudioOperation(operation.id, 120000, signal)
+              clearPendingAudioOperation(getDraftAudioOperationKey())
+              if (completed.status !== 'Succeeded') {
+                throw new Error(completed.errorMessage ?? 'Audio processing failed.')
+              }
 
-            const audioDraft = createDraftFromAudio({
-              title: title.trim() || data.title,
-              items: data.items,
-              detectedLanguage: data.detectedLanguage,
-              promptVersion: data.promptVersion,
-              audioBlob: blob,
-            })
+              const { audioDraft, mergedItems } = mergeAudioOperationIntoDraft(completed, title, draftItems)
+              saveDraftSession({ ...audioDraft, title: title.trim() || audioDraft.title, items: mergedItems })
+              setTitle((current) => current.trim() || completed.title || 'New list')
+              setDraftItems(mergedItems)
+              setDirty(true)
+            } catch (error) {
+              clearPendingAudioOperation(getDraftAudioOperationKey())
+              if (operationId) {
+                try {
+                  await deleteAudioOperation(operationId)
+                } catch {
+                  // Best effort cleanup: the expired/failed operation is still swept server-side.
+                }
+              }
+              if (isAbortError(error)) {
+                return
+              }
 
-            const mergedItems = [...draftItems, ...audioDraft.items]
-            saveDraftSession({
-              ...audioDraft,
-              title: title.trim() || audioDraft.title,
-              items: mergedItems,
-            })
-
-            setTitle((current) => current.trim() || data.title)
-            setDraftItems(mergedItems)
-            setDirty(true)
+              toast.error(error instanceof Error ? error.message : 'Audio processing failed.')
+            }
           }}
         />
       </div>
@@ -660,9 +831,9 @@ export function KinListDetailPage() {
         open={appendAudioOpen}
         onOpenChange={setAppendAudioOpen}
         title="Add items from audio"
-        description="The recording is sent once to generate item proposals. Nothing is added until you confirm the proposals."
-        onConfirm={async (blob) => {
-          await audioAppendMutation.mutateAsync(blob)
+        description="The recording is uploaded once, then processed asynchronously. Nothing is added until you confirm the proposals."
+        onConfirm={async (blob, signal) => {
+          await audioAppendMutation.mutateAsync({ blob, signal })
         }}
       />
     </div>

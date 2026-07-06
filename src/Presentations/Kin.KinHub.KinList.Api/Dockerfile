@@ -10,6 +10,7 @@ COPY ["src/Domains/Kin.KinHub.Identity.Domain/Kin.KinHub.Identity.Domain.csproj"
 COPY ["src/Domains/Kin.KinHub.KinList.Domain/Kin.KinHub.KinList.Domain.csproj", "src/Domains/Kin.KinHub.KinList.Domain/"]
 COPY ["src/Infrastructures/Kin.KinHub.Identity.Jwt/Kin.KinHub.Identity.Jwt.csproj", "src/Infrastructures/Kin.KinHub.Identity.Jwt/"]
 COPY ["src/Infrastructures/Kin.KinHub.KinList.Ai/Kin.KinHub.KinList.Ai.csproj", "src/Infrastructures/Kin.KinHub.KinList.Ai/"]
+COPY ["src/Infrastructures/Kin.KinHub.KinList.AzureStorage/Kin.KinHub.KinList.AzureStorage.csproj", "src/Infrastructures/Kin.KinHub.KinList.AzureStorage/"]
 COPY ["src/Infrastructures/Kin.KinHub.KinList.PostgreSql/Kin.KinHub.KinList.PostgreSql.csproj", "src/Infrastructures/Kin.KinHub.KinList.PostgreSql/"]
 COPY ["src/Presentations/Kin.KinHub.Shared.Api/Kin.KinHub.Shared.Api.csproj", "src/Presentations/Kin.KinHub.Shared.Api/"]
 COPY ["src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj", "src/Presentations/Kin.KinHub.KinList.Api/"]

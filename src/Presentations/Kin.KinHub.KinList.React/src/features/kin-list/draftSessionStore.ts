@@ -13,7 +13,6 @@ export interface KinListDraftSession {
   idempotencyKey: string
   detectedLanguage?: string | null
   promptVersion?: string | null
-  audioBlob?: Blob | null
 }
 
 let currentDraft: KinListDraftSession | null = null
@@ -24,7 +23,6 @@ export function createEmptyDraft(): KinListDraftSession {
     items: [],
     source: 'manual',
     idempotencyKey: randomUUID(),
-    audioBlob: null,
   }
 
   return currentDraft
@@ -47,7 +45,6 @@ export function createDraftFromAudio(input: {
   items: string[]
   detectedLanguage?: string | null
   promptVersion?: string | null
-  audioBlob?: Blob | null
 }) {
   currentDraft = {
     title: input.title,
@@ -60,7 +57,6 @@ export function createDraftFromAudio(input: {
     idempotencyKey: randomUUID(),
     detectedLanguage: input.detectedLanguage,
     promptVersion: input.promptVersion,
-    audioBlob: input.audioBlob ?? null,
   }
 
   return currentDraft

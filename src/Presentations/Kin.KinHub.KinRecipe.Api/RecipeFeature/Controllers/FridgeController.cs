@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.KinRecipe.Api.RecipeFeature;
 
 [ApiController]
 [Route("api/fridges")]
+[Authorize]
 public sealed class FridgeController : ControllerBase
 {
     private readonly IFridgeService _fridgeService;
@@ -28,9 +30,6 @@ public sealed class FridgeController : ControllerBase
         [FromBody] CreateFridgeRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -45,9 +44,6 @@ public sealed class FridgeController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _fridgeService.GetAllAsync(_currentUser.UserId, cancellationToken);
         return HttpResultMapper.ToActionResult(this, result);
     }
@@ -55,9 +51,6 @@ public sealed class FridgeController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _fridgeService.GetByIdAsync(id, _currentUser.UserId, cancellationToken);
         return HttpResultMapper.ToActionResult(this, result);
     }
@@ -68,9 +61,6 @@ public sealed class FridgeController : ControllerBase
         [FromBody] UpdateFridgeRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -85,9 +75,6 @@ public sealed class FridgeController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         var result = await _fridgeService.DeleteAsync(id, _currentUser.UserId, cancellationToken);
         return HttpResultMapper.ToActionResult(this, result);
     }

@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.KinRecipe.Api.RecipeAssistantFeature;
 
 [ApiController]
 [Route("api/recipe-assistant")]
+[Authorize]
 public sealed class RecipeAssistantController : ControllerBase
 {
     private readonly IRecipeAssistantManager _recipeAiService;
@@ -31,9 +33,6 @@ public sealed class RecipeAssistantController : ControllerBase
         [FromBody] SuggestRecipesRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -50,9 +49,6 @@ public sealed class RecipeAssistantController : ControllerBase
         [FromBody] ParseRecipeRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 
@@ -69,9 +65,6 @@ public sealed class RecipeAssistantController : ControllerBase
         [FromBody] AdaptRecipeRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!_currentUser.IsAuthenticated)
-            return ApiProblemDetails.AuthenticationRequired(this);
-
         if (request is null)
             return ApiProblemDetails.InvalidRequestBody(this);
 

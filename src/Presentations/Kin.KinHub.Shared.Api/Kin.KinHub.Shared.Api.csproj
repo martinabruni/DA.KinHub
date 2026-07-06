@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.Identity.Business\Kin.KinHub.Identity.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Core.Domain\Kin.KinHub.Core.Domain.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
+    <ProjectReference Include="..\..\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
   </ItemGroup>
 
 </Project>

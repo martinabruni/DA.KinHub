@@ -8,7 +8,11 @@ namespace Kin.KinHub.Identity.Api.AuthenticationFeature;
 [Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {
-    private readonly IAuthenticationService _authService;
+    private readonly IRegisterUserHandler _registerUserHandler;
+    private readonly IGetCurrentUserHandler _getCurrentUserHandler;
+    private readonly IUpdateUserEmailHandler _updateUserEmailHandler;
+    private readonly IUpdateUserPasswordHandler _updateUserPasswordHandler;
+    private readonly IDeleteUserHandler _deleteUserHandler;
     private readonly IRequestValidator<RegisterRequest> _registerValidator;
     private readonly IRequestValidator<UpdateUserEmailRequest> _updateEmailValidator;
     private readonly IRequestValidator<UpdateUserPasswordRequest> _updatePasswordValidator;
@@ -16,14 +20,22 @@ public sealed class AuthController : ControllerBase
     private readonly ICurrentUser _currentUser;
 
     public AuthController(
-        IAuthenticationService authService,
+        IRegisterUserHandler registerUserHandler,
+        IGetCurrentUserHandler getCurrentUserHandler,
+        IUpdateUserEmailHandler updateUserEmailHandler,
+        IUpdateUserPasswordHandler updateUserPasswordHandler,
+        IDeleteUserHandler deleteUserHandler,
         IRequestValidator<RegisterRequest> registerValidator,
         IRequestValidator<UpdateUserEmailRequest> updateEmailValidator,
         IRequestValidator<UpdateUserPasswordRequest> updatePasswordValidator,
         IUserProviderService userProviderService,
         ICurrentUser currentUser)
     {
-        _authService = authService;
+        _registerUserHandler = registerUserHandler;
+        _getCurrentUserHandler = getCurrentUserHandler;
+        _updateUserEmailHandler = updateUserEmailHandler;
+        _updateUserPasswordHandler = updateUserPasswordHandler;
+        _deleteUserHandler = deleteUserHandler;
         _registerValidator = registerValidator;
         _updateEmailValidator = updateEmailValidator;
         _updatePasswordValidator = updatePasswordValidator;
@@ -44,7 +56,7 @@ public sealed class AuthController : ControllerBase
         if (!validation.IsValid)
             return ApiProblemDetails.Validation(this, validation.Errors);
 
-        var result = await _authService.RegisterAsync(request, cancellationToken);
+        var result = await _registerUserHandler.HandleAsync(request, cancellationToken);
 
         return HttpResultMapper.ToCreatedActionResult(this, result);
     }
@@ -53,7 +65,7 @@ public sealed class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> MeAsync(CancellationToken cancellationToken)
     {
-        var result = await _authService.GetCurrentUserAsync(_currentUser.UserId, cancellationToken);
+        var result = await _getCurrentUserHandler.HandleAsync(_currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
@@ -72,7 +84,7 @@ public sealed class AuthController : ControllerBase
         if (!validation.IsValid)
             return ApiProblemDetails.Validation(this, validation.Errors);
 
-        var result = await _authService.UpdateUserEmailAsync(_currentUser.UserId, request, cancellationToken);
+        var result = await _updateUserEmailHandler.HandleAsync(_currentUser.UserId, request, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
@@ -91,7 +103,7 @@ public sealed class AuthController : ControllerBase
         if (!validation.IsValid)
             return ApiProblemDetails.Validation(this, validation.Errors);
 
-        var result = await _authService.UpdateUserPasswordAsync(_currentUser.UserId, request, cancellationToken);
+        var result = await _updateUserPasswordHandler.HandleAsync(_currentUser.UserId, request, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }
@@ -100,7 +112,7 @@ public sealed class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> DeleteAccountAsync(CancellationToken cancellationToken)
     {
-        var result = await _authService.DeleteUserAsync(_currentUser.UserId, cancellationToken);
+        var result = await _deleteUserHandler.HandleAsync(_currentUser.UserId, cancellationToken);
 
         return HttpResultMapper.ToActionResult(this, result);
     }

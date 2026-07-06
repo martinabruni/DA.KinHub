@@ -104,10 +104,10 @@ public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService, IFam
         var result = await GetCurrentFamilyAsync(userId, cancellationToken);
         return result.Status switch
         {
-            Kin.KinHub.Core.Business.Common.ResultStatus.Success when result.Family is not null =>
+            ResultStatus.Success when result.Family is not null =>
                 FamilyContextResolution.Success(result.Family.Id),
-            Kin.KinHub.Core.Business.Common.ResultStatus.NotFound => FamilyContextResolution.NoFamily(),
-            Kin.KinHub.Core.Business.Common.ResultStatus.Unauthorized => FamilyContextResolution.Forbidden(),
+            ResultStatus.NotFound => FamilyContextResolution.NoFamily(),
+            ResultStatus.Unauthorized => FamilyContextResolution.Forbidden(),
             _ => FamilyContextResolution.Unavailable(),
         };
     }
@@ -118,17 +118,7 @@ public sealed class RemoteFamilyOwnershipService : IFamilyOwnershipService, IFam
         CancellationToken cancellationToken = default)
     {
         var currentFamily = await GetCurrentFamilyAsync(userId, cancellationToken);
-        if (!currentFamily.IsSuccess)
-        {
-            return currentFamily;
-        }
-
-        if (currentFamily.Family!.Id != familyId)
-        {
-            return FamilyAccessResult.Unauthorized("You do not own this family.");
-        }
-
-        return currentFamily;
+        return currentFamily.EnsureOwnership(familyId);
     }
 
     private string? GetAuthorizationHeader()

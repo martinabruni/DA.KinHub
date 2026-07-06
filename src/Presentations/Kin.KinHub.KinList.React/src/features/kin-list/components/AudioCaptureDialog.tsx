@@ -31,7 +31,7 @@ interface AudioCaptureDialogProps {
   onOpenChange: (open: boolean) => void
   title: string
   description: string
-  onConfirm: (blob: Blob) => Promise<void>
+  onConfirm: (blob: Blob, signal: AbortSignal) => Promise<void>
 }
 
 export function AudioCaptureDialog({
@@ -46,6 +46,7 @@ export function AudioCaptureDialog({
   const chunksRef = useRef<BlobPart[]>([])
   const timeoutRef = useRef<number | null>(null)
   const intervalRef = useRef<number | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const [blob, setBlob] = useState<Blob | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +80,7 @@ export function AudioCaptureDialog({
   }, [])
 
   const resetCapture = useCallback(() => {
+    abortControllerRef.current = null
     cleanupMedia()
     setBlob(null)
     setError(null)
@@ -164,13 +166,27 @@ export function AudioCaptureDialog({
       return
     }
 
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     try {
       setIsSubmitting(true)
-      await onConfirm(blob)
+      await onConfirm(blob, controller.signal)
       onOpenChange(false)
+    } catch {
+      // The caller surfaces the error state; keep the dialog open without bubbling
+      // an unhandled rejection from the click handler.
     } finally {
+      abortControllerRef.current = null
       setIsSubmitting(false)
     }
+  }
+
+  const cancelDialog = () => {
+    if (isSubmitting) {
+      abortControllerRef.current?.abort(new DOMException('The operation was aborted.', 'AbortError'))
+    }
+
+    onOpenChange(false)
   }
 
   return (
@@ -230,8 +246,8 @@ export function AudioCaptureDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button type="button" variant="outline" onClick={cancelDialog}>
+            {isSubmitting ? 'Cancel processing' : 'Cancel'}
           </Button>
           <Button type="button" onClick={confirmAudio} disabled={!blob || isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic className="mr-2 h-4 w-4" />}

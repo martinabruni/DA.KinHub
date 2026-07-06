@@ -9,38 +9,26 @@ public static partial class HttpResultMapper
     public static IActionResult ToActionResult<T>(CoreResult.Result<T> result) =>
         result.Status switch
         {
-            CoreResult.ResultStatus.Success => new OkObjectResult(result.Value),
-            CoreResult.ResultStatus.NotFound => new NotFoundObjectResult(new { message = result.Message }),
-            CoreResult.ResultStatus.Conflict => new ConflictObjectResult(new { message = result.Message }),
-            CoreResult.ResultStatus.ValidationError => new BadRequestObjectResult(new { message = result.Message }),
-            CoreResult.ResultStatus.Unauthorized => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status403Forbidden },
-            CoreResult.ResultStatus.ServiceUnavailable => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status503ServiceUnavailable },
+            ResultStatus.Success => new OkObjectResult(result.Value),
+            ResultStatus.NotFound => new NotFoundObjectResult(new { message = result.Message }),
+            ResultStatus.Conflict => new ConflictObjectResult(new { message = result.Message }),
+            ResultStatus.ValidationError => new BadRequestObjectResult(new { message = result.Message }),
+            ResultStatus.UnprocessableEntity => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status422UnprocessableEntity },
+            ResultStatus.Unauthorized => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status403Forbidden },
+            ResultStatus.ServiceUnavailable => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status503ServiceUnavailable },
             _ => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 
     public static IActionResult ToActionResult<T>(ControllerBase controller, CoreResult.Result<T> result) =>
-        result.Status switch
-        {
-            CoreResult.ResultStatus.Success => new OkObjectResult(result.Value),
-            CoreResult.ResultStatus.NotFound => new NotFoundObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status404NotFound, "not_found", result.Message ?? "Resource not found.")),
-            CoreResult.ResultStatus.Conflict => new ConflictObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status409Conflict, "conflict", result.Message ?? "The request conflicted with the current resource state.")),
-            CoreResult.ResultStatus.ValidationError => new BadRequestObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status400BadRequest, "validation_error", result.Message ?? "The request is invalid.")),
-            CoreResult.ResultStatus.Unauthorized => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status403Forbidden, "forbidden", result.Message ?? "The authenticated user cannot access this resource.")) { StatusCode = StatusCodes.Status403Forbidden },
-            CoreResult.ResultStatus.ServiceUnavailable => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status503ServiceUnavailable, "service_unavailable", result.Message ?? "A required upstream service is unavailable.")) { StatusCode = StatusCodes.Status503ServiceUnavailable },
-            _ => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status500InternalServerError, "unexpected_error", result.Message ?? "Unexpected server error.")) { StatusCode = StatusCodes.Status500InternalServerError },
-        };
+        SharedHttpResultMapper.ToActionResult(controller, result, unauthorizedIsForbidden: true);
 
     public static IActionResult ToCreatedActionResult<T>(CoreResult.Result<T> result) =>
         result.Status switch
         {
-            CoreResult.ResultStatus.Success => new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created },
+            ResultStatus.Success => new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created },
             _ => ToActionResult(result),
         };
 
     public static IActionResult ToCreatedActionResult<T>(ControllerBase controller, CoreResult.Result<T> result) =>
-        result.Status switch
-        {
-            CoreResult.ResultStatus.Success => new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created },
-            _ => ToActionResult(controller, result),
-        };
+        SharedHttpResultMapper.ToCreatedActionResult(controller, result, unauthorizedIsForbidden: true);
 }

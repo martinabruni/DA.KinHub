@@ -85,6 +85,34 @@ export interface KinListItemDraftsFromAudioResponse {
   promptVersion?: string | null
 }
 
+export type AudioOperationType = 'NewList' | 'AppendItems'
+export type AudioOperationStatus = 'AwaitingUpload' | 'Queued' | 'Processing' | 'Succeeded' | 'Failed' | 'Expired' | 'Cancelled'
+
+export interface CreateAudioOperationResponse {
+  id: string
+  uploadUrl: string
+  uploadExpiresAt: string
+  blobName: string
+  retryAfterSeconds: number
+}
+
+export interface AudioOperationResponse {
+  id: string
+  type: AudioOperationType
+  status: AudioOperationStatus
+  listId?: string | null
+  title?: string | null
+  items: string[]
+  itemProposals: KinListItemDraftProposal[]
+  existingDuplicates: KinListExistingDuplicate[]
+  detectedLanguage?: string | null
+  promptVersion?: string | null
+  errorCode?: string | null
+  errorMessage?: string | null
+  retryAfterSeconds: number
+  expiresAt: string
+}
+
 export interface ProblemDetailsError {
   type?: string
   title?: string

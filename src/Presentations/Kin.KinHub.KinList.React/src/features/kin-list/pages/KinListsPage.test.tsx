@@ -5,6 +5,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { KinListSummary } from '@/types'
 import { renderWithProviders } from '@/test/renderWithProviders'
 import { readDraftSession, clearDraftSession } from '@/features/kin-list/draftSessionStore'
+import { FakeMediaRecorder, installMediaRecorder } from '@/test/mediaRecorderMock'
+import type { InstalledMedia } from '@/test/mediaRecorderMock'
 
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -53,8 +55,11 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}</div>
 }
 
-function renderPage(initialLists: KinListSummary[]) {
-  apiMocks.get.mockResolvedValue({ data: initialLists })
+function renderPage(initialLists: KinListSummary[], options?: { preserveGetMock?: boolean }) {
+  if (!options?.preserveGetMock) {
+    apiMocks.get.mockResolvedValue({ data: initialLists })
+  }
+
   return renderWithProviders({
     routes: [
       {
@@ -101,7 +106,7 @@ describe('KinListsPage', () => {
 
     it('manual create seeds an empty in-memory draft and navigates to /draft/new', async () => {
       const user = userEvent.setup()
-      renderPage([])
+      renderPage([], { preserveGetMock: true })
       await screen.findByText(/no lists yet/i)
 
       const emptySection = screen.getByText(/no lists yet/i).closest('section') as HTMLElement
@@ -112,6 +117,172 @@ describe('KinListsPage', () => {
       expect(draft).not.toBeNull()
       expect(draft?.source).toBe('manual')
       expect(draft?.items).toEqual([])
+    })
+
+    it('resumes a pending new-list audio operation from sessionStorage after refresh', async () => {
+      sessionStorage.setItem('kinlist:new-list-audio-operation', 'op-new-1')
+      apiMocks.get.mockImplementation((url: string) => {
+        if (url === '/api/lists') {
+          return Promise.resolve({ data: [] })
+        }
+
+        return Promise.resolve({
+          data: {
+            id: 'op-new-1',
+            type: 'NewList',
+            status: 'Succeeded',
+            listId: null,
+            title: 'Voice list',
+            items: ['Eggs', 'Butter'],
+            itemProposals: [],
+            existingDuplicates: [],
+            detectedLanguage: 'en-US',
+            promptVersion: 'v1',
+            retryAfterSeconds: 2,
+            expiresAt: '2026-06-30T11:00:00.000Z',
+          },
+        })
+      })
+
+      renderPage([], { preserveGetMock: true })
+
+      await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/draft/new'))
+      const draft = readDraftSession()
+      expect(draft).not.toBeNull()
+      expect(draft?.title).toBe('Voice list')
+      expect(draft?.items.map((item) => item.text)).toEqual(['Eggs', 'Butter'])
+      expect(sessionStorage.getItem('kinlist:new-list-audio-operation')).toBeNull()
+      expect(sessionStorage.length).toBe(0)
+    })
+
+    it('clears a failed pending new-list audio operation and shows the error', async () => {
+      sessionStorage.setItem('kinlist:new-list-audio-operation', 'op-new-failed')
+      apiMocks.get.mockImplementation((url: string) => {
+        if (url === '/api/lists') {
+          return Promise.resolve({ data: [] })
+        }
+
+        return Promise.resolve({
+          data: {
+            id: 'op-new-failed',
+            type: 'NewList',
+            status: 'Failed',
+            listId: null,
+            title: null,
+            items: [],
+            itemProposals: [],
+            existingDuplicates: [],
+            detectedLanguage: null,
+            promptVersion: 'v1',
+            errorMessage: 'Audio processing failed.',
+            retryAfterSeconds: 2,
+            expiresAt: '2026-06-30T11:00:00.000Z',
+          },
+        })
+      })
+
+      renderPage([], { preserveGetMock: true })
+
+      await screen.findByText(/no lists yet/i)
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Audio processing failed.'))
+      expect(sessionStorage.getItem('kinlist:new-list-audio-operation')).toBeNull()
+      expect(readDraftSession()).toBeNull()
+    })
+
+    it('deletes the server-side audio operation when upload fails after create', async () => {
+      let media: InstalledMedia | undefined
+      media = installMediaRecorder()
+      const user = userEvent.setup()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+      vi.stubGlobal('fetch', fetchMock)
+
+      apiMocks.post.mockImplementation((url: string) => {
+        if (url === '/api/audio-operations') {
+          return Promise.resolve({
+            data: {
+              id: 'op-upload-fail',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-upload-fail',
+              retryAfterSeconds: 1,
+            },
+          })
+        }
+
+        throw new Error(`Unexpected POST ${url}`)
+      })
+      apiMocks.delete.mockResolvedValue({ data: null })
+
+      renderPage([])
+      await screen.findByText(/no lists yet/i)
+
+      await user.click(screen.getByRole('button', { name: /record a new list/i }))
+      await user.click(await screen.findByRole('button', { name: /start recording/i }))
+      await waitFor(() => expect(FakeMediaRecorder.instances.length).toBeGreaterThan(0))
+      await user.click(screen.getByRole('button', { name: /^stop$/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /process audio/i })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /process audio/i }))
+
+      await waitFor(() =>
+        expect(apiMocks.delete).toHaveBeenCalledWith('/api/audio-operations/op-upload-fail'),
+      )
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith('Audio upload failed with status 500.'),
+      )
+      expect(sessionStorage.getItem('kinlist:new-list-audio-operation')).toBeNull()
+
+      media.restore()
+      vi.unstubAllGlobals()
+    })
+
+    it('cancels in-flight audio processing, deletes the server-side operation, and avoids an error toast', async () => {
+      const media = installMediaRecorder()
+      const user = userEvent.setup()
+      const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal
+          signal?.addEventListener('abort', () => {
+            reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+          }, { once: true })
+        }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      apiMocks.post.mockImplementation((url: string) => {
+        if (url === '/api/audio-operations') {
+          return Promise.resolve({
+            data: {
+              id: 'op-cancel-1',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-cancel-1',
+              retryAfterSeconds: 1,
+            },
+          })
+        }
+
+        throw new Error(`Unexpected POST ${url}`)
+      })
+      apiMocks.delete.mockResolvedValue({ data: null })
+
+      renderPage([])
+      await screen.findByText(/no lists yet/i)
+
+      await user.click(screen.getByRole('button', { name: /record a new list/i }))
+      await user.click(await screen.findByRole('button', { name: /start recording/i }))
+      await waitFor(() => expect(FakeMediaRecorder.instances.length).toBeGreaterThan(0))
+      await user.click(screen.getByRole('button', { name: /^stop$/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /process audio/i })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /process audio/i }))
+      await user.click(await screen.findByRole('button', { name: /cancel processing/i }))
+
+      await waitFor(() =>
+        expect(apiMocks.delete).toHaveBeenCalledWith('/api/audio-operations/op-cancel-1'),
+      )
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(sessionStorage.getItem('kinlist:new-list-audio-operation')).toBeNull()
+
+      media.restore()
+      vi.unstubAllGlobals()
     })
   })
 

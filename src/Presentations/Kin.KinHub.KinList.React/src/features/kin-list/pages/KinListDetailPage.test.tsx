@@ -157,6 +157,156 @@ describe('KinListDetailPage', () => {
       expect(screen.getByDisplayValue('Eggs')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Butter')).toBeInTheDocument()
     })
+
+    it('resumes a pending draft audio operation from sessionStorage after refresh', async () => {
+      sessionStorage.setItem('kinlist:draft-audio-operation', 'op-draft-1')
+      apiMocks.get.mockResolvedValue({
+        data: {
+          id: 'op-draft-1',
+          type: 'NewList',
+          status: 'Succeeded',
+          listId: null,
+          title: 'Voice list',
+          items: ['Eggs', 'Butter'],
+          itemProposals: [],
+          existingDuplicates: [],
+          detectedLanguage: 'en-US',
+          promptVersion: 'v1',
+          retryAfterSeconds: 2,
+          expiresAt: '2026-06-30T11:00:00.000Z',
+        },
+      })
+
+      renderDraft()
+
+      await screen.findByDisplayValue('Voice list')
+      expect(screen.getByDisplayValue('Eggs')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Butter')).toBeInTheDocument()
+      await waitFor(() => expect(sessionStorage.getItem('kinlist:draft-audio-operation')).toBeNull())
+      expect(sessionStorage.length).toBe(0)
+    })
+
+    it('clears a failed pending draft audio operation, shows the error, and returns home', async () => {
+      sessionStorage.setItem('kinlist:draft-audio-operation', 'op-draft-failed')
+      apiMocks.get.mockResolvedValue({
+        data: {
+          id: 'op-draft-failed',
+          type: 'NewList',
+          status: 'Failed',
+          listId: null,
+          title: null,
+          items: [],
+          itemProposals: [],
+          existingDuplicates: [],
+          detectedLanguage: null,
+          promptVersion: 'v1',
+          errorMessage: 'Transcription failed.',
+          retryAfterSeconds: 2,
+          expiresAt: '2026-06-30T11:00:00.000Z',
+        },
+      })
+
+      renderDraft()
+
+      await waitFor(() => expect(screen.getByText(/lists home/i)).toBeInTheDocument())
+      expect(toast.error).toHaveBeenCalledWith('Transcription failed.')
+      expect(sessionStorage.getItem('kinlist:draft-audio-operation')).toBeNull()
+    })
+
+    it('deletes the server-side draft audio operation when upload fails after create', async () => {
+      const media = installMediaRecorder()
+      const user = userEvent.setup()
+      createEmptyDraft()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+      vi.stubGlobal('fetch', fetchMock)
+
+      apiMocks.post.mockImplementation((url: string) => {
+        if (url === '/api/audio-operations') {
+          return Promise.resolve({
+            data: {
+              id: 'op-draft-upload-fail',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-draft-upload-fail',
+              retryAfterSeconds: 1,
+            },
+          })
+        }
+
+        throw new Error(`Unexpected POST ${url}`)
+      })
+      apiMocks.delete.mockResolvedValue({ data: null })
+
+      renderDraft()
+      await screen.findByText(/draft before save/i)
+      await user.click(screen.getByRole('button', { name: /add from audio/i }))
+      await user.click(await screen.findByRole('button', { name: /start recording/i }))
+      await waitFor(() => expect(FakeMediaRecorder.instances.length).toBeGreaterThan(0))
+      await user.click(screen.getByRole('button', { name: /^stop$/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /process audio/i })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /process audio/i }))
+
+      await waitFor(() =>
+        expect(apiMocks.delete).toHaveBeenCalledWith('/api/audio-operations/op-draft-upload-fail'),
+      )
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith('Audio upload failed with status 500.'),
+      )
+      expect(sessionStorage.getItem('kinlist:draft-audio-operation')).toBeNull()
+
+      media.restore()
+      vi.unstubAllGlobals()
+    })
+
+    it('cancels in-flight draft audio processing without surfacing an error toast', async () => {
+      const media = installMediaRecorder()
+      const user = userEvent.setup()
+      createEmptyDraft()
+      const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal
+          signal?.addEventListener('abort', () => {
+            reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+          }, { once: true })
+        }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      apiMocks.post.mockImplementation((url: string) => {
+        if (url === '/api/audio-operations') {
+          return Promise.resolve({
+            data: {
+              id: 'op-draft-cancel-1',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-draft-cancel-1',
+              retryAfterSeconds: 1,
+            },
+          })
+        }
+
+        throw new Error(`Unexpected POST ${url}`)
+      })
+      apiMocks.delete.mockResolvedValue({ data: null })
+
+      renderDraft()
+      await screen.findByText(/draft before save/i)
+      await user.click(screen.getByRole('button', { name: /add from audio/i }))
+      await user.click(await screen.findByRole('button', { name: /start recording/i }))
+      await waitFor(() => expect(FakeMediaRecorder.instances.length).toBeGreaterThan(0))
+      await user.click(screen.getByRole('button', { name: /^stop$/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /process audio/i })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /process audio/i }))
+      await user.click(await screen.findByRole('button', { name: /cancel processing/i }))
+
+      await waitFor(() =>
+        expect(apiMocks.delete).toHaveBeenCalledWith('/api/audio-operations/op-draft-cancel-1'),
+      )
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(sessionStorage.getItem('kinlist:draft-audio-operation')).toBeNull()
+
+      media.restore()
+      vi.unstubAllGlobals()
+    })
   })
 
   describe('dirty-navigation confirmation', () => {
@@ -325,18 +475,61 @@ describe('KinListDetailPage', () => {
     it('records, proposes items via preview, and only persists after Confirm', async () => {
       media = installMediaRecorder()
       const user = userEvent.setup()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+      vi.stubGlobal('fetch', fetchMock)
 
-      apiMocks.get.mockResolvedValue({ data: makeDetail({ items: [] }) })
-      // First POST: item-drafts/from-audio -> proposals. Second POST: items/confirm.
+      apiMocks.get.mockImplementation((url: string) => {
+        if (url === '/api/lists/list-1') {
+          return Promise.resolve({ data: makeDetail({ items: [] }) })
+        }
+
+        return Promise.resolve({
+          data: {
+            id: 'op-1',
+            type: 'AppendItems',
+            status: 'Succeeded',
+            listId: 'list-1',
+            title: null,
+            items: [],
+            itemProposals: [{ text: 'Olive oil', isSelectedByDefault: true, duplicateOfItemId: null }],
+            existingDuplicates: [{ itemId: 'x', text: 'Salt', isCompleted: false }],
+            detectedLanguage: 'en-US',
+            promptVersion: 'v1',
+            retryAfterSeconds: 1,
+            expiresAt: '2026-06-30T11:00:00.000Z',
+          },
+        })
+      })
       apiMocks.post.mockImplementation((url: string) => {
-        if (url.endsWith('/item-drafts/from-audio')) {
+        if (url === '/api/audio-operations') {
           return Promise.resolve({
             data: {
-              items: [{ text: 'Olive oil', isSelectedByDefault: true, duplicateOfItemId: null }],
-              existingDuplicates: [{ itemId: 'x', text: 'Salt', isCompleted: false }],
+              id: 'op-1',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-1',
+              retryAfterSeconds: 1,
             },
           })
         }
+
+        if (url.endsWith('/complete-upload')) {
+          return Promise.resolve({
+            data: {
+              id: 'op-1',
+              type: 'AppendItems',
+              status: 'Queued',
+              listId: 'list-1',
+              title: null,
+              items: [],
+              itemProposals: [],
+              existingDuplicates: [],
+              retryAfterSeconds: 1,
+              expiresAt: '2026-06-30T11:00:00.000Z',
+            },
+          })
+        }
+
         return Promise.resolve({ data: makeDetail({ items: [makeItem({ text: 'Olive oil' })], totalItems: 1 }) })
       })
 
@@ -369,6 +562,132 @@ describe('KinListDetailPage', () => {
           { headers: { 'If-Match': 'list-etag-1' } },
         ),
       )
+
+      vi.unstubAllGlobals()
+    })
+
+    it('resumes a pending append audio operation from sessionStorage after refresh', async () => {
+      sessionStorage.setItem('kinlist:append-audio-operation:list-1', 'op-append-1')
+      apiMocks.get.mockImplementation((url: string) => {
+        if (url === '/api/lists/list-1') {
+          return Promise.resolve({ data: makeDetail({ items: [] }) })
+        }
+
+        return Promise.resolve({
+          data: {
+            id: 'op-append-1',
+            type: 'AppendItems',
+            status: 'Succeeded',
+            listId: 'list-1',
+            title: null,
+            items: [],
+            itemProposals: [{ text: 'Olive oil', isSelectedByDefault: true, duplicateOfItemId: null }],
+            existingDuplicates: [{ itemId: 'x', text: 'Salt', isCompleted: false }],
+            detectedLanguage: 'en-US',
+            promptVersion: 'v1',
+            retryAfterSeconds: 2,
+            expiresAt: '2026-06-30T11:00:00.000Z',
+          },
+        })
+      })
+
+      renderDetail('list-1')
+
+      expect(await screen.findByText(/audio proposals/i)).toBeInTheDocument()
+      expect(screen.getByText(/existing duplicates detected/i)).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Olive oil')).toBeInTheDocument()
+      await waitFor(() => expect(sessionStorage.getItem('kinlist:append-audio-operation:list-1')).toBeNull())
+    })
+
+    it('deletes the server-side append audio operation when upload fails after create', async () => {
+      media = installMediaRecorder()
+      const user = userEvent.setup()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+      vi.stubGlobal('fetch', fetchMock)
+
+      apiMocks.get.mockResolvedValue({ data: makeDetail({ items: [] }) })
+      apiMocks.post.mockImplementation((url: string) => {
+        if (url === '/api/audio-operations') {
+          return Promise.resolve({
+            data: {
+              id: 'op-append-upload-fail',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-append-upload-fail',
+              retryAfterSeconds: 1,
+            },
+          })
+        }
+
+        throw new Error(`Unexpected POST ${url}`)
+      })
+      apiMocks.delete.mockResolvedValue({ data: null })
+
+      renderDetail('list-1')
+      await user.click(await screen.findByRole('button', { name: /add from audio/i }))
+      await user.click(await screen.findByRole('button', { name: /start recording/i }))
+      await waitFor(() => expect(FakeMediaRecorder.instances.length).toBeGreaterThan(0))
+      await user.click(screen.getByRole('button', { name: /^stop$/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /process audio/i })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /process audio/i }))
+
+      await waitFor(() =>
+        expect(apiMocks.delete).toHaveBeenCalledWith('/api/audio-operations/op-append-upload-fail'),
+      )
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith('Audio upload failed with status 500.'),
+      )
+      expect(sessionStorage.getItem('kinlist:append-audio-operation:list-1')).toBeNull()
+
+      vi.unstubAllGlobals()
+    })
+
+    it('cancels in-flight append audio processing without surfacing an error toast', async () => {
+      media = installMediaRecorder()
+      const user = userEvent.setup()
+      const fetchMock = vi.fn().mockImplementation((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal
+          signal?.addEventListener('abort', () => {
+            reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+          }, { once: true })
+        }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      apiMocks.get.mockResolvedValue({ data: makeDetail({ items: [] }) })
+      apiMocks.post.mockImplementation((url: string) => {
+        if (url === '/api/audio-operations') {
+          return Promise.resolve({
+            data: {
+              id: 'op-append-cancel-1',
+              uploadUrl: 'https://storage.test/upload',
+              uploadExpiresAt: '2026-06-30T10:10:00.000Z',
+              blobName: 'family/op-append-cancel-1',
+              retryAfterSeconds: 1,
+            },
+          })
+        }
+
+        throw new Error(`Unexpected POST ${url}`)
+      })
+      apiMocks.delete.mockResolvedValue({ data: null })
+
+      renderDetail('list-1')
+      await user.click(await screen.findByRole('button', { name: /add from audio/i }))
+      await user.click(await screen.findByRole('button', { name: /start recording/i }))
+      await waitFor(() => expect(FakeMediaRecorder.instances.length).toBeGreaterThan(0))
+      await user.click(screen.getByRole('button', { name: /^stop$/i }))
+      await waitFor(() => expect(screen.getByRole('button', { name: /process audio/i })).toBeEnabled())
+      await user.click(screen.getByRole('button', { name: /process audio/i }))
+      await user.click(await screen.findByRole('button', { name: /cancel processing/i }))
+
+      await waitFor(() =>
+        expect(apiMocks.delete).toHaveBeenCalledWith('/api/audio-operations/op-append-cancel-1'),
+      )
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(sessionStorage.getItem('kinlist:append-audio-operation:list-1')).toBeNull()
+
+      vi.unstubAllGlobals()
     })
   })
 

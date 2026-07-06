@@ -121,6 +121,10 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
         services.AddScoped<IFamilyContextResolver, IdentityFamilyContextResolver>();
+        services.AddSingleton<IOAuthLoginPageRenderer, OAuthLoginPageRenderer>();
+        services.AddScoped<IOAuthRequestValidator, OAuthRequestValidator>();
+        services.AddScoped<IOAuthSessionManager, OAuthSessionManager>();
+        services.AddScoped<IOAuthTokenIssuer, OAuthTokenIssuer>();
         services.AddSingleton<IOAuthClientStore>(_ => new InMemoryOAuthClientStore(oauthOptions));
         services.AddSingleton<IOAuthRefreshTokenScopeStore>(_ => new InMemoryOAuthRefreshTokenScopeStore(oauthOptions));
         if (environment.IsDevelopment())

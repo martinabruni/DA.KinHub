@@ -1,6 +1,7 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
 using Kin.KinHub.KinList.Ai.Common;
+using Kin.KinHub.KinList.AzureStorage;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Api.Common;
 using Kin.KinHub.KinList.Api.Common.Configuration;
@@ -26,6 +27,7 @@ public static class ServiceCollectionExtensions
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var familyContextApiOptions = configuration.GetSection(FamilyContextApiOptions.SectionName).Get<FamilyContextApiOptions>() ?? new();
         var kinListOptions = configuration.GetSection(KinListOptions.SectionName).Get<KinListOptions>() ?? new();
+        var audioStorageOptions = configuration.GetSection(AudioStorageOptions.SectionName).Get<AudioStorageOptions>() ?? new();
         var speechOptions = configuration.GetSection(SpeechToTextOptions.SectionName).Get<SpeechToTextOptions>() ?? new();
         var openAiOptions = configuration.GetSection("OpenAi").Get<OpenAiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
@@ -64,12 +66,41 @@ public static class ServiceCollectionExtensions
                 o.MaxAudioDurationSeconds = kinListOptions.MaxAudioDurationSeconds;
                 o.MaxAudioBytes = kinListOptions.MaxAudioBytes;
                 o.AudioProcessingTimeoutSeconds = kinListOptions.AudioProcessingTimeoutSeconds;
+                o.AudioUploadSasTtlMinutes = kinListOptions.AudioUploadSasTtlMinutes;
+                o.AudioOperationRetentionHours = kinListOptions.AudioOperationRetentionHours;
+                o.AudioPollingRetryAfterSeconds = kinListOptions.AudioPollingRetryAfterSeconds;
+                o.AudioProcessingMaxDequeues = kinListOptions.AudioProcessingMaxDequeues;
                 o.TransientRetryMaxAttempts = kinListOptions.TransientRetryMaxAttempts;
                 o.TransientRetryBaseDelayMilliseconds = kinListOptions.TransientRetryBaseDelayMilliseconds;
                 o.TransientRetryMaxDelayMilliseconds = kinListOptions.TransientRetryMaxDelayMilliseconds;
                 o.IdempotencyCleanupIntervalMinutes = kinListOptions.IdempotencyCleanupIntervalMinutes;
                 o.AllowedAudioMimeTypes = kinListOptions.AllowedAudioMimeTypes;
             });
+
+        var hasAudioStorageConfiguration =
+            !string.IsNullOrWhiteSpace(audioStorageOptions.BlobServiceUri)
+            && !string.IsNullOrWhiteSpace(audioStorageOptions.QueueServiceUri);
+
+        var hasPartialAudioStorageConfiguration =
+            !string.IsNullOrWhiteSpace(audioStorageOptions.BlobServiceUri)
+            || !string.IsNullOrWhiteSpace(audioStorageOptions.QueueServiceUri);
+
+        if (hasPartialAudioStorageConfiguration && !hasAudioStorageConfiguration)
+        {
+            throw new InvalidOperationException("Audio processing storage requires both AudioStorage:BlobServiceUri and AudioStorage:QueueServiceUri.");
+        }
+
+        if (hasAudioStorageConfiguration)
+        {
+            services.AddKinHubKinListAzureStorageInfrastructure(o =>
+            {
+                o.BlobServiceUri = audioStorageOptions.BlobServiceUri;
+                o.QueueServiceUri = audioStorageOptions.QueueServiceUri;
+                o.ContainerName = audioStorageOptions.ContainerName;
+                o.ProcessingQueueName = audioStorageOptions.ProcessingQueueName;
+                o.PoisonQueueName = audioStorageOptions.PoisonQueueName;
+            });
+        }
 
         var hasConfiguredAudioPipeline = speechOptions.IsConfigured() && openAiOptions.IsConfigured();
         var hasPartialAudioPipelineConfiguration =
@@ -88,12 +119,14 @@ public static class ServiceCollectionExtensions
                 {
                     o.Endpoint = speechOptions.Endpoint;
                     o.ApiKey = speechOptions.ApiKey;
+                    o.UseManagedIdentity = speechOptions.UseManagedIdentity;
                     o.CandidateLocales = speechOptions.CandidateLocales;
                 },
                 configureOpenAi: o =>
                 {
                     o.Endpoint = openAiOptions.Endpoint;
                     o.ApiKey = openAiOptions.ApiKey;
+                    o.UseManagedIdentity = openAiOptions.UseManagedIdentity;
                     o.ModelDeploymentName = openAiOptions.ModelDeploymentName;
                 });
         }

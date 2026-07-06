@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mic, MoreHorizontal, Plus, ShoppingBasket, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiClient } from '@/api/apiClient'
 import { AudioCaptureDialog } from '@/features/kin-list/components/AudioCaptureDialog'
+import {
+  clearPendingAudioOperation,
+  completeAudioOperation,
+  createAudioOperation,
+  deleteAudioOperation,
+  readPendingAudioOperation,
+  savePendingAudioOperation,
+  uploadAudioToSas,
+  waitForAudioOperation,
+} from '@/features/kin-list/audioOperationClient'
 import { createDraftFromAudio, createEmptyDraft } from '@/features/kin-list/draftSessionStore'
-import type { KinListDetail, KinListDraftFromAudioResponse, KinListSummary, ProblemDetailsError } from '@/types'
+import type { AudioOperationResponse, KinListDetail, KinListSummary, ProblemDetailsError } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -18,8 +28,19 @@ function getProblemCode(error: unknown) {
   return response?.code
 }
 
-function getAudioFileName(blob: Blob) {
-  return blob.type.includes('mp4') || blob.type.includes('m4a') ? 'recording.m4a' : 'recording.webm'
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+const NEW_LIST_OPERATION_KEY = 'kinlist:new-list-audio-operation'
+
+function toDraft(operation: AudioOperationResponse) {
+  return createDraftFromAudio({
+    title: operation.title ?? 'New list',
+    items: operation.items,
+    detectedLanguage: operation.detectedLanguage,
+    promptVersion: operation.promptVersion,
+  })
 }
 
 export function KinListsPage() {
@@ -36,28 +57,86 @@ export function KinListsPage() {
   })
 
   const audioDraftMutation = useMutation({
-    mutationFn: async (blob: Blob) => {
-      const formData = new FormData()
-      formData.append('audio', blob, getAudioFileName(blob))
-      const { data } = await apiClient.post<KinListDraftFromAudioResponse>('/api/list-drafts/from-audio', formData)
-      return { data, blob }
+    mutationFn: async ({ blob, signal }: { blob: Blob; signal: AbortSignal }) => {
+      let operationId: string | null = null
+      try {
+        const operation = await createAudioOperation({
+          type: 'NewList',
+          contentType: blob.type,
+          declaredByteSize: blob.size,
+        }, signal)
+        operationId = operation.id
+        savePendingAudioOperation(NEW_LIST_OPERATION_KEY, operation.id)
+        await uploadAudioToSas(operation.uploadUrl, blob, signal)
+        await completeAudioOperation(operation.id, signal)
+        return await waitForAudioOperation(operation.id, 120000, signal)
+      } catch (error) {
+        if (operationId) {
+          try {
+            await deleteAudioOperation(operationId)
+          } catch {
+            // Best effort cleanup: the expired/failed operation is still swept server-side.
+          }
+        }
+
+        throw error
+      }
     },
-    onSuccess: ({ data, blob }) => {
-      createDraftFromAudio({
-        title: data.title,
-        items: data.items,
-        detectedLanguage: data.detectedLanguage,
-        promptVersion: data.promptVersion,
-        audioBlob: blob,
-      })
+    onSuccess: (operation) => {
+      clearPendingAudioOperation(NEW_LIST_OPERATION_KEY)
+      toDraft(operation)
       navigate('/draft/new')
     },
     onError: (error) => {
+      clearPendingAudioOperation(NEW_LIST_OPERATION_KEY)
+      if (isAbortError(error)) {
+        return
+      }
+
       if (getProblemCode(error) === 'no_items_detected') {
         toast.error('No list items were detected. Try speaking more clearly or use manual creation.')
+        return
       }
+
+      toast.error(error instanceof Error ? error.message : 'Audio processing failed.')
     },
   })
+
+  useEffect(() => {
+    const pendingOperationId = readPendingAudioOperation(NEW_LIST_OPERATION_KEY)
+    if (!pendingOperationId || audioDraftMutation.isPending) {
+      return
+    }
+
+    let cancelled = false
+    void waitForAudioOperation(pendingOperationId)
+      .then((operation) => {
+        if (cancelled) {
+          return
+        }
+
+        clearPendingAudioOperation(NEW_LIST_OPERATION_KEY)
+        if (operation.status !== 'Succeeded') {
+          toast.error(operation.errorMessage ?? 'Audio processing failed.')
+          return
+        }
+
+        toDraft(operation)
+        navigate('/draft/new')
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
+
+        clearPendingAudioOperation(NEW_LIST_OPERATION_KEY)
+        toast.error(error instanceof Error ? error.message : 'Audio processing failed.')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [audioDraftMutation.isPending, navigate])
 
   const deleteMutation = useMutation({
     mutationFn: async (list: KinListSummary) => {
@@ -222,9 +301,9 @@ export function KinListsPage() {
         open={isAudioOpen}
         onOpenChange={setIsAudioOpen}
         title="New audio draft"
-        description="Record up to 60 seconds. The audio stays in memory only long enough to build the draft."
-        onConfirm={async (blob) => {
-          await audioDraftMutation.mutateAsync(blob)
+        description="Record up to 60 seconds. After upload, only the processing operation id survives refresh."
+        onConfirm={async (blob, signal) => {
+          await audioDraftMutation.mutateAsync({ blob, signal })
         }}
       />
     </div>

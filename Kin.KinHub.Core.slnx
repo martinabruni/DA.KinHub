@@ -26,6 +26,9 @@
     <File Path="scripts\create-recipe-schema.sql" />
   </Folder>
   <Folder Name="/src/" />
+  <Folder Name="/src/Shared/">
+    <Project Path="src\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
+  </Folder>
   <Folder Name="/src/Businesses/">
     <Project Path="src\Businesses\Kin.KinHub.Core.Business\Kin.KinHub.Core.Business.csproj" />
     <Project Path="src\Businesses\Kin.KinHub.Identity.Business\Kin.KinHub.Identity.Business.csproj" />
@@ -42,11 +45,13 @@
     <Project Path="src\Infrastructures\Kin.KinHub.Core.OpenAi\Kin.KinHub.Core.OpenAi.csproj" />
     <Project Path="src\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
     <Project Path="src\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
+    <Project Path="src\Infrastructures\Kin.KinHub.KinList.AzureStorage\Kin.KinHub.KinList.AzureStorage.csproj" />
     <Project Path="src\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
   </Folder>
   <Folder Name="/src/Presentations/">
     <Project Path="src\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.KinList.Api\Kin.KinHub.KinList.Api.csproj" />
+    <Project Path="src\Presentations\Kin.KinHub.KinList.AudioWorker\Kin.KinHub.KinList.AudioWorker.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Migrations.Runner\Kin.KinHub.Migrations.Runner.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
