@@ -233,6 +233,7 @@ var kinListAudioProcessingQueueName = 'kinlist-audio-processing'
 var kinListAudioPoisonQueueName = 'kinlist-audio-poison'
 
 // Built-in Azure RBAC role definition IDs.
+// Key Vault Secrets User
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
@@ -315,6 +316,13 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-pr
   }
 }
 
+// IAC-07 TODO: The 0.0.0.0 rule below opens the PostgreSQL server to all Azure services
+// (this is the special "Allow Azure services" rule, not a public 0.0.0.0/0 CIDR). To restrict
+// access to only the Container Apps, replace this with either:
+//   - a VNet-integrated Container Apps environment + private endpoint / delegated subnet rule, or
+//   - explicit firewall rules for the Container Apps' outbound static IPs.
+// Those IPs are not derivable from this codebase, so the rule is left in place to avoid breaking
+// connectivity. Do not remove without a validated replacement.
 resource postgresFirewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-06-01-preview' = {
   parent: postgresServer
   name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
@@ -404,6 +412,11 @@ resource openAiEndpointSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// IAC-06 TODO: This stores the OpenAI account API key (listKeys) in Key Vault. Prefer keyless
+// auth via managed identity (DefaultAzureCredential) with the "Cognitive Services OpenAI User"
+// role (5e0bd9bd-7b93-4f28-af87-19fc36ad61bd) assigned to the consuming Container App identities,
+// then drop this secret. Left in place until the apps are confirmed to use DefaultAzureCredential
+// for the OpenAI endpoint to avoid breaking runtime access.
 resource openAiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: openAiKeySecretName
@@ -420,6 +433,11 @@ resource speechEndpointSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// IAC-06 TODO: This stores the Speech account API key (listKeys) in Key Vault. Prefer keyless
+// auth via managed identity (DefaultAzureCredential) with the "Cognitive Services User" role
+// (a97b65f3-24c7-4388-baec-2e87135dc908) assigned to the consuming Container App identities,
+// then drop this secret. Left in place until the apps are confirmed to use DefaultAzureCredential
+// for the Speech endpoint to avoid breaking runtime access.
 resource speechKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: speechKeySecretName

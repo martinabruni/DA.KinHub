@@ -1,5 +1,5 @@
-using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.Shared.Api.Common;
+using Kin.KinHub.Shared.Kernel.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.KinList.Api.Common;

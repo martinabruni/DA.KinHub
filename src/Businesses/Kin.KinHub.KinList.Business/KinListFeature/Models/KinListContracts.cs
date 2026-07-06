@@ -78,63 +78,63 @@ public sealed class ParsedKinListAudioDraft
 
 public sealed class KinListItemResponse
 {
-    public required Guid Id { get; set; }
-    public required string Text { get; set; }
-    public required string ETag { get; set; }
-    public bool IsCompleted { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public required Guid Id { get; init; }
+    public required string Text { get; init; }
+    public required string ETag { get; init; }
+    public bool IsCompleted { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
 }
 
 public sealed class KinListResponse
 {
-    public required Guid Id { get; set; }
-    public required string Title { get; set; }
-    public required string ETag { get; set; }
-    public int TotalItems { get; set; }
-    public int CompletedItems { get; set; }
-    public bool IsCompleted { get; set; }
-    public DateTime LastModifiedAt { get; set; }
+    public required Guid Id { get; init; }
+    public required string Title { get; init; }
+    public required string ETag { get; init; }
+    public int TotalItems { get; init; }
+    public int CompletedItems { get; init; }
+    public bool IsCompleted { get; init; }
+    public DateTime LastModifiedAt { get; init; }
 }
 
 public sealed class KinListDetailResponse
 {
-    public required Guid Id { get; set; }
-    public required string Title { get; set; }
-    public required string ETag { get; set; }
-    public int TotalItems { get; set; }
-    public int CompletedItems { get; set; }
-    public bool IsCompleted { get; set; }
-    public DateTime LastModifiedAt { get; set; }
-    public IReadOnlyList<KinListItemResponse> Items { get; set; } = [];
+    public required Guid Id { get; init; }
+    public required string Title { get; init; }
+    public required string ETag { get; init; }
+    public int TotalItems { get; init; }
+    public int CompletedItems { get; init; }
+    public bool IsCompleted { get; init; }
+    public DateTime LastModifiedAt { get; init; }
+    public IReadOnlyList<KinListItemResponse> Items { get; init; } = [];
 }
 
 public sealed class KinListDraftFromAudioResponse
 {
-    public required string Title { get; set; }
-    public IReadOnlyList<string> Items { get; set; } = [];
-    public required string DetectedLanguage { get; set; }
-    public required string PromptVersion { get; set; }
+    public required string Title { get; init; }
+    public IReadOnlyList<string> Items { get; init; } = [];
+    public required string DetectedLanguage { get; init; }
+    public required string PromptVersion { get; init; }
 }
 
 public sealed class KinListItemDraftProposalResponse
 {
-    public required string Text { get; set; }
-    public bool IsSelectedByDefault { get; set; }
-    public Guid? DuplicateOfItemId { get; set; }
+    public required string Text { get; init; }
+    public bool IsSelectedByDefault { get; init; }
+    public Guid? DuplicateOfItemId { get; init; }
 }
 
 public sealed class KinListExistingDuplicateResponse
 {
-    public required Guid ItemId { get; set; }
-    public required string Text { get; set; }
-    public bool IsCompleted { get; set; }
+    public required Guid ItemId { get; init; }
+    public required string Text { get; init; }
+    public bool IsCompleted { get; init; }
 }
 
 public sealed class KinListItemDraftsFromAudioResponse
 {
-    public IReadOnlyList<KinListItemDraftProposalResponse> Items { get; set; } = [];
-    public IReadOnlyList<KinListExistingDuplicateResponse> ExistingDuplicates { get; set; } = [];
-    public required string DetectedLanguage { get; set; }
-    public required string PromptVersion { get; set; }
+    public IReadOnlyList<KinListItemDraftProposalResponse> Items { get; init; } = [];
+    public IReadOnlyList<KinListExistingDuplicateResponse> ExistingDuplicates { get; init; } = [];
+    public required string DetectedLanguage { get; init; }
+    public required string PromptVersion { get; init; }
 }

@@ -434,7 +434,7 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
     public async Task CreateAudioOperation_ThenCompleteAndProcessNewList_ReturnsSucceededDraft()
     {
         using var client = _factory.CreateClient();
-        _factory.AudioGenerator.Result = Kin.KinHub.KinList.Business.Common.Result<Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft>.Success(
+        _factory.AudioGenerator.Result = Kin.KinHub.Shared.Kernel.Common.Result<Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft>.Success(
             new Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft
             {
                 Title = "Spesa",

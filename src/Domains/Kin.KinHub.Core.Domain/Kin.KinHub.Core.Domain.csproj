@@ -1,8 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Kin.KinHub.Core.Domain</RootNamespace>
     <AssemblyName>Kin.KinHub.Core.Domain</AssemblyName>
   </PropertyGroup>

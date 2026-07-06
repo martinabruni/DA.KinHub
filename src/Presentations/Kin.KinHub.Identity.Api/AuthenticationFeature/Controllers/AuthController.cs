@@ -58,7 +58,7 @@ public sealed class AuthController : ControllerBase
 
         var result = await _registerUserHandler.HandleAsync(request, cancellationToken);
 
-        return HttpResultMapper.ToCreatedActionResult(this, result);
+        return IdentityHttpResultMapper.ToCreatedActionResult(this, result);
     }
 
     [HttpGet("me")]
@@ -67,7 +67,7 @@ public sealed class AuthController : ControllerBase
     {
         var result = await _getCurrentUserHandler.HandleAsync(_currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("me/email")]
@@ -86,7 +86,7 @@ public sealed class AuthController : ControllerBase
 
         var result = await _updateUserEmailHandler.HandleAsync(_currentUser.UserId, request, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPut("me/password")]
@@ -105,7 +105,7 @@ public sealed class AuthController : ControllerBase
 
         var result = await _updateUserPasswordHandler.HandleAsync(_currentUser.UserId, request, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpDelete("me")]
@@ -114,7 +114,7 @@ public sealed class AuthController : ControllerBase
     {
         var result = await _deleteUserHandler.HandleAsync(_currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpGet("me/providers")]
@@ -123,7 +123,7 @@ public sealed class AuthController : ControllerBase
     {
         var result = await _userProviderService.GetProvidersAsync(_currentUser.UserId, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpPost("me/providers")]
@@ -137,7 +137,7 @@ public sealed class AuthController : ControllerBase
 
         var result = await _userProviderService.LinkAsync(_currentUser.UserId, request, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 
     [HttpDelete("me/providers/{provider}")]
@@ -148,6 +148,6 @@ public sealed class AuthController : ControllerBase
     {
         var result = await _userProviderService.UnlinkAsync(_currentUser.UserId, provider, cancellationToken);
 
-        return HttpResultMapper.ToActionResult(this, result);
+        return IdentityHttpResultMapper.ToActionResult(this, result);
     }
 }

@@ -1,13 +1,12 @@
-namespace Kin.KinHub.Core.Business.Common;
+namespace Kin.KinHub.Shared.Kernel.Common;
 
-public sealed class Result<T> : IResult<T>
+public sealed class Result<T>
 {
     public bool IsSuccess => Status is ResultStatus.Success;
     public ResultStatus Status { get; private init; }
     public string? Code { get; private init; }
-    public T? Value { get; private init; }
-    object? IResult.Value => Value;
     public string? Message { get; private init; }
+    public T? Value { get; private init; }
 
     private Result() { }
 
@@ -27,6 +26,12 @@ public sealed class Result<T> : IResult<T>
         new() { Status = ResultStatus.UnprocessableEntity, Message = message, Code = code };
 
     public static Result<T> Unauthorized(string message, string code = "forbidden") =>
+        new() { Status = ResultStatus.Unauthorized, Message = message, Code = code };
+
+    public static Result<T> Forbidden(string message, string code = "forbidden") =>
+        new() { Status = ResultStatus.Unauthorized, Message = message, Code = code };
+
+    public static Result<T> Unauthenticated(string message, string code = "authentication_required") =>
         new() { Status = ResultStatus.Unauthorized, Message = message, Code = code };
 
     public static Result<T> ServiceUnavailable(string message, string code = "service_unavailable") =>

@@ -1,12 +1,12 @@
+using Kin.KinHub.Shared.Kernel.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using CoreResult = Kin.KinHub.Core.Business.Common;
 
 namespace Kin.KinHub.Shared.Api.Common;
 
 public static partial class HttpResultMapper
 {
-    public static IActionResult ToActionResult<T>(CoreResult.Result<T> result) =>
+    public static IActionResult ToActionResult<T>(Result<T> result) =>
         result.Status switch
         {
             ResultStatus.Success => new OkObjectResult(result.Value),
@@ -19,16 +19,16 @@ public static partial class HttpResultMapper
             _ => new ObjectResult(new { message = result.Message }) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 
-    public static IActionResult ToActionResult<T>(ControllerBase controller, CoreResult.Result<T> result) =>
+    public static IActionResult ToActionResult<T>(ControllerBase controller, Result<T> result) =>
         SharedHttpResultMapper.ToActionResult(controller, result, unauthorizedIsForbidden: true);
 
-    public static IActionResult ToCreatedActionResult<T>(CoreResult.Result<T> result) =>
+    public static IActionResult ToCreatedActionResult<T>(Result<T> result) =>
         result.Status switch
         {
             ResultStatus.Success => new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created },
             _ => ToActionResult(result),
         };
 
-    public static IActionResult ToCreatedActionResult<T>(ControllerBase controller, CoreResult.Result<T> result) =>
+    public static IActionResult ToCreatedActionResult<T>(ControllerBase controller, Result<T> result) =>
         SharedHttpResultMapper.ToCreatedActionResult(controller, result, unauthorizedIsForbidden: true);
 }

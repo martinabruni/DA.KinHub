@@ -4,9 +4,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Kin.KinHub.Shared.Api.Common;
 
+/// <summary>
+/// Central mapper from the shared <see cref="Result{T}"/> to <see cref="IActionResult"/>.
+/// HTTP semantics are identical to the per-context mappers that delegate to it.
+/// </summary>
 public static class SharedHttpResultMapper
 {
-    public static IActionResult ToActionResult<T>(ControllerBase controller, IResult<T> result, bool unauthorizedIsForbidden) =>
+    /// <summary>
+    /// Maps a result to an action result.
+    /// </summary>
+    /// <param name="unauthorizedIsForbidden">
+    /// When true, <see cref="ResultStatus.Unauthorized"/> maps to 403 Forbidden (Core/KinList semantics).
+    /// When false, it maps to 401 Unauthorized (Identity semantics).
+    /// </param>
+    public static IActionResult ToActionResult<T>(ControllerBase controller, Result<T> result, bool unauthorizedIsForbidden) =>
         result.Status switch
         {
             ResultStatus.Success => new OkObjectResult(result.Value),
@@ -20,8 +31,10 @@ public static class SharedHttpResultMapper
             _ => new ObjectResult(ApiProblemDetails.Create(controller, StatusCodes.Status500InternalServerError, result.Code ?? "unexpected_error", result.Message ?? "Unexpected server error.")) { StatusCode = StatusCodes.Status500InternalServerError },
         };
 
-    public static IActionResult ToCreatedActionResult<T>(ControllerBase controller, IResult<T> result, bool unauthorizedIsForbidden) =>
-        result.Status is ResultStatus.Success
-            ? new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created }
-            : ToActionResult(controller, result, unauthorizedIsForbidden);
+    public static IActionResult ToCreatedActionResult<T>(ControllerBase controller, Result<T> result, bool unauthorizedIsForbidden) =>
+        result.Status switch
+        {
+            ResultStatus.Success => new ObjectResult(result.Value) { StatusCode = StatusCodes.Status201Created },
+            _ => ToActionResult(controller, result, unauthorizedIsForbidden),
+        };
 }

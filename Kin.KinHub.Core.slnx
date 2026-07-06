@@ -56,6 +56,9 @@
     <Project Path="src\Presentations\Kin.KinHub.Migrations.Runner\Kin.KinHub.Migrations.Runner.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
+  </Folder>
   <Folder Name="/src/Tests/">
     <Project Path="src/Tests/Kin.KinHub.Core.Test/Kin.KinHub.Core.Test.csproj" Id="4a373282-2a52-44cd-ab39-d964ca708def" />
   </Folder>

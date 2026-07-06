@@ -172,7 +172,7 @@ internal sealed class StubFamilyContextResolver : IFamilyContextResolver
 public sealed class ConfigurableAudioDraftGenerator : IKinListAudioDraftGenerator
 {
     public Result<ParsedKinListAudioDraft> Result { get; set; } =
-        Kin.KinHub.KinList.Business.Common.Result<ParsedKinListAudioDraft>.Success(new ParsedKinListAudioDraft
+        Kin.KinHub.Shared.Kernel.Common.Result<ParsedKinListAudioDraft>.Success(new ParsedKinListAudioDraft
         {
             Title = "Spesa",
             Items = ["Latte", "Pane"],

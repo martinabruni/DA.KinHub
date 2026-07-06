@@ -229,7 +229,7 @@ public sealed class ListsController : ControllerBase
         return string.IsNullOrWhiteSpace(ifMatch) ? null : ifMatch.Trim();
     }
 
-    private IActionResult ApplyEtag(IActionResult actionResult, Kin.KinHub.KinList.Business.Common.Result<KinListDetailResponse> result)
+    private IActionResult ApplyEtag(IActionResult actionResult, Kin.KinHub.Shared.Kernel.Common.Result<KinListDetailResponse> result)
     {
         if (result.IsSuccess && result.Value is not null)
         {

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Kin.KinHub.KinRecipe.Api.Common.Configuration;
 using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Shared.Kernel.Common;
 
 namespace Kin.KinHub.KinRecipe.Api.Common;
 

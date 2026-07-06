@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Kin.KinHub.KinList.Business.Common;
 using DomainKinList = Kin.KinHub.KinList.Domain.KinListFeature.KinList;
 using DomainKinListItem = Kin.KinHub.KinList.Domain.KinListFeature.KinListItem;
 
@@ -89,7 +88,7 @@ public sealed class KinListService : IKinListService
     public async Task<Result<KinListDetailResponse>> CreateAsync(CreateKinListRequest request, Guid familyId, Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)
         => await _transactionExecutor.ExecuteAsync(async ct =>
         {
-            var normalizedItems = NormalizeDistinctItems(request.Items);
+            var normalizedItems = KinListItemNormalizer.NormalizeDistinct(request.Items);
             if (normalizedItems.Count > _options.MaxItemsPerList)
             {
                 return Result<KinListDetailResponse>.ValidationError(
@@ -210,22 +209,13 @@ public sealed class KinListService : IKinListService
         => await _transactionExecutor.ExecuteAsync(async ct =>
         {
             var list = await _listRepository.GetByIdAsync(listId, ct);
-            if (list is null)
+            var error = ValidateListMutation(list, familyId, ifMatch, allowDeleted: true);
+            if (error is not null)
             {
-                return Result<KinListDetailResponse>.NotFound("List not found.");
+                return error;
             }
 
-            if (list.FamilyId != familyId)
-            {
-                return Result<KinListDetailResponse>.Unauthorized("The authenticated family cannot access this list.");
-            }
-
-            if (!MatchesEtag(list.Version, ifMatch))
-            {
-                return Result<KinListDetailResponse>.Conflict("The list was modified by another request.", "etag_conflict");
-            }
-
-            list.IsDeleted = false;
+            list!.IsDeleted = false;
             TouchList(list);
             await _listRepository.UpdateAsync(list, ct);
 
@@ -283,7 +273,7 @@ public sealed class KinListService : IKinListService
                 return error;
             }
 
-            var normalizedItems = NormalizeDistinctItems(request.Items);
+            var normalizedItems = KinListItemNormalizer.NormalizeDistinct(request.Items);
             if (normalizedItems.Count > _options.MaxItemsPerBulkConfirm)
             {
                 return Result<KinListDetailResponse>.ValidationError(
@@ -381,14 +371,10 @@ public sealed class KinListService : IKinListService
         => await _transactionExecutor.ExecuteAsync(async ct =>
         {
             var list = await _listRepository.GetByIdAsync(listId, ct);
-            if (list is null || list.IsDeleted)
+            var listError = ValidateListAccess(list, familyId, allowDeleted: false);
+            if (listError is not null)
             {
-                return Result<KinListDetailResponse>.NotFound("List not found.");
-            }
-
-            if (list.FamilyId != familyId)
-            {
-                return Result<KinListDetailResponse>.Unauthorized("The authenticated family cannot access this list.");
+                return listError;
             }
 
             var item = await _itemRepository.GetByIdAsync(itemId, ct);
@@ -409,11 +395,11 @@ public sealed class KinListService : IKinListService
             item.UpdatedAt = DateTime.UtcNow;
             await _itemRepository.UpdateAsync(item, ct);
 
-            TouchList(list);
-            await _listRepository.UpdateAsync(list, ct);
+            TouchList(list!);
+            await _listRepository.UpdateAsync(list!, ct);
 
             var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list, items));
+            return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list!, items));
         }, cancellationToken);
 
     public Task<Result<CreateAudioProcessingOperationResponse>> CreateAudioOperationAsync(CreateAudioProcessingOperationRequest request, Guid familyId, Guid userId, CancellationToken cancellationToken = default) =>
@@ -448,14 +434,10 @@ public sealed class KinListService : IKinListService
         CancellationToken cancellationToken)
     {
         var list = await _listRepository.GetByIdAsync(listId, cancellationToken);
-        if (list is null || list.IsDeleted)
+        var listError = ValidateListAccess(list, familyId);
+        if (listError is not null)
         {
-            return (null, null, Result<KinListDetailResponse>.NotFound("List not found."));
-        }
-
-        if (list.FamilyId != familyId)
-        {
-            return (null, null, Result<KinListDetailResponse>.Unauthorized("The authenticated family cannot access this list."));
+            return (null, null, listError);
         }
 
         var item = await _itemRepository.GetByIdAsync(itemId, cancellationToken);
@@ -472,9 +454,9 @@ public sealed class KinListService : IKinListService
         return (list, item, null);
     }
 
-    private Result<KinListDetailResponse>? ValidateListMutation(DomainKinList? list, Guid familyId, string ifMatch)
+    private static Result<KinListDetailResponse>? ValidateListAccess(DomainKinList? list, Guid familyId, bool allowDeleted = false)
     {
-        if (list is null || list.IsDeleted)
+        if (list is null || (!allowDeleted && list.IsDeleted))
         {
             return Result<KinListDetailResponse>.NotFound("List not found.");
         }
@@ -484,7 +466,18 @@ public sealed class KinListService : IKinListService
             return Result<KinListDetailResponse>.Unauthorized("The authenticated family cannot access this list.");
         }
 
-        if (!MatchesEtag(list.Version, ifMatch))
+        return null;
+    }
+
+    private static Result<KinListDetailResponse>? ValidateListMutation(DomainKinList? list, Guid familyId, string ifMatch, bool allowDeleted = false)
+    {
+        var accessError = ValidateListAccess(list, familyId, allowDeleted);
+        if (accessError is not null)
+        {
+            return accessError;
+        }
+
+        if (!MatchesEtag(list!.Version, ifMatch))
         {
             return Result<KinListDetailResponse>.Conflict("The list was modified by another request.", "etag_conflict");
         }
@@ -508,15 +501,6 @@ public sealed class KinListService : IKinListService
         var items = await _itemRepository.GetAllByListIdAsync(listId, cancellationToken);
         return items.Count(i => !i.IsDeleted);
     }
-
-    private static List<string> NormalizeDistinctItems(IEnumerable<string> items) =>
-        items
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(NormalizeText)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-    private static string NormalizeText(string text) => text.Trim();
 
     private static string ComputeHash(string title, IReadOnlyList<string> items)
     {
