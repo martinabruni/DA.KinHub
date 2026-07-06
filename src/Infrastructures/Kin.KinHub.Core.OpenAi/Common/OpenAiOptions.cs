@@ -6,6 +6,10 @@ public sealed class OpenAiOptions
     public string ApiKey { get; set; } = string.Empty;
     public string EmbeddingDeploymentName { get; set; } = "text-embedding-3-small";
     public string ModelDeploymentName { get; set; } = "gpt-4o";
+    public int RequestTimeoutSeconds { get; set; } = 30;
+    public int MaxRetryAttempts { get; set; } = 3;
+    public int BaseRetryDelayMilliseconds { get; set; } = 250;
+    public int MaxRetryDelayMilliseconds { get; set; } = 2000;
 
     public string ParseRecipeSystemPrompt { get; set; } = """
         You are a recipe assistant. You process recipe parsing and generation tasks and respond exclusively with a single valid JSON object. No markdown, no code blocks, no prose outside of JSON.
@@ -164,5 +168,9 @@ public sealed class OpenAiOptions
             throw new InvalidOperationException($"{nameof(OpenAiOptions)}.{nameof(Endpoint)} is required.");
         if (string.IsNullOrWhiteSpace(ApiKey))
             throw new InvalidOperationException($"{nameof(OpenAiOptions)}.{nameof(ApiKey)} is required.");
+        if (RequestTimeoutSeconds <= 0)
+            throw new InvalidOperationException($"{nameof(OpenAiOptions)}.{nameof(RequestTimeoutSeconds)} must be greater than zero.");
+        if (MaxRetryAttempts <= 0)
+            throw new InvalidOperationException($"{nameof(OpenAiOptions)}.{nameof(MaxRetryAttempts)} must be greater than zero.");
     }
 }

@@ -18,7 +18,7 @@ public sealed class FridgeIngredientRepository : PostgreSqlRepository<FridgeIngr
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<FridgeIngredient>> GetAllByFamilyIdAsync(Guid fridgeId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<FridgeIngredient>> GetAllByFridgeIdAsync(Guid fridgeId, CancellationToken cancellationToken = default)
     {
         var entities = await Set
             .Where(e => e.FridgeId == fridgeId && !e.IsDeleted)

@@ -21,8 +21,8 @@ internal sealed class OpenAiRecipeMissingIngredientsService : IRecipeMissingIngr
         Guid fridgeId,
         CancellationToken cancellationToken = default)
     {
-        var recipeIngredients = await _recipeIngredientRepository.GetAllByFamilyIdAsync(recipeId, cancellationToken);
-        var fridgeIngredients = await _fridgeIngredientRepository.GetAllByFamilyIdAsync(fridgeId, cancellationToken);
+        var recipeIngredients = await _recipeIngredientRepository.GetAllByRecipeIdAsync(recipeId, cancellationToken);
+        var fridgeIngredients = await _fridgeIngredientRepository.GetAllByFridgeIdAsync(fridgeId, cancellationToken);
 
         var missing = new List<string>();
 
@@ -30,13 +30,19 @@ internal sealed class OpenAiRecipeMissingIngredientsService : IRecipeMissingIngr
         {
             if (recipeIngredient.Embedding is null)
             {
-                missing.Add(recipeIngredient.Name);
+                var fallbackFound = fridgeIngredients.Any(fi =>
+                    string.Equals(NormalizeIngredientName(fi.Name), NormalizeIngredientName(recipeIngredient.Name), StringComparison.OrdinalIgnoreCase));
+                if (!fallbackFound)
+                {
+                    missing.Add(recipeIngredient.Name);
+                }
                 continue;
             }
 
             var found = fridgeIngredients.Any(fi =>
-                fi.Embedding is not null &&
-                CosineSimilarity(recipeIngredient.Embedding, fi.Embedding) >= SimilarityThreshold);
+                (fi.Embedding is not null &&
+                 CosineSimilarity(recipeIngredient.Embedding, fi.Embedding) >= SimilarityThreshold)
+                || string.Equals(NormalizeIngredientName(fi.Name), NormalizeIngredientName(recipeIngredient.Name), StringComparison.OrdinalIgnoreCase));
 
             if (!found)
                 missing.Add(recipeIngredient.Name);
@@ -60,4 +66,6 @@ internal sealed class OpenAiRecipeMissingIngredientsService : IRecipeMissingIngr
 
         return magA is 0f || magB is 0f ? 0f : dot / (MathF.Sqrt(magA) * MathF.Sqrt(magB));
     }
+
+    private static string NormalizeIngredientName(string value) => value.Trim();
 }

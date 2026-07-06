@@ -22,10 +22,15 @@ public sealed class AzureSpeechKinListTranscriber : IKinListSpeechTranscriber
 
     private async Task<Result<SpeechTranscriptionResult>> TranscribeCoreAsync(KinListAudioCommand command, CancellationToken cancellationToken)
     {
-        var client = new TranscriptionClient(
-            new Uri(_options.Endpoint),
-            new ApiKeyCredential(_options.ApiKey),
-            new TranscriptionClientOptions(TranscriptionClientOptions.ServiceVersion.V20251015));
+        var client = _options.UseManagedIdentity
+            ? new TranscriptionClient(
+                new Uri(_options.Endpoint),
+                new global::Azure.Identity.DefaultAzureCredential(),
+                new TranscriptionClientOptions(TranscriptionClientOptions.ServiceVersion.V20251015))
+            : new TranscriptionClient(
+                new Uri(_options.Endpoint),
+                new ApiKeyCredential(_options.ApiKey),
+                new TranscriptionClientOptions(TranscriptionClientOptions.ServiceVersion.V20251015));
 
         return await TransientExecutionHelper.ExecuteAsync(async ct =>
         {

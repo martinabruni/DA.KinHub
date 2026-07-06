@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Businesses\Kin.KinHub.Core.Business\Kin.KinHub.Core.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Core.Domain\Kin.KinHub.Core.Domain.csproj" />
   </ItemGroup>
 

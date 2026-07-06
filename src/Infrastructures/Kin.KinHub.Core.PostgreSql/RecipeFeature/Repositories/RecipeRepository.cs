@@ -18,10 +18,24 @@ public sealed class RecipeRepository : PostgreSqlRepository<RecipeEntity, Recipe
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<Recipe>> GetAllByFamilyIdAsync(Guid recipeBookId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Recipe>> GetAllByRecipeBookIdAsync(Guid recipeBookId, CancellationToken cancellationToken = default)
     {
         var entities = await Set
             .Where(e => e.RecipeBookId == recipeBookId && !e.IsDeleted)
+            .ToListAsync(cancellationToken);
+        return entities.Adapt<IReadOnlyList<Recipe>>();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Recipe>> GetAllByRecipeBookIdsAsync(IReadOnlyCollection<Guid> recipeBookIds, CancellationToken cancellationToken = default)
+    {
+        if (recipeBookIds.Count == 0)
+        {
+            return [];
+        }
+
+        var entities = await Set
+            .Where(e => recipeBookIds.Contains(e.RecipeBookId) && !e.IsDeleted)
             .ToListAsync(cancellationToken);
         return entities.Adapt<IReadOnlyList<Recipe>>();
     }

@@ -6,6 +6,7 @@ public sealed class SpeechToTextOptions
 
     public string Endpoint { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
+    public bool UseManagedIdentity { get; set; }
     public string[] CandidateLocales { get; set; } =
     [
         "it-IT",
@@ -18,22 +19,18 @@ public sealed class SpeechToTextOptions
 
     public bool IsConfigured() =>
         !string.IsNullOrWhiteSpace(Endpoint)
-        && !string.IsNullOrWhiteSpace(ApiKey);
+        && (UseManagedIdentity || !string.IsNullOrWhiteSpace(ApiKey));
 
     public bool HasPartialConfiguration() =>
         !string.IsNullOrWhiteSpace(Endpoint)
-        || !string.IsNullOrWhiteSpace(ApiKey);
+        || !string.IsNullOrWhiteSpace(ApiKey)
+        || UseManagedIdentity;
 
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Endpoint))
         {
             throw new InvalidOperationException($"{nameof(SpeechToTextOptions)}.{nameof(Endpoint)} is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(ApiKey))
-        {
-            throw new InvalidOperationException($"{nameof(SpeechToTextOptions)}.{nameof(ApiKey)} is required.");
         }
 
         if (CandidateLocales.Any(string.IsNullOrWhiteSpace))

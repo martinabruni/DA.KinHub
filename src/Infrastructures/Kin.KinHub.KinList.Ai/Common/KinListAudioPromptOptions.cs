@@ -2,7 +2,7 @@ namespace Kin.KinHub.KinList.Ai.Common;
 
 public sealed class KinListAudioPromptOptions
 {
-    public string PromptVersion { get; set; } = "kinlist-audio-v1";
+    public string PromptVersion { get; set; } = "kinlist-audio-v2";
 
     public string SystemPrompt { get; set; } = """
         You convert a grocery-audio transcription into a KinHub shopping list draft.

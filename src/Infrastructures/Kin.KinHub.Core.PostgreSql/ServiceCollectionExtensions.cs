@@ -1,4 +1,6 @@
 ﻿using Kin.KinHub.Core.PostgreSql.Models;
+using Kin.KinHub.Core.Business.Common;
+using Kin.KinHub.Core.PostgreSql.Common;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Pgvector;
@@ -29,6 +31,8 @@ public static class ServiceCollectionExtensions
                     maxRetryDelay: TimeSpan.FromSeconds(5),
                     errorCodesToAdd: null);
             }));
+
+        services.AddScoped<ICoreTransactionExecutor, EfCoreTransactionExecutor>();
 
         // Core repositories
         services.AddScoped<IFamilyRepository, FamilyRepository>();

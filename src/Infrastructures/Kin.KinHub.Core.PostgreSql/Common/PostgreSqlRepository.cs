@@ -24,6 +24,26 @@ public abstract class PostgreSqlRepository<TEntity, TDomain, TKey>
         return entity.Adapt<TDomain>();
     }
 
+    public async Task<IReadOnlyList<TDomain>> CreateRangeAsync(IReadOnlyCollection<TDomain> models)
+    {
+        if (models.Count == 0)
+        {
+            return [];
+        }
+
+        var entities = new List<TEntity>(models.Count);
+        foreach (var model in models)
+        {
+            var entity = model.Adapt<TEntity>();
+            await OnBeforeCreateAsync(entity);
+            entities.Add(entity);
+        }
+
+        await Set.AddRangeAsync(entities);
+        await Context.SaveChangesAsync();
+        return entities.Adapt<IReadOnlyList<TDomain>>();
+    }
+
     public async Task<TDomain> GetAsync(TKey key)
     {
         var entity = await Set.FindAsync(key);

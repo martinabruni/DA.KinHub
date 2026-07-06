@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IKinListRepository, KinListRepository>();
         services.AddScoped<IKinListItemRepository, KinListItemRepository>();
         services.AddScoped<IIdempotencyRecordRepository, IdempotencyRecordRepository>();
+        services.AddScoped<IAudioProcessingOperationRepository, AudioProcessingOperationRepository>();
         services.AddScoped<IKinListTransactionExecutor, EfKinListTransactionExecutor>();
 
         return services;

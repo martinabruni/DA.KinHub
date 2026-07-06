@@ -1,7 +1,9 @@
 using Azure;
 using Azure.AI.OpenAI;
+using System.Text;
 using Kin.KinHub.KinList.Ai.Common;
 using OpenAI.Chat;
+using System.ClientModel;
 
 namespace Kin.KinHub.KinList.Ai.KinListFeature;
 
@@ -9,12 +11,20 @@ internal sealed class AzureOpenAiKinListChatCompletionClient : IKinListChatCompl
 {
     private readonly ChatClient _chatClient;
     private readonly KinListOptions _kinListOptions;
+    private readonly ChatResponseFormat _responseFormat;
 
     public AzureOpenAiKinListChatCompletionClient(OpenAiOptions options, KinListOptions kinListOptions)
     {
-        var client = new AzureOpenAIClient(new Uri(options.Endpoint), new AzureKeyCredential(options.ApiKey));
+        var client = options.UseManagedIdentity
+            ? new AzureOpenAIClient(new Uri(options.Endpoint), new global::Azure.Identity.DefaultAzureCredential())
+            : new AzureOpenAIClient(new Uri(options.Endpoint), new ApiKeyCredential(options.ApiKey));
         _chatClient = client.GetChatClient(options.ModelDeploymentName);
         _kinListOptions = kinListOptions;
+        _responseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+            jsonSchemaFormatName: "kin_list_audio_draft",
+            jsonSchema: BuildResponseSchema(kinListOptions),
+            jsonSchemaFormatDescription: "Structured KinHub shopping-list draft output for audio transcription.",
+            jsonSchemaIsStrict: true);
     }
 
     public Task<string> CompleteAsync(string systemPrompt, string userMessage, CancellationToken cancellationToken = default) =>
@@ -27,7 +37,7 @@ internal sealed class AzureOpenAiKinListChatCompletionClient : IKinListChatCompl
         {
             var options = new ChatCompletionOptions
             {
-                ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat(),
+                ResponseFormat = _responseFormat,
                 Temperature = 0.1f,
             };
 
@@ -55,5 +65,31 @@ internal sealed class AzureOpenAiKinListChatCompletionClient : IKinListChatCompl
         {
             throw new TimeoutException("Audio structuring timed out.");
         }
+    }
+
+    private static BinaryData BuildResponseSchema(KinListOptions options)
+    {
+        var schema = $$"""
+            {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "maxLength": {{options.MaxTitleLength}}
+                },
+                "items": {
+                  "type": "array",
+                  "maxItems": {{options.MaxItemsPerBulkConfirm}},
+                  "items": {
+                    "type": "string",
+                    "maxLength": {{options.MaxItemLength}}
+                  }
+                }
+              },
+              "required": ["title", "items"],
+              "additionalProperties": false
+            }
+            """;
+        return BinaryData.FromBytes(Encoding.UTF8.GetBytes(schema));
     }
 }

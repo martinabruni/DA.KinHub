@@ -16,12 +16,14 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
     };
 
     private readonly ChatClient _chatClient;
+    private readonly OpenAiOptions _options;
     private readonly string _parsePrompt;
     private readonly string _suggestPrompt;
     private readonly string _adaptPrompt;
 
     public OpenAiRecipeAssistantService(OpenAiOptions options)
     {
+        _options = options;
         var client = new AzureOpenAIClient(new Uri(options.Endpoint), new AzureKeyCredential(options.ApiKey));
         _chatClient = client.GetChatClient(options.ModelDeploymentName);
         _parsePrompt = options.ParseRecipeSystemPrompt;
@@ -41,7 +43,11 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
         };
 
         var json = await SendAsync(JsonSerializer.Serialize(input, JsonOptions), temperature: 0.7f, _suggestPrompt, cancellationToken);
-        var response = JsonSerializer.Deserialize<SuggestionResponse>(json, JsonOptions)!;
+        var response = DeserializeRequired<SuggestionResponse>(json, "recipe suggestion response");
+        if (!string.Equals(response.TaskType, "recipe_suggestion", StringComparison.Ordinal))
+        {
+            throw OpenAiExecutionHelper.InvalidResponse("Azure OpenAI returned an unexpected task_type for recipe suggestions.", json);
+        }
 
         return response.Suggestions
             .Select(MapToSuggestion)
@@ -56,7 +62,11 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
         var input = new { task_type = "recipe_parsing", raw_text = rawText };
 
         var json = await SendAsync(JsonSerializer.Serialize(input, JsonOptions), temperature: 0.3f, _parsePrompt, cancellationToken);
-        var response = JsonSerializer.Deserialize<ParseResponse>(json, JsonOptions)!;
+        var response = DeserializeRequired<ParseResponse>(json, "recipe parsing response");
+        if (!string.Equals(response.TaskType, "recipe_parsing", StringComparison.Ordinal))
+        {
+            throw OpenAiExecutionHelper.InvalidResponse("Azure OpenAI returned an unexpected task_type for recipe parsing.", json);
+        }
 
         return response.Recipe is null ? null : MapToRecipe(response.Recipe);
     }
@@ -75,7 +85,11 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
         };
 
         var json = await SendAsync(JsonSerializer.Serialize(input, JsonOptions), temperature: 0.3f, _adaptPrompt, cancellationToken);
-        var response = JsonSerializer.Deserialize<AdaptationResponse>(json, JsonOptions)!;
+        var response = DeserializeRequired<AdaptationResponse>(json, "recipe adaptation response");
+        if (!string.Equals(response.TaskType, "recipe_adaptation", StringComparison.Ordinal))
+        {
+            throw OpenAiExecutionHelper.InvalidResponse("Azure OpenAI returned an unexpected task_type for recipe adaptation.", json);
+        }
 
         var originalRecipe = MapToRecipe(response.OriginalRecipe);
         var changedIds = new List<Guid>();
@@ -140,15 +154,42 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
             Temperature = temperature,
         };
 
-        var result = await _chatClient.CompleteChatAsync(
-            [
-                new SystemChatMessage(systemPrompt),
-                new UserChatMessage(userMessage),
-            ],
-            options,
+        var result = await OpenAiExecutionHelper.ExecuteWithResilienceAsync(
+            ct => _chatClient.CompleteChatAsync(
+                [
+                    new SystemChatMessage(systemPrompt),
+                    new UserChatMessage(userMessage),
+                ],
+                options,
+                ct),
+            "openai.chat.complete",
+            _options,
             cancellationToken);
 
+        if (result.Value.Content.Count is 0 || string.IsNullOrWhiteSpace(result.Value.Content[0].Text))
+        {
+            throw OpenAiExecutionHelper.InvalidResponse("Azure OpenAI returned an empty JSON payload.");
+        }
+
         return result.Value.Content[0].Text;
+    }
+
+    private static T DeserializeRequired<T>(string json, string context)
+    {
+        try
+        {
+            var response = JsonSerializer.Deserialize<T>(json, JsonOptions);
+            if (response is null)
+            {
+                throw OpenAiExecutionHelper.InvalidResponse($"Azure OpenAI returned an empty {context}.", json);
+            }
+
+            return response;
+        }
+        catch (JsonException ex)
+        {
+            throw OpenAiExecutionHelper.InvalidResponse($"Azure OpenAI returned an invalid {context}.", json, ex);
+        }
     }
 
     private static object MapToJsonObject(Recipe recipe) =>

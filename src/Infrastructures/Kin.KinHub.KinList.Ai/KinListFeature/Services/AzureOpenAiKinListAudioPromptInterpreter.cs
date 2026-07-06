@@ -12,13 +12,16 @@ public sealed class AzureOpenAiKinListAudioPromptInterpreter : IKinListAudioProm
 
     private readonly IKinListChatCompletionClient _chatCompletionClient;
     private readonly KinListAudioPromptOptions _promptOptions;
+    private readonly KinListOptions _kinListOptions;
 
     public AzureOpenAiKinListAudioPromptInterpreter(
         IKinListChatCompletionClient chatCompletionClient,
-        KinListAudioPromptOptions promptOptions)
+        KinListAudioPromptOptions promptOptions,
+        KinListOptions kinListOptions)
     {
         _chatCompletionClient = chatCompletionClient;
         _promptOptions = promptOptions;
+        _kinListOptions = kinListOptions;
     }
 
     public async Task<Result<ParsedKinListAudioDraft>> InterpretAsync(SpeechTranscriptionResult transcription, CancellationToken cancellationToken = default)
@@ -78,6 +81,27 @@ public sealed class AzureOpenAiKinListAudioPromptInterpreter : IKinListAudioProm
         {
             return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
                 "Audio structuring returned an invalid title.",
+                "audio_processing_invalid_response");
+        }
+
+        if (title.Length > _kinListOptions.MaxTitleLength)
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring returned a title outside the allowed limits.",
+                "audio_processing_invalid_response");
+        }
+
+        if (normalizedItems.Count > _kinListOptions.MaxItemsPerBulkConfirm)
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring returned too many items.",
+                "audio_processing_invalid_response");
+        }
+
+        if (normalizedItems.Any(x => x.Length > _kinListOptions.MaxItemLength))
+        {
+            return Result<ParsedKinListAudioDraft>.ServiceUnavailable(
+                "Audio structuring returned an item outside the allowed limits.",
                 "audio_processing_invalid_response");
         }
 

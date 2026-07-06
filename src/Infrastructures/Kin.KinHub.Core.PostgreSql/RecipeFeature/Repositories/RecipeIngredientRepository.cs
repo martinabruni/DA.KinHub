@@ -18,10 +18,24 @@ public sealed class RecipeIngredientRepository : PostgreSqlRepository<RecipeIngr
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<RecipeIngredient>> GetAllByFamilyIdAsync(Guid recipeId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RecipeIngredient>> GetAllByRecipeIdAsync(Guid recipeId, CancellationToken cancellationToken = default)
     {
         var entities = await Set
             .Where(e => e.RecipeId == recipeId && !e.IsDeleted)
+            .ToListAsync(cancellationToken);
+        return entities.Adapt<IReadOnlyList<RecipeIngredient>>();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<RecipeIngredient>> GetAllByRecipeIdsAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken = default)
+    {
+        if (recipeIds.Count == 0)
+        {
+            return [];
+        }
+
+        var entities = await Set
+            .Where(e => recipeIds.Contains(e.RecipeId) && !e.IsDeleted)
             .ToListAsync(cancellationToken);
         return entities.Adapt<IReadOnlyList<RecipeIngredient>>();
     }
@@ -33,6 +47,20 @@ public sealed class RecipeIngredientRepository : PostgreSqlRepository<RecipeIngr
         await Set.AddAsync(entity, cancellationToken);
         await Context.SaveChangesAsync(cancellationToken);
         return entity.Adapt<RecipeIngredient>();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<RecipeIngredient>> AddRangeAsync(IReadOnlyCollection<RecipeIngredient> ingredients, CancellationToken cancellationToken = default)
+    {
+        if (ingredients.Count == 0)
+        {
+            return [];
+        }
+
+        var entities = ingredients.Adapt<List<RecipeIngredientEntity>>();
+        await Set.AddRangeAsync(entities, cancellationToken);
+        await Context.SaveChangesAsync(cancellationToken);
+        return entities.Adapt<IReadOnlyList<RecipeIngredient>>();
     }
 
     /// <inheritdoc/>
