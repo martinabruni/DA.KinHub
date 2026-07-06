@@ -6,4 +6,8 @@
     <RootNamespace>Kin.KinHub.Core.Domain</RootNamespace>
     <AssemblyName>Kin.KinHub.Core.Domain</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
+  </ItemGroup>
 </Project>

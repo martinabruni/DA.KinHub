@@ -11,10 +11,16 @@ public interface IRecipeIngredientRepository
     Task<RecipeIngredient?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Returns all ingredients belonging to the given recipe.</summary>
-    Task<IReadOnlyList<RecipeIngredient>> GetAllByFamilyIdAsync(Guid recipeId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RecipeIngredient>> GetAllByRecipeIdAsync(Guid recipeId, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns all ingredients belonging to the given recipes.</summary>
+    Task<IReadOnlyList<RecipeIngredient>> GetAllByRecipeIdsAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken = default);
 
     /// <summary>Persists a new recipe ingredient and returns it.</summary>
     Task<RecipeIngredient> AddAsync(RecipeIngredient ingredient, CancellationToken cancellationToken = default);
+
+    /// <summary>Persists a set of new recipe ingredients and returns them in the same order.</summary>
+    Task<IReadOnlyList<RecipeIngredient>> AddRangeAsync(IReadOnlyCollection<RecipeIngredient> ingredients, CancellationToken cancellationToken = default);
 
     /// <summary>Updates the given recipe ingredient and returns the updated state.</summary>
     Task<RecipeIngredient> UpdateAsync(RecipeIngredient ingredient, CancellationToken cancellationToken = default);

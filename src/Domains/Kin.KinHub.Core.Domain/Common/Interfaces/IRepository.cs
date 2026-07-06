@@ -14,6 +14,11 @@ public interface IRepository<TModel, TKey>
     Task<TModel> CreateAsync(TModel model);
 
     /// <summary>
+    /// Creates a set of entities and returns the persisted models in the same order.
+    /// </summary>
+    Task<IReadOnlyList<TModel>> CreateRangeAsync(IReadOnlyCollection<TModel> models);
+
+    /// <summary>
     /// Returns the entity matching the given key, or throws if not found.
     /// </summary>
     Task<TModel> GetAsync(TKey key);

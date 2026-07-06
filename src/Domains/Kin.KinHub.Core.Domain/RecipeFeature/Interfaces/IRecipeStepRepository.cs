@@ -11,10 +11,16 @@ public interface IRecipeStepRepository
     Task<RecipeStep?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Returns all steps belonging to the given recipe.</summary>
-    Task<IReadOnlyList<RecipeStep>> GetAllByFamilyIdAsync(Guid recipeId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RecipeStep>> GetAllByRecipeIdAsync(Guid recipeId, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns all steps belonging to the given recipes.</summary>
+    Task<IReadOnlyList<RecipeStep>> GetAllByRecipeIdsAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken = default);
 
     /// <summary>Persists a new recipe step and returns it.</summary>
     Task<RecipeStep> AddAsync(RecipeStep step, CancellationToken cancellationToken = default);
+
+    /// <summary>Persists a set of new recipe steps and returns them in the same order.</summary>
+    Task<IReadOnlyList<RecipeStep>> AddRangeAsync(IReadOnlyCollection<RecipeStep> steps, CancellationToken cancellationToken = default);
 
     /// <summary>Updates the given recipe step and returns the updated state.</summary>
     Task<RecipeStep> UpdateAsync(RecipeStep step, CancellationToken cancellationToken = default);

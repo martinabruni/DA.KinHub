@@ -5,6 +5,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-  <RootNamespace>Kin.KinHub.Identity.Domain</RootNamespace><AssemblyName>Kin.KinHub.Identity.Domain</AssemblyName></PropertyGroup>
+    <RootNamespace>Kin.KinHub.Identity.Domain</RootNamespace>
+    <AssemblyName>Kin.KinHub.Identity.Domain</AssemblyName>
+  </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
+  </ItemGroup>
 </Project>

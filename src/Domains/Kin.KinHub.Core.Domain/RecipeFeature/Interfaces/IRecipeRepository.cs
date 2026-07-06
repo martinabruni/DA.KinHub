@@ -11,7 +11,10 @@ public interface IRecipeRepository
     Task<Recipe?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Returns all recipes belonging to the given recipe book.</summary>
-    Task<IReadOnlyList<Recipe>> GetAllByFamilyIdAsync(Guid recipeBookId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Recipe>> GetAllByRecipeBookIdAsync(Guid recipeBookId, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns all recipes belonging to the given recipe books.</summary>
+    Task<IReadOnlyList<Recipe>> GetAllByRecipeBookIdsAsync(IReadOnlyCollection<Guid> recipeBookIds, CancellationToken cancellationToken = default);
 
     /// <summary>Persists a new recipe and returns it.</summary>
     Task<Recipe> AddAsync(Recipe recipe, CancellationToken cancellationToken = default);

@@ -11,7 +11,7 @@ public interface IFridgeIngredientRepository
     Task<FridgeIngredient?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Returns all ingredients belonging to the given fridge.</summary>
-    Task<IReadOnlyList<FridgeIngredient>> GetAllByFamilyIdAsync(Guid fridgeId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FridgeIngredient>> GetAllByFridgeIdAsync(Guid fridgeId, CancellationToken cancellationToken = default);
 
     /// <summary>Persists a new fridge ingredient and returns it.</summary>
     Task<FridgeIngredient> AddAsync(FridgeIngredient ingredient, CancellationToken cancellationToken = default);
