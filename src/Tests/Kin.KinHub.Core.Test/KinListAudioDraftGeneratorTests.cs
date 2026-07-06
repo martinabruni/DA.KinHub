@@ -7,12 +7,15 @@ namespace Kin.KinHub.Core.Test;
 
 public sealed class KinListAudioDraftGeneratorTests
 {
+    private static readonly KinListOptions DefaultKinListOptions = new();
+
     [Fact]
     public async Task InterpretAsync_WithValidJson_ReturnsPromptVersionAndDetectedLanguage()
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("""{"title":"Spesa settimanale","items":["Latte","2 confezioni di latte"," Pane "]}"""),
-            new KinListAudioPromptOptions { PromptVersion = "kinlist-audio-v2" });
+            new KinListAudioPromptOptions { PromptVersion = "kinlist-audio-v2" },
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {
@@ -32,7 +35,8 @@ public sealed class KinListAudioDraftGeneratorTests
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("not-json"),
-            new KinListAudioPromptOptions());
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {

@@ -11,6 +11,8 @@ namespace Kin.KinHub.Core.Test;
 /// </summary>
 public sealed class KinListAudioPipelineTests
 {
+    private static readonly KinListOptions DefaultKinListOptions = new();
+
     private static KinListAudioCommand Audio() => new()
     {
         AudioBytes = [1, 2, 3, 4, 5],
@@ -31,7 +33,8 @@ public sealed class KinListAudioPipelineTests
             })),
             new AzureOpenAiKinListAudioPromptInterpreter(
                 new FakeChatCompletionClient("""{"title":"Groceries","items":["Milk","Bread"]}"""),
-                new KinListAudioPromptOptions()));
+                new KinListAudioPromptOptions(),
+                DefaultKinListOptions));
 
         var result = await generator.ParseAsync(Audio());
 
@@ -51,7 +54,8 @@ public sealed class KinListAudioPipelineTests
             })),
             new AzureOpenAiKinListAudioPromptInterpreter(
                 new FakeChatCompletionClient("this is not json"),
-                new KinListAudioPromptOptions()));
+                new KinListAudioPromptOptions(),
+                DefaultKinListOptions));
 
         var result = await generator.ParseAsync(Audio());
 
@@ -71,7 +75,8 @@ public sealed class KinListAudioPipelineTests
             })),
             new AzureOpenAiKinListAudioPromptInterpreter(
                 new ThrowingChatCompletionClient(new TimeoutException("slow")),
-                new KinListAudioPromptOptions()));
+                new KinListAudioPromptOptions(),
+                DefaultKinListOptions));
 
         var result = await generator.ParseAsync(Audio());
 
@@ -91,7 +96,8 @@ public sealed class KinListAudioPipelineTests
             })),
             new AzureOpenAiKinListAudioPromptInterpreter(
                 new ThrowingChatCompletionClient(new HttpRequestException("429")),
-                new KinListAudioPromptOptions()));
+                new KinListAudioPromptOptions(),
+                DefaultKinListOptions));
 
         var result = await generator.ParseAsync(Audio());
 
@@ -122,7 +128,8 @@ public sealed class KinListAudioPipelineTests
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("""{"title":"Spesa","items":["Latte"]}"""),
-            new KinListAudioPromptOptions { PromptVersion = "kinlist-audio-v3" });
+            new KinListAudioPromptOptions { PromptVersion = "kinlist-audio-v3" },
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {
@@ -139,7 +146,8 @@ public sealed class KinListAudioPipelineTests
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("""{"title":"Spesa","items":["2 confezioni di latte","Pane"]}"""),
-            new KinListAudioPromptOptions());
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {
@@ -158,7 +166,8 @@ public sealed class KinListAudioPipelineTests
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("""{"title":"Spesa","items":["Latte"," Latte ","latte"]}"""),
-            new KinListAudioPromptOptions());
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {
@@ -176,7 +185,8 @@ public sealed class KinListAudioPipelineTests
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("""{"title":"Spesa","items":["1 litro di latte","2 litri di latte"]}"""),
-            new KinListAudioPromptOptions());
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {
@@ -193,7 +203,8 @@ public sealed class KinListAudioPipelineTests
     {
         var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
             new FakeChatCompletionClient("""{"title":"","items":[]}"""),
-            new KinListAudioPromptOptions());
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
 
         var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
         {
@@ -203,6 +214,45 @@ public sealed class KinListAudioPipelineTests
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value!.Items);
+    }
+
+    [Fact]
+    public async Task Interpreter_WhenTitleExceedsLimit_ReturnsInvalidResponse()
+    {
+        var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
+            new FakeChatCompletionClient($$"""{"title":"{{new string('x', 101)}}","items":["Latte"]}"""),
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
+
+        var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
+        {
+            Transcript = "latte",
+            DetectedLanguage = "it-IT",
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultStatus.ServiceUnavailable, result.Status);
+        Assert.Equal("audio_processing_invalid_response", result.Code);
+    }
+
+    [Fact]
+    public async Task Interpreter_WhenItemsExceedLimit_ReturnsInvalidResponse()
+    {
+        var items = string.Join(',', Enumerable.Range(0, 51).Select(x => $@"""item-{x}"""));
+        var interpreter = new AzureOpenAiKinListAudioPromptInterpreter(
+            new FakeChatCompletionClient($$"""{"title":"Spesa","items":[{{items}}]}"""),
+            new KinListAudioPromptOptions(),
+            DefaultKinListOptions);
+
+        var result = await interpreter.InterpretAsync(new SpeechTranscriptionResult
+        {
+            Transcript = "spesa",
+            DetectedLanguage = "it-IT",
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultStatus.ServiceUnavailable, result.Status);
+        Assert.Equal("audio_processing_invalid_response", result.Code);
     }
 
     // ---------- T03.3 service-level draft responses ----------
@@ -379,8 +429,11 @@ public sealed class KinListAudioPipelineTests
             store,
             store,
             store,
+            store,
             new TestKinListTransactionExecutor(),
             new StubAudioDraftGenerator(Result<ParsedKinListAudioDraft>.Success(draft)),
+            new InMemoryAudioBlobStorage(),
+            new InMemoryAudioProcessingQueue(),
             new KinListOptions());
     }
 }

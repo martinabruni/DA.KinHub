@@ -24,10 +24,12 @@
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" Aliases="global,IdentityApi" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" Aliases="global,KinRecipeApi" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinList.Api\Kin.KinHub.KinList.Api.csproj" Aliases="KinListApi" />
+    <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinList.AudioWorker\Kin.KinHub.KinList.AudioWorker.csproj" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.Migrations.Runner\Kin.KinHub.Migrations.Runner.csproj" />
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.KinList.Domain\Kin.KinHub.KinList.Domain.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.AzureStorage\Kin.KinHub.KinList.AzureStorage.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.PostgreSql\Kin.KinHub.Identity.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />

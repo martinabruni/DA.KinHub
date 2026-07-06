@@ -23,9 +23,9 @@ public sealed class AuthenticationServiceCharacterizationTests
         var credentials = new InMemoryUserCredentialRepository();
         var providers = new InMemoryUserProviderRepository();
         var refreshTokens = new InMemoryRefreshTokenRepository();
-        var service = CreateAuthenticationService(users, credentials, providers, refreshTokens);
+        var handlers = CreateAuthenticationService(users, credentials, providers, refreshTokens);
 
-        var result = await service.RegisterAsync(new RegisterRequest
+        var result = await handlers.Register.HandleAsync(new RegisterRequest
         {
             Email = "martina@kinhub.dev",
             Password = "super-secret",
@@ -46,6 +46,27 @@ public sealed class AuthenticationServiceCharacterizationTests
         var createdProvider = Assert.Single(providers.Items.Values);
         Assert.Equal(createdUser.Id, createdProvider.UserId);
         Assert.Equal((int)IdentityProviderType.KinHub, createdProvider.ProviderId);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WhenPasswordMissing_ReturnsValidationError()
+    {
+        var handlers = CreateAuthenticationService(
+            new InMemoryKinUserRepository(),
+            new InMemoryUserCredentialRepository(),
+            new InMemoryUserProviderRepository(),
+            new InMemoryRefreshTokenRepository());
+
+        var result = await handlers.Register.HandleAsync(new RegisterRequest
+        {
+            Email = "martina@kinhub.dev",
+            Password = string.Empty,
+            DisplayName = "Martina",
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultStatus.ValidationError, result.Status);
+        Assert.Equal("A password is required to register with the KinHub provider.", result.Message);
     }
 
     [Fact]
@@ -74,14 +95,14 @@ public sealed class AuthenticationServiceCharacterizationTests
         };
         var refreshTokens = new InMemoryRefreshTokenRepository(storedToken);
         var tokenGenerator = new TestTokenGenerator();
-        var service = CreateAuthenticationService(
+        var handlers = CreateAuthenticationService(
             users,
             new InMemoryUserCredentialRepository(),
             new InMemoryUserProviderRepository(),
             refreshTokens,
             tokenGenerator: tokenGenerator);
 
-        var result = await service.RefreshTokenAsync(storedToken.Token);
+        var result = await handlers.Refresh.HandleAsync(storedToken.Token);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
@@ -95,7 +116,7 @@ public sealed class AuthenticationServiceCharacterizationTests
     public async Task UpdateUserPasswordAsync_ReturnsUnauthorized_WhenCurrentPasswordDoesNotMatch()
     {
         var userId = Guid.NewGuid();
-        var service = CreateAuthenticationService(
+        var handlers = CreateAuthenticationService(
             new InMemoryKinUserRepository(new KinUser
             {
                 Id = userId,
@@ -117,18 +138,18 @@ public sealed class AuthenticationServiceCharacterizationTests
             new InMemoryUserProviderRepository(),
             new InMemoryRefreshTokenRepository());
 
-        var result = await service.UpdateUserPasswordAsync(userId, new UpdateUserPasswordRequest
+        var result = await handlers.UpdatePassword.HandleAsync(userId, new UpdateUserPasswordRequest
         {
             CurrentPassword = "wrong-password",
             NewPassword = "new-password",
         });
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(Kin.KinHub.Identity.Business.Common.ResultStatus.Unauthorized, result.Status);
+        Assert.Equal(Kin.KinHub.Shared.Kernel.Common.ResultStatus.Unauthorized, result.Status);
         Assert.Equal("Invalid current password.", result.Message);
     }
 
-    private static KinHubAuthenticationService CreateAuthenticationService(
+    private static AuthHandlers CreateAuthenticationService(
         IKinUserRepository userRepository,
         IUserCredentialRepository credentialRepository,
         IUserProviderRepository userProviderRepository,
@@ -146,16 +167,16 @@ public sealed class AuthenticationServiceCharacterizationTests
             new KinHubPasswordIdentityProvider(userRepository, credentialRepository, userProviderRepository, passwordHasher),
         });
 
-        return new KinHubAuthenticationService(
+        return new AuthHandlers(
             new RegisterUserHandler(providerRegistry),
-            new LoginUserHandler(providerRegistry, loginResponseFactory),
             new RefreshTokenHandler(refreshTokenRepository, userRepository, loginResponseFactory),
-            new LogoutUserHandler(refreshTokenRepository),
-            new GetCurrentUserHandler(userRepository),
-            new UpdateUserEmailHandler(userRepository, credentialRepository, passwordHasher),
-            new UpdateUserPasswordHandler(credentialRepository, passwordHasher),
-            new DeleteUserHandler(userRepository));
+            new UpdateUserPasswordHandler(credentialRepository, passwordHasher));
     }
+
+    private sealed record AuthHandlers(
+        IRegisterUserHandler Register,
+        IRefreshTokenHandler Refresh,
+        IUpdateUserPasswordHandler UpdatePassword);
 }
 
 public sealed class FamilyServiceCharacterizationTests
@@ -258,7 +279,7 @@ public sealed class FamilyServiceCharacterizationTests
         var ownershipService = new FamilyOwnershipService(familyRepository, NullLogger<FamilyOwnershipService>.Instance);
 
         return new KinHubFamilyService(
-            new CreateFamilyHandler(familyRepository, familyMemberRepository, kinHubServiceRepository, familyServiceRepository),
+            new CreateFamilyHandler(familyRepository, familyMemberRepository, kinHubServiceRepository, familyServiceRepository, new NoOpCoreTransactionExecutor()),
             new AddFamilyMemberHandler(ownershipService, familyMemberRepository),
             new GetFamilyHandler(ownershipService, familyMemberRepository),
             new DeleteFamilyMemberHandler(ownershipService, familyMemberRepository),
@@ -388,7 +409,7 @@ public sealed class RecipeServiceCharacterizationTests
         var recipeResponseMapper = new RecipeResponseMapper(recipeIngredientRepository, recipeStepRepository);
 
         return new KinHubRecipeService(
-            new CreateRecipeHandler(recipeRepository, recipeIngredientRepository, recipeStepRepository, recipeBookAccessService, recipeResponseMapper),
+            new CreateRecipeHandler(recipeRepository, recipeIngredientRepository, recipeStepRepository, recipeBookAccessService, recipeResponseMapper, new NoOpCoreTransactionExecutor()),
             new GetRecipesHandler(recipeRepository, recipeBookAccessService, recipeResponseMapper),
             new GetRecipeByIdHandler(recipeAccessService, recipeResponseMapper),
             new UpdateRecipeHandler(recipeRepository, recipeAccessService, recipeResponseMapper),
@@ -907,6 +928,16 @@ internal sealed class InMemoryFamilyRepository : IFamilyRepository
         return Task.FromResult(model);
     }
 
+    public Task<IReadOnlyList<Family>> CreateRangeAsync(IReadOnlyCollection<Family> models)
+    {
+        foreach (var model in models)
+        {
+            Items[model.Id] = model;
+        }
+
+        return Task.FromResult<IReadOnlyList<Family>>(models.ToArray());
+    }
+
     public Task<Family> DeleteAsync(Guid key)
     {
         var family = GetExisting(key);
@@ -959,6 +990,17 @@ internal sealed class InMemoryFamilyMemberRepository : IFamilyMemberRepository
         return Task.FromResult(model);
     }
 
+    public Task<IReadOnlyList<FamilyMember>> CreateRangeAsync(IReadOnlyCollection<FamilyMember> models)
+    {
+        var created = new List<FamilyMember>(models.Count);
+        foreach (var model in models)
+        {
+            created.Add(CreateAsync(model).GetAwaiter().GetResult());
+        }
+
+        return Task.FromResult<IReadOnlyList<FamilyMember>>(created);
+    }
+
     public Task<FamilyMember> DeleteAsync(Guid key)
     {
         var member = GetExisting(key);
@@ -1009,6 +1051,16 @@ internal sealed class InMemoryKinHubServiceRepository : IKinHubServiceRepository
         return Task.FromResult(model);
     }
 
+    public Task<IReadOnlyList<KinHubService>> CreateRangeAsync(IReadOnlyCollection<KinHubService> models)
+    {
+        foreach (var model in models)
+        {
+            Items[model.Id] = model;
+        }
+
+        return Task.FromResult<IReadOnlyList<KinHubService>>(models.ToArray());
+    }
+
     public Task<KinHubService> DeleteAsync(int key)
     {
         var service = GetExisting(key);
@@ -1051,6 +1103,16 @@ internal sealed class InMemoryFamilyServiceRepository : IFamilyServiceRepository
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
+    }
+
+    public Task<IReadOnlyList<FamilyService>> CreateRangeAsync(IReadOnlyCollection<FamilyService> models)
+    {
+        foreach (var model in models)
+        {
+            Items[model.Id] = model;
+        }
+
+        return Task.FromResult<IReadOnlyList<FamilyService>>(models.ToArray());
     }
 
     public Task<FamilyService> DeleteAsync(Guid key)
@@ -1100,8 +1162,11 @@ internal sealed class InMemoryRecipeRepository : IRecipeRepository
         return Task.FromResult(recipe);
     }
 
-    public Task<IReadOnlyList<Recipe>> GetAllByFamilyIdAsync(Guid recipeBookId, CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<Recipe>> GetAllByRecipeBookIdAsync(Guid recipeBookId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Recipe>>(Items.Values.Where(recipe => recipe.RecipeBookId == recipeBookId && !recipe.IsDeleted).ToList());
+
+    public Task<IReadOnlyList<Recipe>> GetAllByRecipeBookIdsAsync(IReadOnlyCollection<Guid> recipeBookIds, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Recipe>>(Items.Values.Where(recipe => recipeBookIds.Contains(recipe.RecipeBookId) && !recipe.IsDeleted).ToList());
 
     public Task<Recipe?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.TryGetValue(id, out var recipe) && !recipe.IsDeleted ? recipe : null);
@@ -1178,8 +1243,21 @@ internal sealed class InMemoryRecipeIngredientRepository : IRecipeIngredientRepo
         return Task.FromResult(ingredient);
     }
 
-    public Task<IReadOnlyList<RecipeIngredient>> GetAllByFamilyIdAsync(Guid recipeId, CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<RecipeIngredient>> AddRangeAsync(IReadOnlyCollection<RecipeIngredient> ingredients, CancellationToken cancellationToken = default)
+    {
+        foreach (var ingredient in ingredients)
+        {
+            Items[ingredient.Id] = ingredient;
+        }
+
+        return Task.FromResult<IReadOnlyList<RecipeIngredient>>(ingredients.ToArray());
+    }
+
+    public Task<IReadOnlyList<RecipeIngredient>> GetAllByRecipeIdAsync(Guid recipeId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<RecipeIngredient>>(Items.Values.Where(ingredient => ingredient.RecipeId == recipeId).ToList());
+
+    public Task<IReadOnlyList<RecipeIngredient>> GetAllByRecipeIdsAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RecipeIngredient>>(Items.Values.Where(ingredient => recipeIds.Contains(ingredient.RecipeId)).ToList());
 
     public Task<RecipeIngredient?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.TryGetValue(id, out var ingredient) ? ingredient : null);
@@ -1213,8 +1291,21 @@ internal sealed class InMemoryRecipeStepRepository : IRecipeStepRepository
         return Task.FromResult(step);
     }
 
-    public Task<IReadOnlyList<RecipeStep>> GetAllByFamilyIdAsync(Guid recipeId, CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<RecipeStep>> AddRangeAsync(IReadOnlyCollection<RecipeStep> steps, CancellationToken cancellationToken = default)
+    {
+        foreach (var step in steps)
+        {
+            Items[step.Id] = step;
+        }
+
+        return Task.FromResult<IReadOnlyList<RecipeStep>>(steps.ToArray());
+    }
+
+    public Task<IReadOnlyList<RecipeStep>> GetAllByRecipeIdAsync(Guid recipeId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<RecipeStep>>(Items.Values.Where(step => step.RecipeId == recipeId && !step.IsDeleted).ToList());
+
+    public Task<IReadOnlyList<RecipeStep>> GetAllByRecipeIdsAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RecipeStep>>(Items.Values.Where(step => recipeIds.Contains(step.RecipeId) && !step.IsDeleted).ToList());
 
     public Task<RecipeStep?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.TryGetValue(id, out var step) && !step.IsDeleted ? step : null);

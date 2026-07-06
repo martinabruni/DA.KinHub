@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Diagnostics;
+using Kin.KinHub.KinList.Business.Common;
+using Kin.KinHub.KinList.Business.KinListFeature;
 
 namespace Kin.KinHub.Core.Test;
 
@@ -25,6 +28,9 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
         _factory.CurrentUser.HasFamilyContext = true;
         _factory.CurrentUser.FamilyId = KinListApiFactory.FamilyA;
         _factory.CurrentUser.UserId = KinListApiFactory.UserId;
+        _factory.AudioGenerator.Reset();
+        _factory.BlobStorage.Reset();
+        _factory.AudioQueue.Reset();
     }
 
     // ---------- CRUD happy path ----------
@@ -422,10 +428,10 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // ---------- Audio endpoints (wiring only; deterministic fake generator) ----------
+    // ---------- Audio operation endpoints ----------
 
     [Fact]
-    public async Task ListDraftFromAudio_WithAllowedMime_ReturnsDraft()
+    public async Task CreateAudioOperation_ThenCompleteAndProcessNewList_ReturnsSucceededDraft()
     {
         using var client = _factory.CreateClient();
         _factory.AudioGenerator.Result = Kin.KinHub.KinList.Business.Common.Result<Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft>.Success(
@@ -437,41 +443,200 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
                 PromptVersion = "kinlist-audio-v1",
             });
 
-        using var form = BuildAudioForm("audio/webm", "draft.webm");
-        var response = await client.PostAsync("/api/list-drafts/from-audio", form);
+        var createResponse = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm",
+            declaredByteSize = 4,
+        });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(HttpStatusCode.Accepted, createResponse.StatusCode);
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var operationId = createBody.GetProperty("id").GetGuid();
+        var blobName = createBody.GetProperty("blobName").GetString()!;
+
+        _factory.BlobStorage.Seed(blobName, [1, 2, 3, 4], "audio/webm");
+
+        var completeResponse = await client.PostAsync($"/api/audio-operations/{operationId}/complete-upload", null);
+        Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
+
+        var queued = Assert.Single(_factory.AudioQueue.Messages);
+        Assert.Equal(operationId, queued.OperationId);
+        Assert.True(ActivityContext.TryParse(queued.CorrelationId, null, out _));
+
+        var processingService = new KinListService(
+            _factory.Store,
+            _factory.Store,
+            _factory.Store,
+            _factory.Store,
+            new TestKinListTransactionExecutor(),
+            _factory.AudioGenerator,
+            _factory.BlobStorage,
+            _factory.AudioQueue,
+            new KinListOptions());
+        var processed = await processingService.ProcessAudioOperationAsync(operationId, CancellationToken.None);
+        Assert.True(processed.IsSuccess);
+
+        var getResponse = await client.GetAsync($"/api/audio-operations/{operationId}");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var body = await getResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Succeeded", body.GetProperty("status").GetString());
         Assert.Equal("Spesa", body.GetProperty("title").GetString());
         Assert.Equal("it-IT", body.GetProperty("detectedLanguage").GetString());
     }
 
     [Fact]
-    public async Task ListDraftFromAudio_WithAllowedMimeParameters_ReturnsDraft()
+    public async Task CreateAudioOperation_ReturnsLocationAndRetryAfterHeaders()
     {
         using var client = _factory.CreateClient();
-        _factory.AudioGenerator.Result = Kin.KinHub.KinList.Business.Common.Result<Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft>.Success(
-            new Kin.KinHub.KinList.Business.KinListFeature.ParsedKinListAudioDraft
-            {
-                Title = "Spesa",
-                Items = ["Latte", "Pane"],
-                DetectedLanguage = "it-IT",
-                PromptVersion = "kinlist-audio-v1",
-            });
 
-        using var form = BuildAudioForm("audio/webm;codecs=opus", "draft.webm");
-        var response = await client.PostAsync("/api/list-drafts/from-audio", form);
+        var response = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm",
+            declaredByteSize = 4,
+        });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+        Assert.Equal("2", response.Headers.RetryAfter?.Delta?.TotalSeconds.ToString("0"));
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.EndsWith($"/api/audio-operations/{body.GetProperty("id").GetGuid():D}", response.Headers.Location!.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ListDraftFromAudio_WithDisallowedMime_ReturnsValidationError()
+    public async Task CreateAndCompleteAudioOperation_DoNotWaitForAudioProcessing()
     {
         using var client = _factory.CreateClient();
+        _factory.AudioGenerator.Reset();
+        _factory.AudioGenerator.Delay = TimeSpan.FromSeconds(2);
 
-        using var form = BuildAudioForm("audio/wav", "draft.wav");
-        var response = await client.PostAsync("/api/list-drafts/from-audio", form);
+        var createStopwatch = Stopwatch.StartNew();
+        var createResponse = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm",
+            declaredByteSize = 4,
+        });
+        createStopwatch.Stop();
+
+        Assert.Equal(HttpStatusCode.Accepted, createResponse.StatusCode);
+        Assert.True(createStopwatch.Elapsed < TimeSpan.FromMilliseconds(500), $"Create took {createStopwatch.Elapsed.TotalMilliseconds:0} ms.");
+        Assert.Equal(0, _factory.AudioGenerator.CallCount);
+
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var operationId = createBody.GetProperty("id").GetGuid();
+        var blobName = createBody.GetProperty("blobName").GetString()!;
+        _factory.BlobStorage.Seed(blobName, [1, 2, 3, 4], "audio/webm");
+
+        var completeStopwatch = Stopwatch.StartNew();
+        var completeResponse = await client.PostAsync($"/api/audio-operations/{operationId}/complete-upload", null);
+        completeStopwatch.Stop();
+
+        Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
+        Assert.True(completeStopwatch.Elapsed < TimeSpan.FromMilliseconds(500), $"Complete took {completeStopwatch.Elapsed.TotalMilliseconds:0} ms.");
+        Assert.Equal(0, _factory.AudioGenerator.CallCount);
+
+        var queued = Assert.Single(_factory.AudioQueue.Messages);
+        Assert.Equal(operationId, queued.OperationId);
+    }
+
+    [Fact]
+    public async Task CompleteAudioOperation_WhenBlobIsMissing_ReturnsValidationError()
+    {
+        using var client = _factory.CreateClient();
+        var createResponse = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm",
+            declaredByteSize = 4,
+        });
+
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var operationId = createBody.GetProperty("id").GetGuid();
+
+        var completeResponse = await client.PostAsync($"/api/audio-operations/{operationId}/complete-upload", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, completeResponse.StatusCode);
+        var body = await completeResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("audio_blob_missing", body.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task GetAudioOperation_WhenExpired_TransitionsToExpired()
+    {
+        using var client = _factory.CreateClient();
+        var createResponse = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm",
+            declaredByteSize = 4,
+        });
+
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var operationId = createBody.GetProperty("id").GetGuid();
+        var operation = await _factory.Store.GetByIdAsync(operationId, CancellationToken.None);
+        Assert.NotNull(operation);
+        operation!.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await _factory.Store.UpdateAsync(operation, CancellationToken.None);
+
+        var response = await client.GetAsync($"/api/audio-operations/{operationId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Expired", body.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task DeleteAudioOperation_CancelsOperationAndDeletesBlob()
+    {
+        using var client = _factory.CreateClient();
+        var createResponse = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm",
+            declaredByteSize = 4,
+        });
+
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var operationId = createBody.GetProperty("id").GetGuid();
+        var blobName = createBody.GetProperty("blobName").GetString()!;
+        _factory.BlobStorage.Seed(blobName, [1, 2, 3, 4], "audio/webm");
+
+        var deleteResponse = await client.DeleteAsync($"/api/audio-operations/{operationId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        var operation = await _factory.Store.GetByIdAsync(operationId, CancellationToken.None);
+        Assert.NotNull(operation);
+        Assert.Equal("Cancelled", operation!.Status.ToString());
+        Assert.Null(await _factory.BlobStorage.GetBlobAsync(blobName, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateAudioOperation_WithAllowedMimeParameters_ReturnsAccepted()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/webm;codecs=opus",
+            declaredByteSize = 4,
+        });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateAudioOperation_WithDisallowedMime_ReturnsValidationError()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/audio-operations", new
+        {
+            type = "NewList",
+            contentType = "audio/wav",
+            declaredByteSize = 4,
+        });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -479,15 +644,6 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
     }
 
     // ---------- helpers ----------
-
-    private static MultipartFormDataContent BuildAudioForm(string contentType, string fileName)
-    {
-        var form = new MultipartFormDataContent();
-        var audio = new ByteArrayContent([1, 2, 3, 4]);
-        audio.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(contentType);
-        form.Add(audio, "Audio", fileName);
-        return form;
-    }
 
     private static async Task<HttpResponseMessage> CreateListAsync(HttpClient client, string title, string[] items, string key)
     {

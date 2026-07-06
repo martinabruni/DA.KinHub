@@ -343,49 +343,38 @@ public class OAuthApiFactory : WebApplicationFactory<IdentityApi::Program>
 
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll<IAuthenticationService>();
+            services.RemoveAll<ILoginUserHandler>();
+            services.RemoveAll<ILogoutUserHandler>();
+            services.RemoveAll<IRefreshTokenHandler>();
             services.RemoveAll<IFamilyOwnershipService>();
             services.RemoveAll<IOAuthClientStore>();
 
-            services.AddScoped<IAuthenticationService>(sp => new FakeAuthenticationService(sp.GetRequiredService<ITokenGenerator>()));
+            services.AddScoped<ILoginUserHandler>(sp => new FakeAuthenticationHandlers(sp.GetRequiredService<ITokenGenerator>()));
+            services.AddScoped<ILogoutUserHandler>(sp => new FakeAuthenticationHandlers(sp.GetRequiredService<ITokenGenerator>()));
+            services.AddScoped<IRefreshTokenHandler>(sp => new FakeAuthenticationHandlers(sp.GetRequiredService<ITokenGenerator>()));
             services.AddScoped<IFamilyOwnershipService>(_ => new FakeFamilyOwnershipService(_hasFamilyContext));
             services.AddSingleton<IOAuthClientStore>(new FixedOAuthClientStore());
         });
     }
 }
 
-internal sealed class FakeAuthenticationService : IAuthenticationService
+internal sealed class FakeAuthenticationHandlers : ILoginUserHandler, ILogoutUserHandler, IRefreshTokenHandler
 {
     private readonly ITokenGenerator _tokenGenerator;
 
-    public FakeAuthenticationService(ITokenGenerator tokenGenerator)
+    public FakeAuthenticationHandlers(ITokenGenerator tokenGenerator)
     {
         _tokenGenerator = tokenGenerator;
     }
 
-    public Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
-
-    public Task<Result<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default) =>
+    public Task<Result<LoginResponse>> HandleAsync(LoginRequest request, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result<LoginResponse>.Success(CreateLoginResponse()));
 
-    public Task<Result<LoginResponse>> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default) =>
+    Task<Result<LoginResponse>> IRefreshTokenHandler.HandleAsync(string refreshToken, CancellationToken cancellationToken) =>
         Task.FromResult(Result<LoginResponse>.Success(CreateLoginResponse()));
 
-    public Task<Result<bool>> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default) =>
+    Task<Result<bool>> ILogoutUserHandler.HandleAsync(string refreshToken, CancellationToken cancellationToken) =>
         Task.FromResult(Result<bool>.Success(true));
-
-    public Task<Result<UserProfileResponse>> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
-
-    public Task<Result<bool>> UpdateUserEmailAsync(Guid userId, UpdateUserEmailRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
-
-    public Task<Result<bool>> UpdateUserPasswordAsync(Guid userId, UpdateUserPasswordRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
-
-    public Task<Result<bool>> DeleteUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
 
     private LoginResponse CreateLoginResponse() =>
         new()

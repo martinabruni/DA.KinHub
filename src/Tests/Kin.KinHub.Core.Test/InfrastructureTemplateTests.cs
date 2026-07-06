@@ -35,8 +35,10 @@ public sealed class InfrastructureTemplateTests
         var secrets = kinListApp.GetProperty("properties").GetProperty("configuration").GetProperty("secrets").EnumerateArray().ToArray();
         Assert.Contains(secrets, secret => HasSecret(secret, "db-connection-string"));
         Assert.Contains(secrets, secret => HasSecret(secret, "jwt-secret"));
-        Assert.Contains(secrets, secret => HasSecret(secret, "openai-key"));
-        Assert.Contains(secrets, secret => HasSecret(secret, "speech-key"));
+        Assert.Contains(secrets, secret => HasSecret(secret, "openai-endpoint"));
+        Assert.Contains(secrets, secret => HasSecret(secret, "speech-endpoint"));
+        Assert.DoesNotContain(secrets, secret => HasSecret(secret, "openai-key"));
+        Assert.DoesNotContain(secrets, secret => HasSecret(secret, "speech-key"));
         Assert.All(secrets, secret => Assert.True(secret.TryGetProperty("keyVaultUrl", out _), "KinList container secrets must use Key Vault references."));
 
         var envExpression = kinListApp
@@ -51,6 +53,8 @@ public sealed class InfrastructureTemplateTests
         Assert.Contains("parameters('identityContainerAppName')", envExpression, StringComparison.Ordinal);
         Assert.Contains("Jwt__Audience", envExpression, StringComparison.Ordinal);
         Assert.Contains("kinhub.api", envExpression, StringComparison.Ordinal);
+        Assert.Contains("OpenAi__UseManagedIdentity", envExpression, StringComparison.Ordinal);
+        Assert.Contains("Speech__UseManagedIdentity", envExpression, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -76,12 +80,14 @@ public sealed class InfrastructureTemplateTests
         Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('identityContainerAppName'))]"));
         Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinRecipeContainerAppName'))]"));
         Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinListContainerAppName'))]"));
+        Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))]"));
         Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinListMigrationJobName'))]"));
 
         var outputs = document.RootElement.GetProperty("outputs");
         Assert.True(outputs.TryGetProperty("identityIdentityId", out _));
         Assert.True(outputs.TryGetProperty("kinRecipeIdentityId", out _));
         Assert.True(outputs.TryGetProperty("kinListIdentityId", out _));
+        Assert.True(outputs.TryGetProperty("kinListAudioWorkerIdentityId", out _));
         Assert.True(outputs.TryGetProperty("kinListMigrationIdentityId", out _));
     }
 

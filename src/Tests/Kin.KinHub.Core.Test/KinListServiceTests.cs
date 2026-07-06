@@ -229,6 +229,88 @@ public sealed class KinListServiceTests
         Assert.Equal("no_items_detected", result.Code);
     }
 
+    [Fact]
+    public async Task ProcessAudioOperationAsync_WhenAudioGeneratorIsTransient_RequeuesOperation()
+    {
+        var repositories = new InMemoryKinListRepositories();
+        var blobStorage = new InMemoryAudioBlobStorage();
+        var queue = new InMemoryAudioProcessingQueue();
+        var service = new KinListService(
+            repositories,
+            repositories,
+            repositories,
+            repositories,
+            new TestKinListTransactionExecutor(),
+            new UnavailableAudioDraftGenerator(),
+            blobStorage,
+            queue,
+            DefaultOptions);
+        var familyId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var created = await service.CreateAudioOperationAsync(new CreateAudioProcessingOperationRequest
+        {
+            Type = "NewList",
+            ContentType = "audio/webm",
+            DeclaredByteSize = 3,
+        }, familyId, userId);
+        blobStorage.Seed(created.Value!.BlobName, [1, 2, 3], "audio/webm");
+        await service.CompleteAudioOperationUploadAsync(created.Value.Id, familyId);
+
+        var processed = await service.ProcessAudioOperationAsync(created.Value.Id);
+        var operation = await repositories.GetByIdAsync(created.Value.Id);
+
+        Assert.False(processed.IsSuccess);
+        Assert.Equal(ResultStatus.ServiceUnavailable, processed.Status);
+        Assert.NotNull(operation);
+        Assert.Equal(AudioProcessingOperationStatus.Queued, operation!.Status);
+        Assert.Equal(1, operation.AttemptCount);
+        Assert.Null(operation.CompletedAt);
+        Assert.Null(operation.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ProcessAudioOperationAsync_WhenAlreadyClaimed_ReturnsConflict()
+    {
+        var repositories = new InMemoryKinListRepositories();
+        var blobStorage = new InMemoryAudioBlobStorage();
+        var queue = new InMemoryAudioProcessingQueue();
+        var service = new KinListService(
+            repositories,
+            repositories,
+            repositories,
+            repositories,
+            new TestKinListTransactionExecutor(),
+            new FakeKinListAudioDraftGenerator(new ParsedKinListAudioDraft
+            {
+                Title = "Spesa",
+                Items = ["Latte"],
+                DetectedLanguage = "it-IT",
+                PromptVersion = "kinlist-audio-v1",
+            }),
+            blobStorage,
+            queue,
+            DefaultOptions);
+        var familyId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var created = await service.CreateAudioOperationAsync(new CreateAudioProcessingOperationRequest
+        {
+            Type = "NewList",
+            ContentType = "audio/webm",
+            DeclaredByteSize = 3,
+        }, familyId, userId);
+        blobStorage.Seed(created.Value!.BlobName, [1, 2, 3], "audio/webm");
+        await service.CompleteAudioOperationUploadAsync(created.Value.Id, familyId);
+        _ = await repositories.TryStartProcessingAsync(created.Value.Id, DateTime.UtcNow);
+
+        var processed = await service.ProcessAudioOperationAsync(created.Value.Id);
+
+        Assert.False(processed.IsSuccess);
+        Assert.Equal(ResultStatus.Conflict, processed.Status);
+        Assert.Equal("audio_operation_already_processing", processed.Code);
+    }
+
     private static KinListService CreateService(
         InMemoryKinListRepositories repositories,
         KinListOptions? options = null,
@@ -237,16 +319,20 @@ public sealed class KinListServiceTests
             repositories,
             repositories,
             repositories,
+            repositories,
             new TestKinListTransactionExecutor(),
             audioDraftGenerator ?? new UnavailableAudioDraftGenerator(),
+            new InMemoryAudioBlobStorage(),
+            new InMemoryAudioProcessingQueue(),
             options ?? DefaultOptions);
 }
 
-internal sealed class InMemoryKinListRepositories : IKinListRepository, IKinListItemRepository, IIdempotencyRecordRepository
+internal sealed class InMemoryKinListRepositories : IKinListRepository, IKinListItemRepository, IIdempotencyRecordRepository, IAudioProcessingOperationRepository
 {
     private readonly Dictionary<Guid, DomainKinList> _lists = [];
     private readonly Dictionary<Guid, DomainKinListItem> _items = [];
     private readonly List<IdempotencyRecord> _records = [];
+    private readonly Dictionary<Guid, AudioProcessingOperation> _audioOperations = [];
 
     public Task<IReadOnlyList<DomainKinList>> GetAllByFamilyIdAsync(Guid familyId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<DomainKinList>>(_lists.Values.Where(x => x.FamilyId == familyId).Select(Clone).ToList());
@@ -308,6 +394,39 @@ internal sealed class InMemoryKinListRepositories : IKinListRepository, IKinList
         return Task.FromResult(Clone(record));
     }
 
+    public Task<AudioProcessingOperation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_audioOperations.TryGetValue(id, out var operation) ? Clone(operation) : null);
+
+    public Task<AudioProcessingOperation> AddAsync(AudioProcessingOperation operation, CancellationToken cancellationToken = default)
+    {
+        _audioOperations[operation.Id] = Clone(operation);
+        return Task.FromResult(Clone(operation));
+    }
+
+    public Task<AudioProcessingOperation> UpdateAsync(AudioProcessingOperation operation, CancellationToken cancellationToken = default)
+    {
+        _audioOperations[operation.Id] = Clone(operation);
+        return Task.FromResult(Clone(operation));
+    }
+
+    public Task<AudioProcessingOperation?> TryStartProcessingAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken = default)
+    {
+        if (!_audioOperations.TryGetValue(id, out var operation) || operation.Status != AudioProcessingOperationStatus.Queued)
+        {
+            return Task.FromResult<AudioProcessingOperation?>(null);
+        }
+
+        var claimed = Clone(operation);
+        claimed.Status = AudioProcessingOperationStatus.Processing;
+        claimed.AttemptCount += 1;
+        claimed.ProcessingStartedAt ??= utcNow;
+        claimed.LastHeartbeatAt = utcNow;
+        claimed.UpdatedAt = utcNow;
+        claimed.Version = Guid.NewGuid();
+        _audioOperations[id] = Clone(claimed);
+        return Task.FromResult<AudioProcessingOperation?>(Clone(claimed));
+    }
+
     public void SeedExpiredRecord(IdempotencyRecord record) => _records.Add(Clone(record));
 
     private static DomainKinList Clone(DomainKinList list) =>
@@ -348,6 +467,37 @@ internal sealed class InMemoryKinListRepositories : IKinListRepository, IKinList
             ResponseJson = record.ResponseJson,
             ExpiresAt = record.ExpiresAt,
             CreatedAt = record.CreatedAt,
+        };
+
+    private static AudioProcessingOperation Clone(AudioProcessingOperation operation) =>
+        new()
+        {
+            Id = operation.Id,
+            FamilyId = operation.FamilyId,
+            UserId = operation.UserId,
+            Type = operation.Type,
+            ListId = operation.ListId,
+            Status = operation.Status,
+            BlobName = operation.BlobName,
+            ContentType = operation.ContentType,
+            DeclaredByteSize = operation.DeclaredByteSize,
+            UploadedByteSize = operation.UploadedByteSize,
+            Title = operation.Title,
+            ProposedItemsJson = operation.ProposedItemsJson,
+            DetectedLanguage = operation.DetectedLanguage,
+            PromptVersion = operation.PromptVersion,
+            ErrorCode = operation.ErrorCode,
+            ErrorMessage = operation.ErrorMessage,
+            AttemptCount = operation.AttemptCount,
+            CorrelationId = operation.CorrelationId,
+            Version = operation.Version,
+            CreatedAt = operation.CreatedAt,
+            UpdatedAt = operation.UpdatedAt,
+            ExpiresAt = operation.ExpiresAt,
+            UploadCompletedAt = operation.UploadCompletedAt,
+            ProcessingStartedAt = operation.ProcessingStartedAt,
+            CompletedAt = operation.CompletedAt,
+            LastHeartbeatAt = operation.LastHeartbeatAt,
         };
 }
 

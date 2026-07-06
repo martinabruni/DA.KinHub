@@ -83,7 +83,7 @@ public sealed class KinListCatalogTests
         var familyServices = new InMemoryFamilyServiceRepository();
         var catalog = CreateCatalog();
 
-        var handler = new CreateFamilyHandler(families, members, catalog, familyServices);
+        var handler = new CreateFamilyHandler(families, members, catalog, familyServices, new NoOpCoreTransactionExecutor());
 
         var result = await handler.HandleAsync(new CreateFamilyRequest
         {
