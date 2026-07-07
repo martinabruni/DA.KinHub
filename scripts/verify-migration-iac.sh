@@ -84,17 +84,18 @@ require_match 'FamilyContextApi__BaseUrl' 'ops/iac/modules/compute.bicep' 'IaC m
 
 echo "Checking migration rollout gate in CI/CD..."
 backend_workflow='.github/workflows/backend.yml'
+deploy_workflow='.github/workflows/deploy-backend.yml'
 require_match 'Package Migration Runner Image' "$backend_workflow" 'Backend workflow must package the migration runner image.'
-require_match 'az containerapp job execution show' "$backend_workflow" 'Backend workflow must poll migration job execution status.'
-require_match 'Roll out backend revisions after migration success' "$backend_workflow" 'Backend workflow must roll out app images only after migration success.'
+require_match 'az containerapp job execution show' "$deploy_workflow" 'Backend workflow must poll migration job execution status.'
+require_match 'Roll out backend revisions after migration success' "$deploy_workflow" 'Backend workflow must roll out app images only after migration success.'
 
 echo "Checking Key Vault based secret wiring in IaC..."
-main_bicep='ops/iac/main.bicep'
-require_multiline_match "name: 'db-connection-string'.*?keyVaultUrl:" "$main_bicep" 'db-connection-string must be a Key Vault reference.'
-require_multiline_match "name: 'jwt-secret'.*?keyVaultUrl:" "$main_bicep" 'jwt-secret must be a Key Vault reference.'
-require_multiline_match "name: 'openai-key'.*?keyVaultUrl:" "$main_bicep" 'openai-key must be a Key Vault reference.'
-require_multiline_match "name: 'speech-key'.*?keyVaultUrl:" "$main_bicep" 'speech-key must be a Key Vault reference.'
-require_multiline_match "name: 'ghcr-password'.*?keyVaultUrl:" "$main_bicep" 'ghcr-password must be a Key Vault reference.'
+compute_bicep='ops/iac/modules/compute.bicep'
+require_multiline_match "name: 'db-connection-string'.*?keyVaultUrl:" "$compute_bicep" 'db-connection-string must be a Key Vault reference.'
+require_multiline_match "name: 'jwt-secret'.*?keyVaultUrl:" "$compute_bicep" 'jwt-secret must be a Key Vault reference.'
+require_multiline_match "name: 'openai-key'.*?keyVaultUrl:" "$compute_bicep" 'openai-key must be a Key Vault reference.'
+require_multiline_match "name: 'speech-endpoint'.*?keyVaultUrl:" "$compute_bicep" 'speech-endpoint must be a Key Vault reference.'
+require_multiline_match "name: 'ghcr-password'.*?keyVaultUrl:" "$compute_bicep" 'ghcr-password must be a Key Vault reference.'
 
 echo "Checking KinRecipe -> KinList legacy redirects..."
 kinrecipe_routes='src/Presentations/Kin.KinHub.KinRecipe.React/src/router/routes.tsx'
