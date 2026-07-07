@@ -2,6 +2,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["Kin.KinHub.Core.slnx", "./"]
+COPY ["Directory.Build.props", "./"]
+COPY ["Directory.Packages.props", "./"]
+COPY ["src/Shared/Kin.KinHub.Shared.Kernel/Kin.KinHub.Shared.Kernel.csproj", "src/Shared/Kin.KinHub.Shared.Kernel/"]
 COPY ["src/Businesses/Kin.KinHub.KinList.Business/Kin.KinHub.KinList.Business.csproj", "src/Businesses/Kin.KinHub.KinList.Business/"]
 COPY ["src/Domains/Kin.KinHub.KinList.Domain/Kin.KinHub.KinList.Domain.csproj", "src/Domains/Kin.KinHub.KinList.Domain/"]
 COPY ["src/Infrastructures/Kin.KinHub.KinList.AzureOpenAi/Kin.KinHub.KinList.AzureOpenAi.csproj", "src/Infrastructures/Kin.KinHub.KinList.AzureOpenAi/"]

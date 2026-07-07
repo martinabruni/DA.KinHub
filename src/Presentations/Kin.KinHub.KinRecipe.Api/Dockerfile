@@ -2,6 +2,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["Kin.KinHub.Core.slnx", "./"]
+COPY ["Directory.Build.props", "./"]
+COPY ["Directory.Packages.props", "./"]
+COPY ["src/Shared/Kin.KinHub.Shared.Kernel/Kin.KinHub.Shared.Kernel.csproj", "src/Shared/Kin.KinHub.Shared.Kernel/"]
 COPY ["src/Businesses/Kin.KinHub.Core.Business/Kin.KinHub.Core.Business.csproj", "src/Businesses/Kin.KinHub.Core.Business/"]
 COPY ["src/Businesses/Kin.KinHub.KinRecipe.Business/Kin.KinHub.KinRecipe.Business.csproj", "src/Businesses/Kin.KinHub.KinRecipe.Business/"]
 COPY ["src/Businesses/Kin.KinHub.Identity.Business/Kin.KinHub.Identity.Business.csproj", "src/Businesses/Kin.KinHub.Identity.Business/"]
