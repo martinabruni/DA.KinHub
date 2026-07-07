@@ -11,6 +11,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIdentityProvider, KinHubPasswordIdentityProvider>();
         services.AddScoped<IIdentityProviderRegistry, IdentityProviderRegistry>();
         services.AddScoped<IUserProviderService, UserProviderService>();
+        services.AddScoped<IIdentityAccountService, IdentityAccountService>();
+        services.AddScoped<IIdentitySessionService, IdentitySessionService>();
         services.AddScoped<ILoginResponseFactory, LoginResponseFactory>();
         services.AddScoped<IRegisterUserHandler, RegisterUserHandler>();
         services.AddScoped<ILoginUserHandler, LoginUserHandler>();

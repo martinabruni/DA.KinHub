@@ -61,11 +61,21 @@ public sealed class InfrastructureTemplateTests
     public void MainTemplate_ExportsKinListMigrationJobName_AndAvoidsLegacyCoreApiVariable()
     {
         using var document = LoadJson("ops", "iac", "main.json");
+        var computeDeployment = FindResource(document.RootElement, "Microsoft.Resources/deployments", "compute");
         var outputs = document.RootElement.GetProperty("outputs");
 
         Assert.Equal(
-            "[parameters('kinListMigrationJobName')]",
+            "[reference('compute').outputs.kinListMigrationJobName.value]",
             outputs.GetProperty("kinListMigrationJobName").GetProperty("value").GetString());
+        Assert.Equal(
+            "[parameters('kinListMigrationJobName')]",
+            computeDeployment
+                .GetProperty("properties")
+                .GetProperty("template")
+                .GetProperty("outputs")
+                .GetProperty("kinListMigrationJobName")
+                .GetProperty("value")
+                .GetString());
 
         var templateJson = document.RootElement.GetRawText();
         Assert.DoesNotContain("KINLIST_CORE_API_BASE_URL", templateJson, StringComparison.Ordinal);
@@ -99,7 +109,7 @@ public sealed class InfrastructureTemplateTests
 
     private static JsonElement FindResource(JsonElement root, string type, string name)
     {
-        foreach (var resource in root.GetProperty("resources").EnumerateArray())
+        foreach (var resource in EnumerateResources(root))
         {
             if (resource.GetProperty("type").GetString() == type
                 && resource.GetProperty("name").GetString() == name)
@@ -109,6 +119,54 @@ public sealed class InfrastructureTemplateTests
         }
 
         throw new Xunit.Sdk.XunitException($"Resource '{type}' / '{name}' not found.");
+    }
+
+    private static IEnumerable<JsonElement> EnumerateResources(JsonElement node)
+    {
+        if (!node.TryGetProperty("resources", out var resources))
+        {
+            yield break;
+        }
+
+        foreach (var resource in EnumerateResourceCollection(resources))
+        {
+            yield return resource;
+
+            foreach (var nested in EnumerateResources(resource))
+            {
+                yield return nested;
+            }
+
+            if (resource.TryGetProperty("properties", out var properties)
+                && properties.TryGetProperty("template", out var template))
+            {
+                foreach (var nested in EnumerateResources(template))
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<JsonElement> EnumerateResourceCollection(JsonElement resources)
+    {
+        if (resources.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var resource in resources.EnumerateArray())
+            {
+                yield return resource;
+            }
+
+            yield break;
+        }
+
+        if (resources.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in resources.EnumerateObject())
+            {
+                yield return property.Value;
+            }
+        }
     }
 
     private static JsonDocument LoadJson(params string[] relativePathSegments)

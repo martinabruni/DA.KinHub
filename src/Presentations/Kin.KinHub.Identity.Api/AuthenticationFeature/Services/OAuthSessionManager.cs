@@ -17,16 +17,16 @@ public sealed class OAuthSessionManager : IOAuthSessionManager
 {
     private const string SessionCookiePath = "/";
 
-    private readonly IRefreshTokenHandler _refreshTokenHandler;
+    private readonly IIdentitySessionService _sessionService;
     private readonly IOAuthIdentitySessionStore _identitySessionStore;
     private readonly OAuthServerOptions _oauthOptions;
 
     public OAuthSessionManager(
-        IRefreshTokenHandler refreshTokenHandler,
+        IIdentitySessionService sessionService,
         IOAuthIdentitySessionStore identitySessionStore,
         OAuthServerOptions oauthOptions)
     {
-        _refreshTokenHandler = refreshTokenHandler;
+        _sessionService = sessionService;
         _identitySessionStore = identitySessionStore;
         _oauthOptions = oauthOptions;
     }
@@ -91,7 +91,7 @@ public sealed class OAuthSessionManager : IOAuthSessionManager
         OAuthIdentitySession session,
         CancellationToken cancellationToken)
     {
-        var refreshResult = await _refreshTokenHandler.HandleAsync(session.RefreshToken, cancellationToken);
+        var refreshResult = await _sessionService.RefreshAsync(session.RefreshToken, cancellationToken);
 
         if (!refreshResult.IsSuccess || refreshResult.Value is null)
         {

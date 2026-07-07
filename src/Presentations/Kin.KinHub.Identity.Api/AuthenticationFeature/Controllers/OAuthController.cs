@@ -10,8 +10,7 @@ public sealed class OAuthController : ControllerBase
     private static readonly string[] SupportedGrantTypes = ["authorization_code"];
     private static readonly string[] SupportedResponseTypes = ["code"];
 
-    private readonly ILoginUserHandler _loginUserHandler;
-    private readonly ILogoutUserHandler _logoutUserHandler;
+    private readonly IIdentitySessionService _sessionService;
     private readonly IOAuthClientStore _clientStore;
     private readonly IOAuthAuthorizationCodeStore _authorizationCodeStore;
     private readonly IOAuthIdentitySessionStore _identitySessionStore;
@@ -23,8 +22,7 @@ public sealed class OAuthController : ControllerBase
     private readonly OAuthServerOptions _oauthOptions;
 
     public OAuthController(
-        ILoginUserHandler loginUserHandler,
-        ILogoutUserHandler logoutUserHandler,
+        IIdentitySessionService sessionService,
         IOAuthClientStore clientStore,
         IOAuthAuthorizationCodeStore authorizationCodeStore,
         IOAuthIdentitySessionStore identitySessionStore,
@@ -35,8 +33,7 @@ public sealed class OAuthController : ControllerBase
         IOAuthTokenIssuer tokenIssuer,
         OAuthServerOptions oauthOptions)
     {
-        _loginUserHandler = loginUserHandler;
-        _logoutUserHandler = logoutUserHandler;
+        _sessionService = sessionService;
         _clientStore = clientStore;
         _authorizationCodeStore = authorizationCodeStore;
         _identitySessionStore = identitySessionStore;
@@ -203,7 +200,7 @@ public sealed class OAuthController : ControllerBase
             return Content(_loginPageRenderer.Render(authorizeRequest, client!, scope, _oauthOptions.AuthorizationServerUrl, _oauthOptions.RegistrationUiUrl, "Email and password are required."), "text/html");
         }
 
-        var result = await _loginUserHandler.HandleAsync(
+        var result = await _sessionService.LoginAsync(
             new LoginRequest
             {
                 Email = request.Email.Trim(),
@@ -294,7 +291,7 @@ public sealed class OAuthController : ControllerBase
             && _identitySessionStore.TryRemove(sessionId, out var session)
             && session is not null)
         {
-            await _logoutUserHandler.HandleAsync(session.RefreshToken, cancellationToken);
+            await _sessionService.LogoutAsync(session.RefreshToken, cancellationToken);
         }
 
         _sessionManager.DeleteIdentitySessionCookie(Request, Response);
