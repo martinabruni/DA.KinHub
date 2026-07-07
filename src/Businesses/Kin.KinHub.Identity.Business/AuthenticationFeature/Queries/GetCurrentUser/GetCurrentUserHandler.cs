@@ -15,7 +15,7 @@ public sealed class GetCurrentUserHandler : IGetCurrentUserHandler
     {
         try
         {
-            var user = await _userRepository.GetAsync(userId);
+            var user = await _userRepository.GetAsync(userId, cancellationToken);
 
             return Result<UserProfileResponse>.Success(new UserProfileResponse
             {

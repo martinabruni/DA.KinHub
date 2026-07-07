@@ -29,15 +29,15 @@ public sealed class RefreshTokenHandler : IRefreshTokenHandler
     {
         try
         {
-            var stored = await _refreshTokenRepository.FindByTokenAsync(refreshToken);
+            var stored = await _refreshTokenRepository.FindByTokenAsync(refreshToken, cancellationToken);
 
             if (stored is null || stored.Revoked || stored.ExpiresAtUtc <= DateTime.UtcNow)
                 return Result<LoginResponse>.Unauthorized("Invalid or expired refresh token.");
 
             stored.Revoked = true;
-            await _refreshTokenRepository.UpdateAsync(stored.Id, stored);
+            await _refreshTokenRepository.UpdateAsync(stored.Id, stored, cancellationToken);
 
-            var user = await _userRepository.GetAsync(stored.UserId);
+            var user = await _userRepository.GetAsync(stored.UserId, cancellationToken);
 
             if (user.Status is not UserStatus.Active)
                 return Result<LoginResponse>.Unauthorized("Account is not active.");

@@ -28,7 +28,7 @@ public sealed class UpdateUserPasswordHandler : IUpdateUserPasswordHandler
     {
         try
         {
-            var credential = await _credentialRepository.GetByUserIdAsync(userId);
+            var credential = await _credentialRepository.GetByUserIdAsync(userId, cancellationToken);
 
             if (credential?.PasswordHash is null)
                 return Result<bool>.Unauthorized("Invalid current password.");
@@ -38,7 +38,7 @@ public sealed class UpdateUserPasswordHandler : IUpdateUserPasswordHandler
 
             credential.PasswordHash = _passwordHasher.Hash(request.NewPassword);
             credential.UpdatedAt = DateTime.UtcNow;
-            await _credentialRepository.UpdateAsync(credential.Id, credential);
+            await _credentialRepository.UpdateAsync(credential.Id, credential, cancellationToken);
 
             return Result<bool>.Success(true);
         }

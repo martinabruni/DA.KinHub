@@ -23,7 +23,7 @@ public sealed class KinHubServiceService : IKinHubServiceService
     public async Task<Result<IReadOnlyList<KinHubServiceDto>>> GetAllServicesAsync(
         CancellationToken cancellationToken = default)
     {
-        var services = await _kinHubServiceRepository.GetAllAsync();
+        var services = await _kinHubServiceRepository.GetAllAsync(cancellationToken);
 
         return Result<IReadOnlyList<KinHubServiceDto>>.Success(services.Adapt<List<KinHubServiceDto>>());
     }
@@ -38,7 +38,7 @@ public sealed class KinHubServiceService : IKinHubServiceService
         if (!access.IsSuccess)
             return access.ToResult<IReadOnlyList<FamilyServiceDto>>();
 
-        var allServices = await _kinHubServiceRepository.GetAllAsync();
+        var allServices = await _kinHubServiceRepository.GetAllAsync(cancellationToken);
         var familyServices = await _familyServiceRepository.GetByFamilyIdAsync(familyId, cancellationToken);
 
         var dtos = allServices
@@ -90,13 +90,13 @@ public sealed class KinHubServiceService : IKinHubServiceService
                 IsActive = request.IsActive,
                 CreatedAt = now,
                 UpdatedAt = now,
-            });
+            }, cancellationToken);
         }
         else
         {
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = now;
-            familyService = await _familyServiceRepository.UpdateAsync(existing.Id, existing);
+            familyService = await _familyServiceRepository.UpdateAsync(existing.Id, existing, cancellationToken);
         }
 
         var service = await _kinHubServiceRepository.FindByServiceTypeAsync(

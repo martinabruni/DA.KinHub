@@ -22,11 +22,11 @@ public sealed class DeleteUserHandler : IDeleteUserHandler
     {
         try
         {
-            var user = await _userRepository.GetAsync(userId);
+            var user = await _userRepository.GetAsync(userId, cancellationToken);
 
             user.IsDeleted = true;
             user.UpdatedAt = DateTime.UtcNow;
-            await _userRepository.UpdateAsync(user.Id, user);
+            await _userRepository.UpdateAsync(user.Id, user, cancellationToken);
 
             return Result<bool>.Success(true);
         }

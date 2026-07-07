@@ -32,7 +32,7 @@ public sealed class LoginResponseFactory : ILoginResponseFactory
             UpdatedAt = now,
         };
 
-        await _refreshTokenRepository.CreateAsync(refreshTokenEntity);
+        await _refreshTokenRepository.CreateAsync(refreshTokenEntity, cancellationToken);
 
         return new LoginResponse
         {

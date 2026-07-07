@@ -22,13 +22,13 @@ public sealed class LogoutUserHandler : ILogoutUserHandler
     {
         try
         {
-            var stored = await _refreshTokenRepository.FindByTokenAsync(refreshToken);
+            var stored = await _refreshTokenRepository.FindByTokenAsync(refreshToken, cancellationToken);
 
             if (stored is null)
                 return Result<bool>.NotFound("Refresh token not found.");
 
             stored.Revoked = true;
-            await _refreshTokenRepository.UpdateAsync(stored.Id, stored);
+            await _refreshTokenRepository.UpdateAsync(stored.Id, stored, cancellationToken);
 
             return Result<bool>.Success(true);
         }

@@ -28,7 +28,7 @@ public sealed class UpdateFamilyMemberHandler : IUpdateFamilyMemberHandler
                 return access.ToResult<UpdateFamilyMemberResponse>();
             }
 
-            var member = await _familyMemberRepository.GetAsync(memberId);
+            var member = await _familyMemberRepository.GetAsync(memberId, cancellationToken);
             if (member.FamilyId != familyId || member.IsDeleted)
             {
                 return Result<UpdateFamilyMemberResponse>.NotFound("Member not found in this family.");
@@ -42,7 +42,7 @@ public sealed class UpdateFamilyMemberHandler : IUpdateFamilyMemberHandler
 
             member.Name = request.Name;
             member.UpdatedAt = DateTime.UtcNow;
-            await _familyMemberRepository.UpdateAsync(member.Id, member);
+            await _familyMemberRepository.UpdateAsync(member.Id, member, cancellationToken);
 
             return Result<UpdateFamilyMemberResponse>.Success(new UpdateFamilyMemberResponse
             {

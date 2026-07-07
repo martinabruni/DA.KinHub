@@ -33,11 +33,11 @@ public sealed class KinHubPasswordIdentityProvider : IIdentityProvider
         if (string.IsNullOrWhiteSpace(credential.Email) || string.IsNullOrEmpty(credential.Password))
             return null;
 
-        var user = await _userRepository.FindByEmailAsync(credential.Email);
+        var user = await _userRepository.FindByEmailAsync(credential.Email, cancellationToken);
         if (user is null || user.Status is not UserStatus.Active)
             return null;
 
-        var stored = await _credentialRepository.GetByUserIdAsync(user.Id);
+        var stored = await _credentialRepository.GetByUserIdAsync(user.Id, cancellationToken);
         if (stored?.PasswordHash is null)
             return null;
 
@@ -66,7 +66,7 @@ public sealed class KinHubPasswordIdentityProvider : IIdentityProvider
             UpdatedAt = now,
         };
 
-        var created = await _userRepository.CreateAsync(user);
+        var created = await _userRepository.CreateAsync(user, cancellationToken);
 
         await _credentialRepository.CreateAsync(new UserCredential
         {
@@ -75,9 +75,9 @@ public sealed class KinHubPasswordIdentityProvider : IIdentityProvider
             PasswordHash = _passwordHasher.Hash(registration.Password),
             CreatedAt = now,
             UpdatedAt = now,
-        });
+        }, cancellationToken);
 
-        await _userProviderRepository.CreateAsync(BuildLink(created.Id, created.Id.ToString(), now));
+        await _userProviderRepository.CreateAsync(BuildLink(created.Id, created.Id.ToString(), now), cancellationToken);
 
         return created;
     }
@@ -92,7 +92,7 @@ public sealed class KinHubPasswordIdentityProvider : IIdentityProvider
 
         var now = DateTime.UtcNow;
 
-        var existingCredential = await _credentialRepository.GetByUserIdAsync(userId);
+        var existingCredential = await _credentialRepository.GetByUserIdAsync(userId, cancellationToken);
         if (existingCredential is null)
         {
             await _credentialRepository.CreateAsync(new UserCredential
@@ -102,31 +102,31 @@ public sealed class KinHubPasswordIdentityProvider : IIdentityProvider
                 PasswordHash = _passwordHasher.Hash(credential.Password),
                 CreatedAt = now,
                 UpdatedAt = now,
-            });
+            }, cancellationToken);
         }
         else
         {
             existingCredential.PasswordHash = _passwordHasher.Hash(credential.Password);
             existingCredential.UpdatedAt = now;
-            await _credentialRepository.UpdateAsync(existingCredential.Id, existingCredential);
+            await _credentialRepository.UpdateAsync(existingCredential.Id, existingCredential, cancellationToken);
         }
 
-        await _userProviderRepository.CreateAsync(BuildLink(userId, userId.ToString(), now));
+        await _userProviderRepository.CreateAsync(BuildLink(userId, userId.ToString(), now), cancellationToken);
     }
 
     public async Task UnlinkAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var link = await _userProviderRepository.GetByUserAndProviderAsync(userId, (int)ProviderType);
+        var link = await _userProviderRepository.GetByUserAndProviderAsync(userId, (int)ProviderType, cancellationToken);
         if (link is null)
             return;
 
-        await _userProviderRepository.DeleteAsync(link.Id);
+        await _userProviderRepository.DeleteAsync(link.Id, cancellationToken);
 
-        var credential = await _credentialRepository.GetByUserIdAsync(userId);
+        var credential = await _credentialRepository.GetByUserIdAsync(userId, cancellationToken);
         if (credential is not null)
-            await _credentialRepository.DeleteAsync(credential.Id);
+            await _credentialRepository.DeleteAsync(credential.Id, cancellationToken);
     }
 
     private static UserProvider BuildLink(Guid userId, string providerUserId, DateTime now) =>

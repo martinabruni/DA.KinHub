@@ -27,7 +27,7 @@ public sealed class DeleteFamilyMemberHandler : IDeleteFamilyMemberHandler
                 return access.ToResult<bool>();
             }
 
-            var member = await _familyMemberRepository.GetAsync(memberId);
+            var member = await _familyMemberRepository.GetAsync(memberId, cancellationToken);
             if (member.FamilyId != familyId)
             {
                 return Result<bool>.NotFound("Member not found in this family.");
@@ -41,7 +41,7 @@ public sealed class DeleteFamilyMemberHandler : IDeleteFamilyMemberHandler
 
             member.IsDeleted = true;
             member.UpdatedAt = DateTime.UtcNow;
-            await _familyMemberRepository.UpdateAsync(member.Id, member);
+            await _familyMemberRepository.UpdateAsync(member.Id, member, cancellationToken);
 
             return Result<bool>.Success(true);
         }

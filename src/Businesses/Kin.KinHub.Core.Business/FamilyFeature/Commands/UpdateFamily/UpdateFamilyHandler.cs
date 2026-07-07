@@ -30,7 +30,7 @@ public sealed class UpdateFamilyHandler : IUpdateFamilyHandler
             var family = access.Family!;
             family.Name = request.Name;
             family.UpdatedAt = DateTime.UtcNow;
-            await _familyRepository.UpdateAsync(family.Id, family);
+            await _familyRepository.UpdateAsync(family.Id, family, cancellationToken);
 
             return Result<UpdateFamilyResponse>.Success(new UpdateFamilyResponse
             {

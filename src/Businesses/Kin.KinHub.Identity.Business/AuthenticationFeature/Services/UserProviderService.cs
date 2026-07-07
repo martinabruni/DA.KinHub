@@ -23,7 +23,7 @@ public sealed class UserProviderService : IUserProviderService
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var links = await _userProviderRepository.GetByUserIdAsync(userId);
+        var links = await _userProviderRepository.GetByUserIdAsync(userId, cancellationToken);
         return Result<IReadOnlyList<LinkedProviderResponse>>.Success(Map(links));
     }
 
@@ -37,7 +37,7 @@ public sealed class UserProviderService : IUserProviderService
             return Result<IReadOnlyList<LinkedProviderResponse>>.ValidationError(
                 $"The '{request.Provider}' identity provider is not supported.");
 
-        var existing = await _userProviderRepository.GetByUserAndProviderAsync(userId, (int)request.Provider);
+        var existing = await _userProviderRepository.GetByUserAndProviderAsync(userId, (int)request.Provider, cancellationToken);
         if (existing is not null)
             return Result<IReadOnlyList<LinkedProviderResponse>>.Conflict(
                 $"The '{request.Provider}' provider is already linked to this account.");
@@ -66,7 +66,7 @@ public sealed class UserProviderService : IUserProviderService
             return Result<IReadOnlyList<LinkedProviderResponse>>.UnexpectedError("Failed to link provider.");
         }
 
-        var links = await _userProviderRepository.GetByUserIdAsync(userId);
+        var links = await _userProviderRepository.GetByUserIdAsync(userId, cancellationToken);
         return Result<IReadOnlyList<LinkedProviderResponse>>.Success(Map(links));
     }
 
@@ -80,7 +80,7 @@ public sealed class UserProviderService : IUserProviderService
             return Result<IReadOnlyList<LinkedProviderResponse>>.ValidationError(
                 $"The '{provider}' identity provider is not supported.");
 
-        var links = await _userProviderRepository.GetByUserIdAsync(userId);
+        var links = await _userProviderRepository.GetByUserIdAsync(userId, cancellationToken);
 
         if (links.All(link => link.ProviderId != (int)provider))
             return Result<IReadOnlyList<LinkedProviderResponse>>.NotFound(
@@ -99,7 +99,7 @@ public sealed class UserProviderService : IUserProviderService
             return Result<IReadOnlyList<LinkedProviderResponse>>.UnexpectedError("Failed to unlink provider.");
         }
 
-        var remaining = await _userProviderRepository.GetByUserIdAsync(userId);
+        var remaining = await _userProviderRepository.GetByUserIdAsync(userId, cancellationToken);
         return Result<IReadOnlyList<LinkedProviderResponse>>.Success(Map(remaining));
     }
 

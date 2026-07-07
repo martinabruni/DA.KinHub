@@ -35,7 +35,7 @@ public sealed class AddFamilyMemberHandler : IAddFamilyMemberHandler
                 FamilyId = familyId,
                 CreatedAt = now,
                 UpdatedAt = now,
-            });
+            }, cancellationToken);
 
             return Result<AddFamilyMemberResponse>.Success(new AddFamilyMemberResponse
             {

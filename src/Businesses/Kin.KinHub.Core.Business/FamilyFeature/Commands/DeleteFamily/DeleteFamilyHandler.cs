@@ -36,13 +36,13 @@ public sealed class DeleteFamilyHandler : IDeleteFamilyHandler
             {
                 member.IsDeleted = true;
                 member.UpdatedAt = now;
-                await _familyMemberRepository.UpdateAsync(member.Id, member);
+                await _familyMemberRepository.UpdateAsync(member.Id, member, cancellationToken);
             }
 
             var family = access.Family!;
             family.IsDeleted = true;
             family.UpdatedAt = now;
-            await _familyRepository.UpdateAsync(family.Id, family);
+            await _familyRepository.UpdateAsync(family.Id, family, cancellationToken);
 
             return Result<bool>.Success(true);
         }

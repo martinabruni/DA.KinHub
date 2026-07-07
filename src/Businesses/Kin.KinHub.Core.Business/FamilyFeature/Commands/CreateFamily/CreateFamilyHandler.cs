@@ -48,7 +48,7 @@ public sealed class CreateFamilyHandler : ICreateFamilyHandler
                     UpdatedAt = now,
                 };
 
-                var createdFamily = await _familyRepository.CreateAsync(family);
+                var createdFamily = await _familyRepository.CreateAsync(family, ct);
 
                 var members = new List<FamilyMember>(request.AdditionalMembers.Count + 1)
                 {
@@ -71,10 +71,10 @@ public sealed class CreateFamilyHandler : ICreateFamilyHandler
                     UpdatedAt = now,
                 }));
 
-                var createdMembers = await _familyMemberRepository.CreateRangeAsync(members);
+                var createdMembers = await _familyMemberRepository.CreateRangeAsync(members, ct);
                 var createdOwner = createdMembers[0];
 
-                var allServices = await _kinHubServiceRepository.GetAllAsync();
+                var allServices = await _kinHubServiceRepository.GetAllAsync(ct);
                 var familyServices = allServices.Select(service => new FamilyService
                 {
                     Id = Guid.NewGuid(),
@@ -84,7 +84,7 @@ public sealed class CreateFamilyHandler : ICreateFamilyHandler
                     CreatedAt = now,
                     UpdatedAt = now,
                 }).ToArray();
-                await _familyServiceRepository.CreateRangeAsync(familyServices);
+                await _familyServiceRepository.CreateRangeAsync(familyServices, ct);
 
                 return Result<CreateFamilyResponse>.Success(new CreateFamilyResponse
                 {

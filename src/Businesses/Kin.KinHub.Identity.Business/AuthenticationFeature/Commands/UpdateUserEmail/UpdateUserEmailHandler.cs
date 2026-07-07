@@ -31,22 +31,22 @@ public sealed class UpdateUserEmailHandler : IUpdateUserEmailHandler
     {
         try
         {
-            var credential = await _credentialRepository.GetByUserIdAsync(userId);
+            var credential = await _credentialRepository.GetByUserIdAsync(userId, cancellationToken);
             if (credential?.PasswordHash is null
                 || !_passwordHasher.Verify(request.CurrentPassword, credential.PasswordHash))
             {
                 return Result<bool>.Unauthorized("Invalid current password.");
             }
 
-            var user = await _userRepository.GetAsync(userId);
+            var user = await _userRepository.GetAsync(userId, cancellationToken);
 
-            var existing = await _userRepository.FindByEmailAsync(request.NewEmail);
+            var existing = await _userRepository.FindByEmailAsync(request.NewEmail, cancellationToken);
             if (existing is not null && existing.Id != userId)
                 return Result<bool>.Conflict("Email already in use.");
 
             user.Email = request.NewEmail;
             user.UpdatedAt = DateTime.UtcNow;
-            await _userRepository.UpdateAsync(user.Id, user);
+            await _userRepository.UpdateAsync(user.Id, user, cancellationToken);
 
             return Result<bool>.Success(true);
         }
