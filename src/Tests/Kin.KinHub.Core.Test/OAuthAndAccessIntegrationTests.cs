@@ -75,7 +75,7 @@ public sealed class OAuthAndAccessIntegrationTests
         var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa");
 
         Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
         var code = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location!.Query)["code"].ToString();
@@ -88,7 +88,7 @@ public sealed class OAuthAndAccessIntegrationTests
                 ["client_id"] = OAuthApiFactory.ClientId,
                 ["code"] = code,
                 ["redirect_uri"] = OAuthApiFactory.RedirectUri,
-                ["code_verifier"] = "integration-verifier",
+                ["code_verifier"] = "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa",
             }!));
 
         Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
@@ -104,7 +104,7 @@ public sealed class OAuthAndAccessIntegrationTests
         var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa");
         var code = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location!.Query)["code"].ToString();
 
         var tokenResponse = await client.PostAsync(
@@ -115,7 +115,7 @@ public sealed class OAuthAndAccessIntegrationTests
                 ["client_id"] = OAuthApiFactory.ClientId,
                 ["code"] = code,
                 ["redirect_uri"] = OAuthApiFactory.RedirectUri,
-                ["code_verifier"] = "wrong-verifier",
+                ["code_verifier"] = "wrong-pkce-code-verifier-rfc7636-bbbbbbbbbbbbbbbb",
             }!));
 
         Assert.Equal(HttpStatusCode.BadRequest, tokenResponse.StatusCode);
@@ -129,12 +129,12 @@ public sealed class OAuthAndAccessIntegrationTests
         var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var firstAuthorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+        var firstAuthorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa");
 
         Assert.Equal(HttpStatusCode.Redirect, firstAuthorizeResponse.StatusCode);
 
         var secondAuthorizeResponse = await client.GetAsync(
-            $"/authorize?response_type=code&client_id={OAuthApiFactory.ClientId}&redirect_uri={Uri.EscapeDataString(OAuthApiFactory.RedirectUri)}&scope={OAuthScopes.Read}&state=integration-state&code_challenge={ComputeCodeChallenge("integration-verifier")}&code_challenge_method=S256");
+            $"/authorize?response_type=code&client_id={OAuthApiFactory.ClientId}&redirect_uri={Uri.EscapeDataString(OAuthApiFactory.RedirectUri)}&scope={OAuthScopes.Read}&state=integration-state&code_challenge={ComputeCodeChallenge("integration-pkce-code-verifier-rfc7636-aaaaaaaaaa")}&code_challenge_method=S256");
 
         Assert.Equal(HttpStatusCode.Redirect, secondAuthorizeResponse.StatusCode);
         Assert.Contains("code=", secondAuthorizeResponse.Headers.Location!.Query, StringComparison.Ordinal);
@@ -146,7 +146,7 @@ public sealed class OAuthAndAccessIntegrationTests
         var factory = _familyFactory;
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-verifier");
+        var authorizeResponse = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa");
 
         Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
 

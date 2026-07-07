@@ -27,13 +27,13 @@ public sealed class OAuthGateTests
     {
         using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var authorizeResponse = await AuthorizeAsync(client, "replay-verifier");
+        var authorizeResponse = await AuthorizeAsync(client, "replay-pkce-code-verifier-rfc7636-aaaaaaaaaaaaaaa");
         var code = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location!.Query)["code"].ToString();
 
-        var first = await ExchangeCodeAsync(client, code, "replay-verifier");
+        var first = await ExchangeCodeAsync(client, code, "replay-pkce-code-verifier-rfc7636-aaaaaaaaaaaaaaa");
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
 
-        var replay = await ExchangeCodeAsync(client, code, "replay-verifier");
+        var replay = await ExchangeCodeAsync(client, code, "replay-pkce-code-verifier-rfc7636-aaaaaaaaaaaaaaa");
         Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
         var body = await replay.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("invalid_grant", body.GetProperty("error").GetString());
@@ -89,7 +89,7 @@ public sealed class OAuthGateTests
     {
         using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var authorizeResponse = await AuthorizeAsync(client, "logout-verifier");
+        var authorizeResponse = await AuthorizeAsync(client, "logout-pkce-code-verifier-rfc7636-aaaaaaaaaaaaaaa");
         Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
 
         var response = await client.PostAsync(
@@ -108,7 +108,7 @@ public sealed class OAuthGateTests
     {
         using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        var authorizeResponse = await AuthorizeAsync(client, "logout-verifier");
+        var authorizeResponse = await AuthorizeAsync(client, "logout-pkce-code-verifier-rfc7636-aaaaaaaaaaaaaaa");
         Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
 
         var response = await client.PostAsync(

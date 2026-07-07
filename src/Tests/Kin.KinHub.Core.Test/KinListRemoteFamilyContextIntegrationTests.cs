@@ -119,7 +119,7 @@ public sealed class KinListRemoteFamilyContextIntegrationTests
                 ["redirect_uri"] = OAuthApiFactory.RedirectUri,
                 ["scope"] = "kinhub.api",
                 ["state"] = "integration-state",
-                ["code_challenge"] = ComputeCodeChallenge("integration-verifier"),
+                ["code_challenge"] = ComputeCodeChallenge("integration-pkce-code-verifier-rfc7636-aaaaaaaaaa"),
                 ["code_challenge_method"] = "S256",
                 ["email"] = "integration@kinhub.dev",
                 ["password"] = "Password123!",
@@ -137,7 +137,7 @@ public sealed class KinListRemoteFamilyContextIntegrationTests
                 ["client_id"] = OAuthApiFactory.ClientId,
                 ["code"] = code,
                 ["redirect_uri"] = OAuthApiFactory.RedirectUri,
-                ["code_verifier"] = "integration-verifier",
+                ["code_verifier"] = "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa",
             }!));
 
         Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
