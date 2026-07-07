@@ -1,5 +1,5 @@
 using Kin.KinHub.Core.Business.Common;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 
 namespace Kin.KinHub.Identity.Api.Common;
 

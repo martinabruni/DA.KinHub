@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Kin.KinHub.KinRecipe.Api.Common;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 using Kin.KinHub.Shared.Kernel.Common;
 
 namespace Kin.KinHub.KinRecipe.Api.Common;

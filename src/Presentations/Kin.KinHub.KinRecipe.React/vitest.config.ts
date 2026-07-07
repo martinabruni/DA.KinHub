@@ -12,7 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../Kin.KinHub.Frontend.Shared'),
+      '@shared': path.resolve(__dirname, '../Kin.KinHub.Shared.React'),
     },
   },
 })

@@ -26,9 +26,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@shared/*": ["../Kin.KinHub.Frontend.Shared/*"]
+      "@shared/*": ["../Kin.KinHub.Shared.React/*"]
     }
   },
-  "include": ["src", "../Kin.KinHub.Frontend.Shared"]
+  "include": ["src", "../Kin.KinHub.Shared.React"]
 }
 

@@ -1,7 +1,7 @@
-using Kin.KinHub.Core.Business.RecipeAssistantFeature;
-using Kin.KinHub.Core.Domain.RecipeAssistantFeature;
+using Kin.KinHub.KinRecipe.Business.RecipeAssistantFeature;
+using Kin.KinHub.KinRecipe.Domain.RecipeAssistantFeature;
 using Kin.KinHub.Core.Domain.FamilyFeature;
-using Kin.KinHub.Core.Domain.RecipeFeature;
+using Kin.KinHub.KinRecipe.Domain.RecipeFeature;
 using Kin.KinHub.KinList.Business.KinListFeature;
 using DomainKinListItem = Kin.KinHub.KinList.Domain.KinListFeature.KinListItem;
 

@@ -1,5 +1,5 @@
 using Kin.KinHub.Core.Business.Common;
-using Kin.KinHub.Core.Business.RecipeAssistantFeature;
+using Kin.KinHub.KinRecipe.Business.RecipeAssistantFeature;
 using Kin.KinHub.KinRecipe.Api.RecipeAssistantFeature;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

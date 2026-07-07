@@ -1,9 +1,6 @@
 using Kin.KinHub.Core.PostgreSql;
 using Kin.KinHub.Core.Business.Common;
-using Kin.KinHub.Core.PostgreSql.Common;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
-using Pgvector;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -17,11 +14,6 @@ public static class ServiceCollectionExtensions
         configure(options);
         options.Validate();
 
-        TypeAdapterConfig.GlobalSettings.NewConfig<Vector, float[]>()
-            .MapWith(v => v.ToArray());
-        TypeAdapterConfig.GlobalSettings.NewConfig<float[], Vector>()
-            .MapWith(f => new Vector(f));
-
         services.AddDbContext<CoreDbContext>(o =>
             o.UseNpgsql(options.ConnectionString, npgsqlOptions =>
             {
@@ -33,20 +25,10 @@ public static class ServiceCollectionExtensions
             }));
 
         services.AddScoped<ICoreTransactionExecutor, EfCoreTransactionExecutor>();
-
-        // Core repositories
         services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMemberRepository, FamilyMemberRepository>();
         services.AddScoped<IKinHubServiceRepository, KinHubServiceRepository>();
         services.AddScoped<IFamilyServiceRepository, FamilyServiceRepository>();
-
-        // Recipe repositories (stubs â€” implement after EF Core Power Tools scaffold)
-        services.AddScoped<IRecipeBookRepository, RecipeBookRepository>();
-        services.AddScoped<IRecipeRepository, RecipeRepository>();
-        services.AddScoped<IRecipeIngredientRepository, RecipeIngredientRepository>();
-        services.AddScoped<IRecipeStepRepository, RecipeStepRepository>();
-        services.AddScoped<IFridgeRepository, FridgeRepository>();
-        services.AddScoped<IFridgeIngredientRepository, FridgeIngredientRepository>();
 
         return services;
     }

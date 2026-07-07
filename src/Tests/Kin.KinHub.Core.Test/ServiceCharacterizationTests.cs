@@ -1,9 +1,10 @@
 using Kin.KinHub.Core.Business.Common;
 using Kin.KinHub.Core.Business.FamilyFeature;
-using Kin.KinHub.Core.Business.RecipeFeature;
-using Kin.KinHub.Core.Domain.RecipeAssistantFeature;
+using Kin.KinHub.KinRecipe.Business.Common;
+using Kin.KinHub.KinRecipe.Business.RecipeFeature;
+using Kin.KinHub.KinRecipe.Domain.RecipeAssistantFeature;
 using Kin.KinHub.Core.Domain.FamilyFeature;
-using Kin.KinHub.Core.Domain.RecipeFeature;
+using Kin.KinHub.KinRecipe.Domain.RecipeFeature;
 using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -409,7 +410,7 @@ public sealed class RecipeServiceCharacterizationTests
         var recipeResponseMapper = new RecipeResponseMapper(recipeIngredientRepository, recipeStepRepository);
 
         return new KinHubRecipeService(
-            new CreateRecipeHandler(recipeRepository, recipeIngredientRepository, recipeStepRepository, recipeBookAccessService, recipeResponseMapper, new NoOpCoreTransactionExecutor()),
+            new CreateRecipeHandler(recipeRepository, recipeIngredientRepository, recipeStepRepository, recipeBookAccessService, recipeResponseMapper, new NoOpKinRecipeTransactionExecutor()),
             new GetRecipesHandler(recipeRepository, recipeBookAccessService, recipeResponseMapper),
             new GetRecipeByIdHandler(recipeAccessService, recipeResponseMapper),
             new UpdateRecipeHandler(recipeRepository, recipeAccessService, recipeResponseMapper),

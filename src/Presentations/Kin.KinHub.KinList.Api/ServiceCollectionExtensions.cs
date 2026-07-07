@@ -1,13 +1,13 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
-using Kin.KinHub.KinList.Ai.Common;
+using Kin.KinHub.KinList.AzureOpenAi.Common;
 using Kin.KinHub.KinList.AzureStorage;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Api.Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -113,7 +113,7 @@ public static class ServiceCollectionExtensions
 
         if (hasConfiguredAudioPipeline)
         {
-            services.AddKinHubKinListAiInfrastructure(
+            services.AddKinHubKinListAzureOpenAiInfrastructure(
                 configureSpeech: o =>
                 {
                     o.Endpoint = speechOptions.Endpoint;

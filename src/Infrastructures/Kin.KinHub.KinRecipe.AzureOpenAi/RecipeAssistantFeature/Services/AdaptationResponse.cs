@@ -1,0 +1,7 @@
+namespace Kin.KinHub.KinRecipe.AzureOpenAi.RecipeAssistantFeature;
+
+internal sealed record AdaptationResponse(
+    string TaskType,
+    RecipeJson OriginalRecipe,
+    IReadOnlyList<StepJson> AdaptedSteps,
+    IReadOnlyList<ChangeJson> Changes);

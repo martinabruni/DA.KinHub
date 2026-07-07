@@ -10,12 +10,12 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Businesses\Kin.KinHub.Core.Business\Kin.KinHub.Core.Business.csproj" />
-    <ProjectReference Include="..\..\Domains\Kin.KinHub.Core.Domain\Kin.KinHub.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinRecipe.Business\Kin.KinHub.KinRecipe.Business.csproj" />
+    <ProjectReference Include="..\..\Domains\Kin.KinHub.KinRecipe.Domain\Kin.KinHub.KinRecipe.Domain.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Identity.Domain\Kin.KinHub.Identity.Domain.csproj" />
-    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinRecipe.PostgreSql\Kin.KinHub.KinRecipe.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
-    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.OpenAi\Kin.KinHub.Core.OpenAi.csproj" />
-    <ProjectReference Include="..\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinRecipe.AzureOpenAi\Kin.KinHub.KinRecipe.AzureOpenAi.csproj" />
+    <ProjectReference Include="..\Kin.KinHub.Core.Api\Kin.KinHub.Core.Api.csproj" />
   </ItemGroup>
 </Project>

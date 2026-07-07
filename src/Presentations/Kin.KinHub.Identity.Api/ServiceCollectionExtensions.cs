@@ -1,6 +1,6 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 using Kin.KinHub.Identity.Api.Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;

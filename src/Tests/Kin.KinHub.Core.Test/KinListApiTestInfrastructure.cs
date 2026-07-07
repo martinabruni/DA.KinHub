@@ -5,7 +5,7 @@ using Kin.KinHub.Identity.Domain.Common;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
 using Kin.KinHub.KinList.Domain.KinListFeature;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;

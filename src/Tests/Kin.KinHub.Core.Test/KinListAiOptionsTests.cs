@@ -1,4 +1,4 @@
-using Kin.KinHub.KinList.Ai.Common;
+using Kin.KinHub.KinList.AzureOpenAi.Common;
 
 namespace Kin.KinHub.Core.Test;
 

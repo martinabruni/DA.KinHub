@@ -18,6 +18,6 @@
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.PostgreSql\Kin.KinHub.Identity.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
-    <ProjectReference Include="..\Kin.KinHub.Shared.Api\Kin.KinHub.Shared.Api.csproj" />
+    <ProjectReference Include="..\Kin.KinHub.Core.Api\Kin.KinHub.Core.Api.csproj" />
   </ItemGroup>
 </Project>

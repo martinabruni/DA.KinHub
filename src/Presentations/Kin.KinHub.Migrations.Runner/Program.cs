@@ -1,18 +1,9 @@
 using Kin.KinHub.Core.PostgreSql;
-using Kin.KinHub.Migrations.Runner;
 using Kin.KinHub.Identity.PostgreSql;
 using Kin.KinHub.KinList.PostgreSql;
+using Kin.KinHub.KinRecipe.PostgreSql;
+using Kin.KinHub.Migrations.Runner;
 using Microsoft.EntityFrameworkCore;
-
-// KinHub database migration runner.
-//
-// Runs ONCE (as a Container Apps Job) and exits. Migrations are applied ONLY here;
-// application replicas must never call Database.Migrate().
-//
-// ORDERING IS LOAD-BEARING: the KinListDbContext migrations create
-// kinlist."List" / kinlist."ListItem". The CoreDbContext migration
-// 20260701070642_RemoveShoppingListFromCore moves data FROM kinrecipe.* INTO those
-// kinlist tables, so KinList MUST be migrated first, then Core.
 
 try
 {
@@ -24,6 +15,7 @@ try
         new("IdentityDbContext", ApplyIdentityMigrationsAsync),
         new("KinListDbContext", ApplyKinListMigrationsAsync),
         new("CoreDbContext", ApplyCoreMigrationsAsync),
+        new("KinRecipeDbContext", ApplyKinRecipeMigrationsAsync),
     ]);
 
     await runner.RunAsync(connectionString);
@@ -72,4 +64,17 @@ static async Task ApplyCoreMigrationsAsync(
     await using var coreContext = new CoreDbContext(coreOptions);
     coreContext.Database.SetCommandTimeout(commandTimeoutSeconds);
     await coreContext.Database.MigrateAsync(cancellationToken);
+}
+
+static async Task ApplyKinRecipeMigrationsAsync(
+    string connectionString,
+    int commandTimeoutSeconds,
+    CancellationToken cancellationToken)
+{
+    var kinRecipeOptions = new DbContextOptionsBuilder<KinRecipeDbContext>()
+        .UseNpgsql(connectionString, options => options.CommandTimeout(commandTimeoutSeconds))
+        .Options;
+    await using var kinRecipeContext = new KinRecipeDbContext(kinRecipeOptions);
+    kinRecipeContext.Database.SetCommandTimeout(commandTimeoutSeconds);
+    await kinRecipeContext.Database.MigrateAsync(cancellationToken);
 }

@@ -1,7 +1,7 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
 using Kin.KinHub.KinRecipe.Api.Common;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
             .AddScoped(typeof(IRequestValidator<>), typeof(FluentRequestValidator<>))
-            .AddKinHubCorePostgreSqlInfrastructure(o =>
+            .AddKinHubKinRecipePostgreSqlInfrastructure(o =>
             {
                 o.ConnectionString = connectionString;
             })
@@ -49,7 +49,8 @@ public static class ServiceCollectionExtensions
                 o.Audience = jwtSettings.Audience;
             })
             .AddKinHubCoreBusiness()
-            .AddKinHubCoreOpenAiInfrastructure(o =>
+            .AddKinHubKinRecipeBusiness()
+            .AddKinHubKinRecipeAzureOpenAiInfrastructure(o =>
             {
                 o.Endpoint = openAiSettings.Endpoint;
                 o.ApiKey = openAiSettings.ApiKey;

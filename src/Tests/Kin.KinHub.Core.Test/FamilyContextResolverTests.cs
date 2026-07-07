@@ -2,7 +2,7 @@ extern alias KinListApi;
 
 using System.Net;
 using System.Text;
-using Kin.KinHub.Shared.Api.Common.Authorization;
+using Kin.KinHub.Core.Api.Common.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Resolver = KinListApi::Kin.KinHub.KinList.Api.Common.RemoteFamilyContextResolver;

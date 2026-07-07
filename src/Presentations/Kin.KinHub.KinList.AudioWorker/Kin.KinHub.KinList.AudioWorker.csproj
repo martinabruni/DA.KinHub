@@ -8,7 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinList.Business\Kin.KinHub.KinList.Business.csproj" />
     <ProjectReference Include="..\..\Shared\Kin.KinHub.Shared.Kernel\Kin.KinHub.Shared.Kernel.csproj" />
-    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.Ai\Kin.KinHub.KinList.Ai.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.AzureOpenAi\Kin.KinHub.KinList.AzureOpenAi.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.AzureStorage\Kin.KinHub.KinList.AzureStorage.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.KinList.PostgreSql\Kin.KinHub.KinList.PostgreSql.csproj" />
   </ItemGroup>

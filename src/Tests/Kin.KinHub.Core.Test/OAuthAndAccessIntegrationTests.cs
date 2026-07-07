@@ -7,7 +7,7 @@ using Kin.KinHub.Identity.Business.Common;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
 using Kin.KinHub.Identity.Api.AuthenticationFeature;
 using Kin.KinHub.Identity.Jwt.AuthenticationFeature;
-using Kin.KinHub.Shared.Api.Common;
+using Kin.KinHub.Core.Api.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;

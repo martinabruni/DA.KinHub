@@ -5,23 +5,25 @@ const terminalStatuses = new Set(['Succeeded', 'Failed', 'Expired', 'Cancelled']
 
 function sleep(milliseconds: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+    const abortSignal = signal
+
+    if (abortSignal?.aborted) {
+      reject(abortSignal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
       return
     }
 
     const timeoutId = window.setTimeout(() => {
-      signal?.removeEventListener('abort', handleAbort)
+      abortSignal?.removeEventListener('abort', handleAbort)
       resolve()
     }, milliseconds)
 
     const handleAbort = () => {
       window.clearTimeout(timeoutId)
-      signal?.removeEventListener('abort', handleAbort)
-      reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
+      abortSignal?.removeEventListener('abort', handleAbort)
+      reject(abortSignal?.reason ?? new DOMException('The operation was aborted.', 'AbortError'))
     }
 
-    signal?.addEventListener('abort', handleAbort, { once: true })
+    abortSignal?.addEventListener('abort', handleAbort, { once: true })
   })
 }
 

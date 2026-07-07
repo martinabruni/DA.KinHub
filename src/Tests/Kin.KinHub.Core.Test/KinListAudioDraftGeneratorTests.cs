@@ -1,5 +1,5 @@
-using Kin.KinHub.KinList.Ai.Common;
-using Kin.KinHub.KinList.Ai.KinListFeature;
+using Kin.KinHub.KinList.AzureOpenAi.Common;
+using Kin.KinHub.KinList.AzureOpenAi.KinListFeature;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
 

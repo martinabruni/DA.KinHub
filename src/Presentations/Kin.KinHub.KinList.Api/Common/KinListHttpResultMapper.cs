@@ -1,4 +1,4 @@
-using Kin.KinHub.Shared.Api.Common;
+using Kin.KinHub.Core.Api.Common;
 using Kin.KinHub.Shared.Kernel.Common;
 using Microsoft.AspNetCore.Mvc;
 

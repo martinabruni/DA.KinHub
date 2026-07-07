@@ -1,5 +1,5 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
-using Kin.KinHub.KinList.Ai.Common;
+using Kin.KinHub.KinList.AzureOpenAi.Common;
 using Kin.KinHub.KinList.AudioWorker;
 using Kin.KinHub.KinList.AzureStorage;
 using Kin.KinHub.KinList.Business.Common;
@@ -41,7 +41,7 @@ builder.Services
     {
         o.ConnectionString = connectionString;
     })
-    .AddKinHubKinListAiInfrastructure(
+    .AddKinHubKinListAzureOpenAiInfrastructure(
         configureSpeech: o =>
         {
             o.Endpoint = speechOptions.Endpoint;
