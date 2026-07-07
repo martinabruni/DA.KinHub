@@ -11,8 +11,8 @@ internal static class MapsterTestSetup
     [ModuleInitializer]
     internal static void Initialize()
     {
-        new IdentityMappingProfile().Register(TypeAdapterConfig.GlobalConfig);
-        new KinListMappingProfile().Register(TypeAdapterConfig.GlobalConfig);
-        new KinRecipeMappingProfile().Register(TypeAdapterConfig.GlobalConfig);
+        TypeAdapterConfig.GlobalSettings.Apply(new IdentityMappingProfile());
+        TypeAdapterConfig.GlobalSettings.Apply(new KinListMappingProfile());
+        TypeAdapterConfig.GlobalSettings.Apply(new KinRecipeMappingProfile());
     }
 }
