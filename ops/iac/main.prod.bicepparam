@@ -18,6 +18,7 @@ param containerAppsEnvironmentName = 'kinhub-cae-prod'
 param identityContainerAppName = 'kinhub-identity-ca-prod'
 param kinRecipeContainerAppName = 'kinhub-kinrecipe-ca-prod'
 param kinListContainerAppName = 'kinhub-kinlist-ca-prod'
+param kinListAudioWorkerContainerAppName = 'kinhub-kinlist-audio-worker-ca-prod'
 param kinListMigrationJobName = 'kinhub-kinlist-mig-prod'
 
 // CORS origins
@@ -43,11 +44,13 @@ param openAiAccountName = 'kinhub-openai-prod'
 param openAiSkuName = 'S0'
 param speechAccountName = 'kinhub-speech-prod'
 param speechSkuName = 'S0'
+param kinListAudioStorageAccountName = 'kinhubaudioprod'
 
 // Container images (override per deployment/tag as needed)
 param identityImage = 'ghcr.io/kin/kinhub-identity:prod'
 param kinRecipeImage = 'ghcr.io/kin/kinhub-kinrecipe:prod'
 param kinListImage = 'ghcr.io/kin/kinhub-kinlist:prod'
+param kinListAudioWorkerImage = 'ghcr.io/kin/kinhub-kinlist-audio-worker:prod'
 param kinListMigrationImage = 'ghcr.io/kin/kinhub-kinlist-mig:prod'
 
 // JWT (non-secret settings; jwtSecret is passed by the workflow)
