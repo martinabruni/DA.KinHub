@@ -310,6 +310,7 @@ public sealed class KinListAudioWorkerTests
         services.AddSingleton<IAudioProcessingQueue>(new InMemoryAudioProcessingQueue());
         services.AddSingleton<IKinListItemDeduplicator, KinListItemDeduplicator>();
         services.AddSingleton<ICorrelationIdProvider, CorrelationIdProvider>();
+        services.AddSingleton<CreateAudioProcessingOperationBusinessValidator>();
         services.AddSingleton<ILogger<KinListAudioService>>(_ => NullLogger<KinListAudioService>.Instance);
         services.AddScoped<IAudioOperationProcessor, KinListAudioService>();
         var provider = services.BuildServiceProvider();
