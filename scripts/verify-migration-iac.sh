@@ -80,7 +80,7 @@ require_match 'Applying \{step\.Name\} migrations \(step \{index \+ 1\}/\{_steps
 
 echo "Checking removal of deprecated Core->KinList wiring..."
 ensure_no_matches 'KINLIST_CORE_API_BASE_URL' .github ops src scripts
-require_match 'FamilyContextApi__BaseUrl' 'ops/iac/main.bicep' 'IaC must derive FamilyContextApi__BaseUrl from Identity.'
+require_match 'FamilyContextApi__BaseUrl' 'ops/iac/modules/compute.bicep' 'IaC must derive FamilyContextApi__BaseUrl from Identity.'
 
 echo "Checking migration rollout gate in CI/CD..."
 backend_workflow='.github/workflows/backend.yml'
