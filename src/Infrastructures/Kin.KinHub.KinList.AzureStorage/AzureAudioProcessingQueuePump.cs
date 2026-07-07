@@ -1,4 +1,5 @@
 using Azure.Storage.Queues.Models;
+using Kin.KinHub.KinList.Business.KinListFeature;
 
 namespace Kin.KinHub.KinList.AzureStorage;
 
