@@ -1,4 +1,5 @@
 ﻿using Kin.KinHub.Core.Business.Common;
+using Mapster;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +12,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<BusinessOptions>? configure = null)
     {
+        TypeAdapterConfig.GlobalSettings.Apply(new CoreMappingProfile());
+
         var options = new BusinessOptions();
         configure?.Invoke(options);
         options.Validate();

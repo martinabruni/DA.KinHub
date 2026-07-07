@@ -1,4 +1,6 @@
 ﻿using Kin.KinHub.Core.OpenAi.Common;
+using Kin.KinHub.Core.OpenAi.RecipeAssistantFeature;
+using Mapster;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -8,6 +10,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<OpenAiOptions> configure)
     {
+        TypeAdapterConfig.GlobalSettings.Apply(new OpenAiMappingProfile());
+
         var options = new OpenAiOptions();
         configure(options);
 

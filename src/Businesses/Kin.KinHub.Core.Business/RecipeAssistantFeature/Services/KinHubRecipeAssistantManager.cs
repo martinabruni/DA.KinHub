@@ -84,17 +84,13 @@ public sealed class KinHubRecipeAssistantManager : IRecipeAssistantManager
                 RecipeId = recipe.Id,
                 Name = recipe.Name,
                 MatchPercentage = matchPercentage,
-                MissingIngredients = missingIngredients
-                    .Select(i => new AssistantIngredientResponse { Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit })
-                    .ToList(),
+                MissingIngredients = missingIngredients.Adapt<List<AssistantIngredientResponse>>(),
             });
         }
 
         existingRecipes = existingRecipes.OrderByDescending(r => r.MatchPercentage).ToList();
 
-        var fridgeAi = fridgeIngredients
-            .Select(i => new RecipeIngredient { Id = Guid.Empty, Name = i.Name, Quantity = i.Quantity, MeasureUnit = i.MeasureUnit, RecipeId = Guid.Empty })
-            .ToList();
+        var fridgeAi = fridgeIngredients.Adapt<List<RecipeIngredient>>();
 
         try
         {

@@ -1,3 +1,5 @@
+using Mapster;
+
 namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
 /// <summary>
@@ -102,14 +104,5 @@ public sealed class UserProviderService : IUserProviderService
     }
 
     private static IReadOnlyList<LinkedProviderResponse> Map(IReadOnlyList<UserProvider> links) =>
-        links
-            .Select(link => new LinkedProviderResponse
-            {
-                Provider = (IdentityProviderType)link.ProviderId,
-                ProviderName = Enum.IsDefined(typeof(IdentityProviderType), link.ProviderId)
-                    ? ((IdentityProviderType)link.ProviderId).ToString()
-                    : link.ProviderId.ToString(),
-                LinkedAt = link.CreatedAt,
-            })
-            .ToList();
+        links.Adapt<List<LinkedProviderResponse>>();
 }

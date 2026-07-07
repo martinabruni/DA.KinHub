@@ -1,5 +1,6 @@
 using Kin.KinHub.KinList.Business.KinListFeature;
 using Kin.KinHub.KinList.Business.Common;
+using Mapster;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddKinHubKinListBusiness(this IServiceCollection services, Action<KinListOptions>? configure = null)
     {
+        TypeAdapterConfig.GlobalSettings.Apply(new KinListMappingProfile());
+
         var options = new KinListOptions();
         configure?.Invoke(options);
         options.Validate();

@@ -1,3 +1,5 @@
+using Mapster;
+
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
 public sealed class GetFamilyHandler : IGetFamilyHandler
@@ -31,11 +33,7 @@ public sealed class GetFamilyHandler : IGetFamilyHandler
             {
                 Id = access.Family.Id,
                 Name = access.Family.Name,
-                Members = members.Select(member => new FamilyMemberDto
-                {
-                    Id = member.Id,
-                    Name = member.Name,
-                }).ToList(),
+                Members = members.Adapt<List<FamilyMemberDto>>(),
             });
         }
         catch (SharedDomainException ex)

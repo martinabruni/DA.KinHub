@@ -1,3 +1,4 @@
+using Mapster;
 using DomainKinListItem = Kin.KinHub.KinList.Domain.KinListFeature.KinListItem;
 
 namespace Kin.KinHub.KinList.Business.KinListFeature;
@@ -27,12 +28,7 @@ public sealed class KinListItemDeduplicator : IKinListItemDeduplicator
                     DuplicateOfItemId = duplicateItem.Id,
                 });
 
-                duplicates.Add(new KinListExistingDuplicateResponse
-                {
-                    ItemId = duplicateItem.Id,
-                    Text = duplicateItem.Text,
-                    IsCompleted = duplicateItem.IsCompleted,
-                });
+                duplicates.Add(duplicateItem.Adapt<KinListExistingDuplicateResponse>());
 
                 continue;
             }

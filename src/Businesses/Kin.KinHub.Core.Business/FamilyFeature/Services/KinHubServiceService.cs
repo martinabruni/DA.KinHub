@@ -1,4 +1,5 @@
-﻿using Kin.KinHub.Core.Business.Common;
+using Kin.KinHub.Core.Business.Common;
+using Mapster;
 
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
@@ -24,17 +25,7 @@ public sealed class KinHubServiceService : IKinHubServiceService
     {
         var services = await _kinHubServiceRepository.GetAllAsync();
 
-        var dtos = services
-            .Select(s => new KinHubServiceDto
-            {
-                Id = s.Id,
-                Name = s.Name,
-                BaseUrl = s.BaseUrl,
-                IsActive = s.IsActive,
-            })
-            .ToList();
-
-        return Result<IReadOnlyList<KinHubServiceDto>>.Success(dtos);
+        return Result<IReadOnlyList<KinHubServiceDto>>.Success(services.Adapt<List<KinHubServiceDto>>());
     }
 
     /// <inheritdoc/>

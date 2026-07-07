@@ -1,4 +1,6 @@
-﻿
+﻿using Kin.KinHub.Identity.Business.Common;
+using Mapster;
+
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
@@ -8,6 +10,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddKinHubIdentityBusiness(this IServiceCollection services)
     {
+        TypeAdapterConfig.GlobalSettings.Apply(new IdentityMappingProfile());
         services.AddScoped<IIdentityProvider, KinHubPasswordIdentityProvider>();
         services.AddScoped<IIdentityProviderRegistry, IdentityProviderRegistry>();
         services.AddScoped<IUserProviderService, UserProviderService>();

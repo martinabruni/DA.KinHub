@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentValidation.Results;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Domain.KinListFeature;
+using Mapster;
 using Microsoft.Extensions.Logging;
 
 namespace Kin.KinHub.KinList.Business.KinListFeature;
@@ -439,21 +440,9 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
     private async Task<AudioProcessingOperationResponse> MapAudioOperationAsync(AudioProcessingOperation operation, CancellationToken cancellationToken)
     {
         var items = DeserializeItems(operation.ProposedItemsJson);
-        var response = new AudioProcessingOperationResponse
-        {
-            Id = operation.Id,
-            Type = operation.Type.ToString(),
-            Status = operation.Status.ToString(),
-            ListId = operation.ListId,
-            Title = operation.Title,
-            Items = items,
-            DetectedLanguage = operation.DetectedLanguage,
-            PromptVersion = operation.PromptVersion,
-            ErrorCode = operation.ErrorCode,
-            ErrorMessage = operation.ErrorMessage,
-            RetryAfterSeconds = _options.AudioPollingRetryAfterSeconds,
-            ExpiresAt = operation.ExpiresAt,
-        };
+        var response = operation.Adapt<AudioProcessingOperationResponse>();
+        response.Items = items;
+        response.RetryAfterSeconds = _options.AudioPollingRetryAfterSeconds;
 
         if (operation.Type is AudioProcessingOperationType.AppendItems && operation.ListId.HasValue && items.Count > 0)
         {
