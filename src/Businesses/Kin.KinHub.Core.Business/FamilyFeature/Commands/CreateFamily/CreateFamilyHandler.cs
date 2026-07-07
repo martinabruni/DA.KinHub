@@ -103,7 +103,7 @@ public sealed class CreateFamilyHandler : ICreateFamilyHandler
         {
             return Result<CreateFamilyResponse>.Conflict(ex.Message);
         }
-        catch (DomainException ex)
+        catch (SharedDomainException ex)
         {
             return Result<CreateFamilyResponse>.UnexpectedError(ex.Message);
         }

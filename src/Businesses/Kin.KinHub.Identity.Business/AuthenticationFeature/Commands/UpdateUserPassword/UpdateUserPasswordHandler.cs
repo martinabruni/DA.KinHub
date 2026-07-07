@@ -46,7 +46,7 @@ public sealed class UpdateUserPasswordHandler : IUpdateUserPasswordHandler
         {
             return Result<bool>.NotFound("User not found.");
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<bool>.UnexpectedError("Failed to update password.");
         }

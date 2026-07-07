@@ -35,7 +35,7 @@ public sealed class GetCurrentUserHandler : IGetCurrentUserHandler
         {
             return Result<UserProfileResponse>.NotFound("User not found.");
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<UserProfileResponse>.UnexpectedError("Failed to retrieve user profile.");
         }

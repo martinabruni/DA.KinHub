@@ -34,7 +34,7 @@ public sealed class DeleteUserHandler : IDeleteUserHandler
         {
             return Result<bool>.NotFound("User not found.");
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<bool>.UnexpectedError("Failed to delete account.");
         }

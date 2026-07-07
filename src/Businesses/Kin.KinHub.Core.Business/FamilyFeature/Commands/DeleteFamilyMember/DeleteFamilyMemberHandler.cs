@@ -52,7 +52,7 @@ public sealed class DeleteFamilyMemberHandler : IDeleteFamilyMemberHandler
         {
             return Result<bool>.NotFound(ex.Message);
         }
-        catch (DomainException ex)
+        catch (SharedDomainException ex)
         {
             return Result<bool>.UnexpectedError(ex.Message);
         }

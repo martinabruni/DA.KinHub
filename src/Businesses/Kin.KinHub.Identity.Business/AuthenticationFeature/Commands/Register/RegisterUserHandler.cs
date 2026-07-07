@@ -49,7 +49,7 @@ public sealed class RegisterUserHandler : IRegisterUserHandler
         {
             return Result<RegisterResponse>.ValidationError(ex.Message);
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<RegisterResponse>.UnexpectedError("Registration failed. Please try again.");
         }

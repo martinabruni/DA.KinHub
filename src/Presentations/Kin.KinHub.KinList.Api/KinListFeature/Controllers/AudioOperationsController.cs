@@ -11,12 +11,12 @@ namespace Kin.KinHub.KinList.Api.KinListFeature;
 [Authorize(Policy = FamilyContextRequirement.PolicyName)]
 public sealed class AudioOperationsController : ControllerBase
 {
-    private readonly IKinListService _service;
+    private readonly IKinListAudioService _service;
     private readonly IRequestValidator<CreateAudioProcessingOperationRequest> _createValidator;
     private readonly ICurrentUser _currentUser;
 
     public AudioOperationsController(
-        IKinListService service,
+        IKinListAudioService service,
         IRequestValidator<CreateAudioProcessingOperationRequest> createValidator,
         ICurrentUser currentUser)
     {

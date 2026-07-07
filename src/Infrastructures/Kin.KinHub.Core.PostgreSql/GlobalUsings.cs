@@ -5,3 +5,5 @@ global using Kin.KinHub.Core.Domain.RecipeAssistantFeature;
 global using Kin.KinHub.Core.PostgreSql.Common;
 global using Kin.KinHub.Core.PostgreSql.FamilyFeature;
 global using Kin.KinHub.Core.PostgreSql.RecipeFeature;
+
+global using Kin.KinHub.Shared.Kernel.Exceptions;

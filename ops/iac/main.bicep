@@ -337,6 +337,35 @@ resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2
   name: postgresDatabaseName
 }
 
+// IAC-09: audit-only diagnostic settings routed to the existing Log Analytics workspace.
+resource keyVaultDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  scope: keyVault
+  name: 'audit'
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [
+      {
+        category: 'AuditEvent'
+        enabled: true
+      }
+    ]
+  }
+}
+
+resource postgresDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  scope: postgresServer
+  name: 'audit'
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [
+      {
+        categoryGroup: 'audit'
+        enabled: true
+      }
+    ]
+  }
+}
+
 resource openAiAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: openAiAccountName
   location: location

@@ -43,7 +43,7 @@ public sealed class GetFamilyHandler : IGetFamilyHandler
                 }).ToList(),
             });
         }
-        catch (DomainException ex)
+        catch (SharedDomainException ex)
         {
             return Result<FamilyDetailResponse>.UnexpectedError(ex.Message);
         }

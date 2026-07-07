@@ -17,6 +17,8 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IKinListAudioDraftGenerator, UnavailableKinListAudioDraftGenerator>();
         services.TryAddScoped<IAudioProcessingBlobStorage, UnavailableAudioProcessingBlobStorage>();
         services.TryAddScoped<IAudioProcessingQueue, UnavailableAudioProcessingQueue>();
+        services.AddSingleton<IEtagProvider, EtagProvider>();
+        services.AddScoped<ICorrelationIdProvider, CorrelationIdProvider>();
         services.AddScoped<IKinListMapper, KinListMapper>();
         services.AddScoped<IKinListItemDeduplicator, KinListItemDeduplicator>();
         services.AddScoped<IKinListAudioService, KinListAudioService>();

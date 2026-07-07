@@ -56,7 +56,7 @@ public sealed class DeleteFamilyHandler : IDeleteFamilyHandler
         {
             return Result<bool>.NotFound(ex.Message);
         }
-        catch (DomainException ex)
+        catch (SharedDomainException ex)
         {
             return Result<bool>.UnexpectedError(ex.Message);
         }

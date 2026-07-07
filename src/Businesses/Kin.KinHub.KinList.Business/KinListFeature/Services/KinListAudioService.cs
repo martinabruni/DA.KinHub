@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Domain.KinListFeature;
+using Microsoft.Extensions.Logging;
 
 namespace Kin.KinHub.KinList.Business.KinListFeature;
 
@@ -16,6 +16,8 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
     private readonly IAudioProcessingBlobStorage _blobStorage;
     private readonly IAudioProcessingQueue _audioQueue;
     private readonly IKinListItemDeduplicator _deduplicator;
+    private readonly ICorrelationIdProvider _correlationIdProvider;
+    private readonly ILogger<KinListAudioService> _logger;
     private readonly KinListOptions _options;
 
     public KinListAudioService(
@@ -26,6 +28,8 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         IAudioProcessingBlobStorage blobStorage,
         IAudioProcessingQueue audioQueue,
         IKinListItemDeduplicator deduplicator,
+        ICorrelationIdProvider correlationIdProvider,
+        ILogger<KinListAudioService> logger,
         KinListOptions options)
     {
         _listRepository = listRepository;
@@ -35,6 +39,8 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         _blobStorage = blobStorage;
         _audioQueue = audioQueue;
         _deduplicator = deduplicator;
+        _correlationIdProvider = correlationIdProvider;
+        _logger = logger;
         _options = options;
     }
 
@@ -99,7 +105,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
             BlobName = uploadTarget.BlobName,
             ContentType = normalizedMimeType,
             DeclaredByteSize = request.DeclaredByteSize,
-            CorrelationId = KinListAudioTelemetry.ResolveCorrelationId(),
+            CorrelationId = _correlationIdProvider.Resolve(),
             AttemptCount = 0,
             ExpiresAt = now.AddHours(_options.AudioOperationRetentionHours),
             ListId = request.ListId,
@@ -150,7 +156,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         }
 
         operation.Status = AudioProcessingOperationStatus.Queued;
-        operation.CorrelationId = KinListAudioTelemetry.ResolveCorrelationId(operation.CorrelationId);
+        operation.CorrelationId = _correlationIdProvider.Resolve(operation.CorrelationId);
         operation.UploadedByteSize = blob.ContentLength;
         operation.UploadCompletedAt = DateTime.UtcNow;
         operation.UpdatedAt = DateTime.UtcNow;
@@ -217,6 +223,24 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
             return Result<AudioProcessingOperationResponse>.NotFound("Audio operation not found.");
         }
 
+        var preconditionResult = await ValidateOperationPreconditionsAsync(operation, cancellationToken);
+        if (preconditionResult is not null)
+        {
+            return preconditionResult;
+        }
+
+        // Atomically claim the operation so concurrent workers cannot process the same audio twice.
+        var (claimed, claimFailure) = await ClaimOperationAsync(operation, cancellationToken);
+        if (claimFailure is not null)
+        {
+            return claimFailure;
+        }
+
+        return await ExecuteAudioOperationAsync(claimed!, cancellationToken);
+    }
+
+    private async Task<Result<AudioProcessingOperationResponse>?> ValidateOperationPreconditionsAsync(AudioProcessingOperation operation, CancellationToken cancellationToken)
+    {
         if (operation.Status is AudioProcessingOperationStatus.Succeeded)
         {
             return Result<AudioProcessingOperationResponse>.Success(await MapAudioOperationAsync(operation, cancellationToken));
@@ -232,25 +256,34 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
             return Result<AudioProcessingOperationResponse>.Conflict("The audio operation is not ready for processing.", "audio_operation_not_queued");
         }
 
+        return null;
+    }
+
+    // Returns the claimed operation on success, or a terminal/conflict result when the claim could not be taken.
+    private async Task<(AudioProcessingOperation? Claimed, Result<AudioProcessingOperationResponse>? Failure)> ClaimOperationAsync(AudioProcessingOperation operation, CancellationToken cancellationToken)
+    {
         var claimedOperation = await _audioOperationRepository.TryStartProcessingAsync(operation.Id, DateTime.UtcNow, cancellationToken);
-        if (claimedOperation is null)
+        if (claimedOperation is not null)
         {
-            var currentOperation = await _audioOperationRepository.GetByIdAsync(operation.Id, cancellationToken);
-            if (currentOperation is null)
-            {
-                return Result<AudioProcessingOperationResponse>.NotFound("Audio operation not found.");
-            }
-
-            if (currentOperation.Status is AudioProcessingOperationStatus.Succeeded or AudioProcessingOperationStatus.Failed or AudioProcessingOperationStatus.Cancelled or AudioProcessingOperationStatus.Expired)
-            {
-                return Result<AudioProcessingOperationResponse>.Success(await MapAudioOperationAsync(currentOperation, cancellationToken));
-            }
-
-            return Result<AudioProcessingOperationResponse>.Conflict("The audio operation is already being processed.", "audio_operation_already_processing");
+            return (claimedOperation, null);
         }
 
-        operation = claimedOperation;
+        var currentOperation = await _audioOperationRepository.GetByIdAsync(operation.Id, cancellationToken);
+        if (currentOperation is null)
+        {
+            return (null, Result<AudioProcessingOperationResponse>.NotFound("Audio operation not found."));
+        }
 
+        if (currentOperation.Status is AudioProcessingOperationStatus.Succeeded or AudioProcessingOperationStatus.Failed or AudioProcessingOperationStatus.Cancelled or AudioProcessingOperationStatus.Expired)
+        {
+            return (null, Result<AudioProcessingOperationResponse>.Success(await MapAudioOperationAsync(currentOperation, cancellationToken)));
+        }
+
+        return (null, Result<AudioProcessingOperationResponse>.Conflict("The audio operation is already being processed.", "audio_operation_already_processing"));
+    }
+
+    private async Task<Result<AudioProcessingOperationResponse>> ExecuteAudioOperationAsync(AudioProcessingOperation operation, CancellationToken cancellationToken)
+    {
         try
         {
             await using var blobStream = await _blobStorage.OpenReadAsync(operation.BlobName, cancellationToken);
@@ -300,11 +333,22 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
             operation.Version = Guid.NewGuid();
             operation = await _audioOperationRepository.UpdateAsync(operation, cancellationToken);
 
-            await _blobStorage.DeleteIfExistsAsync(operation.BlobName, cancellationToken);
+            // Blob cleanup is best-effort: the operation is already Succeeded at this point.
+            // A failure here must not requeue the operation (DeleteIfExistsAsync is idempotent).
+            try
+            {
+                await _blobStorage.DeleteIfExistsAsync(operation.BlobName, cancellationToken);
+            }
+            catch (Exception blobEx)
+            {
+                _logger.LogWarning(blobEx, "Audio operation {OperationId} succeeded but blob cleanup failed; it will be retried on next pass.", operation.Id);
+            }
+
             return Result<AudioProcessingOperationResponse>.Success(await MapAudioOperationAsync(operation, cancellationToken));
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Audio operation {OperationId} failed unexpectedly and will be requeued.", operation.Id);
             operation = await RequeueOperationAsync(operation, cancellationToken);
             return Result<AudioProcessingOperationResponse>.ServiceUnavailable(ex.Message, "audio_processing_unexpected_error");
         }

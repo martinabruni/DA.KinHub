@@ -14,38 +14,25 @@ public sealed class KinListService : IKinListService
     private readonly IKinListItemRepository _itemRepository;
     private readonly IIdempotencyRecordRepository _idempotencyRepository;
     private readonly IKinListTransactionExecutor _transactionExecutor;
-    private readonly IKinListAudioService _audioService;
     private readonly IKinListMapper _mapper;
+    private readonly IEtagProvider _etagProvider;
     private readonly KinListOptions _options;
 
     public KinListService(
         IKinListRepository listRepository,
         IKinListItemRepository itemRepository,
         IIdempotencyRecordRepository idempotencyRepository,
-        IAudioProcessingOperationRepository audioOperationRepository,
         IKinListTransactionExecutor transactionExecutor,
-        IKinListAudioDraftGenerator audioDraftGenerator,
-        IAudioProcessingBlobStorage blobStorage,
-        IAudioProcessingQueue audioQueue,
-        KinListOptions options,
-        IKinListMapper? mapper = null,
-        IKinListItemDeduplicator? deduplicator = null,
-        IKinListAudioService? audioService = null)
+        IKinListMapper mapper,
+        IEtagProvider etagProvider,
+        KinListOptions options)
     {
         _listRepository = listRepository;
         _itemRepository = itemRepository;
         _idempotencyRepository = idempotencyRepository;
         _transactionExecutor = transactionExecutor;
-        _mapper = mapper ?? new KinListMapper();
-        _audioService = audioService ?? new KinListAudioService(
-            listRepository,
-            itemRepository,
-            audioOperationRepository,
-            audioDraftGenerator,
-            blobStorage,
-            audioQueue,
-            deduplicator ?? new KinListItemDeduplicator(),
-            options);
+        _mapper = mapper;
+        _etagProvider = etagProvider;
         _options = options;
     }
 
@@ -96,78 +83,97 @@ public sealed class KinListService : IKinListService
                     "list_item_limit_exceeded");
             }
 
-            var requestHash = ComputeHash(request.Title.Trim(), normalizedItems);
+            var title = request.Title.Trim();
+            var requestHash = ComputeHash(title, normalizedItems);
             var now = DateTime.UtcNow;
-            await _idempotencyRepository.DeleteExpiredAsync(idempotencyKey, familyId, userId, now, ct);
-            var existing = await _idempotencyRepository.GetActiveAsync(idempotencyKey, familyId, userId, now, ct);
-            if (existing is not null)
+
+            var replay = await TryReplayIdempotentAsync(idempotencyKey, familyId, userId, requestHash, now, ct);
+            if (replay is not null)
             {
-                if (!string.Equals(existing.RequestHash, requestHash, StringComparison.Ordinal))
-                {
-                    return Result<KinListDetailResponse>.Conflict("Idempotency-Key was already used with a different payload.", "idempotency_conflict");
-                }
-
-                var replay = JsonSerializer.Deserialize<KinListDetailResponse>(existing.ResponseJson, JsonOptions);
-                if (replay is null)
-                {
-                    return Result<KinListDetailResponse>.UnexpectedError("Stored idempotent response could not be restored.");
-                }
-
-                return Result<KinListDetailResponse>.Success(replay);
+                return replay;
             }
 
-            var listId = Guid.NewGuid();
-            var version = Guid.NewGuid();
-            var list = new DomainKinList
-            {
-                Id = listId,
-                FamilyId = familyId,
-                Title = request.Title.Trim(),
-                Version = version,
-                IsDeleted = false,
-                CreatedAt = now,
-                UpdatedAt = now,
-                LastModifiedAt = now,
-            };
+            var (list, response) = await PersistNewListAsync(title, normalizedItems, familyId, now, ct);
 
-            await _listRepository.AddAsync(list, ct);
-
-            var activationOrder = normalizedItems.Count;
-            foreach (var text in normalizedItems)
-            {
-                var item = new KinListItem
-                {
-                    Id = Guid.NewGuid(),
-                    ListId = listId,
-                    Text = text,
-                    Version = Guid.NewGuid(),
-                    IsCompleted = false,
-                    ActivationOrder = activationOrder--,
-                    IsDeleted = false,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                };
-
-                await _itemRepository.AddAsync(item, ct);
-            }
-
-            var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
-            var response = _mapper.MapDetail(list, items);
-
-            await _idempotencyRepository.AddAsync(new IdempotencyRecord
-            {
-                Id = Guid.NewGuid(),
-                Key = idempotencyKey,
-                FamilyId = familyId,
-                UserId = userId,
-                RequestHash = requestHash,
-                ResponseJson = JsonSerializer.Serialize(response, JsonOptions),
-                ExpiresAt = now.AddHours(_options.IdempotencyRetentionHours),
-                CreatedAt = now,
-            }, ct);
+            await RecordIdempotencyAsync(idempotencyKey, familyId, userId, requestHash, response, now, ct);
 
             return Result<KinListDetailResponse>.Success(response);
         }, cancellationToken);
+
+    // Returns a replay result when the same Idempotency-Key was already used; null when the caller should proceed.
+    private async Task<Result<KinListDetailResponse>?> TryReplayIdempotentAsync(
+        string idempotencyKey, Guid familyId, Guid userId, string requestHash, DateTime now, CancellationToken ct)
+    {
+        await _idempotencyRepository.DeleteExpiredAsync(idempotencyKey, familyId, userId, now, ct);
+        var existing = await _idempotencyRepository.GetActiveAsync(idempotencyKey, familyId, userId, now, ct);
+        if (existing is null)
+        {
+            return null;
+        }
+
+        if (!string.Equals(existing.RequestHash, requestHash, StringComparison.Ordinal))
+        {
+            return Result<KinListDetailResponse>.Conflict("Idempotency-Key was already used with a different payload.", "idempotency_conflict");
+        }
+
+        var replay = JsonSerializer.Deserialize<KinListDetailResponse>(existing.ResponseJson, JsonOptions);
+        return replay is null
+            ? Result<KinListDetailResponse>.UnexpectedError("Stored idempotent response could not be restored.")
+            : Result<KinListDetailResponse>.Success(replay);
+    }
+
+    private async Task<(DomainKinList List, KinListDetailResponse Response)> PersistNewListAsync(
+        string title, IReadOnlyList<string> normalizedItems, Guid familyId, DateTime now, CancellationToken ct)
+    {
+        var listId = Guid.NewGuid();
+        var list = new DomainKinList
+        {
+            Id = listId,
+            FamilyId = familyId,
+            Title = title,
+            Version = Guid.NewGuid(),
+            IsDeleted = false,
+            CreatedAt = now,
+            UpdatedAt = now,
+            LastModifiedAt = now,
+        };
+
+        await _listRepository.AddAsync(list, ct);
+
+        var activationOrder = normalizedItems.Count;
+        foreach (var text in normalizedItems)
+        {
+            await _itemRepository.AddAsync(new KinListItem
+            {
+                Id = Guid.NewGuid(),
+                ListId = listId,
+                Text = text,
+                Version = Guid.NewGuid(),
+                IsCompleted = false,
+                ActivationOrder = activationOrder--,
+                IsDeleted = false,
+                CreatedAt = now,
+                UpdatedAt = now,
+            }, ct);
+        }
+
+        var items = await _itemRepository.GetAllByListIdAsync(listId, ct);
+        return (list, _mapper.MapDetail(list, items));
+    }
+
+    private Task RecordIdempotencyAsync(
+        string idempotencyKey, Guid familyId, Guid userId, string requestHash, KinListDetailResponse response, DateTime now, CancellationToken ct)
+        => _idempotencyRepository.AddAsync(new IdempotencyRecord
+        {
+            Id = Guid.NewGuid(),
+            Key = idempotencyKey,
+            FamilyId = familyId,
+            UserId = userId,
+            RequestHash = requestHash,
+            ResponseJson = JsonSerializer.Serialize(response, JsonOptions),
+            ExpiresAt = now.AddHours(_options.IdempotencyRetentionHours),
+            CreatedAt = now,
+        }, ct);
 
     public async Task<Result<KinListDetailResponse>> UpdateAsync(Guid listId, UpdateKinListRequest request, Guid familyId, string ifMatch, CancellationToken cancellationToken = default)
         => await _transactionExecutor.ExecuteAsync(async ct =>
@@ -402,30 +408,6 @@ public sealed class KinListService : IKinListService
             return Result<KinListDetailResponse>.Success(_mapper.MapDetail(list!, items));
         }, cancellationToken);
 
-    public Task<Result<CreateAudioProcessingOperationResponse>> CreateAudioOperationAsync(CreateAudioProcessingOperationRequest request, Guid familyId, Guid userId, CancellationToken cancellationToken = default) =>
-        _audioService.CreateAudioOperationAsync(request, familyId, userId, cancellationToken);
-
-    public Task<Result<AudioProcessingOperationResponse>> CompleteAudioOperationUploadAsync(Guid operationId, Guid familyId, CancellationToken cancellationToken = default) =>
-        _audioService.CompleteAudioOperationUploadAsync(operationId, familyId, cancellationToken);
-
-    public Task<Result<AudioProcessingOperationResponse>> GetAudioOperationAsync(Guid operationId, Guid familyId, CancellationToken cancellationToken = default) =>
-        _audioService.GetAudioOperationAsync(operationId, familyId, cancellationToken);
-
-    public Task<Result<bool>> DeleteAudioOperationAsync(Guid operationId, Guid familyId, CancellationToken cancellationToken = default) =>
-        _audioService.DeleteAudioOperationAsync(operationId, familyId, cancellationToken);
-
-    public Task<Result<AudioProcessingOperationResponse>> ProcessAudioOperationAsync(Guid operationId, CancellationToken cancellationToken = default) =>
-        _audioService.ProcessAudioOperationAsync(operationId, cancellationToken);
-
-    public Task<Result<AudioProcessingOperationResponse>> MarkAudioOperationFailedAsync(Guid operationId, string code, string message, CancellationToken cancellationToken = default) =>
-        _audioService.MarkAudioOperationFailedAsync(operationId, code, message, cancellationToken);
-
-    public Task<Result<KinListDraftFromAudioResponse>> CreateDraftFromAudioAsync(KinListAudioCommand command, CancellationToken cancellationToken = default) =>
-        _audioService.CreateDraftFromAudioAsync(command, cancellationToken);
-
-    public Task<Result<KinListItemDraftsFromAudioResponse>> CreateItemDraftsFromAudioAsync(Guid listId, Guid familyId, KinListAudioCommand command, CancellationToken cancellationToken = default) =>
-        _audioService.CreateItemDraftsFromAudioAsync(listId, familyId, command, cancellationToken);
-
     private async Task<(DomainKinList? List, DomainKinListItem? Item, Result<KinListDetailResponse>? Error)> GetItemForMutationAsync(
         Guid listId,
         Guid itemId,
@@ -486,7 +468,7 @@ public sealed class KinListService : IKinListService
     }
 
     private bool MatchesEtag(Guid version, string ifMatch) =>
-        string.Equals(_mapper.ToEtag(version), ifMatch.Trim(), StringComparison.Ordinal);
+        _etagProvider.Matches(ifMatch, version);
 
     private static void TouchList(DomainKinList list)
     {

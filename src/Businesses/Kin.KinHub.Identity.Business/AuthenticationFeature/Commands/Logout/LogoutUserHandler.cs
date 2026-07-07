@@ -32,7 +32,7 @@ public sealed class LogoutUserHandler : ILogoutUserHandler
 
             return Result<bool>.Success(true);
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<bool>.UnexpectedError("Logout failed. Please try again.");
         }

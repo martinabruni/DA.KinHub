@@ -49,7 +49,7 @@ public sealed class RefreshTokenHandler : IRefreshTokenHandler
         {
             return Result<LoginResponse>.Unauthorized("Invalid refresh token.");
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<LoginResponse>.UnexpectedError("Token refresh failed. Please try again.");
         }

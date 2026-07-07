@@ -166,9 +166,8 @@ public sealed class KinListServiceTests
     public async Task CreateItemDraftsFromAudioAsync_MarksExistingDuplicatesAsDeselected()
     {
         var repositories = new InMemoryKinListRepositories();
-        var service = CreateService(
+        var audioService = CreateAudioService(
             repositories,
-            DefaultOptions,
             new FakeKinListAudioDraftGenerator(new ParsedKinListAudioDraft
             {
                 Title = "Spesa settimanale",
@@ -176,6 +175,7 @@ public sealed class KinListServiceTests
                 DetectedLanguage = "it-IT",
                 PromptVersion = "kinlist-audio-v1",
             }));
+        var service = CreateService(repositories);
         var familyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
@@ -185,7 +185,7 @@ public sealed class KinListServiceTests
             Items = ["Latte"],
         }, familyId, userId, "req-1");
 
-        var drafts = await service.CreateItemDraftsFromAudioAsync(
+        var drafts = await audioService.CreateItemDraftsFromAudioAsync(
             created.Value!.Id,
             familyId,
             new KinListAudioCommand
@@ -206,9 +206,8 @@ public sealed class KinListServiceTests
     public async Task CreateDraftFromAudioAsync_WhenNoItemsDetected_ReturnsUnprocessableEntity()
     {
         var repositories = new InMemoryKinListRepositories();
-        var service = CreateService(
+        var service = CreateAudioService(
             repositories,
-            DefaultOptions,
             new FakeKinListAudioDraftGenerator(new ParsedKinListAudioDraft
             {
                 Title = "Spesa",
@@ -235,16 +234,11 @@ public sealed class KinListServiceTests
         var repositories = new InMemoryKinListRepositories();
         var blobStorage = new InMemoryAudioBlobStorage();
         var queue = new InMemoryAudioProcessingQueue();
-        var service = new KinListService(
+        var service = CreateAudioService(
             repositories,
-            repositories,
-            repositories,
-            repositories,
-            new TestKinListTransactionExecutor(),
             new UnavailableAudioDraftGenerator(),
             blobStorage,
-            queue,
-            DefaultOptions);
+            queue);
         var familyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
@@ -275,12 +269,8 @@ public sealed class KinListServiceTests
         var repositories = new InMemoryKinListRepositories();
         var blobStorage = new InMemoryAudioBlobStorage();
         var queue = new InMemoryAudioProcessingQueue();
-        var service = new KinListService(
+        var service = CreateAudioService(
             repositories,
-            repositories,
-            repositories,
-            repositories,
-            new TestKinListTransactionExecutor(),
             new FakeKinListAudioDraftGenerator(new ParsedKinListAudioDraft
             {
                 Title = "Spesa",
@@ -289,8 +279,7 @@ public sealed class KinListServiceTests
                 PromptVersion = "kinlist-audio-v1",
             }),
             blobStorage,
-            queue,
-            DefaultOptions);
+            queue);
         var familyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
@@ -314,16 +303,36 @@ public sealed class KinListServiceTests
     private static KinListService CreateService(
         InMemoryKinListRepositories repositories,
         KinListOptions? options = null,
-        IKinListAudioDraftGenerator? audioDraftGenerator = null) =>
-        new(
-            repositories,
+        IKinListAudioDraftGenerator? audioDraftGenerator = null)
+    {
+        _ = audioDraftGenerator;
+        var etag = new EtagProvider();
+        return new KinListService(
             repositories,
             repositories,
             repositories,
             new TestKinListTransactionExecutor(),
+            new KinListMapper(etag),
+            etag,
+            options ?? DefaultOptions);
+    }
+
+    private static KinListAudioService CreateAudioService(
+        InMemoryKinListRepositories repositories,
+        IKinListAudioDraftGenerator? audioDraftGenerator = null,
+        IAudioProcessingBlobStorage? blobStorage = null,
+        IAudioProcessingQueue? queue = null,
+        KinListOptions? options = null) =>
+        new(
+            repositories,
+            repositories,
+            repositories,
             audioDraftGenerator ?? new UnavailableAudioDraftGenerator(),
-            new InMemoryAudioBlobStorage(),
-            new InMemoryAudioProcessingQueue(),
+            blobStorage ?? new InMemoryAudioBlobStorage(),
+            queue ?? new InMemoryAudioProcessingQueue(),
+            new KinListItemDeduplicator(),
+            new CorrelationIdProvider(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<KinListAudioService>.Instance,
             options ?? DefaultOptions);
 }
 

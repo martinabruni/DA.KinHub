@@ -8,11 +8,14 @@ public interface IKinListMapper
     KinListResponse MapSummary(DomainKinList list, IReadOnlyList<DomainKinListItem> items);
     KinListDetailResponse MapDetail(DomainKinList list, IReadOnlyList<DomainKinListItem> items);
     KinListItemResponse MapItem(DomainKinListItem item);
-    string ToEtag(Guid version);
 }
 
 public sealed class KinListMapper : IKinListMapper
 {
+    private readonly IEtagProvider _etagProvider;
+
+    public KinListMapper(IEtagProvider etagProvider) => _etagProvider = etagProvider;
+
     public KinListResponse MapSummary(DomainKinList list, IReadOnlyList<DomainKinListItem> items)
     {
         var activeItems = items.Where(i => !i.IsDeleted).ToList();
@@ -21,7 +24,7 @@ public sealed class KinListMapper : IKinListMapper
         {
             Id = list.Id,
             Title = list.Title,
-            ETag = ToEtag(list.Version),
+            ETag = _etagProvider.ToEtag(list.Version),
             TotalItems = activeItems.Count,
             CompletedItems = completedItems,
             IsCompleted = activeItems.Count > 0 && completedItems == activeItems.Count,
@@ -44,7 +47,7 @@ public sealed class KinListMapper : IKinListMapper
         {
             Id = list.Id,
             Title = list.Title,
-            ETag = ToEtag(list.Version),
+            ETag = _etagProvider.ToEtag(list.Version),
             TotalItems = visibleItems.Count,
             CompletedItems = completedItems,
             IsCompleted = visibleItems.Count > 0 && completedItems == visibleItems.Count,
@@ -58,11 +61,9 @@ public sealed class KinListMapper : IKinListMapper
         {
             Id = item.Id,
             Text = item.Text,
-            ETag = ToEtag(item.Version),
+            ETag = _etagProvider.ToEtag(item.Version),
             IsCompleted = item.IsCompleted,
             CreatedAt = item.CreatedAt,
             UpdatedAt = item.UpdatedAt,
         };
-
-    public string ToEtag(Guid version) => $"\"{version:D}\"";
 }

@@ -58,7 +58,7 @@ public sealed class UpdateFamilyMemberHandler : IUpdateFamilyMemberHandler
         {
             return Result<UpdateFamilyMemberResponse>.NotFound(ex.Message);
         }
-        catch (DomainException ex)
+        catch (SharedDomainException ex)
         {
             return Result<UpdateFamilyMemberResponse>.UnexpectedError(ex.Message);
         }

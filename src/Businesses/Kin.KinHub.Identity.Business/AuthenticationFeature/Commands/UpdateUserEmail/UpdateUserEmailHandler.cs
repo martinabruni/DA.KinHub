@@ -54,7 +54,7 @@ public sealed class UpdateUserEmailHandler : IUpdateUserEmailHandler
         {
             return Result<bool>.NotFound("User not found.");
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<bool>.UnexpectedError("Failed to update email.");
         }

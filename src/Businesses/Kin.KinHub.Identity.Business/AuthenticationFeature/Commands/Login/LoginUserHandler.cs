@@ -44,7 +44,7 @@ public sealed class LoginUserHandler : ILoginUserHandler
             return Result<LoginResponse>.Success(
                 await _loginResponseFactory.CreateAsync(user, cancellationToken));
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<LoginResponse>.UnexpectedError("Login failed. Please try again.");
         }

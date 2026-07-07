@@ -49,7 +49,7 @@ public sealed class UpdateFamilyHandler : IUpdateFamilyHandler
         {
             return Result<UpdateFamilyResponse>.NotFound(ex.Message);
         }
-        catch (DomainException ex)
+        catch (SharedDomainException ex)
         {
             return Result<UpdateFamilyResponse>.UnexpectedError(ex.Message);
         }

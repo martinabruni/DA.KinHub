@@ -7,10 +7,10 @@ using Kin.KinHub.Core.Domain.RecipeFeature;
 using Kin.KinHub.Identity.Business.AuthenticationFeature;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
 using Microsoft.Extensions.Logging.Abstractions;
-using CoreDuplicateEntityException = Kin.KinHub.Core.Domain.Common.DuplicateEntityException;
-using CoreEntityNotFoundException = Kin.KinHub.Core.Domain.Common.EntityNotFoundException;
-using IdentityDuplicateEntityException = Kin.KinHub.Identity.Domain.Common.DuplicateEntityException;
-using IdentityEntityNotFoundException = Kin.KinHub.Identity.Domain.Common.EntityNotFoundException;
+using CoreDuplicateEntityException = Kin.KinHub.Shared.Kernel.Exceptions.DuplicateEntityException;
+using CoreEntityNotFoundException = Kin.KinHub.Shared.Kernel.Exceptions.EntityNotFoundException;
+using IdentityDuplicateEntityException = Kin.KinHub.Shared.Kernel.Exceptions.DuplicateEntityException;
+using IdentityEntityNotFoundException = Kin.KinHub.Shared.Kernel.Exceptions.EntityNotFoundException;
 
 namespace Kin.KinHub.Core.Test;
 

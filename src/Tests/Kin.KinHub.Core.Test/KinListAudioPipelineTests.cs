@@ -308,7 +308,7 @@ public sealed class KinListAudioPipelineTests
         var familyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        var created = await service.CreateAsync(new CreateKinListRequest { Title = "Spesa", Items = ["Latte"] }, familyId, userId, "req-1");
+        var created = await BuildListService(store).CreateAsync(new CreateKinListRequest { Title = "Spesa", Items = ["Latte"] }, familyId, userId, "req-1");
 
         var drafts = await service.CreateItemDraftsFromAudioAsync(created.Value!.Id, familyId, Audio());
 
@@ -327,7 +327,7 @@ public sealed class KinListAudioPipelineTests
     [Fact]
     public async Task CreateItemDraftsFromAudio_WhenListBelongsToAnotherFamily_ReturnsUnauthorized()
     {
-        var service = BuildService(out _, new ParsedKinListAudioDraft
+        var service = BuildService(out var store, new ParsedKinListAudioDraft
         {
             Title = "Spesa",
             Items = ["Latte"],
@@ -337,7 +337,7 @@ public sealed class KinListAudioPipelineTests
         var familyA = Guid.NewGuid();
         var familyB = Guid.NewGuid();
 
-        var created = await service.CreateAsync(new CreateKinListRequest { Title = "Spesa", Items = ["Latte"] }, familyA, Guid.NewGuid(), "req-1");
+        var created = await BuildListService(store).CreateAsync(new CreateKinListRequest { Title = "Spesa", Items = ["Latte"] }, familyA, Guid.NewGuid(), "req-1");
 
         var drafts = await service.CreateItemDraftsFromAudioAsync(created.Value!.Id, familyB, Audio());
 
@@ -422,20 +422,50 @@ public sealed class KinListAudioPipelineTests
 
     // ---------- helpers ----------
 
-    private static KinListService BuildService(out InMemoryKinListStore store, ParsedKinListAudioDraft draft)
+    private static KinListAudioService BuildService(out InMemoryKinListStore store, ParsedKinListAudioDraft draft)
     {
         store = new InMemoryKinListStore();
+        return TestServiceFactory.BuildAudioService(store, new StubAudioDraftGenerator(Result<ParsedKinListAudioDraft>.Success(draft)));
+    }
+
+    private static KinListService BuildListService(InMemoryKinListStore store) =>
+        TestServiceFactory.BuildListService(store);
+}
+
+internal static class TestServiceFactory
+{
+    public static KinListService BuildListService(
+        InMemoryKinListStore store,
+        KinListOptions? options = null)
+    {
+        var etag = new EtagProvider();
         return new KinListService(
             store,
             store,
             store,
-            store,
             new TestKinListTransactionExecutor(),
-            new StubAudioDraftGenerator(Result<ParsedKinListAudioDraft>.Success(draft)),
-            new InMemoryAudioBlobStorage(),
-            new InMemoryAudioProcessingQueue(),
-            new KinListOptions());
+            new KinListMapper(etag),
+            etag,
+            options ?? new KinListOptions());
     }
+
+    public static KinListAudioService BuildAudioService(
+        InMemoryKinListStore store,
+        IKinListAudioDraftGenerator audioDraftGenerator,
+        IAudioProcessingBlobStorage? blobStorage = null,
+        IAudioProcessingQueue? queue = null,
+        KinListOptions? options = null) =>
+        new(
+            store,
+            store,
+            store,
+            audioDraftGenerator,
+            blobStorage ?? new InMemoryAudioBlobStorage(),
+            queue ?? new InMemoryAudioProcessingQueue(),
+            new KinListItemDeduplicator(),
+            new CorrelationIdProvider(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<KinListAudioService>.Instance,
+            options ?? new KinListOptions());
 }
 
 internal sealed class ThrowingChatCompletionClient : IKinListChatCompletionClient

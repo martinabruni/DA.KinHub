@@ -464,15 +464,16 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
         Assert.Equal(operationId, queued.OperationId);
         Assert.True(ActivityContext.TryParse(queued.CorrelationId, null, out _));
 
-        var processingService = new KinListService(
+        var processingService = new KinListAudioService(
             _factory.Store,
             _factory.Store,
             _factory.Store,
-            _factory.Store,
-            new TestKinListTransactionExecutor(),
             _factory.AudioGenerator,
             _factory.BlobStorage,
             _factory.AudioQueue,
+            new KinListItemDeduplicator(),
+            new CorrelationIdProvider(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<KinListAudioService>.Instance,
             new KinListOptions());
         var processed = await processingService.ProcessAudioOperationAsync(operationId, CancellationToken.None);
         Assert.True(processed.IsSuccess);

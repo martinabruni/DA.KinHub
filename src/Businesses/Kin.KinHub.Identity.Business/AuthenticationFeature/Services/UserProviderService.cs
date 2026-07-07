@@ -76,7 +76,7 @@ public sealed class UserProviderService : IUserProviderService
         {
             return Result<IReadOnlyList<LinkedProviderResponse>>.ValidationError(ex.Message);
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<IReadOnlyList<LinkedProviderResponse>>.UnexpectedError("Failed to link provider.");
         }
@@ -109,7 +109,7 @@ public sealed class UserProviderService : IUserProviderService
         {
             await adapter.UnlinkAsync(userId, cancellationToken);
         }
-        catch (DomainException)
+        catch (SharedDomainException)
         {
             return Result<IReadOnlyList<LinkedProviderResponse>>.UnexpectedError("Failed to unlink provider.");
         }

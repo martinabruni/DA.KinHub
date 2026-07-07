@@ -31,7 +31,8 @@ public sealed class HostRouteInventoryTests
         Assert.All(listRoutes, route =>
             Assert.True(
                 route.StartsWith("/api/lists", StringComparison.Ordinal)
-                || route.StartsWith("/api/list-drafts", StringComparison.Ordinal),
+                || route.StartsWith("/api/list-drafts", StringComparison.Ordinal)
+                || route.StartsWith("/api/audio-operations", StringComparison.Ordinal),
                 $"Unexpected KinList route: {route}"));
     }
 
@@ -68,7 +69,8 @@ public sealed class HostRouteInventoryTests
     private static bool IsRecipeOrListRoute(string route) =>
         route.StartsWith("/api/recipe-books", StringComparison.Ordinal)
         || route.StartsWith("/api/fridges", StringComparison.Ordinal)
-        || route.StartsWith("/api/lists", StringComparison.Ordinal);
+        || route.StartsWith("/api/lists", StringComparison.Ordinal)
+        || route.StartsWith("/api/audio-operations", StringComparison.Ordinal);
 
     private static bool IsIdentityOrListRoute(string route) =>
         route.StartsWith("/api/auth", StringComparison.Ordinal)

@@ -3,6 +3,7 @@ using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Business.KinListFeature;
 using Kin.KinHub.KinList.Domain.KinListFeature;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics;
 using System.Text.Json;
@@ -307,6 +308,8 @@ public sealed class KinListAudioWorkerTests
         services.AddSingleton<IAudioProcessingBlobStorage>(blobStorage);
         services.AddSingleton<IAudioProcessingQueue>(new InMemoryAudioProcessingQueue());
         services.AddSingleton<IKinListItemDeduplicator, KinListItemDeduplicator>();
+        services.AddSingleton<ICorrelationIdProvider, CorrelationIdProvider>();
+        services.AddSingleton<ILogger<KinListAudioService>>(_ => NullLogger<KinListAudioService>.Instance);
         services.AddScoped<IAudioOperationProcessor, KinListAudioService>();
         var provider = services.BuildServiceProvider();
 
