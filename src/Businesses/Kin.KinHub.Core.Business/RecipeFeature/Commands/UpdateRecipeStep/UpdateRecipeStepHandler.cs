@@ -1,14 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface IUpdateRecipeStepHandler
-{
-    Task<Result<RecipeStepResponse>> HandleAsync(
-        Guid recipeStepId,
-        UpdateRecipeStepRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class UpdateRecipeStepHandler : IUpdateRecipeStepHandler
 {
     private readonly IRecipeStepRepository _recipeStepRepository;
@@ -33,7 +24,9 @@ public sealed class UpdateRecipeStepHandler : IUpdateRecipeStepHandler
     {
         var access = await _recipeStepAccessService.GetAccessibleRecipeStepAsync(recipeStepId, userId, cancellationToken);
         if (!access.IsSuccess)
+        {
             return access.ToResult<RecipeStepResponse>();
+        }
 
         var recipeStep = access.RecipeStep!;
         recipeStep.Order = request.Order;

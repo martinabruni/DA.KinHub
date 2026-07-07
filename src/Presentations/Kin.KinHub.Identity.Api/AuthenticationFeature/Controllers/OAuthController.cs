@@ -17,6 +17,7 @@ public sealed class OAuthController : ControllerBase
     private readonly ITokenValidator _tokenValidator;
     private readonly IOAuthLoginPageRenderer _loginPageRenderer;
     private readonly IOAuthRequestValidator _requestValidator;
+    private readonly IRequestValidator<OAuthDynamicClientRegistrationRequest> _dynamicClientRegistrationValidator;
     private readonly IOAuthSessionManager _sessionManager;
     private readonly IOAuthTokenIssuer _tokenIssuer;
     private readonly OAuthServerOptions _oauthOptions;
@@ -29,6 +30,7 @@ public sealed class OAuthController : ControllerBase
         ITokenValidator tokenValidator,
         IOAuthLoginPageRenderer loginPageRenderer,
         IOAuthRequestValidator requestValidator,
+        IRequestValidator<OAuthDynamicClientRegistrationRequest> dynamicClientRegistrationValidator,
         IOAuthSessionManager sessionManager,
         IOAuthTokenIssuer tokenIssuer,
         OAuthServerOptions oauthOptions)
@@ -40,6 +42,7 @@ public sealed class OAuthController : ControllerBase
         _tokenValidator = tokenValidator;
         _loginPageRenderer = loginPageRenderer;
         _requestValidator = requestValidator;
+        _dynamicClientRegistrationValidator = dynamicClientRegistrationValidator;
         _sessionManager = sessionManager;
         _tokenIssuer = tokenIssuer;
         _oauthOptions = oauthOptions;
@@ -47,7 +50,7 @@ public sealed class OAuthController : ControllerBase
 
     [HttpPost("register")]
     [EnableRateLimiting(OAuthServerOptions.RateLimitPolicyName)]
-    public IActionResult RegisterClient([FromBody] OAuthDynamicClientRegistrationRequest? request)
+    public async Task<IActionResult> RegisterClient([FromBody] OAuthDynamicClientRegistrationRequest? request)
     {
         if (!_oauthOptions.EnableDynamicClientRegistration)
         {
@@ -63,11 +66,6 @@ public sealed class OAuthController : ControllerBase
         request.GrantTypes ??= [];
         request.ResponseTypes ??= [];
 
-        if (request.RedirectUris.Length is 0)
-        {
-            return BadRequest(CreateOAuthError("invalid_redirect_uri", "At least one redirect_uri is required."));
-        }
-
         if (request.GrantTypes.Length is 0)
         {
             request.GrantTypes = ["authorization_code"];
@@ -78,25 +76,10 @@ public sealed class OAuthController : ControllerBase
             request.ResponseTypes = ["code"];
         }
 
-        if (!request.GrantTypes.All(SupportedGrantTypes.Contains))
+        var validation = await _dynamicClientRegistrationValidator.ValidateAsync(request);
+        if (!validation.IsValid)
         {
-            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only the authorization_code grant type is supported."));
-        }
-
-        if (!request.ResponseTypes.All(SupportedResponseTypes.Contains))
-        {
-            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only the code response type is supported."));
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.TokenEndpointAuthMethod)
-            && !string.Equals(request.TokenEndpointAuthMethod, "none", StringComparison.Ordinal))
-        {
-            return BadRequest(CreateOAuthError("invalid_client_metadata", "Only public clients with token_endpoint_auth_method 'none' are supported."));
-        }
-
-        if (request.RedirectUris.Any(uri => !_requestValidator.IsAllowedRedirectUri(uri)))
-        {
-            return BadRequest(CreateOAuthError("invalid_redirect_uri", "Redirect URIs must use HTTPS or localhost."));
+            return BadRequest(CreateOAuthError("invalid_client_metadata", validation.Errors[0]));
         }
 
         if (!_requestValidator.TryResolveDynamicClientScope(this, request.Scope, out var resolvedScope, out var scopeErrorResult))
@@ -314,6 +297,11 @@ public sealed class OAuthController : ControllerBase
             || string.IsNullOrWhiteSpace(request.CodeVerifier))
         {
             return BadRequest(CreateOAuthError("invalid_request", "code, redirect_uri, and code_verifier are required."));
+        }
+
+        if (!_requestValidator.IsValidCodeVerifier(request.CodeVerifier))
+        {
+            return BadRequest(CreateOAuthError("invalid_request", "code_verifier must be 43-128 unreserved characters (RFC 7636 §4.1)."));
         }
 
         if (!_authorizationCodeStore.TryConsume(request.Code, out var ticket) || ticket is null)

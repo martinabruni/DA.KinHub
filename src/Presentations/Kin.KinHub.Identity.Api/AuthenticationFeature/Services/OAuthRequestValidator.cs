@@ -6,28 +6,6 @@ using System.Text;
 
 namespace Kin.KinHub.Identity.Api.AuthenticationFeature;
 
-public interface IOAuthRequestValidator
-{
-    bool TryValidateAuthorizationRequest(
-        ControllerBase controller,
-        OAuthAuthorizeRequest request,
-        out OAuthRegisteredClient? client,
-        out string scope,
-        out IActionResult? errorResult);
-
-    bool TryResolveDynamicClientScope(
-        ControllerBase controller,
-        string? requestedScope,
-        out string resolvedScope,
-        out IActionResult? errorResult);
-
-    IActionResult RedirectOAuthError(string redirectUri, string? state, string error, string description);
-    string BuildAuthorizationSuccessRedirect(string redirectUri, string? state, string code);
-    bool RequiresElevatedConsent(string scope);
-    bool VerifyPkce(string codeVerifier, string codeChallenge, string codeChallengeMethod);
-    bool IsAllowedRedirectUri(string redirectUri);
-}
-
 public sealed class OAuthRequestValidator : IOAuthRequestValidator
 {
     private readonly IOAuthClientStore _clientStore;
@@ -76,6 +54,12 @@ public sealed class OAuthRequestValidator : IOAuthRequestValidator
             || !string.Equals(request.CodeChallengeMethod, "S256", StringComparison.Ordinal))
         {
             errorResult = controller.BadRequest(CreateOAuthError("invalid_request", "PKCE with code_challenge_method=S256 is required."));
+            return false;
+        }
+
+        if (!IsValidCodeChallenge(request.CodeChallenge))
+        {
+            errorResult = controller.BadRequest(CreateOAuthError("invalid_request", "code_challenge must be a 43-character BASE64URL-encoded value (S256)."));
             return false;
         }
 
@@ -181,6 +165,14 @@ public sealed class OAuthRequestValidator : IOAuthRequestValidator
             || uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
             || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
     }
+
+    public bool IsValidCodeVerifier(string codeVerifier) =>
+        codeVerifier.Length is >= 43 and <= 128
+        && codeVerifier.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '.' or '_' or '~');
+
+    private static bool IsValidCodeChallenge(string codeChallenge) =>
+        codeChallenge.Length == 43
+        && codeChallenge.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
 
     private bool TryNormalizeGrantedScope(
         ControllerBase controller,

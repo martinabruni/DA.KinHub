@@ -1,5 +1,5 @@
 using Kin.KinHub.KinList.Business.Common;
-using Kin.KinHub.KinList.PostgreSql.Models;
+using Kin.KinHub.KinList.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kin.KinHub.KinList.PostgreSql.Common;

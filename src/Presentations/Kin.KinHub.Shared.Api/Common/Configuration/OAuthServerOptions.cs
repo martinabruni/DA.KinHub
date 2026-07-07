@@ -1,4 +1,4 @@
-namespace Kin.KinHub.Shared.Api.Common.Configuration;
+namespace Kin.KinHub.Shared.Api.Common;
 
 public sealed class OAuthServerOptions
 {
@@ -22,22 +22,4 @@ public sealed class OAuthServerOptions
     public int MaxIdentitySessions { get; set; } = 1000;
     public int RateLimitPermitLimit { get; set; } = 30;
     public int RateLimitWindowSeconds { get; set; } = 60;
-}
-
-public sealed class OAuthRegisteredClientOptions
-{
-    public string ClientId { get; set; } = string.Empty;
-    public string ClientName { get; set; } = string.Empty;
-    public string[] RedirectUris { get; set; } = [];
-    public string[] GrantTypes { get; set; } = ["authorization_code"];
-    public string[] ResponseTypes { get; set; } = ["code"];
-    public string TokenEndpointAuthMethod { get; set; } = "none";
-    public string Scope { get; set; } = OAuthScopes.Read;
-}
-
-public static class OAuthScopes
-{
-    public const string Read = "kinhub.api";
-    public const string Write = "kinhub.api.write";
-    public const string Admin = "kinhub.api.admin";
 }

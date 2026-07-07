@@ -1,14 +1,5 @@
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
-public interface IDeleteFamilyMemberHandler
-{
-    Task<Result<bool>> HandleAsync(
-        Guid familyId,
-        Guid memberId,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class DeleteFamilyMemberHandler : IDeleteFamilyMemberHandler
 {
     private readonly IFamilyOwnershipService _familyOwnershipService;
@@ -32,15 +23,21 @@ public sealed class DeleteFamilyMemberHandler : IDeleteFamilyMemberHandler
         {
             var access = await _familyOwnershipService.EnsureOwnershipAsync(familyId, userId, cancellationToken);
             if (!access.IsSuccess)
+            {
                 return access.ToResult<bool>();
+            }
 
             var member = await _familyMemberRepository.GetAsync(memberId);
             if (member.FamilyId != familyId)
+            {
                 return Result<bool>.NotFound("Member not found in this family.");
+            }
 
             var allMembers = await _familyMemberRepository.GetByFamilyIdAsync(familyId, cancellationToken);
             if (allMembers.Count <= 1)
+            {
                 return Result<bool>.Conflict("Cannot remove the only member of a family.");
+            }
 
             member.IsDeleted = true;
             member.UpdatedAt = DateTime.UtcNow;

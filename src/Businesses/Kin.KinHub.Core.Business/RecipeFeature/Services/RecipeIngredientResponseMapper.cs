@@ -1,19 +1,8 @@
-namespace Kin.KinHub.Core.Business.RecipeFeature;
+using Mapster;
 
-public interface IRecipeIngredientResponseMapper
-{
-    RecipeIngredientResponse Map(RecipeIngredient recipeIngredient);
-}
+namespace Kin.KinHub.Core.Business.RecipeFeature;
 
 public sealed class RecipeIngredientResponseMapper : IRecipeIngredientResponseMapper
 {
-    public RecipeIngredientResponse Map(RecipeIngredient recipeIngredient) =>
-        new()
-        {
-            Id = recipeIngredient.Id,
-            Name = recipeIngredient.Name,
-            MeasureUnit = recipeIngredient.MeasureUnit,
-            Quantity = recipeIngredient.Quantity,
-            RecipeId = recipeIngredient.RecipeId,
-        };
+    public RecipeIngredientResponse Map(RecipeIngredient recipeIngredient) => recipeIngredient.Adapt<RecipeIngredientResponse>();
 }

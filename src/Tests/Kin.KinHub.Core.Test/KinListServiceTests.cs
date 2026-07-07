@@ -229,6 +229,27 @@ public sealed class KinListServiceTests
     }
 
     [Fact]
+    public async Task CreateAudioOperationAsync_WhenAppendOperationHasNoListId_ReturnsValidationError()
+    {
+        var repositories = new InMemoryKinListRepositories();
+        var service = CreateAudioService(repositories);
+
+        var result = await service.CreateAudioOperationAsync(
+            new CreateAudioProcessingOperationRequest
+            {
+                Type = "AppendItems",
+                ContentType = "audio/webm",
+                DeclaredByteSize = 3,
+            },
+            Guid.NewGuid(),
+            Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultStatus.ValidationError, result.Status);
+        Assert.Equal("list_id_required", result.Code);
+    }
+
+    [Fact]
     public async Task ProcessAudioOperationAsync_WhenAudioGeneratorIsTransient_RequeuesOperation()
     {
         var repositories = new InMemoryKinListRepositories();
@@ -332,6 +353,7 @@ public sealed class KinListServiceTests
             queue ?? new InMemoryAudioProcessingQueue(),
             new KinListItemDeduplicator(),
             new CorrelationIdProvider(),
+            new CreateAudioProcessingOperationBusinessValidator(options ?? DefaultOptions),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<KinListAudioService>.Instance,
             options ?? DefaultOptions);
 }

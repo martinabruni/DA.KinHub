@@ -1,13 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface ICreateRecipeHandler
-{
-    Task<Result<RecipeResponse>> HandleAsync(
-        CreateRecipeRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class CreateRecipeHandler : ICreateRecipeHandler
 {
     private readonly IRecipeRepository _recipeRepository;
@@ -40,7 +32,9 @@ public sealed class CreateRecipeHandler : ICreateRecipeHandler
     {
         var access = await _recipeBookAccessService.GetAccessibleRecipeBookAsync(request.RecipeBookId, userId, cancellationToken);
         if (!access.IsSuccess)
+        {
             return access.ToResult<RecipeResponse>();
+        }
 
         return await _transactionExecutor.ExecuteAsync(async ct =>
         {

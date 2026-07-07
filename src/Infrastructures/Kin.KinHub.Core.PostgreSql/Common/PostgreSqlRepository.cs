@@ -15,16 +15,18 @@ public abstract class PostgreSqlRepository<TEntity, TDomain, TKey>
         Context = context;
     }
 
-    public async Task<TDomain> CreateAsync(TDomain model)
+    public async Task<TDomain> CreateAsync(TDomain model, CancellationToken cancellationToken = default)
     {
         var entity = model.Adapt<TEntity>();
-        await OnBeforeCreateAsync(entity);
-        await Set.AddAsync(entity);
-        await Context.SaveChangesAsync();
+        await OnBeforeCreateAsync(entity, cancellationToken);
+        await Set.AddAsync(entity, cancellationToken);
+        await Context.SaveChangesAsync(cancellationToken);
         return entity.Adapt<TDomain>();
     }
 
-    public async Task<IReadOnlyList<TDomain>> CreateRangeAsync(IReadOnlyCollection<TDomain> models)
+    public async Task<IReadOnlyList<TDomain>> CreateRangeAsync(
+        IReadOnlyCollection<TDomain> models,
+        CancellationToken cancellationToken = default)
     {
         if (models.Count == 0)
         {
@@ -35,48 +37,48 @@ public abstract class PostgreSqlRepository<TEntity, TDomain, TKey>
         foreach (var model in models)
         {
             var entity = model.Adapt<TEntity>();
-            await OnBeforeCreateAsync(entity);
+            await OnBeforeCreateAsync(entity, cancellationToken);
             entities.Add(entity);
         }
 
-        await Set.AddRangeAsync(entities);
-        await Context.SaveChangesAsync();
+        await Set.AddRangeAsync(entities, cancellationToken);
+        await Context.SaveChangesAsync(cancellationToken);
         return entities.Adapt<IReadOnlyList<TDomain>>();
     }
 
-    public async Task<TDomain> GetAsync(TKey key)
+    public async Task<TDomain> GetAsync(TKey key, CancellationToken cancellationToken = default)
     {
-        var entity = await Set.FindAsync(key);
+        var entity = await Set.FindAsync([key], cancellationToken);
         if (entity is null)
             throw new EntityNotFoundException(typeof(TEntity).Name, key!);
         return entity.Adapt<TDomain>();
     }
 
-    public async Task<IReadOnlyList<TDomain>> GetAllAsync()
+    public async Task<IReadOnlyList<TDomain>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var entities = await Set.ToListAsync();
+        var entities = await Set.ToListAsync(cancellationToken);
         return entities.Adapt<IReadOnlyList<TDomain>>();
     }
 
-    public async Task<TDomain> UpdateAsync(TKey key, TDomain model)
+    public async Task<TDomain> UpdateAsync(TKey key, TDomain model, CancellationToken cancellationToken = default)
     {
-        var existing = await Set.FindAsync(key);
+        var existing = await Set.FindAsync([key], cancellationToken);
         if (existing is null)
             throw new EntityNotFoundException(typeof(TEntity).Name, key!);
         Context.Entry(existing).CurrentValues.SetValues(model.Adapt<TEntity>());
-        await Context.SaveChangesAsync();
+        await Context.SaveChangesAsync(cancellationToken);
         return existing.Adapt<TDomain>();
     }
 
-    public async Task<TDomain> DeleteAsync(TKey key)
+    public async Task<TDomain> DeleteAsync(TKey key, CancellationToken cancellationToken = default)
     {
-        var existing = await Set.FindAsync(key);
+        var existing = await Set.FindAsync([key], cancellationToken);
         if (existing is null)
             throw new EntityNotFoundException(typeof(TEntity).Name, key!);
         Set.Remove(existing);
-        await Context.SaveChangesAsync();
+        await Context.SaveChangesAsync(cancellationToken);
         return existing.Adapt<TDomain>();
     }
 
-    protected virtual Task OnBeforeCreateAsync(TEntity entity) => Task.CompletedTask;
+    protected virtual Task OnBeforeCreateAsync(TEntity entity, CancellationToken cancellationToken) => Task.CompletedTask;
 }

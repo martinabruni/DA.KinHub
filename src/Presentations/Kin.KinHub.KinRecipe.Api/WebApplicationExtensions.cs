@@ -1,4 +1,4 @@
-namespace Kin.KinHub.Shared.Api.Common.Configuration;
+namespace Microsoft.AspNetCore.Builder;
 
 public static class WebApplicationExtensions
 {

@@ -1,4 +1,4 @@
-﻿using Kin.KinHub.Core.PostgreSql.Models;
+using Kin.KinHub.Core.PostgreSql;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 

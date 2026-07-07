@@ -1,10 +1,5 @@
 namespace Kin.KinHub.Identity.Api.AuthenticationFeature;
 
-public interface IOAuthTokenIssuer
-{
-    object CreateScopedTokenResponse(LoginResponse response, string scope);
-}
-
 public sealed class OAuthTokenIssuer : IOAuthTokenIssuer
 {
     private readonly ITokenGenerator _tokenGenerator;

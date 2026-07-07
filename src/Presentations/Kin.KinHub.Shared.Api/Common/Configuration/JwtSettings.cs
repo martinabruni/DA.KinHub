@@ -1,4 +1,4 @@
-namespace Kin.KinHub.Shared.Api.Common.Configuration;
+namespace Kin.KinHub.Shared.Api.Common;
 
 public sealed class JwtSettings
 {

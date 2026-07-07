@@ -464,6 +464,7 @@ internal static class TestServiceFactory
             queue ?? new InMemoryAudioProcessingQueue(),
             new KinListItemDeduplicator(),
             new CorrelationIdProvider(),
+            new CreateAudioProcessingOperationBusinessValidator(options ?? new KinListOptions()),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<KinListAudioService>.Instance,
             options ?? new KinListOptions());
 }

@@ -4,7 +4,6 @@ using Kin.KinHub.KinList.Ai.Common;
 using Kin.KinHub.KinList.AzureStorage;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Api.Common;
-using Kin.KinHub.KinList.Api.Common.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;

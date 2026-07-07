@@ -1,13 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface ICreateRecipeBookHandler
-{
-    Task<Result<RecipeBookResponse>> HandleAsync(
-        CreateRecipeBookRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class CreateRecipeBookHandler : ICreateRecipeBookHandler
 {
     private readonly IRecipeBookRepository _recipeBookRepository;
@@ -31,7 +23,9 @@ public sealed class CreateRecipeBookHandler : ICreateRecipeBookHandler
     {
         var familyAccess = await _familyOwnershipService.GetCurrentFamilyAsync(userId, cancellationToken);
         if (!familyAccess.IsSuccess)
+        {
             return familyAccess.ToResult<RecipeBookResponse>();
+        }
 
         var now = DateTime.UtcNow;
         var recipeBook = new RecipeBook

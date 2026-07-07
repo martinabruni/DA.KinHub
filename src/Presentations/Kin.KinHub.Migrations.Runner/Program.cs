@@ -1,7 +1,7 @@
-using Kin.KinHub.Core.PostgreSql.Models;
+using Kin.KinHub.Core.PostgreSql;
 using Kin.KinHub.Migrations.Runner;
-using Kin.KinHub.Identity.PostgreSql.Models;
-using Kin.KinHub.KinList.PostgreSql.Models;
+using Kin.KinHub.Identity.PostgreSql;
+using Kin.KinHub.KinList.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 // KinHub database migration runner.

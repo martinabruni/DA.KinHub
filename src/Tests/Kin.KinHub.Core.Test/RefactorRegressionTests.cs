@@ -108,13 +108,13 @@ public sealed class RefactorRegressionTests
 
     private sealed class StubFamilyRepository : IFamilyRepository
     {
-        public Task<Family> CreateAsync(Family model) => throw new NotSupportedException();
-        public Task<IReadOnlyList<Family>> CreateRangeAsync(IReadOnlyCollection<Family> models) => throw new NotSupportedException();
+        public Task<Family> CreateAsync(Family model, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Family>> CreateRangeAsync(IReadOnlyCollection<Family> models, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Family?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult<Family?>(null);
-        public Task<Family> GetAsync(Guid key) => throw new NotSupportedException();
-        public Task<IReadOnlyList<Family>> GetAllAsync() => Task.FromResult<IReadOnlyList<Family>>([]);
-        public Task<Family> UpdateAsync(Guid key, Family model) => throw new NotSupportedException();
-        public Task<Family> DeleteAsync(Guid key) => throw new NotSupportedException();
+        public Task<Family> GetAsync(Guid key, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Family>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Family>>([]);
+        public Task<Family> UpdateAsync(Guid key, Family model, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Family> DeleteAsync(Guid key, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class StubFridgeRepository : IFridgeRepository

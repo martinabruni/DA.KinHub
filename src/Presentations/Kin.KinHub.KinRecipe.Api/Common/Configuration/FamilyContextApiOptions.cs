@@ -1,4 +1,4 @@
-namespace Kin.KinHub.KinRecipe.Api.Common.Configuration;
+namespace Kin.KinHub.KinRecipe.Api.Common;
 
 public sealed class FamilyContextApiOptions
 {

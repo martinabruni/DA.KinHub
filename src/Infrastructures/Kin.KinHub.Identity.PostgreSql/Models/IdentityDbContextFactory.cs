@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Kin.KinHub.Identity.PostgreSql.Models;
+namespace Kin.KinHub.Identity.PostgreSql;
 
 public sealed class IdentityDbContextFactory : IDesignTimeDbContextFactory<IdentityDbContext>
 {

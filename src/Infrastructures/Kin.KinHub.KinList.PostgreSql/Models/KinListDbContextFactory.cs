@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Kin.KinHub.KinList.PostgreSql.Models;
+namespace Kin.KinHub.KinList.PostgreSql;
 
 public sealed class KinListDbContextFactory : IDesignTimeDbContextFactory<KinListDbContext>
 {

@@ -1,13 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface IGetRecipeStepByIdHandler
-{
-    Task<Result<RecipeStepResponse>> HandleAsync(
-        Guid recipeStepId,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class GetRecipeStepByIdHandler : IGetRecipeStepByIdHandler
 {
     private readonly IRecipeStepAccessService _recipeStepAccessService;
@@ -28,7 +20,9 @@ public sealed class GetRecipeStepByIdHandler : IGetRecipeStepByIdHandler
     {
         var access = await _recipeStepAccessService.GetAccessibleRecipeStepAsync(recipeStepId, userId, cancellationToken);
         if (!access.IsSuccess)
+        {
             return access.ToResult<RecipeStepResponse>();
+        }
 
         return Result<RecipeStepResponse>.Success(_recipeStepResponseMapper.Map(access.RecipeStep!));
     }

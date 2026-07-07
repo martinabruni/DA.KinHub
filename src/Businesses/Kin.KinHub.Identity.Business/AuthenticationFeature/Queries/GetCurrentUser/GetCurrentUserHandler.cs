@@ -1,12 +1,5 @@
 namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
-public interface IGetCurrentUserHandler
-{
-    Task<Result<UserProfileResponse>> HandleAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class GetCurrentUserHandler : IGetCurrentUserHandler
 {
     private readonly IKinUserRepository _userRepository;

@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Kin.KinHub.Core.PostgreSql.Models;
-using Kin.KinHub.KinList.PostgreSql.Models;
+using Kin.KinHub.Core.PostgreSql;
+using Kin.KinHub.KinList.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Infrastructure;

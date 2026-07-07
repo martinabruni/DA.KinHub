@@ -1,12 +1,5 @@
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
-public interface IGetFamilyHandler
-{
-    Task<Result<FamilyDetailResponse>> HandleAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class GetFamilyHandler : IGetFamilyHandler
 {
     private readonly IFamilyOwnershipService _familyOwnershipService;
@@ -28,7 +21,9 @@ public sealed class GetFamilyHandler : IGetFamilyHandler
         {
             var access = await _familyOwnershipService.GetCurrentFamilyAsync(userId, cancellationToken);
             if (!access.IsSuccess)
+            {
                 return access.ToResult<FamilyDetailResponse>();
+            }
 
             var members = await _familyMemberRepository.GetByFamilyIdAsync(access.Family!.Id, cancellationToken);
 

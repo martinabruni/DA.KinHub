@@ -1,4 +1,4 @@
-using Kin.KinHub.Identity.PostgreSql.Models;
+using Kin.KinHub.Identity.PostgreSql;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 

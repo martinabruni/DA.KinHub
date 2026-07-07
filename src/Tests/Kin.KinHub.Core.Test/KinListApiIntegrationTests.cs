@@ -473,6 +473,7 @@ public sealed class KinListApiIntegrationTests : IClassFixture<KinListApiFactory
             _factory.AudioQueue,
             new KinListItemDeduplicator(),
             new CorrelationIdProvider(),
+            new CreateAudioProcessingOperationBusinessValidator(new KinListOptions()),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<KinListAudioService>.Instance,
             new KinListOptions());
         var processed = await processingService.ProcessAudioOperationAsync(operationId, CancellationToken.None);

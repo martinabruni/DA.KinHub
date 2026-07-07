@@ -6,7 +6,6 @@ using System.Text.Json;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Kin.KinHub.KinList.AzureStorage;
-using Kin.KinHub.KinList.AudioWorker;
 
 namespace Kin.KinHub.Core.Test;
 

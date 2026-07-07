@@ -7,5 +7,5 @@ public interface IKinUserRepository : IRepository<KinUser, Guid>
     /// <summary>
     /// Returns the user matching the given email, or null if not found.
     /// </summary>
-    Task<KinUser?> FindByEmailAsync(string email);
+    Task<KinUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
 }

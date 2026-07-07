@@ -1,13 +1,5 @@
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
-public interface ICreateFamilyHandler
-{
-    Task<Result<CreateFamilyResponse>> HandleAsync(
-        CreateFamilyRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class CreateFamilyHandler : ICreateFamilyHandler
 {
     private readonly IFamilyRepository _familyRepository;
@@ -39,7 +31,9 @@ public sealed class CreateFamilyHandler : ICreateFamilyHandler
         {
             var existing = await _familyRepository.FindByUserIdAsync(userId, cancellationToken);
             if (existing is not null)
+            {
                 return Result<CreateFamilyResponse>.Conflict("A family already exists for this user.");
+            }
 
             return await _transactionExecutor.ExecuteAsync(async ct =>
             {

@@ -733,7 +733,7 @@ internal sealed class InMemoryKinUserRepository : IKinUserRepository
             Items[user.Id] = user;
     }
 
-    public Task<KinUser> CreateAsync(KinUser model)
+    public Task<KinUser> CreateAsync(KinUser model, CancellationToken cancellationToken = default)
     {
         if (Items.Values.Any(user => string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase)))
             throw new IdentityDuplicateEntityException(nameof(KinUser), nameof(KinUser.Email), model.Email);
@@ -742,19 +742,19 @@ internal sealed class InMemoryKinUserRepository : IKinUserRepository
         return Task.FromResult(model);
     }
 
-    public Task<KinUser> DeleteAsync(Guid key)
+    public Task<KinUser> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var user = GetExisting(key);
         Items.Remove(key);
         return Task.FromResult(user);
     }
 
-    public Task<KinUser?> FindByEmailAsync(string email) =>
+    public Task<KinUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.Values.SingleOrDefault(user => string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase)));
 
-    public Task<KinUser> GetAsync(Guid key) => Task.FromResult(GetExisting(key));
+    public Task<KinUser> GetAsync(Guid key, CancellationToken cancellationToken = default) => Task.FromResult(GetExisting(key));
 
-    public Task<KinUser> UpdateAsync(Guid key, KinUser model)
+    public Task<KinUser> UpdateAsync(Guid key, KinUser model, CancellationToken cancellationToken = default)
     {
         GetExisting(key);
         Items[key] = model;
@@ -777,23 +777,23 @@ internal sealed class InMemoryUserCredentialRepository : IUserCredentialReposito
             Items[credential.Id] = credential;
     }
 
-    public Task<UserCredential> CreateAsync(UserCredential model)
+    public Task<UserCredential> CreateAsync(UserCredential model, CancellationToken cancellationToken = default)
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
 
-    public Task<UserCredential> DeleteAsync(Guid key)
+    public Task<UserCredential> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var credential = GetAsync(key).Result;
         Items.Remove(key);
         return Task.FromResult(credential);
     }
 
-    public Task<UserCredential?> GetByUserIdAsync(Guid userId) =>
+    public Task<UserCredential?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.Values.SingleOrDefault(credential => credential.UserId == userId));
 
-    public Task<UserCredential> GetAsync(Guid key)
+    public Task<UserCredential> GetAsync(Guid key, CancellationToken cancellationToken = default)
     {
         if (Items.TryGetValue(key, out var credential))
             return Task.FromResult(credential);
@@ -801,7 +801,7 @@ internal sealed class InMemoryUserCredentialRepository : IUserCredentialReposito
         throw new IdentityEntityNotFoundException(nameof(UserCredential), key);
     }
 
-    public Task<UserCredential> UpdateAsync(Guid key, UserCredential model)
+    public Task<UserCredential> UpdateAsync(Guid key, UserCredential model, CancellationToken cancellationToken = default)
     {
         _ = GetAsync(key);
         Items[key] = model;
@@ -819,20 +819,20 @@ internal sealed class InMemoryUserProviderRepository : IUserProviderRepository
             Items[provider.Id] = provider;
     }
 
-    public Task<UserProvider> CreateAsync(UserProvider model)
+    public Task<UserProvider> CreateAsync(UserProvider model, CancellationToken cancellationToken = default)
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
 
-    public Task<UserProvider> DeleteAsync(Guid key)
+    public Task<UserProvider> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var provider = GetAsync(key).Result;
         Items.Remove(key);
         return Task.FromResult(provider);
     }
 
-    public Task<UserProvider> GetAsync(Guid key)
+    public Task<UserProvider> GetAsync(Guid key, CancellationToken cancellationToken = default)
     {
         if (Items.TryGetValue(key, out var provider))
             return Task.FromResult(provider);
@@ -840,14 +840,14 @@ internal sealed class InMemoryUserProviderRepository : IUserProviderRepository
         throw new IdentityEntityNotFoundException(nameof(UserProvider), key);
     }
 
-    public Task<UserProvider> UpdateAsync(Guid key, UserProvider model)
+    public Task<UserProvider> UpdateAsync(Guid key, UserProvider model, CancellationToken cancellationToken = default)
     {
         _ = GetAsync(key);
         Items[key] = model;
         return Task.FromResult(model);
     }
 
-    public Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId)
+    public Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<UserProvider> matches = Items.Values
             .Where(x => x.UserId == userId)
@@ -855,7 +855,7 @@ internal sealed class InMemoryUserProviderRepository : IUserProviderRepository
         return Task.FromResult(matches);
     }
 
-    public Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId)
+    public Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId, CancellationToken cancellationToken = default)
     {
         var match = Items.Values.FirstOrDefault(x => x.UserId == userId && x.ProviderId == providerId);
         return Task.FromResult(match);
@@ -872,23 +872,23 @@ internal sealed class InMemoryRefreshTokenRepository : IRefreshTokenRepository
             Items[refreshToken.Id] = refreshToken;
     }
 
-    public Task<RefreshToken> CreateAsync(RefreshToken model)
+    public Task<RefreshToken> CreateAsync(RefreshToken model, CancellationToken cancellationToken = default)
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
 
-    public Task<RefreshToken> DeleteAsync(Guid key)
+    public Task<RefreshToken> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var refreshToken = GetAsync(key).Result;
         Items.Remove(key);
         return Task.FromResult(refreshToken);
     }
 
-    public Task<RefreshToken?> FindByTokenAsync(string token) =>
+    public Task<RefreshToken?> FindByTokenAsync(string token, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.Values.SingleOrDefault(refreshToken => refreshToken.Token == token));
 
-    public Task<RefreshToken> GetAsync(Guid key)
+    public Task<RefreshToken> GetAsync(Guid key, CancellationToken cancellationToken = default)
     {
         if (Items.TryGetValue(key, out var refreshToken))
             return Task.FromResult(refreshToken);
@@ -896,7 +896,7 @@ internal sealed class InMemoryRefreshTokenRepository : IRefreshTokenRepository
         throw new IdentityEntityNotFoundException(nameof(RefreshToken), key);
     }
 
-    public Task RevokeAllByUserIdAsync(Guid userId)
+    public Task RevokeAllByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         foreach (var refreshToken in Items.Values.Where(token => token.UserId == userId && !token.Revoked))
             refreshToken.Revoked = true;
@@ -904,7 +904,7 @@ internal sealed class InMemoryRefreshTokenRepository : IRefreshTokenRepository
         return Task.CompletedTask;
     }
 
-    public Task<RefreshToken> UpdateAsync(Guid key, RefreshToken model)
+    public Task<RefreshToken> UpdateAsync(Guid key, RefreshToken model, CancellationToken cancellationToken = default)
     {
         _ = GetAsync(key);
         Items[key] = model;
@@ -922,13 +922,13 @@ internal sealed class InMemoryFamilyRepository : IFamilyRepository
             Items[family.Id] = family;
     }
 
-    public Task<Family> CreateAsync(Family model)
+    public Task<Family> CreateAsync(Family model, CancellationToken cancellationToken = default)
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
 
-    public Task<IReadOnlyList<Family>> CreateRangeAsync(IReadOnlyCollection<Family> models)
+    public Task<IReadOnlyList<Family>> CreateRangeAsync(IReadOnlyCollection<Family> models, CancellationToken cancellationToken = default)
     {
         foreach (var model in models)
         {
@@ -938,7 +938,7 @@ internal sealed class InMemoryFamilyRepository : IFamilyRepository
         return Task.FromResult<IReadOnlyList<Family>>(models.ToArray());
     }
 
-    public Task<Family> DeleteAsync(Guid key)
+    public Task<Family> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var family = GetExisting(key);
         Items.Remove(key);
@@ -948,12 +948,12 @@ internal sealed class InMemoryFamilyRepository : IFamilyRepository
     public Task<Family?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.Values.SingleOrDefault(family => family.UserId == userId && !family.IsDeleted));
 
-    public Task<IReadOnlyList<Family>> GetAllAsync() =>
+    public Task<IReadOnlyList<Family>> GetAllAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Family>>(Items.Values.ToList());
 
-    public Task<Family> GetAsync(Guid key) => Task.FromResult(GetExisting(key));
+    public Task<Family> GetAsync(Guid key, CancellationToken cancellationToken = default) => Task.FromResult(GetExisting(key));
 
-    public Task<Family> UpdateAsync(Guid key, Family model)
+    public Task<Family> UpdateAsync(Guid key, Family model, CancellationToken cancellationToken = default)
     {
         GetExisting(key);
         Items[key] = model;
@@ -976,7 +976,7 @@ internal sealed class InMemoryFamilyMemberRepository : IFamilyMemberRepository
             Items[member.Id] = member;
     }
 
-    public Task<FamilyMember> CreateAsync(FamilyMember model)
+    public Task<FamilyMember> CreateAsync(FamilyMember model, CancellationToken cancellationToken = default)
     {
         if (Items.Values.Any(member =>
                 member.FamilyId == model.FamilyId
@@ -990,7 +990,7 @@ internal sealed class InMemoryFamilyMemberRepository : IFamilyMemberRepository
         return Task.FromResult(model);
     }
 
-    public Task<IReadOnlyList<FamilyMember>> CreateRangeAsync(IReadOnlyCollection<FamilyMember> models)
+    public Task<IReadOnlyList<FamilyMember>> CreateRangeAsync(IReadOnlyCollection<FamilyMember> models, CancellationToken cancellationToken = default)
     {
         var created = new List<FamilyMember>(models.Count);
         foreach (var model in models)
@@ -1001,7 +1001,7 @@ internal sealed class InMemoryFamilyMemberRepository : IFamilyMemberRepository
         return Task.FromResult<IReadOnlyList<FamilyMember>>(created);
     }
 
-    public Task<FamilyMember> DeleteAsync(Guid key)
+    public Task<FamilyMember> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var member = GetExisting(key);
         Items.Remove(key);
@@ -1014,15 +1014,15 @@ internal sealed class InMemoryFamilyMemberRepository : IFamilyMemberRepository
             && !member.IsDeleted
             && string.Equals(member.Name, name, StringComparison.OrdinalIgnoreCase)));
 
-    public Task<IReadOnlyList<FamilyMember>> GetAllAsync() =>
+    public Task<IReadOnlyList<FamilyMember>> GetAllAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<FamilyMember>>(Items.Values.ToList());
 
-    public Task<FamilyMember> GetAsync(Guid key) => Task.FromResult(GetExisting(key));
+    public Task<FamilyMember> GetAsync(Guid key, CancellationToken cancellationToken = default) => Task.FromResult(GetExisting(key));
 
     public Task<IReadOnlyList<FamilyMember>> GetByFamilyIdAsync(Guid familyId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<FamilyMember>>(Items.Values.Where(member => member.FamilyId == familyId && !member.IsDeleted).ToList());
 
-    public Task<FamilyMember> UpdateAsync(Guid key, FamilyMember model)
+    public Task<FamilyMember> UpdateAsync(Guid key, FamilyMember model, CancellationToken cancellationToken = default)
     {
         GetExisting(key);
         Items[key] = model;
@@ -1045,13 +1045,13 @@ internal sealed class InMemoryKinHubServiceRepository : IKinHubServiceRepository
             Items[service.Id] = service;
     }
 
-    public Task<KinHubService> CreateAsync(KinHubService model)
+    public Task<KinHubService> CreateAsync(KinHubService model, CancellationToken cancellationToken = default)
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
 
-    public Task<IReadOnlyList<KinHubService>> CreateRangeAsync(IReadOnlyCollection<KinHubService> models)
+    public Task<IReadOnlyList<KinHubService>> CreateRangeAsync(IReadOnlyCollection<KinHubService> models, CancellationToken cancellationToken = default)
     {
         foreach (var model in models)
         {
@@ -1061,7 +1061,7 @@ internal sealed class InMemoryKinHubServiceRepository : IKinHubServiceRepository
         return Task.FromResult<IReadOnlyList<KinHubService>>(models.ToArray());
     }
 
-    public Task<KinHubService> DeleteAsync(int key)
+    public Task<KinHubService> DeleteAsync(int key, CancellationToken cancellationToken = default)
     {
         var service = GetExisting(key);
         Items.Remove(key);
@@ -1071,12 +1071,12 @@ internal sealed class InMemoryKinHubServiceRepository : IKinHubServiceRepository
     public Task<KinHubService?> FindByServiceTypeAsync(KinHubServiceType serviceType, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.Values.SingleOrDefault(service => service.Id == (int)serviceType));
 
-    public Task<IReadOnlyList<KinHubService>> GetAllAsync() =>
+    public Task<IReadOnlyList<KinHubService>> GetAllAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<KinHubService>>(Items.Values.Where(service => service.IsActive).ToList());
 
-    public Task<KinHubService> GetAsync(int key) => Task.FromResult(GetExisting(key));
+    public Task<KinHubService> GetAsync(int key, CancellationToken cancellationToken = default) => Task.FromResult(GetExisting(key));
 
-    public Task<KinHubService> UpdateAsync(int key, KinHubService model)
+    public Task<KinHubService> UpdateAsync(int key, KinHubService model, CancellationToken cancellationToken = default)
     {
         GetExisting(key);
         Items[key] = model;
@@ -1099,13 +1099,13 @@ internal sealed class InMemoryFamilyServiceRepository : IFamilyServiceRepository
             Items[assignment.Id] = assignment;
     }
 
-    public Task<FamilyService> CreateAsync(FamilyService model)
+    public Task<FamilyService> CreateAsync(FamilyService model, CancellationToken cancellationToken = default)
     {
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
 
-    public Task<IReadOnlyList<FamilyService>> CreateRangeAsync(IReadOnlyCollection<FamilyService> models)
+    public Task<IReadOnlyList<FamilyService>> CreateRangeAsync(IReadOnlyCollection<FamilyService> models, CancellationToken cancellationToken = default)
     {
         foreach (var model in models)
         {
@@ -1115,7 +1115,7 @@ internal sealed class InMemoryFamilyServiceRepository : IFamilyServiceRepository
         return Task.FromResult<IReadOnlyList<FamilyService>>(models.ToArray());
     }
 
-    public Task<FamilyService> DeleteAsync(Guid key)
+    public Task<FamilyService> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var assignment = GetExisting(key);
         Items.Remove(key);
@@ -1125,15 +1125,15 @@ internal sealed class InMemoryFamilyServiceRepository : IFamilyServiceRepository
     public Task<FamilyService?> FindByFamilyAndServiceAsync(Guid familyId, int serviceId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Items.Values.SingleOrDefault(assignment => assignment.FamilyId == familyId && assignment.ServiceId == serviceId));
 
-    public Task<IReadOnlyList<FamilyService>> GetAllAsync() =>
+    public Task<IReadOnlyList<FamilyService>> GetAllAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<FamilyService>>(Items.Values.ToList());
 
-    public Task<FamilyService> GetAsync(Guid key) => Task.FromResult(GetExisting(key));
+    public Task<FamilyService> GetAsync(Guid key, CancellationToken cancellationToken = default) => Task.FromResult(GetExisting(key));
 
     public Task<IReadOnlyList<FamilyService>> GetByFamilyIdAsync(Guid familyId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<FamilyService>>(Items.Values.Where(assignment => assignment.FamilyId == familyId && assignment.IsActive).ToList());
 
-    public Task<FamilyService> UpdateAsync(Guid key, FamilyService model)
+    public Task<FamilyService> UpdateAsync(Guid key, FamilyService model, CancellationToken cancellationToken = default)
     {
         GetExisting(key);
         Items[key] = model;

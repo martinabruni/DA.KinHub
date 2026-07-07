@@ -1,22 +1,5 @@
 namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
-public interface IUserProviderService
-{
-    Task<Result<IReadOnlyList<LinkedProviderResponse>>> GetProvidersAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default);
-
-    Task<Result<IReadOnlyList<LinkedProviderResponse>>> LinkAsync(
-        Guid userId,
-        LinkProviderRequest request,
-        CancellationToken cancellationToken = default);
-
-    Task<Result<IReadOnlyList<LinkedProviderResponse>>> UnlinkAsync(
-        Guid userId,
-        IdentityProviderType provider,
-        CancellationToken cancellationToken = default);
-}
-
 /// <summary>
 /// Manages the identity providers linked to a user. Enforces the invariants that a user
 /// always keeps at least one provider and that providers are never auto-linked by email.

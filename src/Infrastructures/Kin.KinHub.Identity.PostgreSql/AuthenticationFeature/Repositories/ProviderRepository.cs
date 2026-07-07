@@ -1,5 +1,5 @@
-﻿
-using Kin.KinHub.Identity.PostgreSql.Models;
+
+using Kin.KinHub.Identity.PostgreSql;
 
 namespace Kin.KinHub.Identity.PostgreSql.AuthenticationFeature;
 

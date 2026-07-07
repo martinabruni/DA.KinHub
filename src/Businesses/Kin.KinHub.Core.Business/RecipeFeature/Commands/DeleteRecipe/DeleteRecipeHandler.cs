@@ -1,13 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface IDeleteRecipeHandler
-{
-    Task<Result<bool>> HandleAsync(
-        Guid recipeId,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class DeleteRecipeHandler : IDeleteRecipeHandler
 {
     private readonly IRecipeRepository _recipeRepository;
@@ -28,7 +20,9 @@ public sealed class DeleteRecipeHandler : IDeleteRecipeHandler
     {
         var access = await _recipeAccessService.GetAccessibleRecipeAsync(recipeId, userId, cancellationToken);
         if (!access.IsSuccess)
+        {
             return access.ToResult<bool>();
+        }
 
         await _recipeRepository.SoftDeleteAsync(recipeId, cancellationToken);
         return Result<bool>.Success(true);

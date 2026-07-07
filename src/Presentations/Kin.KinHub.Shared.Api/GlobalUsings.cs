@@ -1,5 +1,4 @@
 global using Kin.KinHub.Shared.Api.Common;
-global using Kin.KinHub.Shared.Api.Common.Configuration;
 global using Kin.KinHub.Core.Business.FamilyFeature;
 global using Kin.KinHub.Core.Domain.Common;
 global using Kin.KinHub.Core.Domain.FamilyFeature;

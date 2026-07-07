@@ -1,13 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface ICreateRecipeIngredientHandler
-{
-    Task<Result<RecipeIngredientResponse>> HandleAsync(
-        CreateRecipeIngredientRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class CreateRecipeIngredientHandler : ICreateRecipeIngredientHandler
 {
     private readonly IRecipeIngredientRepository _recipeIngredientRepository;
@@ -34,7 +26,9 @@ public sealed class CreateRecipeIngredientHandler : ICreateRecipeIngredientHandl
     {
         var access = await _recipeAccessService.GetAccessibleRecipeAsync(request.RecipeId, userId, cancellationToken);
         if (!access.IsSuccess)
+        {
             return access.ToResult<RecipeIngredientResponse>();
+        }
 
         var now = DateTime.UtcNow;
         var recipeIngredient = new RecipeIngredient

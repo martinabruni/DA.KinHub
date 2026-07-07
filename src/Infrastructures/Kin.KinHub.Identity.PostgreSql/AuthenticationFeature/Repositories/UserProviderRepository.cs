@@ -1,4 +1,4 @@
-﻿using Kin.KinHub.Identity.PostgreSql.Models;
+using Kin.KinHub.Identity.PostgreSql;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,29 +11,29 @@ public sealed class UserProviderRepository
         : base(context) { }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId)
+    public async Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var entities = await Set
             .Where(x => x.UserId == userId && !x.IsDeleted)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return entities.Select(x => x.Adapt<UserProvider>()).ToList();
     }
 
     /// <inheritdoc/>
-    public async Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId)
+    public async Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId, CancellationToken cancellationToken = default)
     {
         var entity = await Set
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.ProviderId == providerId && !x.IsDeleted);
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.ProviderId == providerId && !x.IsDeleted, cancellationToken);
 
         return entity?.Adapt<UserProvider>();
     }
 
     /// <inheritdoc/>
-    protected override async Task OnBeforeCreateAsync(UserProviderEntity entity)
+    protected override async Task OnBeforeCreateAsync(UserProviderEntity entity, CancellationToken cancellationToken)
     {
         var duplicate = await Set
-            .AnyAsync(x => x.UserId == entity.UserId && x.ProviderId == entity.ProviderId && !x.IsDeleted);
+            .AnyAsync(x => x.UserId == entity.UserId && x.ProviderId == entity.ProviderId && !x.IsDeleted, cancellationToken);
 
         if (duplicate)
             throw new DuplicateEntityException(

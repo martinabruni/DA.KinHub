@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Kin.KinHub.KinList.PostgreSql.Models;
+namespace Kin.KinHub.KinList.PostgreSql;
 
 public sealed class KinListDbContext : DbContext
 {

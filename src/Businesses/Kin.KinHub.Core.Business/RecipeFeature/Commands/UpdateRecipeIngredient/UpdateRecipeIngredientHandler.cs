@@ -1,14 +1,5 @@
 namespace Kin.KinHub.Core.Business.RecipeFeature;
 
-public interface IUpdateRecipeIngredientHandler
-{
-    Task<Result<RecipeIngredientResponse>> HandleAsync(
-        Guid recipeIngredientId,
-        UpdateRecipeIngredientRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class UpdateRecipeIngredientHandler : IUpdateRecipeIngredientHandler
 {
     private readonly IRecipeIngredientRepository _recipeIngredientRepository;
@@ -36,7 +27,9 @@ public sealed class UpdateRecipeIngredientHandler : IUpdateRecipeIngredientHandl
     {
         var access = await _recipeIngredientAccessService.GetAccessibleRecipeIngredientAsync(recipeIngredientId, userId, cancellationToken);
         if (!access.IsSuccess)
+        {
             return access.ToResult<RecipeIngredientResponse>();
+        }
 
         var recipeIngredient = access.RecipeIngredient!;
         var nameChanged = !recipeIngredient.Name.Equals(request.Name, StringComparison.OrdinalIgnoreCase);
@@ -46,7 +39,9 @@ public sealed class UpdateRecipeIngredientHandler : IUpdateRecipeIngredientHandl
         recipeIngredient.UpdatedAt = DateTime.UtcNow;
 
         if (nameChanged)
+        {
             recipeIngredient.Embedding = await _embeddingService.GenerateEmbeddingAsync(request.Name, cancellationToken);
+        }
 
         var updatedRecipeIngredient = await _recipeIngredientRepository.UpdateAsync(recipeIngredient, cancellationToken);
         return Result<RecipeIngredientResponse>.Success(_recipeIngredientResponseMapper.Map(updatedRecipeIngredient));

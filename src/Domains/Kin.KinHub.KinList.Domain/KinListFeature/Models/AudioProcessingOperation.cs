@@ -1,22 +1,5 @@
 namespace Kin.KinHub.KinList.Domain.KinListFeature;
 
-public enum AudioProcessingOperationType
-{
-    NewList = 1,
-    AppendItems = 2,
-}
-
-public enum AudioProcessingOperationStatus
-{
-    AwaitingUpload = 1,
-    Queued = 2,
-    Processing = 3,
-    Succeeded = 4,
-    Failed = 5,
-    Expired = 6,
-    Cancelled = 7,
-}
-
 public sealed class AudioProcessingOperation
 {
     public required Guid Id { get; set; }

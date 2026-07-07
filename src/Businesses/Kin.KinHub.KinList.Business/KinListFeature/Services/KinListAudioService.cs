@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FluentValidation.Results;
 using Kin.KinHub.KinList.Business.Common;
 using Kin.KinHub.KinList.Domain.KinListFeature;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
     private readonly IAudioProcessingQueue _audioQueue;
     private readonly IKinListItemDeduplicator _deduplicator;
     private readonly ICorrelationIdProvider _correlationIdProvider;
+    private readonly CreateAudioProcessingOperationBusinessValidator _createAudioOperationValidator;
     private readonly ILogger<KinListAudioService> _logger;
     private readonly KinListOptions _options;
 
@@ -29,6 +31,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         IAudioProcessingQueue audioQueue,
         IKinListItemDeduplicator deduplicator,
         ICorrelationIdProvider correlationIdProvider,
+        CreateAudioProcessingOperationBusinessValidator createAudioOperationValidator,
         ILogger<KinListAudioService> logger,
         KinListOptions options)
     {
@@ -40,6 +43,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         _audioQueue = audioQueue;
         _deduplicator = deduplicator;
         _correlationIdProvider = correlationIdProvider;
+        _createAudioOperationValidator = createAudioOperationValidator;
         _logger = logger;
         _options = options;
     }
@@ -51,30 +55,19 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         activity?.SetTag("kinlist.audio.content_type", request.ContentType);
         activity?.SetTag("kinlist.audio.declared_bytes", request.DeclaredByteSize);
 
-        if (!TryParseOperationType(request.Type, out var operationType))
+        var validation = await _createAudioOperationValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
         {
-            return Result<CreateAudioProcessingOperationResponse>.ValidationError("Unsupported audio operation type.", "invalid_audio_operation_type");
+            return ToValidationResult<CreateAudioProcessingOperationResponse>(validation);
         }
 
+        _ = TryParseOperationType(request.Type, out var operationType);
         var normalizedMimeType = NormalizeMimeType(request.ContentType);
-        if (!_options.AllowedAudioMimeTypes.Contains(normalizedMimeType, StringComparer.OrdinalIgnoreCase))
-        {
-            return Result<CreateAudioProcessingOperationResponse>.ValidationError("Unsupported audio MIME type.", "invalid_audio_mime_type");
-        }
 
-        if (request.DeclaredByteSize <= 0 || request.DeclaredByteSize > _options.MaxAudioBytes)
+        if (operationType is AudioProcessingOperationType.AppendItems
+            && request.ListId is Guid listId)
         {
-            return Result<CreateAudioProcessingOperationResponse>.ValidationError("Audio size is outside the configured limits.", "invalid_audio_size");
-        }
-
-        if (operationType is AudioProcessingOperationType.AppendItems)
-        {
-            if (request.ListId is null)
-            {
-                return Result<CreateAudioProcessingOperationResponse>.ValidationError("ListId is required for append operations.", "list_id_required");
-            }
-
-            var list = await _listRepository.GetByIdAsync(request.ListId.Value, cancellationToken);
+            var list = await _listRepository.GetByIdAsync(listId, cancellationToken);
             if (list is null || list.IsDeleted)
             {
                 return Result<CreateAudioProcessingOperationResponse>.NotFound("List not found.");
@@ -515,6 +508,14 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
 
     private static string NormalizeMimeType(string contentType)
         => contentType.Split(';', 2, StringSplitOptions.TrimEntries)[0].Trim();
+
+    private static Result<T> ToValidationResult<T>(ValidationResult validation)
+    {
+        var failure = validation.Errors[0];
+        return Result<T>.ValidationError(
+            failure.ErrorMessage,
+            string.IsNullOrWhiteSpace(failure.ErrorCode) ? "validation_error" : failure.ErrorCode);
+    }
 
     private static void ApplyOperationFailure(AudioProcessingOperation operation, string code, string message)
     {

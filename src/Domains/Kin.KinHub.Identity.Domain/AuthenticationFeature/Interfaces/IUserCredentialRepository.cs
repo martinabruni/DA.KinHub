@@ -7,5 +7,5 @@ public interface IUserCredentialRepository : IRepository<UserCredential, Guid>
     /// <summary>
     /// Returns the credential for the given user, or null if not found.
     /// </summary>
-    Task<UserCredential?> GetByUserIdAsync(Guid userId);
+    Task<UserCredential?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

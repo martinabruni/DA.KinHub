@@ -1,14 +1,5 @@
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
-public interface IAddFamilyMemberHandler
-{
-    Task<Result<AddFamilyMemberResponse>> HandleAsync(
-        Guid familyId,
-        AddFamilyMemberRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class AddFamilyMemberHandler : IAddFamilyMemberHandler
 {
     private readonly IFamilyOwnershipService _familyOwnershipService;
@@ -32,7 +23,9 @@ public sealed class AddFamilyMemberHandler : IAddFamilyMemberHandler
         {
             var access = await _familyOwnershipService.EnsureOwnershipAsync(familyId, userId, cancellationToken);
             if (!access.IsSuccess)
+            {
                 return access.ToResult<AddFamilyMemberResponse>();
+            }
 
             var now = DateTime.UtcNow;
             var createdMember = await _familyMemberRepository.CreateAsync(new FamilyMember

@@ -8,10 +8,10 @@ public interface IUserProviderRepository
     /// <summary>
     /// Returns every provider currently linked to the given user.
     /// </summary>
-    Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId);
+    Task<IReadOnlyList<UserProvider>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the link for the given user and provider, or null when not linked.
     /// </summary>
-    Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId);
+    Task<UserProvider?> GetByUserAndProviderAsync(Guid userId, int providerId, CancellationToken cancellationToken = default);
 }

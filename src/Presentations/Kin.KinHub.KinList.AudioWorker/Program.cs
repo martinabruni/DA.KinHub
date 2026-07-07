@@ -65,8 +65,6 @@ builder.Services
         o.PoisonQueueName = storageOptions.PoisonQueueName;
     });
 
-builder.Services.AddSingleton<IAudioProcessingQueuePump, AzureAudioProcessingQueuePump>();
-
 var aiConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"]?.Trim()
     ?? builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]?.Trim();
 if (!string.IsNullOrWhiteSpace(aiConnectionString))

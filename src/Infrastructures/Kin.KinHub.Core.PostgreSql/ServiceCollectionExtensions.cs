@@ -1,4 +1,4 @@
-﻿using Kin.KinHub.Core.PostgreSql.Models;
+using Kin.KinHub.Core.PostgreSql;
 using Kin.KinHub.Core.Business.Common;
 using Kin.KinHub.Core.PostgreSql.Common;
 using Mapster;

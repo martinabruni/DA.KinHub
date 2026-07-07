@@ -230,22 +230,4 @@ internal sealed class OpenAiRecipeAssistantService : IRecipeAssistantService
             MissingIngredients = s.MissingIngredients.Select(MapToIngredient).ToList(),
         };
 
-    private sealed record IngredientJson(string? Id, string Name, decimal Quantity, string Unit);
-    private sealed record StepJson(int Order, string Description);
-    private sealed record RecipeJson(
-        string Name,
-        string? Backstory,
-        string FinalTime,
-        int Portions,
-        IReadOnlyList<IngredientJson> Ingredients,
-        IReadOnlyList<StepJson> Steps);
-    private sealed record SuggestionItem(RecipeJson Recipe, int MatchPercentage, IReadOnlyList<IngredientJson> MissingIngredients);
-    private sealed record SuggestionResponse(string TaskType, IReadOnlyList<SuggestionItem> Suggestions);
-    private sealed record ParseResponse(string TaskType, RecipeJson? Recipe, string? Error);
-    private sealed record ChangeJson(string Type, string Description, string? OriginalIngredientId, IngredientJson? NewIngredient);
-    private sealed record AdaptationResponse(
-        string TaskType,
-        RecipeJson OriginalRecipe,
-        IReadOnlyList<StepJson> AdaptedSteps,
-        IReadOnlyList<ChangeJson> Changes);
 }

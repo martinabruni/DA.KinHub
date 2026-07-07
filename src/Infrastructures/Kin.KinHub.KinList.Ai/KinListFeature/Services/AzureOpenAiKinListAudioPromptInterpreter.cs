@@ -113,10 +113,4 @@ public sealed class AzureOpenAiKinListAudioPromptInterpreter : IKinListAudioProm
             PromptVersion = _promptOptions.PromptVersion,
         });
     }
-
-    private sealed class ParsedResponse
-    {
-        public string? Title { get; set; }
-        public IReadOnlyList<string> Items { get; set; } = [];
-    }
 }

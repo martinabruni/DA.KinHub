@@ -1,4 +1,4 @@
-﻿using Kin.KinHub.Identity.PostgreSql.Models;
+using Kin.KinHub.Identity.PostgreSql;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,19 +10,19 @@ public sealed class RefreshTokenRepository : PostgreSqlRepository<RefreshTokenEn
         : base(context) { }
 
     /// <inheritdoc/>
-    public async Task<RefreshToken?> FindByTokenAsync(string token)
+    public async Task<RefreshToken?> FindByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
         var entity = await Set
-            .FirstOrDefaultAsync(x => x.Token == token);
+            .FirstOrDefaultAsync(x => x.Token == token, cancellationToken);
         return entity?.Adapt<RefreshToken>();
     }
 
     /// <inheritdoc/>
-    public async Task RevokeAllByUserIdAsync(Guid userId)
+    public async Task RevokeAllByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var tokens = await Set
             .Where(x => x.UserId == userId && !x.Revoked)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (tokens.Count == 0)
             return;
@@ -30,6 +30,6 @@ public sealed class RefreshTokenRepository : PostgreSqlRepository<RefreshTokenEn
         foreach (var token in tokens)
             token.Revoked = true;
 
-        await Context.SaveChangesAsync();
+        await Context.SaveChangesAsync(cancellationToken);
     }
 }

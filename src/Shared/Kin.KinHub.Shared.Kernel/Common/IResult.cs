@@ -8,8 +8,3 @@ public interface IResult
     string? Message { get; }
     object? Value { get; }
 }
-
-public interface IResult<out T> : IResult
-{
-    new T? Value { get; }
-}

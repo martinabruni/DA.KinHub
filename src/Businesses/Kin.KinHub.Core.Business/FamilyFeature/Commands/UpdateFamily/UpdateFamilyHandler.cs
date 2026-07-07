@@ -1,14 +1,5 @@
 namespace Kin.KinHub.Core.Business.FamilyFeature;
 
-public interface IUpdateFamilyHandler
-{
-    Task<Result<UpdateFamilyResponse>> HandleAsync(
-        Guid familyId,
-        UpdateFamilyRequest request,
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class UpdateFamilyHandler : IUpdateFamilyHandler
 {
     private readonly IFamilyOwnershipService _familyOwnershipService;
@@ -32,7 +23,9 @@ public sealed class UpdateFamilyHandler : IUpdateFamilyHandler
         {
             var access = await _familyOwnershipService.EnsureOwnershipAsync(familyId, userId, cancellationToken);
             if (!access.IsSuccess)
+            {
                 return access.ToResult<UpdateFamilyResponse>();
+            }
 
             var family = access.Family!;
             family.Name = request.Name;

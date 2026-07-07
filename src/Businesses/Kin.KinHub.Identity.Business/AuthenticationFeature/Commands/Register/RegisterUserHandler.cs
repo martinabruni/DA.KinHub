@@ -1,12 +1,5 @@
 namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
-public interface IRegisterUserHandler
-{
-    Task<Result<RegisterResponse>> HandleAsync(
-        RegisterRequest request,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class RegisterUserHandler : IRegisterUserHandler
 {
     private readonly IIdentityProviderRegistry _providerRegistry;

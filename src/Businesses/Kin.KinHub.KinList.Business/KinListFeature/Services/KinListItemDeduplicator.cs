@@ -2,13 +2,6 @@ using DomainKinListItem = Kin.KinHub.KinList.Domain.KinListFeature.KinListItem;
 
 namespace Kin.KinHub.KinList.Business.KinListFeature;
 
-public interface IKinListItemDeduplicator
-{
-    KinListDeduplicationResult Deduplicate(
-        IReadOnlyList<string> candidateItems,
-        IReadOnlyList<DomainKinListItem> existingItems);
-}
-
 public sealed class KinListItemDeduplicator : IKinListItemDeduplicator
 {
     public KinListDeduplicationResult Deduplicate(
@@ -59,10 +52,4 @@ public sealed class KinListItemDeduplicator : IKinListItemDeduplicator
     }
 
     private static string NormalizeText(string text) => text.Trim();
-}
-
-public sealed class KinListDeduplicationResult
-{
-    public IReadOnlyList<KinListItemDraftProposalResponse> Proposals { get; init; } = [];
-    public IReadOnlyList<KinListExistingDuplicateResponse> ExistingDuplicates { get; init; } = [];
 }

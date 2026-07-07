@@ -1,4 +1,4 @@
-﻿using Kin.KinHub.Core.PostgreSql.Models;
+using Kin.KinHub.Core.PostgreSql;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,13 +36,14 @@ public sealed class FamilyMemberRepository : PostgreSqlRepository<FamilyMemberEn
     }
 
     /// <inheritdoc/>
-    protected override async Task OnBeforeCreateAsync(FamilyMemberEntity entity)
+    protected override async Task OnBeforeCreateAsync(FamilyMemberEntity entity, CancellationToken cancellationToken)
     {
         var duplicate = await Set
             .AnyAsync(m =>
                 m.FamilyId == entity.FamilyId
                 && m.Name.ToLower() == entity.Name.ToLower()
-                && !m.IsDeleted);
+                && !m.IsDeleted,
+                cancellationToken);
 
         if (duplicate)
             throw new DuplicateEntityException(nameof(FamilyMember), nameof(FamilyMemberEntity.Name), entity.Name);
