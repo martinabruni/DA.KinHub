@@ -8,17 +8,8 @@
     "identityContainerAppName": {
       "value": "kinhub-identity-api-dev"
     },
-    "kinRecipeContainerAppName": {
-      "value": "kinhub-kinrecipe-api-dev"
-    },
-    "kinListContainerAppName": {
-      "value": "kinhub-kinlist-api-dev"
-    },
-    "kinListAudioWorkerContainerAppName": {
-      "value": "kinhub-kinlist-audio-worker-dev"
-    },
-    "kinListMigrationJobName": {
-      "value": "kinhub-kinlist-migrations-dev"
+    "functionAppName": {
+      "value": "kinhub-func-dev"
     }
   }
 }

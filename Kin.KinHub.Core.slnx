@@ -52,6 +52,7 @@
     <Project Path="src\Infrastructures\Kin.KinHub.KinRecipe.PostgreSql\Kin.KinHub.KinRecipe.PostgreSql.csproj" />
   </Folder>
   <Folder Name="/src/Presentations/">
+    <Project Path="src\Presentations\Kin.KinHub.App.Functions\Kin.KinHub.App.Functions.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.KinList.Api\Kin.KinHub.KinList.Api.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.KinList.AudioWorker\Kin.KinHub.KinList.AudioWorker.csproj" />

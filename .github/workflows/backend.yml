@@ -20,14 +20,8 @@ env:
   BICEP_FILE: ops/iac/main.bicep
   GHCR_SERVER: ghcr.io
   IDENTITY_API_PROJECT: src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj
-  KINRECIPE_API_PROJECT: src/Presentations/Kin.KinHub.KinRecipe.Api/Kin.KinHub.KinRecipe.Api.csproj
-  KINLIST_API_PROJECT: src/Presentations/Kin.KinHub.KinList.Api/Kin.KinHub.KinList.Api.csproj
-  KINLIST_AUDIO_WORKER_PROJECT: src/Presentations/Kin.KinHub.KinList.AudioWorker/Kin.KinHub.KinList.AudioWorker.csproj
   IDENTITY_DOCKERFILE: src/Presentations/Kin.KinHub.Identity.Api/Dockerfile
-  KINRECIPE_DOCKERFILE: src/Presentations/Kin.KinHub.KinRecipe.Api/Dockerfile
-  KINLIST_DOCKERFILE: src/Presentations/Kin.KinHub.KinList.Api/Dockerfile
-  KINLIST_AUDIO_WORKER_DOCKERFILE: src/Presentations/Kin.KinHub.KinList.AudioWorker/Dockerfile
-  MIGRATION_DOCKERFILE: src/Presentations/Kin.KinHub.Migrations.Runner/Dockerfile
+  FUNCTIONS_APP_PROJECT: src/Presentations/Kin.KinHub.App.Functions/Kin.KinHub.App.Functions.csproj
 
 concurrency:
   group: backend-${{ github.ref }}
@@ -113,8 +107,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.identity_image.outputs.image }}
 
-  package_kinrecipe_image:
-    name: Package KinRecipe Image
+  package_functions_app:
+    name: Package Functions App
     runs-on: ubuntu-latest
     needs:
       - backend_ci
@@ -123,127 +117,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Compute image tag
-        id: kinrecipe_image
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish Functions App
+        run: dotnet publish ${{ env.FUNCTIONS_APP_PROJECT }} -c Release -o publish_output
+
+      - name: Zip Functions App package
         run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinrecipe-api:${GITHUB_SHA}"
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          cd publish_output
+          zip -r ../functions-app.zip .
+          cd ..
 
-      - name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+      - name: Upload Functions App package
+        uses: actions/upload-artifact@v4
         with:
-          registry: ${{ env.GHCR_SERVER }}
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_PASSWORD }}
-
-      - name: Build and push KinRecipe image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ env.KINRECIPE_DOCKERFILE }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.kinrecipe_image.outputs.image }}
-
-  package_kinlist_image:
-    name: Package KinList Image
-    runs-on: ubuntu-latest
-    needs:
-      - backend_ci
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Compute image tag
-        id: kinlist_image
-        run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-api:${GITHUB_SHA}"
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
-
-      - name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_SERVER }}
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_PASSWORD }}
-
-      - name: Build and push KinList image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ env.KINLIST_DOCKERFILE }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.kinlist_image.outputs.image }}
-
-  package_migration_image:
-    name: Package Migration Runner Image
-    runs-on: ubuntu-latest
-    needs:
-      - backend_ci
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Compute image tag
-        id: migration_image
-        run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-migration:${GITHUB_SHA}"
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
-
-      - name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_SERVER }}
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_PASSWORD }}
-
-      - name: Build and push Migration Runner image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ env.MIGRATION_DOCKERFILE }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.migration_image.outputs.image }}
-
-  package_kinlist_audio_worker_image:
-    name: Package KinList Audio Worker Image
-    runs-on: ubuntu-latest
-    needs:
-      - backend_ci
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Compute image tag
-        id: kinlist_audio_worker_image
-        run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image="${{ env.GHCR_SERVER }}/${owner}/kinhub-kinlist-audio-worker:${GITHUB_SHA}"
-          echo "image=${image}" >> "$GITHUB_OUTPUT"
-
-      - name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_SERVER }}
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_PASSWORD }}
-
-      - name: Build and push KinList audio worker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ env.KINLIST_AUDIO_WORKER_DOCKERFILE }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.kinlist_audio_worker_image.outputs.image }}
+          name: functions-app-package
+          path: functions-app.zip
 
   deploy_dev:
     name: Deploy Dev
@@ -251,10 +143,7 @@ jobs:
     needs:
       - validate_bicep
       - package_identity_image
-      - package_kinrecipe_image
-      - package_kinlist_image
-      - package_kinlist_audio_worker_image
-      - package_migration_image
+      - package_functions_app
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: dev
@@ -266,10 +155,7 @@ jobs:
     needs:
       - deploy_dev
       - package_identity_image
-      - package_kinrecipe_image
-      - package_kinlist_image
-      - package_kinlist_audio_worker_image
-      - package_migration_image
+      - package_functions_app
     uses: ./.github/workflows/deploy-backend.yml
     with:
       environment: prod

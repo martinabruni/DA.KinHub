@@ -1,5 +1,13 @@
 # KinList audio async rollout plan
 
+> **Historical record.** This document captures a point-in-time validation of the KinList audio
+> pipeline rollout performed on 2026-07-04, when KinList still ran as a dedicated Container App and
+> migrations ran as a Container Apps Job. That architecture has since been replaced: KinRecipe,
+> KinList, and the KinList audio worker are now hosted together in the `Kin.KinHub.App.Functions`
+> Azure Functions app (see `ops/iac/main.bicep`), and migrations run directly from the CI/CD
+> pipeline (see `.github/workflows/deploy-backend.yml`) instead of via a Container Apps Job. The
+> sections below are left as-is for historical reference; do not use them as current deploy guidance.
+
 ## Status
 
 - Current status: Validated

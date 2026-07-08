@@ -15,17 +15,11 @@ param speechAccountName string
 @description('Azure AI Speech SKU name.')
 param speechSkuName string
 
-@description('Principal id of the KinList API identity granted Speech/OpenAI user roles.')
-param kinListApiPrincipalId string
+@description('Principal id of the Function App identity granted Speech/OpenAI user roles.')
+param functionAppPrincipalId string
 
-@description('Resource id of the KinList API identity (used for stable role-assignment GUID names).')
-param kinListApiIdentityId string
-
-@description('Principal id of the KinList audio worker identity granted Speech/OpenAI user roles.')
-param kinListWorkerPrincipalId string
-
-@description('Resource id of the KinList audio worker identity (used for stable role-assignment GUID names).')
-param kinListWorkerIdentityId string
+@description('Resource id of the Function App identity (used for stable role-assignment GUID names).')
+param functionAppIdentityId string
 
 // Built-in Azure RBAC role definition IDs.
 var cognitiveServicesUserRoleId = 'a97b65f3-24c7-4388-baec-2e87135dc908'
@@ -90,41 +84,21 @@ resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2
   }
 }
 
-resource kinListSpeechUserForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppSpeechUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: speechAccount
-  name: guid(speechAccount.id, kinListApiIdentityId, cognitiveServicesUserRoleId)
+  name: guid(speechAccount.id, functionAppIdentityId, cognitiveServicesUserRoleId)
   properties: {
-    principalId: kinListApiPrincipalId
+    principalId: functionAppPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
   }
 }
 
-resource kinListOpenAiUserForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppOpenAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: openAiAccount
-  name: guid(openAiAccount.id, kinListApiIdentityId, cognitiveServicesOpenAiUserRoleId)
+  name: guid(openAiAccount.id, functionAppIdentityId, cognitiveServicesOpenAiUserRoleId)
   properties: {
-    principalId: kinListApiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAiUserRoleId)
-  }
-}
-
-resource kinListSpeechUserForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: speechAccount
-  name: guid(speechAccount.id, kinListWorkerIdentityId, cognitiveServicesUserRoleId)
-  properties: {
-    principalId: kinListWorkerPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
-  }
-}
-
-resource kinListOpenAiUserForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: openAiAccount
-  name: guid(openAiAccount.id, kinListWorkerIdentityId, cognitiveServicesOpenAiUserRoleId)
-  properties: {
-    principalId: kinListWorkerPrincipalId
+    principalId: functionAppPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAiUserRoleId)
   }

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "13656841457728156737"
+      "templateHash": "4553243093846630707"
     }
   },
   "parameters": {
@@ -22,44 +22,14 @@
         "description": "Name of the Identity API Container App."
       }
     },
-    "kinRecipeContainerAppName": {
+    "functionAppName": {
       "type": "string",
       "metadata": {
-        "description": "Name of the KinRecipe API Container App."
-      }
-    },
-    "kinListContainerAppName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the KinList API Container App."
-      }
-    },
-    "kinListAudioWorkerContainerAppName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the KinList audio worker Container App."
-      }
-    },
-    "kinListMigrationJobName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the KinList migration Container Apps Job."
+        "description": "Name of the Function App hosting all non-identity routes (lists, audio operations, fridges, recipe books, recipe assistant) and the audio-processing queue trigger."
       }
     }
   },
   "resources": [
-    {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[format('{0}-identity', parameters('kinListContainerAppName'))]",
-      "location": "[parameters('location')]"
-    },
-    {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))]",
-      "location": "[parameters('location')]"
-    },
     {
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-01-31",
@@ -69,36 +39,18 @@
     {
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-01-31",
-      "name": "[format('{0}-identity', parameters('kinRecipeContainerAppName'))]",
-      "location": "[parameters('location')]"
-    },
-    {
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[format('{0}-identity', parameters('kinListMigrationJobName'))]",
+      "name": "[format('{0}-identity', parameters('functionAppName'))]",
       "location": "[parameters('location')]"
     }
   ],
   "outputs": {
-    "kinListIdentityId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListContainerAppName')))]"
-    },
-    "kinListAudioWorkerIdentityId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListAudioWorkerContainerAppName')))]"
-    },
-    "kinListMigrationIdentityId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinListMigrationJobName')))]"
-    },
     "identityIdentityId": {
       "type": "string",
       "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('identityContainerAppName')))]"
     },
-    "kinRecipeIdentityId": {
+    "functionAppIdentityId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('kinRecipeContainerAppName')))]"
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('functionAppName')))]"
     }
   }
 }

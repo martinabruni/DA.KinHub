@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Presentations\Kin.KinHub.App.Functions\Kin.KinHub.App.Functions.csproj" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.Core.Api\Kin.KinHub.Core.Api.csproj" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" Aliases="global,IdentityApi" />
     <ProjectReference Include="..\..\Presentations\Kin.KinHub.KinRecipe.Api\Kin.KinHub.KinRecipe.Api.csproj" Aliases="global,KinRecipeApi" />

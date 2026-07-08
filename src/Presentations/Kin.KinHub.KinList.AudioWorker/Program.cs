@@ -75,6 +75,7 @@ if (!string.IsNullOrWhiteSpace(aiConnectionString))
     });
 }
 
+builder.Services.AddSingleton<AudioQueueMessageProcessor>();
 builder.Services.AddHostedService<AudioProcessingWorkerService>();
 
 var host = builder.Build();

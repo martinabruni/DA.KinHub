@@ -35,8 +35,8 @@ for (const check of forbiddenChecks) {
 }
 
 // 3. The two axios clients must target the correct origins.
-if (!apiClient.includes('createApiClient(KINLIST_API_URL)')) {
-  throw new Error('Kin List apiClient must use VITE_KINLIST_API_URL.')
+if (!apiClient.includes('createApiClient(KINHUB_API_URL)')) {
+  throw new Error('Kin List apiClient must use VITE_KINHUB_API_URL.')
 }
 
 if (!apiClient.includes('createApiClient(IDENTITY_API_URL)')) {
@@ -61,7 +61,7 @@ if (existsSync(distAssetsPath)) {
     .join('\n')
 
   const identityApiUrl = process.env.VITE_IDENTITY_API_URL
-  const kinListApiUrl = process.env.VITE_KINLIST_API_URL
+  const kinListApiUrl = process.env.VITE_KINHUB_API_URL
 
   if (identityApiUrl && !distBundle.includes(identityApiUrl)) {
     throw new Error('Built bundle does not contain the configured identity API URL.')

@@ -16,10 +16,9 @@ param kinListStaticWebAppName = 'kinhub-kinlist-swa-dev'
 // Container Apps
 param containerAppsEnvironmentName = 'kinhub-cae-dev'
 param identityContainerAppName = 'kinhub-identity-ca-dev'
-param kinRecipeContainerAppName = 'kinhub-kinrecipe-ca-dev'
-param kinListContainerAppName = 'kinhub-kinlist-ca-dev'
-param kinListAudioWorkerContainerAppName = 'kinhub-kinlist-audio-worker-ca-dev'
-param kinListMigrationJobName = 'kinhub-kinlist-mig-dev'
+
+// Function App (hosts all non-identity routes and the audio-processing queue trigger)
+param functionAppName = 'kinhub-func-dev'
 
 // CORS origins
 param coreFrontendOrigin = 'https://dev.core.kinhub.example'
@@ -48,10 +47,6 @@ param kinListAudioStorageAccountName = 'kinhubaudiodev'
 
 // Container images (override per deployment/tag as needed)
 param identityImage = 'ghcr.io/kin/kinhub-identity:dev'
-param kinRecipeImage = 'ghcr.io/kin/kinhub-kinrecipe:dev'
-param kinListImage = 'ghcr.io/kin/kinhub-kinlist:dev'
-param kinListAudioWorkerImage = 'ghcr.io/kin/kinhub-kinlist-audio-worker:dev'
-param kinListMigrationImage = 'ghcr.io/kin/kinhub-kinlist-mig:dev'
 
 // JWT (non-secret settings; jwtSecret is passed by the workflow)
 param jwtIssuer = 'kinhub-dev'

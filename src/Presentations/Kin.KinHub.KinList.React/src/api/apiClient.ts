@@ -8,8 +8,8 @@ const getEnvUrl = (value: unknown, fallback: string) => {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
 }
 
-const KINLIST_API_URL = getEnvUrl(
-  import.meta.env.VITE_KINLIST_API_URL,
+const KINHUB_API_URL = getEnvUrl(
+  import.meta.env.VITE_KINHUB_API_URL,
   'http://localhost:5002',
 )
 const IDENTITY_API_URL = getEnvUrl(
@@ -31,5 +31,5 @@ function createApiClient(baseURL: string) {
   })
 }
 
-export const apiClient = createApiClient(KINLIST_API_URL)
+export const apiClient = createApiClient(KINHUB_API_URL)
 export const identityApiClient = createApiClient(IDENTITY_API_URL)

@@ -83,19 +83,19 @@ ensure_no_matches 'KINLIST_CORE_API_BASE_URL' .github ops src scripts
 require_match 'FamilyContextApi__BaseUrl' 'ops/iac/modules/compute.bicep' 'IaC must derive FamilyContextApi__BaseUrl from Identity.'
 
 echo "Checking migration rollout gate in CI/CD..."
-backend_workflow='.github/workflows/backend.yml'
 deploy_workflow='.github/workflows/deploy-backend.yml'
-require_match 'Package Migration Runner Image' "$backend_workflow" 'Backend workflow must package the migration runner image.'
-require_match 'az containerapp job execution show' "$deploy_workflow" 'Backend workflow must poll migration job execution status.'
-require_match 'Roll out backend revisions after migration success' "$deploy_workflow" 'Backend workflow must roll out app images only after migration success.'
+require_match 'Run database migrations' "$deploy_workflow" 'Backend workflow must run database migrations directly from the pipeline.'
+require_match 'az functionapp deployment source config-zip' "$deploy_workflow" 'Backend workflow must zip-deploy the Function App.'
+require_multiline_match 'Run database migrations.*?az functionapp deployment source config-zip' "$deploy_workflow" 'Backend workflow must run database migrations before zip-deploying the Function App.'
 
 echo "Checking Key Vault based secret wiring in IaC..."
 compute_bicep='ops/iac/modules/compute.bicep'
 require_multiline_match "name: 'db-connection-string'.*?keyVaultUrl:" "$compute_bicep" 'db-connection-string must be a Key Vault reference.'
 require_multiline_match "name: 'jwt-secret'.*?keyVaultUrl:" "$compute_bicep" 'jwt-secret must be a Key Vault reference.'
-require_multiline_match "name: 'openai-key'.*?keyVaultUrl:" "$compute_bicep" 'openai-key must be a Key Vault reference.'
-require_multiline_match "name: 'speech-endpoint'.*?keyVaultUrl:" "$compute_bicep" 'speech-endpoint must be a Key Vault reference.'
 require_multiline_match "name: 'ghcr-password'.*?keyVaultUrl:" "$compute_bicep" 'ghcr-password must be a Key Vault reference.'
+require_match "'ConnectionStrings__KinHub'" "$compute_bicep" 'Function App must resolve ConnectionStrings__KinHub from Key Vault.'
+require_match "'OpenAi__Endpoint'" "$compute_bicep" 'Function App must resolve OpenAi__Endpoint from Key Vault.'
+require_match "'Speech__Endpoint'" "$compute_bicep" 'Function App must resolve Speech__Endpoint from Key Vault.'
 
 echo "Checking KinRecipe -> KinList legacy redirects..."
 kinrecipe_routes='src/Presentations/Kin.KinHub.KinRecipe.React/src/router/routes.tsx'

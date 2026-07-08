@@ -4,45 +4,20 @@ param location string = resourceGroup().location
 @description('Name of the Identity API Container App.')
 param identityContainerAppName string
 
-@description('Name of the KinRecipe API Container App.')
-param kinRecipeContainerAppName string
-
-@description('Name of the KinList API Container App.')
-param kinListContainerAppName string
-
-@description('Name of the KinList audio worker Container App.')
-param kinListAudioWorkerContainerAppName string
-
-@description('Name of the KinList migration Container Apps Job.')
-param kinListMigrationJobName string
-
-resource kinListIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${kinListContainerAppName}-identity'
-  location: location
-}
-
-resource kinListAudioWorkerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${kinListAudioWorkerContainerAppName}-identity'
-  location: location
-}
+@description('Name of the Function App hosting all non-identity routes (lists, audio operations, fridges, recipe books, recipe assistant) and the audio-processing queue trigger.')
+param functionAppName string
 
 resource identityIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: '${identityContainerAppName}-identity'
   location: location
 }
 
-resource kinRecipeIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${kinRecipeContainerAppName}-identity'
+// Single identity consolidating the former kinRecipe, kinList API, kinList audio-worker and
+// kinList migration identities, now that App.Functions hosts all of that functionality.
+resource functionAppIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${functionAppName}-identity'
   location: location
 }
 
-resource kinListMigrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${kinListMigrationJobName}-identity'
-  location: location
-}
-
-output kinListIdentityId string = kinListIdentity.id
-output kinListAudioWorkerIdentityId string = kinListAudioWorkerIdentity.id
-output kinListMigrationIdentityId string = kinListMigrationIdentity.id
 output identityIdentityId string = identityIdentity.id
-output kinRecipeIdentityId string = kinRecipeIdentity.id
+output functionAppIdentityId string = functionAppIdentity.id

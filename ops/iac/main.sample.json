@@ -26,17 +26,8 @@
     "identityContainerAppName": {
       "value": "kinhub-identity-api-dev"
     },
-    "kinRecipeContainerAppName": {
-      "value": "kinhub-kinrecipe-api-dev"
-    },
-    "kinListContainerAppName": {
-      "value": "kinhub-kinlist-api-dev"
-    },
-    "kinListAudioWorkerContainerAppName": {
-      "value": "kinhub-kinlist-audio-worker-dev"
-    },
-    "kinListMigrationJobName": {
-      "value": "kinhub-kinlist-migrations-dev"
+    "functionAppName": {
+      "value": "kinhub-func-dev"
     },
     "coreFrontendOrigin": {
       "value": "https://core-dev.example.com"
@@ -83,9 +74,6 @@
     "speechSkuName": {
       "value": "S0"
     },
-    "kinListOpenAiModelDeploymentName": {
-      "value": "gpt-4o-mini"
-    },
     "kinListSpeechCandidateLocales": {
       "value": [
         "it-IT",
@@ -119,18 +107,6 @@
     },
     "identityImage": {
       "value": "ghcr.io/example/kinhub-identity:latest"
-    },
-    "kinRecipeImage": {
-      "value": "ghcr.io/example/kinhub-kinrecipe:latest"
-    },
-    "kinListImage": {
-      "value": "ghcr.io/example/kinhub-kinlist:latest"
-    },
-    "kinListAudioWorkerImage": {
-      "value": "ghcr.io/example/kinhub-kinlist-audio-worker:latest"
-    },
-    "kinListMigrationImage": {
-      "value": "ghcr.io/example/kinhub-kinlist-migrations:latest"
     },
     "familyContextApiTimeoutSeconds": {
       "value": "10"

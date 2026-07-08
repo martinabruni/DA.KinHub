@@ -279,10 +279,15 @@ public sealed class KinListAudioWorkerTests
         var services = new ServiceCollection();
         services.AddSingleton<IAudioOperationProcessor>(processor);
         var provider = services.BuildServiceProvider();
+        var messageProcessor = new AudioQueueMessageProcessor(
+            queuePump,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            options,
+            NullLogger<AudioQueueMessageProcessor>.Instance);
 
         return new AudioProcessingWorkerService(
             queuePump,
-            provider.GetRequiredService<IServiceScopeFactory>(),
+            messageProcessor,
             options,
             NullLogger<AudioProcessingWorkerService>.Instance);
     }
@@ -314,10 +319,15 @@ public sealed class KinListAudioWorkerTests
         services.AddSingleton<ILogger<KinListAudioService>>(_ => NullLogger<KinListAudioService>.Instance);
         services.AddScoped<IAudioOperationProcessor, KinListAudioService>();
         var provider = services.BuildServiceProvider();
+        var messageProcessor = new AudioQueueMessageProcessor(
+            queuePump,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            options,
+            NullLogger<AudioQueueMessageProcessor>.Instance);
 
         return new AudioProcessingWorkerService(
             queuePump,
-            provider.GetRequiredService<IServiceScopeFactory>(),
+            messageProcessor,
             options,
             NullLogger<AudioProcessingWorkerService>.Instance);
     }

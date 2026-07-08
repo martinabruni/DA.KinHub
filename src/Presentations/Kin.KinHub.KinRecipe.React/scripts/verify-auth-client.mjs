@@ -38,13 +38,17 @@ for (const check of forbiddenChecks) {
   }
 }
 
-// 3. The two axios clients must target the correct origins via the shared factory.
-if (!apiClient.includes('createApiClient(KINRECIPE_API_URL)')) {
-  throw new Error('KinRecipe apiClient must use VITE_KINRECIPE_API_URL.')
+// 3. The non-identity SPA now targets a single KinHub backend URL plus the dedicated Identity API.
+if (!apiClient.includes('createApiClient(KINHUB_API_URL)')) {
+  throw new Error('KinRecipe apiClient must use VITE_KINHUB_API_URL.')
 }
 
 if (!apiClient.includes('createApiClient(IDENTITY_API_URL)')) {
   throw new Error('identityApiClient must use VITE_IDENTITY_API_URL.')
+}
+
+if (!apiClient.includes('export const kinListApiClient = createApiClient(KINHUB_API_URL)')) {
+  throw new Error('KinList calls inside the unified SPA must use VITE_KINHUB_API_URL.')
 }
 
 // 4. The access token must be held in memory via the shared OAuth token store, never in localStorage.
@@ -64,19 +68,19 @@ if (existsSync(distAssetsPath)) {
     .join('\n')
 
   const identityApiUrl = process.env.VITE_IDENTITY_API_URL
-  const kinRecipeApiUrl = process.env.VITE_KINRECIPE_API_URL
+  const kinhubApiUrl = process.env.VITE_KINHUB_API_URL
 
   if (identityApiUrl && !distBundle.includes(identityApiUrl)) {
     throw new Error('Built bundle does not contain the configured identity API URL.')
   }
 
-  if (kinRecipeApiUrl && !distBundle.includes(kinRecipeApiUrl)) {
-    throw new Error('Built bundle does not contain the configured KinRecipe API URL.')
+  if (kinhubApiUrl && !distBundle.includes(kinhubApiUrl)) {
+    throw new Error('Built bundle does not contain the configured KinHub API URL.')
   }
 
   for (const endpoint of ['/api/auth/me', '/logout']) {
-    if (kinRecipeApiUrl && distBundle.includes(`${kinRecipeApiUrl}${endpoint}`)) {
-      throw new Error(`Built bundle still points ${endpoint} at the KinRecipe API URL.`)
+    if (kinhubApiUrl && distBundle.includes(`${kinhubApiUrl}${endpoint}`)) {
+      throw new Error(`Built bundle still points ${endpoint} at the KinHub API URL.`)
     }
   }
 }

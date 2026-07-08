@@ -61,8 +61,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_KINRECIPE_API_URL: https://kinrecipe-api.example.com
-          VITE_KINLIST_API_URL: https://kinlist-api.example.com
+          VITE_KINHUB_API_URL: https://kinhub-api.example.com
           VITE_IDENTITY_API_URL: https://identity-api.example.com
           VITE_IDENTITY_URL: https://identity.example.com
           VITE_CORE_URL: https://core.example.com
@@ -81,7 +80,7 @@ jobs:
       - name: Verify KinRecipe auth wiring
         if: matrix.name == 'kinrecipe'
         env:
-          VITE_KINRECIPE_API_URL: https://kinrecipe-api.example.com
+          VITE_KINHUB_API_URL: https://kinhub-api.example.com
           VITE_IDENTITY_API_URL: https://identity-api.example.com
         run: npm run verify:auth-client
 
@@ -100,7 +99,7 @@ jobs:
       - name: Verify KinList auth wiring
         if: matrix.name == 'kinlist'
         env:
-          VITE_KINLIST_API_URL: https://kinlist-api.example.com
+          VITE_KINHUB_API_URL: https://kinhub-api.example.com
           VITE_IDENTITY_API_URL: https://identity-api.example.com
         run: npm run verify:auth-client
 
@@ -222,8 +221,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_KINRECIPE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
-          VITE_KINLIST_API_URL: ${{ vars.VITE_KINLIST_API_URL }}
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
@@ -269,7 +267,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_KINLIST_API_URL: ${{ vars.VITE_KINLIST_API_URL }}
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
@@ -405,8 +403,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_KINRECIPE_API_URL: ${{ vars.VITE_KINRECIPE_API_URL }}
-          VITE_KINLIST_API_URL: ${{ vars.VITE_KINLIST_API_URL }}
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
@@ -452,7 +449,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_KINLIST_API_URL: ${{ vars.VITE_KINLIST_API_URL }}
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}

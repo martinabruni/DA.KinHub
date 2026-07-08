@@ -54,22 +54,17 @@ param ghcrUsername string
 @minLength(1)
 param ghcrPassword string
 
-@description('Principal ids granted Key Vault Secrets User (identity, kinrecipe, kinlist, worker, migration).')
+@description('Principal ids granted Key Vault Secrets User (identity, function app).')
 param identityPrincipalId string
-param kinRecipePrincipalId string
-param kinListApiPrincipalId string
-param kinListWorkerPrincipalId string
-param kinListMigrationPrincipalId string
+param functionAppPrincipalId string
 
 @description('Resource ids of the same identities (used for stable role-assignment GUID names).')
 param identityIdentityId string
-param kinRecipeIdentityId string
-param kinListApiIdentityId string
-param kinListWorkerIdentityId string
-param kinListMigrationIdentityId string
+param functionAppIdentityId string
 
 var postgresConnectionString = 'Server=${postgresServer.properties.fullyQualifiedDomainName};Database=${postgresDatabaseName};Port=5432;User Id=${postgresAdministratorLogin};Password=${postgresAdministratorPassword};Ssl Mode=Require;'
 var sqlConnectionStringSecretName = 'database-connection-string'
+var storageConnectionStringSecretName = 'storage-connection-string'
 var jwtSecretSecretName = 'jwt-secret'
 var openAiEndpointSecretName = 'openai-endpoint'
 var openAiKeySecretName = 'openai-key'
@@ -253,6 +248,17 @@ resource ghcrPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// AzureWebJobsStorage for the Function App runtime. The Y1/Dynamic Functions host requires a
+// connection string (identity-based storage is not used for the host's own AzureWebJobsStorage),
+// so this is wired into compute.bicep as a Key Vault reference on the site's app settings.
+resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: storageConnectionStringSecretName
+  properties: {
+    value: 'DefaultEndpointsProtocol=https;AccountName=${kinListAudioStorageAccountName};AccountKey=${kinListAudioStorageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+  }
+}
+
 resource kinListAudioStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: kinListAudioStorageAccountName
   location: location
@@ -340,87 +346,48 @@ resource identityKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@20
   }
 }
 
-resource kinRecipeKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: keyVault
-  name: guid(keyVault.id, kinRecipeIdentityId, keyVaultSecretsUserRoleId)
+  name: guid(keyVault.id, functionAppIdentityId, keyVaultSecretsUserRoleId)
   properties: {
-    principalId: kinRecipePrincipalId
+    principalId: functionAppPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
   }
 }
 
-resource kinListKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault
-  name: guid(keyVault.id, kinListApiIdentityId, keyVaultSecretsUserRoleId)
-  properties: {
-    principalId: kinListApiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-  }
-}
-
-resource kinListMigrationKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault
-  name: guid(keyVault.id, kinListMigrationIdentityId, keyVaultSecretsUserRoleId)
-  properties: {
-    principalId: kinListMigrationPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-  }
-}
-
-resource kinListAudioWorkerKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault
-  name: guid(keyVault.id, kinListWorkerIdentityId, keyVaultSecretsUserRoleId)
-  properties: {
-    principalId: kinListWorkerPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-  }
-}
-
-resource kinListStorageBlobContributorForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: kinListAudioStorageAccount
-  name: guid(kinListAudioStorageAccount.id, kinListApiIdentityId, storageBlobDataContributorRoleId)
+  name: guid(kinListAudioStorageAccount.id, functionAppIdentityId, storageBlobDataContributorRoleId)
   properties: {
-    principalId: kinListApiPrincipalId
+    principalId: functionAppPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
   }
 }
 
-resource kinListStorageQueueContributorForApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppStorageQueueContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: kinListAudioStorageAccount
-  name: guid(kinListAudioStorageAccount.id, kinListApiIdentityId, storageQueueDataContributorRoleId)
+  name: guid(kinListAudioStorageAccount.id, functionAppIdentityId, storageQueueDataContributorRoleId)
   properties: {
-    principalId: kinListApiPrincipalId
+    principalId: functionAppPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId)
   }
 }
 
-resource kinListStorageBlobContributorForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppStorageQueueProcessor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: kinListAudioStorageAccount
-  name: guid(kinListAudioStorageAccount.id, kinListWorkerIdentityId, storageBlobDataContributorRoleId)
+  name: guid(kinListAudioStorageAccount.id, functionAppIdentityId, storageQueueDataMessageProcessorRoleId)
   properties: {
-    principalId: kinListWorkerPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
-  }
-}
-
-resource kinListStorageQueueProcessorForWorker 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: kinListAudioStorageAccount
-  name: guid(kinListAudioStorageAccount.id, kinListWorkerIdentityId, storageQueueDataMessageProcessorRoleId)
-  properties: {
-    principalId: kinListWorkerPrincipalId
+    principalId: functionAppPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataMessageProcessorRoleId)
   }
 }
 
 output sqlConnectionStringSecretUri string = sqlConnectionStringSecret.properties.secretUri
+output storageConnectionStringSecretUri string = storageConnectionStringSecret.properties.secretUri
 output jwtSecretUri string = jwtSecretKvSecret.properties.secretUri
 output openAiEndpointSecretUri string = openAiEndpointSecret.properties.secretUri
 output openAiKeySecretUri string = openAiKeySecret.properties.secretUri

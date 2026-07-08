@@ -24,17 +24,8 @@ param containerAppsEnvironmentName string
 @description('Identity backend container app name.')
 param identityContainerAppName string
 
-@description('KinRecipe backend container app name.')
-param kinRecipeContainerAppName string
-
-@description('KinList backend container app name.')
-param kinListContainerAppName string
-
-@description('KinList audio worker container app name.')
-param kinListAudioWorkerContainerAppName string
-
-@description('KinList expand/contract migration Container Apps Job name.')
-param kinListMigrationJobName string
+@description('Function App name hosting all non-identity routes (lists, audio operations, fridges, recipe books, recipe assistant) and the audio-processing queue trigger.')
+param functionAppName string
 
 @description('Core frontend origin allowed by backend CORS.')
 param coreFrontendOrigin string
@@ -83,9 +74,6 @@ param speechAccountName string
 
 @description('Azure AI Speech SKU name.')
 param speechSkuName string = 'S0'
-
-@description('OpenAI chat model deployment name used by the KinList audio pipeline.')
-param kinListOpenAiModelDeploymentName string = 'gpt-4o-mini'
 
 @description('Ordered candidate speech-to-text locales for the KinList audio pipeline.')
 param kinListSpeechCandidateLocales array = [
@@ -137,22 +125,6 @@ param staticSitesDeploymentAuthPolicy string = 'DeploymentToken'
 @description('Full image reference for the Identity backend.')
 @minLength(1)
 param identityImage string
-
-@description('Full image reference for the KinRecipe backend.')
-@minLength(1)
-param kinRecipeImage string
-
-@description('Full image reference for the KinList backend.')
-@minLength(1)
-param kinListImage string
-
-@description('Full image reference for the KinList audio worker.')
-@minLength(1)
-param kinListAudioWorkerImage string
-
-@description('Full image reference for the KinList expand/contract migration job (owned by t06-mig).')
-@minLength(1)
-param kinListMigrationImage string
 
 @description('Family context API HTTP timeout in seconds.')
 param familyContextApiTimeoutSeconds string = '10'
@@ -227,20 +199,8 @@ resource identityIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023
   name: '${identityContainerAppName}-identity'
 }
 
-resource kinRecipeIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: '${kinRecipeContainerAppName}-identity'
-}
-
-resource kinListIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: '${kinListContainerAppName}-identity'
-}
-
-resource kinListAudioWorkerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: '${kinListAudioWorkerContainerAppName}-identity'
-}
-
-resource kinListMigrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: '${kinListMigrationJobName}-identity'
+resource functionAppIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: '${functionAppName}-identity'
 }
 
 module observability 'modules/observability.bicep' = {
@@ -260,10 +220,8 @@ module ai 'modules/ai.bicep' = {
     openAiSkuName: openAiSkuName
     speechAccountName: speechAccountName
     speechSkuName: speechSkuName
-    kinListApiPrincipalId: kinListIdentity.properties.principalId
-    kinListApiIdentityId: kinListIdentity.id
-    kinListWorkerPrincipalId: kinListAudioWorkerIdentity.properties.principalId
-    kinListWorkerIdentityId: kinListAudioWorkerIdentity.id
+    functionAppPrincipalId: functionAppIdentity.properties.principalId
+    functionAppIdentityId: functionAppIdentity.id
   }
 }
 
@@ -286,15 +244,9 @@ module data 'modules/data.bicep' = {
     ghcrUsername: ghcrUsername
     ghcrPassword: ghcrPassword
     identityPrincipalId: identityIdentity.properties.principalId
-    kinRecipePrincipalId: kinRecipeIdentity.properties.principalId
-    kinListApiPrincipalId: kinListIdentity.properties.principalId
-    kinListWorkerPrincipalId: kinListAudioWorkerIdentity.properties.principalId
-    kinListMigrationPrincipalId: kinListMigrationIdentity.properties.principalId
+    functionAppPrincipalId: functionAppIdentity.properties.principalId
     identityIdentityId: identityIdentity.id
-    kinRecipeIdentityId: kinRecipeIdentity.id
-    kinListApiIdentityId: kinListIdentity.id
-    kinListWorkerIdentityId: kinListAudioWorkerIdentity.id
-    kinListMigrationIdentityId: kinListMigrationIdentity.id
+    functionAppIdentityId: functionAppIdentity.id
   }
 }
 
@@ -325,27 +277,20 @@ module compute 'modules/compute.bicep' = {
     location: location
     containerAppsEnvironmentName: containerAppsEnvironmentName
     identityContainerAppName: identityContainerAppName
-    kinRecipeContainerAppName: kinRecipeContainerAppName
-    kinListContainerAppName: kinListContainerAppName
-    kinListAudioWorkerContainerAppName: kinListAudioWorkerContainerAppName
-    kinListMigrationJobName: kinListMigrationJobName
+    functionAppName: functionAppName
     logAnalyticsCustomerId: observability.outputs.logAnalyticsCustomerId
     logAnalyticsPrimarySharedKey: observability.outputs.logAnalyticsPrimarySharedKey
     applicationInsightsConnectionString: observability.outputs.applicationInsightsConnectionString
     identityIdentityName: '${identityContainerAppName}-identity'
-    kinRecipeIdentityName: '${kinRecipeContainerAppName}-identity'
-    kinListIdentityName: '${kinListContainerAppName}-identity'
-    kinListAudioWorkerIdentityName: '${kinListAudioWorkerContainerAppName}-identity'
-    kinListMigrationIdentityName: '${kinListMigrationJobName}-identity'
+    functionAppIdentityName: '${functionAppName}-identity'
     sqlConnectionStringSecretUri: data.outputs.sqlConnectionStringSecretUri
     jwtSecretUri: data.outputs.jwtSecretUri
     openAiEndpointSecretUri: data.outputs.openAiEndpointSecretUri
-    openAiKeySecretUri: data.outputs.openAiKeySecretUri
     speechEndpointSecretUri: data.outputs.speechEndpointSecretUri
     ghcrPasswordSecretUri: data.outputs.ghcrPasswordSecretUri
+    storageConnectionStringSecretUri: data.outputs.storageConnectionStringSecretUri
     embeddingDeploymentName: ai.outputs.embeddingDeploymentName
     gpt4oDeploymentName: ai.outputs.gpt4oDeploymentName
-    kinListOpenAiModelDeploymentName: kinListOpenAiModelDeploymentName
     storageAccountName: data.outputs.storageAccountName
     kinListAudioContainerName: data.outputs.kinListAudioContainerName
     kinListAudioProcessingQueueName: data.outputs.kinListAudioProcessingQueueName
@@ -358,10 +303,6 @@ module compute 'modules/compute.bicep' = {
     ghcrServer: ghcrServer
     ghcrUsername: ghcrUsername
     identityImage: identityImage
-    kinRecipeImage: kinRecipeImage
-    kinListImage: kinListImage
-    kinListAudioWorkerImage: kinListAudioWorkerImage
-    kinListMigrationImage: kinListMigrationImage
     jwtIssuer: jwtIssuer
     jwtAccessTokenExpiryMinutes: jwtAccessTokenExpiryMinutes
     jwtRefreshTokenExpiryDays: jwtRefreshTokenExpiryDays
@@ -392,8 +333,9 @@ output identityStaticWebAppDefaultHostname string = frontend.outputs.defaultHost
 output kinRecipeStaticWebAppDefaultHostname string = frontend.outputs.defaultHostnames[2]
 output kinListStaticWebAppDefaultHostname string = frontend.outputs.defaultHostnames[3]
 output identityApiUrl string = compute.outputs.identityApiUrl
-output kinRecipeApiUrl string = compute.outputs.kinRecipeApiUrl
-output kinListApiUrl string = compute.outputs.kinListApiUrl
-output kinListMigrationJobName string = compute.outputs.kinListMigrationJobName
+// TODO(next tranche): kinRecipeApiUrl/kinListApiUrl outputs are removed — this collapses to a
+// single nonIdentityApiUrl for the App.Functions host. Update .github/workflows/*.yml references
+// that consumed kinRecipeApiUrl/kinListApiUrl/kinListMigrationJobName accordingly.
+output nonIdentityApiUrl string = compute.outputs.nonIdentityApiUrl
 output openAiEndpoint string = ai.outputs.openAiEndpoint
 output speechEndpoint string = ai.outputs.speechEndpoint
