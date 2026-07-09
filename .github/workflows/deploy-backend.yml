@@ -215,8 +215,8 @@ jobs:
 
           az postgres flexible-server firewall-rule create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.POSTGRES_SERVER_NAME }}" \
-            --rule-name gh-actions-runner-temp \
+            --server-name "${{ vars.POSTGRES_SERVER_NAME }}" \
+            --name gh-actions-runner-temp \
             --start-ip-address "${runner_ip}" \
             --end-ip-address "${runner_ip}"
 
@@ -231,8 +231,8 @@ jobs:
         run: |
           az postgres flexible-server firewall-rule delete \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.POSTGRES_SERVER_NAME }}" \
-            --rule-name gh-actions-runner-temp \
+            --server-name "${{ vars.POSTGRES_SERVER_NAME }}" \
+            --name gh-actions-runner-temp \
             --yes
 
       - name: Roll out backend revisions after migration success
