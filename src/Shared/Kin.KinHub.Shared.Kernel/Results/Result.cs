@@ -1,4 +1,6 @@
-namespace Kin.KinHub.Shared.Kernel.Common;
+namespace Kin.KinHub.Shared.Kernel.Results;
+
+using Kin.KinHub.Shared.Kernel.Enums;
 
 public sealed class Result<T>
 {

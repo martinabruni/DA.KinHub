@@ -1,4 +1,4 @@
-namespace Kin.KinHub.Shared.Kernel.Common;
+namespace Kin.KinHub.Shared.Kernel.Exceptions;
 
 public abstract class SharedDomainException : Exception
 {

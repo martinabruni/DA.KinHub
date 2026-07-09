@@ -1,4 +1,4 @@
-namespace Kin.KinHub.Shared.Kernel.Common;
+namespace Kin.KinHub.Shared.Kernel.Enums;
 
 public enum ResultStatus
 {
