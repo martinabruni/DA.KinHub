@@ -53,7 +53,6 @@ param ghcrPassword = '<set-ghcr-pat>'
 
 param identityImage = 'ghcr.io/example/kinhub-identity:latest'
 
-param familyContextApiTimeoutSeconds = '10'
 param kinListMaxTitleLength = '100'
 param kinListMaxItemLength = '200'
 param kinListMaxItemsPerList = '100'

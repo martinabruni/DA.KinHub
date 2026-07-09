@@ -72,7 +72,6 @@ param jwtAccessTokenExpiryMinutes string
 param jwtRefreshTokenExpiryDays string
 
 // KinList config.
-param familyContextApiTimeoutSeconds string
 param kinListSpeechCandidateLocales array
 param kinListAllowedAudioMimeTypes array
 param kinListMaxTitleLength string
@@ -413,14 +412,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'Jwt__RefreshTokenExpiryDays'
           value: jwtRefreshTokenExpiryDays
-        }
-        {
-          name: 'FamilyContextApi__BaseUrl'
-          value: 'https://${identityContainerAppName}.${containerAppsEnvironment.properties.defaultDomain}'
-        }
-        {
-          name: 'FamilyContextApi__TimeoutSeconds'
-          value: familyContextApiTimeoutSeconds
         }
         {
           name: 'OpenAi__Endpoint'

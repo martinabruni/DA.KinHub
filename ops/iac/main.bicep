@@ -126,9 +126,6 @@ param staticSitesDeploymentAuthPolicy string = 'DeploymentToken'
 @minLength(1)
 param identityImage string
 
-@description('Family context API HTTP timeout in seconds.')
-param familyContextApiTimeoutSeconds string = '10'
-
 @description('KinList maximum list title length.')
 param kinListMaxTitleLength string = '100'
 
@@ -306,7 +303,6 @@ module compute 'modules/compute.bicep' = {
     jwtIssuer: jwtIssuer
     jwtAccessTokenExpiryMinutes: jwtAccessTokenExpiryMinutes
     jwtRefreshTokenExpiryDays: jwtRefreshTokenExpiryDays
-    familyContextApiTimeoutSeconds: familyContextApiTimeoutSeconds
     kinListSpeechCandidateLocales: kinListSpeechCandidateLocales
     kinListAllowedAudioMimeTypes: kinListAllowedAudioMimeTypes
     kinListMaxTitleLength: kinListMaxTitleLength

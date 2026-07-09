@@ -201,41 +201,7 @@ jobs:
             --template-file "${{ env.BICEP_FILE }}" \
             --parameters "${deploy_parameters[@]}"
 
-      - name: Open temporary Postgres firewall rule for migrations
-        run: |
-          runner_ip="$(curl -s https://api.ipify.org)"
-
-          if [ -z "${runner_ip}" ]; then
-            echo "Failed to resolve the runner's public IP."
-            exit 1
-          fi
-
-          echo "RUNNER_IP=${runner_ip}" >> "$GITHUB_ENV"
-          echo "Opening temporary firewall rule for ${runner_ip}."
-
-          az postgres flexible-server firewall-rule create \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server-name "${{ vars.POSTGRES_SERVER_NAME }}" \
-            --name gh-actions-runner-temp \
-            --start-ip-address "${runner_ip}" \
-            --end-ip-address "${runner_ip}"
-
-      - name: Run database migrations
-        env:
-          ConnectionStrings__KinHub: Server=${{ vars.POSTGRES_SERVER_NAME }}.postgres.database.azure.com;Database=${{ vars.POSTGRES_DATABASE_NAME }};Port=5432;User Id=${{ secrets.POSTGRES_ADMINISTRATOR_LOGIN }};Password=${{ secrets.POSTGRES_ADMINISTRATOR_PASSWORD }};Ssl Mode=Require;
-        run: |
-          dotnet run --project src/Presentations/Kin.KinHub.Migrations.Runner --configuration Release --
-
-      - name: Close temporary Postgres firewall rule
-        if: always()
-        run: |
-          az postgres flexible-server firewall-rule delete \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server-name "${{ vars.POSTGRES_SERVER_NAME }}" \
-            --name gh-actions-runner-temp \
-            --yes
-
-      - name: Roll out backend revisions after migration success
+      - name: Roll out backend revisions
         run: |
           az containerapp update \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \

@@ -55,38 +55,33 @@ ensure_no_matches() {
   fi
 }
 
-echo "Checking that only the migration runner applies EF migrations..."
+echo "Checking that EF migrations only run at application startup..."
 matches="$(
   rg -n 'Database\.Migrate\(|\.MigrateAsync\(' src/Presentations src/Infrastructures \
     -g '!**/bin/**' \
     -g '!**/obj/**' \
     -g '!**/*.Designer.cs' \
-    -g '!src/Presentations/Kin.KinHub.Migrations.Runner/Program.cs' \
+    -g '!src/Presentations/Kin.KinHub.Identity.Api/Program.cs' \
+    -g '!src/Presentations/Kin.KinHub.App.Functions/Program.cs' \
+    -g '!src/Shared/Kin.KinHub.Shared.Kernel/Extensions/DbContextMigrationExtensions.cs' \
     2>/dev/null || true
 )"
 
 if [ -n "$matches" ]; then
-  echo "ERROR: found EF migration calls outside the dedicated runner:" >&2
+  echo "ERROR: found EF migration calls outside application startup:" >&2
   echo "$matches" >&2
   exit 1
 fi
 
-runner_program='src/Presentations/Kin.KinHub.Migrations.Runner/Program.cs'
-runner_service='src/Presentations/Kin.KinHub.Migrations.Runner/MigrationRunnerService.cs'
-require_match 'new\("IdentityDbContext", ApplyIdentityMigrationsAsync\)' "$runner_program" 'Migration runner must apply IdentityDbContext first.'
-require_match 'new\("KinListDbContext", ApplyKinListMigrationsAsync\)' "$runner_program" 'Migration runner must apply KinListDbContext second.'
-require_match 'new\("CoreDbContext", ApplyCoreMigrationsAsync\)' "$runner_program" 'Migration runner must apply CoreDbContext third.'
-require_match 'Applying \{step\.Name\} migrations \(step \{index \+ 1\}/\{_steps\.Count\}\)' "$runner_service" 'Migration runner must log ordered step progress.'
+identity_program='src/Presentations/Kin.KinHub.Identity.Api/Program.cs'
+functions_program='src/Presentations/Kin.KinHub.App.Functions/Program.cs'
+require_match 'RunMigrationsOnStartup' "$identity_program" 'Identity.Api must gate startup migrations behind RunMigrationsOnStartup.'
+require_match 'RunMigrationsOnStartup' "$functions_program" 'App.Functions must gate startup migrations behind RunMigrationsOnStartup.'
+require_match 'ApplyPendingMigrationsAsync' "$identity_program" 'Identity.Api must apply IdentityDbContext migrations at startup.'
+require_match 'ApplyPendingMigrationsAsync' "$functions_program" 'App.Functions must apply Core/KinList/KinRecipe migrations at startup.'
 
 echo "Checking removal of deprecated Core->KinList wiring..."
 ensure_no_matches 'KINLIST_CORE_API_BASE_URL' .github ops src scripts
-require_match 'FamilyContextApi__BaseUrl' 'ops/iac/modules/compute.bicep' 'IaC must derive FamilyContextApi__BaseUrl from Identity.'
-
-echo "Checking migration rollout gate in CI/CD..."
-deploy_workflow='.github/workflows/deploy-backend.yml'
-require_match 'Run database migrations' "$deploy_workflow" 'Backend workflow must run database migrations directly from the pipeline.'
-require_match 'az functionapp deployment source config-zip' "$deploy_workflow" 'Backend workflow must zip-deploy the Function App.'
-require_multiline_match 'Run database migrations.*?az functionapp deployment source config-zip' "$deploy_workflow" 'Backend workflow must run database migrations before zip-deploying the Function App.'
 
 echo "Checking Key Vault based secret wiring in IaC..."
 compute_bicep='ops/iac/modules/compute.bicep'
