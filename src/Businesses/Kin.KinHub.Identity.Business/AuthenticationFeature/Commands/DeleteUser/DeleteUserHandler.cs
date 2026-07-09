@@ -1,12 +1,5 @@
 namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
-public interface IDeleteUserHandler
-{
-    Task<Result<bool>> HandleAsync(
-        Guid userId,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class DeleteUserHandler : IDeleteUserHandler
 {
     private readonly IKinUserRepository _userRepository;

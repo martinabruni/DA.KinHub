@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Registers only family ownership, family management, and service catalog behavior.
-    /// Identity.Api uses this subset so recipe and assistant graphs are never present there.
+    /// App.Functions uses this subset directly; Identity.Api never references Core at all.
     /// </summary>
     public static IServiceCollection AddKinHubFamilyBusiness(this IServiceCollection services)
     {

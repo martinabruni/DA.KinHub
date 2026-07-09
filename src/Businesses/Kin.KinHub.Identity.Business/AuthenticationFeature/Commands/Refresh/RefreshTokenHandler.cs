@@ -1,12 +1,5 @@
 namespace Kin.KinHub.Identity.Business.AuthenticationFeature;
 
-public interface IRefreshTokenHandler
-{
-    Task<Result<LoginResponse>> HandleAsync(
-        string refreshToken,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class RefreshTokenHandler : IRefreshTokenHandler
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
