@@ -9,13 +9,12 @@ Cosa fa, in concreto:
 - Emissione e **refresh** dei token; logout con revoca del refresh token.
 - Gestione del profilo (`GET/PUT /api/auth/me`, cambio email e password, cancellazione account).
 - Collegamento/scollegamento di **provider di identità** (oggi solo il provider password "KinHub").
-- Esposizione dell'endpoint `GET /api/access/family-context` usato dagli altri servizi per sapere a quale famiglia appartiene l'utente.
 
-Responsabilità e confini: questa feature vive interamente nel contesto **Identity** ed è esposta dall'host `Kin.KinHub.Identity.Api`. È l'unica che conosce le credenziali e che firma i JWT.
+Responsabilità e confini: questa feature vive interamente nel contesto **Identity** ed è esposta dall'host `Kin.KinHub.Identity.Api`. È l'unica che conosce le credenziali e che firma i JWT. **Identity.Api non conosce il dominio Core**: non referenzia `Core.Business`/`Core.Domain`/`Core.PostgreSql` e non risolve più il "family context" — quella responsabilità (Family/Services) è stata spostata interamente su `Kin.KinHub.App.Functions` (vedi [flusso-gestione-famiglie.md](./flusso-gestione-famiglie.md)).
 
 Parti del backend coinvolte:
 
-- **Presentation** — `AuthController`, `OAuthController`, `OAuthMetadataController`, `AccessController` (`src/Presentations/Kin.KinHub.Identity.Api`), più validator FluentValidation e gli store OAuth (`PostgreSqlOAuthStores`, `OAuthModels`). I servizi helper OAuth (`OAuthRequestValidator`, `OAuthSessionManager`, `OAuthTokenIssuer`, `OAuthLoginPageRenderer`) vivono in `AuthenticationFeature/Services`.
+- **Presentation** — `AuthController`, `OAuthController`, `OAuthMetadataController` (`src/Presentations/Kin.KinHub.Identity.Api`), più validator FluentValidation e gli store OAuth (`PostgreSqlOAuthStores`, `OAuthModels`). I servizi helper OAuth (`OAuthRequestValidator`, `OAuthSessionManager`, `OAuthTokenIssuer`, `OAuthLoginPageRenderer`) vivono in `AuthenticationFeature/Services`.
 - **Business** — gli handler in `AuthenticationFeature/Commands` e `Queries` (`Register`, `Login`, `Refresh`, `Logout`, `UpdateUserEmail`, `UpdateUserPassword`, `DeleteUser`, `GetCurrentUser`), invocati direttamente dai controller, più `KinHubPasswordIdentityProvider`, `IdentityProviderRegistry`, `LoginResponseFactory`, `UserProviderService`.
 - **Domain** — entità `KinUser`, `UserCredential`, `UserProvider`, `Provider`, `RefreshToken`, `TokenClaims`; interfacce `IIdentityProvider`, `IIdentityProviderRegistry`, `ITokenGenerator`, `ITokenValidator`, `IPasswordHasher`, i repository, l'enum `UserStatus`, `IdentityProviderType`.
 - **Infrastructure** — `Kin.KinHub.Identity.Jwt` (`JwtTokenGenerator`, `CurrentUser`, `JwtOptions`), `Kin.KinHub.Identity.PostgreSql` (repository, `PasswordHasher`, `IdentityDbContext`).
@@ -43,7 +42,7 @@ Due percorsi distinti:
 - **Registrazione**: `POST /api/auth/register` → `AuthController.RegisterAsync` con body `RegisterRequest`.
 - **Login/OAuth**: `GET /authorize` e `POST /authorize` → `OAuthController.Authorize/AuthorizeAsync`; scambio del codice su `POST /token` → `OAuthController.Token`. Il profilo passa da `AuthController` (`/api/auth/me`, `me/email`, `me/password`, `me/providers`).
 
-Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`ServiceCollectionExtensions`), che configura JWT Bearer, le policy di autorizzazione, il rate limiter OAuth, CORS, gli store OAuth (in-memory in sviluppo, PostgreSQL in produzione) e registra `AddKinHubFamilyBusiness().AddKinHubIdentityBusiness()`.
+Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`ServiceCollectionExtensions`), che configura JWT Bearer, le policy di autorizzazione, il rate limiter OAuth, CORS, gli store OAuth (in-memory in sviluppo, PostgreSQL in produzione) e registra `AddKinHubIdentityBusiness()`. Allo startup, dopo `app.Build()` e prima di `app.Run()`, viene applicata anche la migrazione EF Core di `IdentityDbContext` (`ApplyPendingMigrationsAsync`, condizionata dal flag `RunMigrationsOnStartup`, default `true`) — non esiste più un progetto Migrations Runner separato.
 
 ## 2. Validazione iniziale
 
@@ -89,7 +88,7 @@ Il bootstrap di tutto avviene in `Program.cs` → `AddKinHubIdentityApi` (`Servi
 - Login OAuth: `RefreshToken` persistito, sessione + cookie creati, authorization code memorizzato, e infine JSON `{ access_token, token_type: "Bearer", expires_in, scope }`.
 - Refresh: vecchio refresh token revocato, nuovo refresh token persistito, nuovo access token emesso.
 - Logout: refresh token revocato (`LogoutUserHandler`), cookie di sessione cancellato.
-- Side effect trasversale: l'access token emesso è ciò che tutte le altre API validano; `AccessController.GetFamilyContext` (protetto dalla policy famiglia) restituisce `{ familyId }` agli altri servizi.
+- Side effect trasversale: l'access token emesso è ciò che tutte le altre API validano (incluso `Kin.KinHub.App.Functions`, che valida il JWT autonomamente tramite `ITokenValidator` e risolve il family-context internamente — non più chiamando Identity.Api via HTTP).
 
 # Pattern correttamente implementati
 
