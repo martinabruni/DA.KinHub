@@ -3,6 +3,7 @@ using Kin.KinHub.KinList.PostgreSql.KinListFeature;
 using Kin.KinHub.KinList.PostgreSql;
 using Kin.KinHub.KinList.Domain.KinListFeature;
 using Kin.KinHub.KinList.Business.Common;
+using Kin.KinHub.Shared.Kernel.Options;
 using Microsoft.EntityFrameworkCore;
 
 namespace Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,4 @@
 using Kin.KinHub.KinRecipe.PostgreSql;
-using Kin.KinHub.Core.PostgreSql.Common;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Pgvector;
@@ -33,7 +32,6 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IKinRecipeTransactionExecutor, EfCoreKinRecipeTransactionExecutor>();
 
-        services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IRecipeBookRepository, RecipeBookRepository>();
         services.AddScoped<IRecipeRepository, RecipeRepository>();
         services.AddScoped<IRecipeIngredientRepository, RecipeIngredientRepository>();

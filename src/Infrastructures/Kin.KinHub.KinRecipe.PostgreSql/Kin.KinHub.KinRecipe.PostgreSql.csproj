@@ -7,7 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.KinRecipe.Business\Kin.KinHub.KinRecipe.Business.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.KinRecipe.Domain\Kin.KinHub.KinRecipe.Domain.csproj" />
-    <ProjectReference Include="..\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
   </ItemGroup>
 
   <ItemGroup>

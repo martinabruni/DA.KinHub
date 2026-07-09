@@ -16,7 +16,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Kin.KinHub.KinList.AzureStorage.AzureStorageAudioClients>();
         services.AddSingleton<IAudioProcessingQueuePump, Kin.KinHub.KinList.AzureStorage.AzureAudioProcessingQueuePump>();
         services.AddScoped<IAudioProcessingBlobStorage, Kin.KinHub.KinList.AzureStorage.AzureBlobAudioProcessingBlobStorage>();
-        services.AddScoped<IAudioProcessingQueue, Kin.KinHub.KinList.AzureStorage.AzureQueueAudioProcessingQueue>();
+        services.AddScoped<IAudioProcessingQueuePublisher, Kin.KinHub.KinList.AzureStorage.AzureQueueAudioProcessingQueuePublisher>();
         return services;
     }
 }
