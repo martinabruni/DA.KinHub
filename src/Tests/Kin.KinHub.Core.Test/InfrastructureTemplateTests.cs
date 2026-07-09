@@ -5,77 +5,70 @@ namespace Kin.KinHub.Core.Test;
 public sealed class InfrastructureTemplateTests
 {
     [Fact]
-    public void MainTemplate_ContainsManualMigrationJob_WithKeyVaultBackedSecrets()
+    public void MainTemplate_ProvisionsFunctionApp_OnConsumptionPlan_WithKeyVaultBackedSettings()
     {
         using var document = LoadJson("ops", "iac", "main.json");
-        var migrationJob = FindResource(document.RootElement, "Microsoft.App/jobs", "[parameters('kinListMigrationJobName')]");
+        var functionApp = FindResource(document.RootElement, "Microsoft.Web/sites", "[parameters('functionAppName')]");
+        var plan = FindResource(document.RootElement, "Microsoft.Web/serverfarms", "[format('{0}-plan', parameters('functionAppName'))]");
 
-        var configuration = migrationJob.GetProperty("properties").GetProperty("configuration");
-        Assert.Equal("Manual", configuration.GetProperty("triggerType").GetString());
+        Assert.Equal("Y1", plan.GetProperty("sku").GetProperty("name").GetString());
+        Assert.Equal("Dynamic", plan.GetProperty("sku").GetProperty("tier").GetString());
+        Assert.Equal("functionapp", functionApp.GetProperty("kind").GetString());
 
-        var secrets = configuration.GetProperty("secrets").EnumerateArray().ToArray();
-        Assert.Contains(secrets, secret => HasSecret(secret, "db-connection-string"));
-        Assert.Contains(secrets, secret => HasSecret(secret, "ghcr-password"));
-        Assert.All(secrets, secret => Assert.True(secret.TryGetProperty("keyVaultUrl", out _), "Migration job secrets must use Key Vault references."));
-
-        var container = migrationJob.GetProperty("properties").GetProperty("template").GetProperty("containers")[0];
-        Assert.Equal("[parameters('kinListMigrationImage')]", container.GetProperty("image").GetString());
-        Assert.Contains(
-            container.GetProperty("env").EnumerateArray(),
-            env => env.GetProperty("name").GetString() == "ConnectionStrings__KinHub"
-                   && env.GetProperty("secretRef").GetString() == "db-connection-string");
-    }
-
-    [Fact]
-    public void MainTemplate_WiresKinListToIdentity_WithAudienceAndKeyVaultSecrets()
-    {
-        using var document = LoadJson("ops", "iac", "main.json");
-        var kinListApp = FindResource(document.RootElement, "Microsoft.App/containerApps", "[parameters('kinListContainerAppName')]");
-
-        var secrets = kinListApp.GetProperty("properties").GetProperty("configuration").GetProperty("secrets").EnumerateArray().ToArray();
-        Assert.Contains(secrets, secret => HasSecret(secret, "db-connection-string"));
-        Assert.Contains(secrets, secret => HasSecret(secret, "jwt-secret"));
-        Assert.Contains(secrets, secret => HasSecret(secret, "openai-endpoint"));
-        Assert.Contains(secrets, secret => HasSecret(secret, "speech-endpoint"));
-        Assert.DoesNotContain(secrets, secret => HasSecret(secret, "openai-key"));
-        Assert.DoesNotContain(secrets, secret => HasSecret(secret, "speech-key"));
-        Assert.All(secrets, secret => Assert.True(secret.TryGetProperty("keyVaultUrl", out _), "KinList container secrets must use Key Vault references."));
-
-        var envExpression = kinListApp
+        var appSettingsExpression = functionApp
             .GetProperty("properties")
-            .GetProperty("template")
-            .GetProperty("containers")[0]
-            .GetProperty("env")
+            .GetProperty("siteConfig")
+            .GetProperty("appSettings")
             .GetString();
 
-        Assert.NotNull(envExpression);
-        Assert.Contains("FamilyContextApi__BaseUrl", envExpression, StringComparison.Ordinal);
-        Assert.Contains("parameters('identityContainerAppName')", envExpression, StringComparison.Ordinal);
-        Assert.Contains("Jwt__Audience", envExpression, StringComparison.Ordinal);
-        Assert.Contains("kinhub.api", envExpression, StringComparison.Ordinal);
-        Assert.Contains("OpenAi__UseManagedIdentity", envExpression, StringComparison.Ordinal);
-        Assert.Contains("Speech__UseManagedIdentity", envExpression, StringComparison.Ordinal);
+        Assert.NotNull(appSettingsExpression);
+        Assert.Contains("'AzureWebJobsStorage'", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("'ConnectionStrings__KinHub'", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("'Jwt__Secret'", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("@Microsoft.KeyVault(SecretUri=", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("parameters('storageConnectionStringSecretUri')", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("parameters('sqlConnectionStringSecretUri')", appSettingsExpression, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void MainTemplate_ExportsKinListMigrationJobName_AndAvoidsLegacyCoreApiVariable()
+    public void MainTemplate_WiresFunctionAppToIdentity_WithAudienceAndManagedIdentityAuth()
+    {
+        using var document = LoadJson("ops", "iac", "main.json");
+        var functionApp = FindResource(document.RootElement, "Microsoft.Web/sites", "[parameters('functionAppName')]");
+
+        var appSettingsExpression = functionApp
+            .GetProperty("properties")
+            .GetProperty("siteConfig")
+            .GetProperty("appSettings")
+            .GetString();
+
+        Assert.NotNull(appSettingsExpression);
+        Assert.Contains("FamilyContextApi__BaseUrl", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("parameters('identityContainerAppName')", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("Jwt__Audience", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("kinhub.api", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("OpenAi__UseManagedIdentity", appSettingsExpression, StringComparison.Ordinal);
+        Assert.Contains("Speech__UseManagedIdentity", appSettingsExpression, StringComparison.Ordinal);
+        Assert.DoesNotContain("openAiKeySecretUri", appSettingsExpression, StringComparison.Ordinal);
+        Assert.DoesNotContain("speechKeySecretUri", appSettingsExpression, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainTemplate_ExportsNonIdentityApiUrl_AndAvoidsLegacyCoreApiVariable()
     {
         using var document = LoadJson("ops", "iac", "main.json");
         var computeDeployment = FindResource(document.RootElement, "Microsoft.Resources/deployments", "compute");
         var outputs = document.RootElement.GetProperty("outputs");
 
         Assert.Equal(
-            "[reference('compute').outputs.kinListMigrationJobName.value]",
-            outputs.GetProperty("kinListMigrationJobName").GetProperty("value").GetString());
-        Assert.Equal(
-            "[parameters('kinListMigrationJobName')]",
+            "[reference('compute').outputs.nonIdentityApiUrl.value]",
+            outputs.GetProperty("nonIdentityApiUrl").GetProperty("value").GetString());
+        Assert.True(
             computeDeployment
                 .GetProperty("properties")
                 .GetProperty("template")
                 .GetProperty("outputs")
-                .GetProperty("kinListMigrationJobName")
-                .GetProperty("value")
-                .GetString());
+                .TryGetProperty("nonIdentityApiUrl", out _));
 
         var templateJson = document.RootElement.GetRawText();
         Assert.DoesNotContain("KINLIST_CORE_API_BASE_URL", templateJson, StringComparison.Ordinal);
@@ -88,17 +81,12 @@ public sealed class InfrastructureTemplateTests
         var resources = document.RootElement.GetProperty("resources").EnumerateArray().ToArray();
 
         Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('identityContainerAppName'))]"));
-        Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinRecipeContainerAppName'))]"));
-        Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinListContainerAppName'))]"));
-        Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinListAudioWorkerContainerAppName'))]"));
-        Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('kinListMigrationJobName'))]"));
+        Assert.Contains(resources, resource => HasResourceName(resource, "[format('{0}-identity', parameters('functionAppName'))]"));
+        Assert.Equal(2, resources.Length);
 
         var outputs = document.RootElement.GetProperty("outputs");
         Assert.True(outputs.TryGetProperty("identityIdentityId", out _));
-        Assert.True(outputs.TryGetProperty("kinRecipeIdentityId", out _));
-        Assert.True(outputs.TryGetProperty("kinListIdentityId", out _));
-        Assert.True(outputs.TryGetProperty("kinListAudioWorkerIdentityId", out _));
-        Assert.True(outputs.TryGetProperty("kinListMigrationIdentityId", out _));
+        Assert.True(outputs.TryGetProperty("functionAppIdentityId", out _));
     }
 
     private static bool HasSecret(JsonElement secret, string name) =>
