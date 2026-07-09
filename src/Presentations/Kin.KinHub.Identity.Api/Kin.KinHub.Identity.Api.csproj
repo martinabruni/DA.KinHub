@@ -12,11 +12,8 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Businesses\Kin.KinHub.Core.Business\Kin.KinHub.Core.Business.csproj" />
     <ProjectReference Include="..\..\Businesses\Kin.KinHub.Identity.Business\Kin.KinHub.Identity.Business.csproj" />
-    <ProjectReference Include="..\..\Domains\Kin.KinHub.Core.Domain\Kin.KinHub.Core.Domain.csproj" />
     <ProjectReference Include="..\..\Domains\Kin.KinHub.Identity.Domain\Kin.KinHub.Identity.Domain.csproj" />
-    <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Core.PostgreSql\Kin.KinHub.Core.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.PostgreSql\Kin.KinHub.Identity.PostgreSql.csproj" />
     <ProjectReference Include="..\..\Infrastructures\Kin.KinHub.Identity.Jwt\Kin.KinHub.Identity.Jwt.csproj" />
   </ItemGroup>

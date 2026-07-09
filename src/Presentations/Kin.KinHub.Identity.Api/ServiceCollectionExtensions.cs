@@ -1,13 +1,11 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using FluentValidation;
 using Kin.KinHub.Identity.Api.Common;
-using Kin.KinHub.Identity.Api.Common.Authorization;
 using Kin.KinHub.Identity.Api.Common.Configuration;
 using Kin.KinHub.Identity.Api.Common.Middlewares;
 using Kin.KinHub.Identity.Api.Common.Validators;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
@@ -45,10 +43,6 @@ public static class ServiceCollectionExtensions
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
             .AddScoped(typeof(IRequestValidator<>), typeof(FluentRequestValidator<>))
-            .AddKinHubCorePostgreSqlInfrastructure(o =>
-            {
-                o.ConnectionString = connectionString;
-            })
             .AddKinHubIdentityPostgreSqlInfrastructure(o =>
             {
                 o.ConnectionString = connectionString;
@@ -61,7 +55,6 @@ public static class ServiceCollectionExtensions
                 o.Issuer = effectiveJwtIssuer;
                 o.Audience = jwtSettings.Audience;
             })
-            .AddKinHubFamilyBusiness()
             .AddKinHubIdentityBusiness();
 
         AddAzureMonitorIfConfigured(services, configuration);
@@ -111,19 +104,9 @@ public static class ServiceCollectionExtensions
                 .RequireAuthenticatedUser()
                 .RequireAssertion(HasApiScope)
                 .Build();
-            options.AddPolicy(
-                FamilyContextRequirement.PolicyName,
-                policy =>
-                {
-                    policy.RequireAssertion(HasApiScope);
-                    policy.Requirements.Add(new FamilyContextRequirement());
-                });
         });
-        services.AddScoped<IAuthorizationHandler, FamilyContextAuthorizationHandler>();
-        services.AddScoped<IAuthorizationMiddlewareResultHandler, FamilyAuthorizationMiddlewareResultHandler>();
         services.AddHttpContextAccessor();
         services.AddScoped<JwtAuthenticationMiddleware>();
-        services.AddScoped<IFamilyContextResolver, IdentityFamilyContextResolver>();
         services.AddSingleton<IOAuthLoginPageRenderer, OAuthLoginPageRenderer>();
         services.AddScoped<IOAuthRequestValidator, OAuthRequestValidator>();
         services.AddScoped<IOAuthSessionManager, OAuthSessionManager>();

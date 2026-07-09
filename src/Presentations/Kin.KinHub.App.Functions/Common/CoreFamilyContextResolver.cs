@@ -1,13 +1,10 @@
-using Kin.KinHub.Core.Business.Common;
-using Kin.KinHub.Identity.Api.Common.Authorization;
+namespace Kin.KinHub.App.Functions.Common;
 
-namespace Kin.KinHub.Identity.Api.Common;
-
-public sealed class IdentityFamilyContextResolver : IFamilyContextResolver
+public sealed class CoreFamilyContextResolver : IFamilyContextResolver
 {
     private readonly IFamilyOwnershipService _familyOwnershipService;
 
-    public IdentityFamilyContextResolver(IFamilyOwnershipService familyOwnershipService) =>
+    public CoreFamilyContextResolver(IFamilyOwnershipService familyOwnershipService) =>
         _familyOwnershipService = familyOwnershipService;
 
     public async Task<FamilyContextResolution> ResolveAsync(Guid userId, CancellationToken cancellationToken = default)

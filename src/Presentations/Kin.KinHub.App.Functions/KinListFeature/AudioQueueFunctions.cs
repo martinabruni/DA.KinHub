@@ -2,9 +2,9 @@ namespace Kin.KinHub.App.Functions.KinListFeature;
 
 public sealed class AudioQueueFunctions
 {
-    private readonly AudioQueueMessageProcessor _processor;
+    private readonly IAudioProcessingQueueConsumer _processor;
 
-    public AudioQueueFunctions(AudioQueueMessageProcessor processor)
+    public AudioQueueFunctions(IAudioProcessingQueueConsumer processor)
     {
         _processor = processor;
     }

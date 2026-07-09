@@ -8,7 +8,7 @@ using Kin.KinHub.Core.Business.FamilyFeature;
 using Kin.KinHub.KinList.AzureOpenAi.Common;
 using Kin.KinHub.KinList.AzureStorage;
 using Kin.KinHub.KinList.Business.Common;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Kin.KinHub.Shared.Kernel.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var effectiveJwtSecret = ResolveJwtSecret(jwtSettings.Secret, environment);
         var effectiveJwtIssuer = ResolveJwtIssuer(jwtSettings.Issuer, environment);
+        var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
 
         services
             .AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped, includeInternalTypes: true)
@@ -36,13 +37,17 @@ public static class ServiceCollectionExtensions
                 o.Issuer = effectiveJwtIssuer;
                 o.Audience = jwtSettings.Audience;
             })
+            .AddKinHubCorePostgreSqlInfrastructure(o =>
+            {
+                o.ConnectionString = connectionString;
+            })
+            .AddKinHubFamilyBusiness()
             .AddKinHubKinListInfrastructure(configuration, environment)
-            // KinRecipe registers after KinList: it overwrites IFamilyContextResolver with
-            // RemoteFamilyOwnershipService, matching today's behaviour (KinRecipe wins).
             .AddKinHubKinRecipeInfrastructure(configuration, environment)
             .AddHttpContextAccessor()
+            .AddScoped<IFamilyContextResolver, CoreFamilyContextResolver>()
             .AddScoped<FunctionsAuthorizationService>()
-            .AddSingleton<AudioQueueMessageProcessor>();
+            .AddSingleton<IAudioProcessingQueueConsumer, AudioProcessingQueueConsumer>();
 
         AddAzureMonitorIfConfigured(services, configuration);
 
@@ -56,18 +61,15 @@ public static class ServiceCollectionExtensions
     {
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
-        var familyContextApiOptions = configuration.GetSection(FamilyContextApiOptions.SectionName).Get<FamilyContextApiOptions>() ?? new();
         var kinListOptions = configuration.GetSection(KinListOptions.SectionName).Get<KinListOptions>() ?? new();
         var audioStorageOptions = configuration.GetSection(AudioStorageOptions.SectionName).Get<AudioStorageOptions>() ?? new();
         var speechOptions = configuration.GetSection(SpeechToTextOptions.SectionName).Get<SpeechToTextOptions>() ?? new();
         var openAiOptions = configuration.GetSection("OpenAi").Get<OpenAiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
-        ValidateProductionSecurity(corsOptions, jwtSettings, familyContextApiOptions, environment);
-        familyContextApiOptions.Validate();
+        ValidateProductionSecurity(corsOptions, jwtSettings, environment);
         kinListOptions.Validate();
 
         services.AddSingleton(corsOptions);
-        services.AddSingleton(familyContextApiOptions);
         services.AddSingleton(kinListOptions);
 
         services
@@ -150,13 +152,6 @@ public static class ServiceCollectionExtensions
                 });
         }
 
-        services.AddHttpClient<IFamilyContextResolver, RemoteFamilyContextResolver>((serviceProvider, client) =>
-        {
-            var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
-            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-        });
-
         services.AddHostedService<IdempotencyRecordCleanupService>();
 
         return services;
@@ -170,20 +165,16 @@ public static class ServiceCollectionExtensions
         var corsOptions = configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new();
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new();
         var openAiSettings = configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new();
-        var familyContextApiOptions = configuration.GetSection(FamilyContextApiOptions.SectionName).Get<FamilyContextApiOptions>() ?? new();
         var connectionString = configuration.GetConnectionString("KinHub") ?? string.Empty;
-        ValidateProductionSecurity(corsOptions, jwtSettings, familyContextApiOptions, environment);
-        familyContextApiOptions.Validate();
+        ValidateProductionSecurity(corsOptions, jwtSettings, environment);
 
         services.AddSingleton(corsOptions);
-        services.AddSingleton(familyContextApiOptions);
 
         services
             .AddKinHubKinRecipePostgreSqlInfrastructure(o =>
             {
                 o.ConnectionString = connectionString;
             })
-            .AddKinHubCoreBusiness()
             .AddKinHubKinRecipeBusiness()
             .AddKinHubKinRecipeAzureOpenAiInfrastructure(o =>
             {
@@ -192,20 +183,6 @@ public static class ServiceCollectionExtensions
                 o.EmbeddingDeploymentName = openAiSettings.EmbeddingDeploymentName;
                 o.ModelDeploymentName = openAiSettings.ModelDeploymentName;
             });
-
-        services.RemoveAll<IFamilyOwnershipService>();
-        services.AddHttpClient<IFamilyOwnershipService, RemoteFamilyOwnershipService>((serviceProvider, client) =>
-        {
-            var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
-            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-        });
-        services.AddHttpClient<IFamilyContextResolver, RemoteFamilyOwnershipService>((serviceProvider, client) =>
-        {
-            var options = serviceProvider.GetRequiredService<FamilyContextApiOptions>();
-            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-        });
 
         return services;
     }
@@ -245,7 +222,6 @@ public static class ServiceCollectionExtensions
     private static void ValidateProductionSecurity(
         CorsOptions cors,
         JwtSettings jwt,
-        FamilyContextApiOptions familyContextApi,
         IHostEnvironment environment)
     {
         if (environment.IsDevelopment()) return;
@@ -253,8 +229,6 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException("Cors must contain explicit origins outside development.");
         if (jwt.Secret.Trim().Length < 32 || string.IsNullOrWhiteSpace(jwt.Issuer) || string.IsNullOrWhiteSpace(jwt.Audience))
             throw new InvalidOperationException("Jwt secret, issuer, and audience must be configured securely.");
-        if (!Uri.TryCreate(familyContextApi.BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidOperationException("FamilyContextApi:BaseUrl must use HTTPS outside development.");
     }
 
     private static void AddAzureMonitorIfConfigured(IServiceCollection services, IConfiguration configuration)

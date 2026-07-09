@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace Kin.KinHub.Identity.Api.FamilyFeature;
+namespace Kin.KinHub.App.Functions.FamilyFeature;
 
 internal sealed class AddFamilyMemberRequestValidator : AbstractValidator<AddFamilyMemberRequest>
 {
