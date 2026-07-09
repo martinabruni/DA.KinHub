@@ -1,4 +1,5 @@
-using Kin.KinHub.Identity.Domain.Common;
+using Kin.KinHub.Shared.Kernel.Interfaces;
+using Kin.KinHub.Shared.Kernel.Models;
 
 namespace Kin.KinHub.Identity.Domain.AuthenticationFeature;
 
