@@ -16,7 +16,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
     private readonly IAudioProcessingOperationRepository _audioOperationRepository;
     private readonly IKinListAudioDraftGenerator _audioDraftGenerator;
     private readonly IAudioProcessingBlobStorage _blobStorage;
-    private readonly IAudioProcessingQueue _audioQueue;
+    private readonly IAudioProcessingQueuePublisher _audioQueue;
     private readonly IKinListItemDeduplicator _deduplicator;
     private readonly ICorrelationIdProvider _correlationIdProvider;
     private readonly CreateAudioProcessingOperationBusinessValidator _createAudioOperationValidator;
@@ -29,7 +29,7 @@ public sealed class KinListAudioService : IKinListAudioService, IAudioOperationP
         IAudioProcessingOperationRepository audioOperationRepository,
         IKinListAudioDraftGenerator audioDraftGenerator,
         IAudioProcessingBlobStorage blobStorage,
-        IAudioProcessingQueue audioQueue,
+        IAudioProcessingQueuePublisher audioQueue,
         IKinListItemDeduplicator deduplicator,
         ICorrelationIdProvider correlationIdProvider,
         CreateAudioProcessingOperationBusinessValidator createAudioOperationValidator,

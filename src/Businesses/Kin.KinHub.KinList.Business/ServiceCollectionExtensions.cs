@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IKinListTransactionExecutor, NoOpKinListTransactionExecutor>();
         services.TryAddScoped<IKinListAudioDraftGenerator, UnavailableKinListAudioDraftGenerator>();
         services.TryAddScoped<IAudioProcessingBlobStorage, UnavailableAudioProcessingBlobStorage>();
-        services.TryAddScoped<IAudioProcessingQueue, UnavailableAudioProcessingQueue>();
+        services.TryAddScoped<IAudioProcessingQueuePublisher, UnavailableAudioProcessingQueuePublisher>();
         services.AddScoped<CreateAudioProcessingOperationBusinessValidator>();
         services.AddSingleton<IEtagProvider, EtagProvider>();
         services.AddScoped<ICorrelationIdProvider, CorrelationIdProvider>();

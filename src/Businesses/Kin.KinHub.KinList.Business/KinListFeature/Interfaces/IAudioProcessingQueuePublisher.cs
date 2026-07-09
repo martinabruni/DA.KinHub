@@ -1,6 +1,6 @@
 namespace Kin.KinHub.KinList.Business.KinListFeature;
 
-public interface IAudioProcessingQueue
+public interface IAudioProcessingQueuePublisher
 {
     Task EnqueueAsync(Guid operationId, string correlationId, CancellationToken cancellationToken = default);
 }
