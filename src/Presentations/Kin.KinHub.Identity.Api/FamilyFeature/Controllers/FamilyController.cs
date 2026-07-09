@@ -1,4 +1,4 @@
-using Kin.KinHub.Core.Api.Common.Authorization;
+using Kin.KinHub.Identity.Api.Common.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

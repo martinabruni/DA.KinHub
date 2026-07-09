@@ -1,6 +1,10 @@
 global using Kin.KinHub.Identity.Api;
 global using Kin.KinHub.Identity.Api.AuthenticationFeature;
-global using Kin.KinHub.Core.Api.Common;
+global using Kin.KinHub.Identity.Api.Common;
+global using Kin.KinHub.Identity.Api.Common.Authorization;
+global using Kin.KinHub.Identity.Api.Common.Configuration;
+global using Kin.KinHub.Identity.Api.Common.Middlewares;
+global using Kin.KinHub.Identity.Api.Common.Validators;
 global using Kin.KinHub.Identity.Api.FamilyFeature;
 global using Kin.KinHub.Core.Business.FamilyFeature;
 global using Kin.KinHub.Core.Domain.Common;

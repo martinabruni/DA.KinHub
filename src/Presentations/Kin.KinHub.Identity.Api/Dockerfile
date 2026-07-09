@@ -12,7 +12,6 @@ COPY ["src/Domains/Kin.KinHub.Identity.Domain/Kin.KinHub.Identity.Domain.csproj"
 COPY ["src/Infrastructures/Kin.KinHub.Core.PostgreSql/Kin.KinHub.Core.PostgreSql.csproj", "src/Infrastructures/Kin.KinHub.Core.PostgreSql/"]
 COPY ["src/Infrastructures/Kin.KinHub.Identity.Jwt/Kin.KinHub.Identity.Jwt.csproj", "src/Infrastructures/Kin.KinHub.Identity.Jwt/"]
 COPY ["src/Infrastructures/Kin.KinHub.Identity.PostgreSql/Kin.KinHub.Identity.PostgreSql.csproj", "src/Infrastructures/Kin.KinHub.Identity.PostgreSql/"]
-COPY ["src/Presentations/Kin.KinHub.Core.Api/Kin.KinHub.Core.Api.csproj", "src/Presentations/Kin.KinHub.Core.Api/"]
 COPY ["src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj", "src/Presentations/Kin.KinHub.Identity.Api/"]
 
 RUN dotnet restore "src/Presentations/Kin.KinHub.Identity.Api/Kin.KinHub.Identity.Api.csproj"

@@ -9,10 +9,10 @@ public abstract class FunctionsTriggerBase
     protected static ControllerBase CreateController(HttpRequest request) => new FunctionController(request.HttpContext);
 
     protected static IActionResult ToKinListActionResult<T>(HttpRequest request, Result<T> result) =>
-        SharedHttpResultMapper.ToActionResult(CreateController(request), result, unauthorizedIsForbidden: true);
+        KinListHttpResultMapper.ToActionResult(CreateController(request), result);
 
     protected static IActionResult ToKinListCreatedActionResult<T>(HttpRequest request, Result<T> result) =>
-        SharedHttpResultMapper.ToCreatedActionResult(CreateController(request), result, unauthorizedIsForbidden: true);
+        KinListHttpResultMapper.ToCreatedActionResult(CreateController(request), result);
 
     protected static IActionResult ToActionResult<T>(HttpRequest request, Result<T> result) =>
         HttpResultMapper.ToActionResult(CreateController(request), result);

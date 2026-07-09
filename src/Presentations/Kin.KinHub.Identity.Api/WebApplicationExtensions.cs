@@ -1,3 +1,6 @@
+using Kin.KinHub.Identity.Api.Common.Configuration;
+using Kin.KinHub.Identity.Api.Common.Middlewares;
+
 namespace Kin.KinHub.Identity.Api;
 
 public static class WebApplicationExtensions

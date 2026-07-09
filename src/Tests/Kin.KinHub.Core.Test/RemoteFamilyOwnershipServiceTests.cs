@@ -1,18 +1,11 @@
-extern alias KinRecipeApi;
-
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using Kin.KinHub.App.Functions.Common;
 using Kin.KinHub.Core.Business.Common;
 using Kin.KinHub.Core.Business.FamilyFeature;
-using Kin.KinHub.KinRecipe.Business.RecipeFeature;
-using Kin.KinHub.Identity.Domain.Common;
-using Kin.KinHub.Core.Api.Common;
-using Kin.KinHub.KinRecipe.Api.RecipeFeature;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
-using RemoteFamilyOwnershipService = KinRecipeApi::Kin.KinHub.KinRecipe.Api.Common.RemoteFamilyOwnershipService;
 
 namespace Kin.KinHub.Core.Test;
 
@@ -76,29 +69,6 @@ public sealed class RemoteFamilyOwnershipServiceTests
         Assert.Equal(ResultStatus.Unauthorized, result.Status);
     }
 
-    [Fact]
-    public async Task RecipeBookController_WhenServiceUnavailable_ReturnsProblemDetails503()
-    {
-        var controller = new RecipeBookController(
-            new ServiceUnavailableRecipeBookService(),
-            new PassThroughValidator<CreateRecipeBookRequest>(),
-            new PassThroughValidator<UpdateRecipeBookRequest>(),
-            new FakeCurrentUser());
-
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext(),
-        };
-
-        var response = await controller.GetAllAsync(CancellationToken.None);
-
-        var objectResult = Assert.IsType<ObjectResult>(response);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, objectResult.StatusCode);
-
-        var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Equal("service_unavailable", problem.Extensions["code"]);
-    }
-
     private static RemoteFamilyOwnershipService CreateService(HttpClient httpClient)
     {
         var httpContext = new DefaultHttpContext();
@@ -109,40 +79,6 @@ public sealed class RemoteFamilyOwnershipServiceTests
             new HttpContextAccessor { HttpContext = httpContext },
             NullLogger<RemoteFamilyOwnershipService>.Instance);
     }
-}
-
-internal sealed class ServiceUnavailableRecipeBookService : IRecipeBookService
-{
-    public Task<Result<RecipeBookResponse>> CreateAsync(CreateRecipeBookRequest request, Guid userId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result<RecipeBookResponse>.ServiceUnavailable("Core is unavailable."));
-
-    public Task<Result<IReadOnlyList<RecipeBookResponse>>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result<IReadOnlyList<RecipeBookResponse>>.ServiceUnavailable("Core is unavailable."));
-
-    public Task<Result<RecipeBookResponse>> GetByIdAsync(Guid id, Guid userId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result<RecipeBookResponse>.ServiceUnavailable("Core is unavailable."));
-
-    public Task<Result<RecipeBookResponse>> UpdateAsync(Guid id, UpdateRecipeBookRequest request, Guid userId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result<RecipeBookResponse>.ServiceUnavailable("Core is unavailable."));
-
-    public Task<Result<bool>> DeleteAsync(Guid id, Guid userId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result<bool>.ServiceUnavailable("Core is unavailable."));
-}
-
-internal sealed class PassThroughValidator<T> : IRequestValidator<T>
-{
-    public Task<RequestValidationResult> ValidateAsync(T request, CancellationToken cancellationToken = default) =>
-        Task.FromResult(RequestValidationResult.Success());
-}
-
-internal sealed class FakeCurrentUser : ICurrentUser
-{
-    public Guid UserId { get; } = Guid.NewGuid();
-    public string Email { get; } = "test@kinhub.dev";
-    public IReadOnlyList<string> Roles { get; } = [];
-    public bool IsAuthenticated { get; } = true;
-    public Guid FamilyId { get; } = Guid.NewGuid();
-    public bool HasFamilyContext { get; } = true;
 }
 
 internal sealed class StubHttpMessageHandler : HttpMessageHandler
