@@ -54,8 +54,6 @@
   <Folder Name="/src/Presentations/">
     <Project Path="src\Presentations\Kin.KinHub.App.Functions\Kin.KinHub.App.Functions.csproj" />
     <Project Path="src\Presentations\Kin.KinHub.Identity.Api\Kin.KinHub.Identity.Api.csproj" />
-    <Project Path="src\Presentations\Kin.KinHub.KinList.AudioWorker\Kin.KinHub.KinList.AudioWorker.csproj" />
-    <Project Path="src\Presentations\Kin.KinHub.Migrations.Runner\Kin.KinHub.Migrations.Runner.csproj" />
   </Folder>
   <Folder Name="/src/Tests/">
     <Project Path="src/Tests/Kin.KinHub.Core.Test/Kin.KinHub.Core.Test.csproj" Id="4a373282-2a52-44cd-ab39-d964ca708def" />
