@@ -453,7 +453,7 @@ internal static class TestServiceFactory
         InMemoryKinListStore store,
         IKinListAudioDraftGenerator audioDraftGenerator,
         IAudioProcessingBlobStorage? blobStorage = null,
-        IAudioProcessingQueue? queue = null,
+        IAudioProcessingQueuePublisher? queue = null,
         KinListOptions? options = null) =>
         new(
             store,

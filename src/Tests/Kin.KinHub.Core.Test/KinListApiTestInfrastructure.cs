@@ -37,7 +37,7 @@ internal sealed class StubFamilyContextResolver : IFamilyContextResolver
 public sealed class ConfigurableAudioDraftGenerator : IKinListAudioDraftGenerator
 {
     public Result<ParsedKinListAudioDraft> Result { get; set; } =
-        Kin.KinHub.Shared.Kernel.Common.Result<ParsedKinListAudioDraft>.Success(new ParsedKinListAudioDraft
+        Kin.KinHub.Shared.Kernel.Results.Result<ParsedKinListAudioDraft>.Success(new ParsedKinListAudioDraft
         {
             Title = "Spesa",
             Items = ["Latte", "Pane"],
@@ -381,7 +381,7 @@ public sealed class InMemoryAudioBlobStorage : IAudioProcessingBlobStorage
     }
 }
 
-public sealed class InMemoryAudioProcessingQueue : IAudioProcessingQueue
+public sealed class InMemoryAudioProcessingQueue : IAudioProcessingQueuePublisher
 {
     public List<(Guid OperationId, string CorrelationId)> Messages { get; } = [];
 

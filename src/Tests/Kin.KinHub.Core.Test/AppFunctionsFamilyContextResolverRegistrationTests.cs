@@ -1,3 +1,4 @@
+using Kin.KinHub.App.Functions.Common;
 using Kin.KinHub.App.Functions.Common.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,15 +8,14 @@ using Microsoft.Extensions.Hosting;
 namespace Kin.KinHub.Core.Test;
 
 /// <summary>
-/// Guards the single highest-risk regression from merging AddKinHubKinListApi/AddKinHubKinRecipeApi
-/// into App.Functions/ServiceCollectionExtensions.cs: KinRecipe must register after KinList so that
-/// IFamilyContextResolver resolves to RemoteFamilyOwnershipService (KinRecipe's registration), not
-/// RemoteFamilyContextResolver (KinList's registration) — matching pre-merge behavior.
+/// Guards the Identity/Core boundary: App.Functions now owns Core.PostgreSql directly, so
+/// IFamilyContextResolver must resolve to the in-process CoreFamilyContextResolver — not a
+/// remote HTTP-based resolver — regardless of which module (KinList/KinRecipe) registers last.
 /// </summary>
 public sealed class AppFunctionsFamilyContextResolverRegistrationTests
 {
     [Fact]
-    public void AddKinHubAppFunctions_ResolvesIFamilyContextResolver_AsRemoteFamilyOwnershipService()
+    public void AddKinHubAppFunctions_ResolvesIFamilyContextResolver_AsCoreFamilyContextResolver()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -24,7 +24,6 @@ public sealed class AppFunctionsFamilyContextResolverRegistrationTests
                 ["Jwt:Issuer"] = "http://localhost",
                 ["Jwt:Secret"] = "development-only-kinhub-jwt-secret-0001",
                 ["Jwt:Audience"] = "kinhub.api",
-                ["FamilyContextApi:BaseUrl"] = "http://localhost:5001",
             })
             .Build();
 
@@ -34,7 +33,7 @@ public sealed class AppFunctionsFamilyContextResolverRegistrationTests
         using var provider = services.BuildServiceProvider();
         var resolver = provider.GetRequiredService<IFamilyContextResolver>();
 
-        Assert.IsType<Kin.KinHub.App.Functions.Common.RemoteFamilyOwnershipService>(resolver);
+        Assert.IsType<CoreFamilyContextResolver>(resolver);
     }
 
     private sealed class FakeHostEnvironment : IHostEnvironment

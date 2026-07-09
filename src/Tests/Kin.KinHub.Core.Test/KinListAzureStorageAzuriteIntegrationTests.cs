@@ -68,7 +68,7 @@ public sealed class KinListAzureStorageAzuriteIntegrationTests : IClassFixture<A
     {
         var options = CreateOptions();
         var clients = new AzureStorageAudioClients(options);
-        var queue = new AzureQueueAudioProcessingQueue(clients);
+        var queue = new AzureQueueAudioProcessingQueuePublisher(clients);
         var pump = new AzureAudioProcessingQueuePump(clients);
 
         await pump.InitializeAsync(CancellationToken.None);

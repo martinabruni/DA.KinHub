@@ -1,38 +1,29 @@
-using CorePostgreSqlOptions = Kin.KinHub.Core.PostgreSql.Common.PostgreSqlOptions;
-using IdentityPostgreSqlOptions = Kin.KinHub.Identity.PostgreSql.Common.PostgreSqlOptions;
+using Kin.KinHub.Shared.Kernel.Options;
 
 namespace Kin.KinHub.Core.Test;
 
 public sealed class PostgreSqlOptionsTests
 {
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Validate_EmptyConnectionString_Throws(bool useIdentityOptions)
+    [Fact]
+    public void Validate_EmptyConnectionString_Throws()
     {
-        var validate = CreateValidateAction(useIdentityOptions, string.Empty);
+        var options = new PostgreSqlOptions { ConnectionString = string.Empty };
 
-        var exception = Assert.Throws<InvalidOperationException>(validate);
+        var exception = Assert.Throws<InvalidOperationException>(options.Validate);
 
         Assert.Equal("ConnectionString must be configured.", exception.Message);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Validate_ConfiguredConnectionString_DoesNotThrow(bool useIdentityOptions)
+    [Fact]
+    public void Validate_ConfiguredConnectionString_DoesNotThrow()
     {
-        var validate = CreateValidateAction(
-            useIdentityOptions,
-            "Host=localhost;Port=5432;Database=kinhub_tests;Username=kinhub;Password=kinhub");
+        var options = new PostgreSqlOptions
+        {
+            ConnectionString = "Host=localhost;Port=5432;Database=kinhub_tests;Username=kinhub;Password=kinhub",
+        };
 
-        var exception = Record.Exception(validate);
+        var exception = Record.Exception(options.Validate);
 
         Assert.Null(exception);
     }
-
-    private static Action CreateValidateAction(bool useIdentityOptions, string connectionString) =>
-        useIdentityOptions
-            ? () => new IdentityPostgreSqlOptions { ConnectionString = connectionString }.Validate()
-            : () => new CorePostgreSqlOptions { ConnectionString = connectionString }.Validate();
 }

@@ -342,7 +342,7 @@ public sealed class KinListServiceTests
         InMemoryKinListRepositories repositories,
         IKinListAudioDraftGenerator? audioDraftGenerator = null,
         IAudioProcessingBlobStorage? blobStorage = null,
-        IAudioProcessingQueue? queue = null,
+        IAudioProcessingQueuePublisher? queue = null,
         KinListOptions? options = null) =>
         new(
             repositories,

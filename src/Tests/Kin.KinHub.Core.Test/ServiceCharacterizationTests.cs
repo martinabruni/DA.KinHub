@@ -146,7 +146,7 @@ public sealed class AuthenticationServiceCharacterizationTests
         });
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(Kin.KinHub.Shared.Kernel.Common.ResultStatus.Unauthorized, result.Status);
+        Assert.Equal(Kin.KinHub.Shared.Kernel.Enums.ResultStatus.Unauthorized, result.Status);
         Assert.Equal("Invalid current password.", result.Message);
     }
 
@@ -743,6 +743,16 @@ internal sealed class InMemoryKinUserRepository : IKinUserRepository
         return Task.FromResult(model);
     }
 
+    public Task<IReadOnlyList<KinUser>> CreateRangeAsync(IReadOnlyCollection<KinUser> models, CancellationToken cancellationToken = default)
+    {
+        foreach (var model in models)
+            Items[model.Id] = model;
+        return Task.FromResult<IReadOnlyList<KinUser>>(models.ToList());
+    }
+
+    public Task<IReadOnlyList<KinUser>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<KinUser>>(Items.Values.ToList());
+
     public Task<KinUser> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
         var user = GetExisting(key);
@@ -783,6 +793,16 @@ internal sealed class InMemoryUserCredentialRepository : IUserCredentialReposito
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
+
+    public Task<IReadOnlyList<UserCredential>> CreateRangeAsync(IReadOnlyCollection<UserCredential> models, CancellationToken cancellationToken = default)
+    {
+        foreach (var model in models)
+            Items[model.Id] = model;
+        return Task.FromResult<IReadOnlyList<UserCredential>>(models.ToList());
+    }
+
+    public Task<IReadOnlyList<UserCredential>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<UserCredential>>(Items.Values.ToList());
 
     public Task<UserCredential> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
@@ -825,6 +845,16 @@ internal sealed class InMemoryUserProviderRepository : IUserProviderRepository
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
+
+    public Task<IReadOnlyList<UserProvider>> CreateRangeAsync(IReadOnlyCollection<UserProvider> models, CancellationToken cancellationToken = default)
+    {
+        foreach (var model in models)
+            Items[model.Id] = model;
+        return Task.FromResult<IReadOnlyList<UserProvider>>(models.ToList());
+    }
+
+    public Task<IReadOnlyList<UserProvider>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<UserProvider>>(Items.Values.ToList());
 
     public Task<UserProvider> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
@@ -878,6 +908,16 @@ internal sealed class InMemoryRefreshTokenRepository : IRefreshTokenRepository
         Items[model.Id] = model;
         return Task.FromResult(model);
     }
+
+    public Task<IReadOnlyList<RefreshToken>> CreateRangeAsync(IReadOnlyCollection<RefreshToken> models, CancellationToken cancellationToken = default)
+    {
+        foreach (var model in models)
+            Items[model.Id] = model;
+        return Task.FromResult<IReadOnlyList<RefreshToken>>(models.ToList());
+    }
+
+    public Task<IReadOnlyList<RefreshToken>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RefreshToken>>(Items.Values.ToList());
 
     public Task<RefreshToken> DeleteAsync(Guid key, CancellationToken cancellationToken = default)
     {
