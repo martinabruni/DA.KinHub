@@ -11,13 +11,13 @@ public sealed class FunctionsRouteInventoryTests
         var assembly = typeof(Kin.KinHub.App.Functions.KinListFeature.ListsFunctions).Assembly;
         var routes = GetHttpRoutes(assembly);
 
-        Assert.Contains(routes, route => route.StartsWith("api/lists", StringComparison.Ordinal));
-        Assert.Contains(routes, route => route.StartsWith("api/audio-operations", StringComparison.Ordinal));
-        Assert.Contains(routes, route => route.StartsWith("api/fridges", StringComparison.Ordinal));
-        Assert.Contains(routes, route => route.StartsWith("api/recipe-books", StringComparison.Ordinal));
-        Assert.Contains(routes, route => route.StartsWith("api/recipe-assistant", StringComparison.Ordinal));
-        Assert.DoesNotContain(routes, route => route.StartsWith("api/auth", StringComparison.Ordinal));
-        Assert.DoesNotContain(routes, route => route.StartsWith("api/access", StringComparison.Ordinal));
+        Assert.Contains(routes, route => route.StartsWith("lists", StringComparison.Ordinal));
+        Assert.Contains(routes, route => route.StartsWith("audio-operations", StringComparison.Ordinal));
+        Assert.Contains(routes, route => route.StartsWith("fridges", StringComparison.Ordinal));
+        Assert.Contains(routes, route => route.StartsWith("recipe-books", StringComparison.Ordinal));
+        Assert.Contains(routes, route => route.StartsWith("recipe-assistant", StringComparison.Ordinal));
+        Assert.DoesNotContain(routes, route => route.StartsWith("auth", StringComparison.Ordinal));
+        Assert.DoesNotContain(routes, route => route.StartsWith("access", StringComparison.Ordinal));
 
         Assert.Contains(
             assembly.GetTypes()

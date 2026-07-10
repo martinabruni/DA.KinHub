@@ -20,7 +20,7 @@ public sealed class ServicesFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAllAsync))]
     public async Task<IActionResult> GetAllAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/services")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "services")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -35,7 +35,7 @@ public sealed class ServicesFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetFamilyServicesAsync))]
     public async Task<IActionResult> GetFamilyServicesAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/services/family/{familyId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "services/family/{familyId:guid}")] HttpRequest request,
         Guid familyId,
         CancellationToken cancellationToken)
     {
@@ -51,7 +51,7 @@ public sealed class ServicesFunctions : FunctionsTriggerBase
 
     [Function(nameof(ToggleAsync))]
     public async Task<IActionResult> ToggleAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/services/family/{familyId:guid}/toggle")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "services/family/{familyId:guid}/toggle")] HttpRequest request,
         Guid familyId,
         CancellationToken cancellationToken)
     {

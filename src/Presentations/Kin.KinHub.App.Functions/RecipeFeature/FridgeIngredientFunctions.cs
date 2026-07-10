@@ -23,7 +23,7 @@ public sealed class FridgeIngredientFunctions : FunctionsTriggerBase
 
     [Function(nameof(CreateAsync))]
     public async Task<IActionResult> CreateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/fridges/{fridgeId:guid}/ingredients")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "fridges/{fridgeId:guid}/ingredients")] HttpRequest request,
         Guid fridgeId,
         CancellationToken cancellationToken)
     {
@@ -45,7 +45,7 @@ public sealed class FridgeIngredientFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAllAsync))]
     public async Task<IActionResult> GetAllAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/fridges/{fridgeId:guid}/ingredients")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "fridges/{fridgeId:guid}/ingredients")] HttpRequest request,
         Guid fridgeId,
         CancellationToken cancellationToken)
     {
@@ -61,7 +61,7 @@ public sealed class FridgeIngredientFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetByIdAsync))]
     public async Task<IActionResult> GetByIdAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/fridges/{fridgeId:guid}/ingredients/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "fridges/{fridgeId:guid}/ingredients/{id:guid}")] HttpRequest request,
         Guid fridgeId,
         Guid id,
         CancellationToken cancellationToken)
@@ -78,7 +78,7 @@ public sealed class FridgeIngredientFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateAsync))]
     public async Task<IActionResult> UpdateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "api/fridges/{fridgeId:guid}/ingredients/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "fridges/{fridgeId:guid}/ingredients/{id:guid}")] HttpRequest request,
         Guid fridgeId,
         Guid id,
         CancellationToken cancellationToken)
@@ -101,7 +101,7 @@ public sealed class FridgeIngredientFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteAsync))]
     public async Task<IActionResult> DeleteAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/fridges/{fridgeId:guid}/ingredients/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "fridges/{fridgeId:guid}/ingredients/{id:guid}")] HttpRequest request,
         Guid fridgeId,
         Guid id,
         CancellationToken cancellationToken)

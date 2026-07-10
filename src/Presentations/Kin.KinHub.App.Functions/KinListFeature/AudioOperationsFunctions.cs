@@ -20,7 +20,7 @@ public sealed class AudioOperationsFunctions : FunctionsTriggerBase
 
     [Function(nameof(CreateAsync))]
     public async Task<IActionResult> CreateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/audio-operations")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "audio-operations")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureFamilyContextAsync(request, cancellationToken);
@@ -52,7 +52,7 @@ public sealed class AudioOperationsFunctions : FunctionsTriggerBase
 
     [Function(nameof(CompleteUploadAsync))]
     public async Task<IActionResult> CompleteUploadAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/audio-operations/{id:guid}/complete-upload")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "audio-operations/{id:guid}/complete-upload")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -73,7 +73,7 @@ public sealed class AudioOperationsFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAsync))]
     public async Task<IActionResult> GetAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/audio-operations/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "audio-operations/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -94,7 +94,7 @@ public sealed class AudioOperationsFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteAsync))]
     public async Task<IActionResult> DeleteAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/audio-operations/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "audio-operations/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {

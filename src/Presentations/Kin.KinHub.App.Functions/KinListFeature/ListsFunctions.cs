@@ -32,7 +32,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAllAsync))]
     public async Task<IActionResult> GetAllAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/lists")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lists")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureFamilyContextAsync(request, cancellationToken);
@@ -47,7 +47,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetByIdAsync))]
     public async Task<IActionResult> GetByIdAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/lists/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lists/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -63,7 +63,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(CreateAsync))]
     public async Task<IActionResult> CreateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/lists")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "lists")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureFamilyContextAsync(request, cancellationToken);
@@ -95,7 +95,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateAsync))]
     public async Task<IActionResult> UpdateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "api/lists/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "lists/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -123,7 +123,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteAsync))]
     public async Task<IActionResult> DeleteAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/lists/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "lists/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -145,7 +145,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(RestoreAsync))]
     public async Task<IActionResult> RestoreAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/lists/{id:guid}/restore")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "lists/{id:guid}/restore")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -167,7 +167,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(AddItemAsync))]
     public async Task<IActionResult> AddItemAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/lists/{id:guid}/items")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "lists/{id:guid}/items")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -195,7 +195,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(BulkConfirmItemsAsync))]
     public async Task<IActionResult> BulkConfirmItemsAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/lists/{id:guid}/items/confirm")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "lists/{id:guid}/items/confirm")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -223,7 +223,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateItemAsync))]
     public async Task<IActionResult> UpdateItemAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "api/lists/{id:guid}/items/{itemId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "lists/{id:guid}/items/{itemId:guid}")] HttpRequest request,
         Guid id,
         Guid itemId,
         CancellationToken cancellationToken)
@@ -252,7 +252,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteItemAsync))]
     public async Task<IActionResult> DeleteItemAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/lists/{id:guid}/items/{itemId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "lists/{id:guid}/items/{itemId:guid}")] HttpRequest request,
         Guid id,
         Guid itemId,
         CancellationToken cancellationToken)
@@ -275,7 +275,7 @@ public sealed class ListsFunctions : FunctionsTriggerBase
 
     [Function(nameof(RestoreItemAsync))]
     public async Task<IActionResult> RestoreItemAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/lists/{id:guid}/items/{itemId:guid}/restore")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "lists/{id:guid}/items/{itemId:guid}/restore")] HttpRequest request,
         Guid id,
         Guid itemId,
         CancellationToken cancellationToken)
