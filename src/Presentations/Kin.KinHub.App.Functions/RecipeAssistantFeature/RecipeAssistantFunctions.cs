@@ -26,7 +26,7 @@ public sealed class RecipeAssistantFunctions : FunctionsTriggerBase
 
     [Function(nameof(SuggestAsync))]
     public async Task<IActionResult> SuggestAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/recipe-assistant/suggest")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "recipe-assistant/suggest")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -47,7 +47,7 @@ public sealed class RecipeAssistantFunctions : FunctionsTriggerBase
 
     [Function(nameof(ParseAsync))]
     public async Task<IActionResult> ParseAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/recipe-assistant/parse")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "recipe-assistant/parse")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -68,7 +68,7 @@ public sealed class RecipeAssistantFunctions : FunctionsTriggerBase
 
     [Function(nameof(AdaptAsync))]
     public async Task<IActionResult> AdaptAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/recipe-assistant/adapt")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "recipe-assistant/adapt")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);

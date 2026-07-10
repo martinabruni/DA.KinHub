@@ -23,7 +23,7 @@ public sealed class RecipeBookFunctions : FunctionsTriggerBase
 
     [Function(nameof(CreateAsync))]
     public async Task<IActionResult> CreateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/recipe-books")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "recipe-books")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -44,7 +44,7 @@ public sealed class RecipeBookFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAllAsync))]
     public async Task<IActionResult> GetAllAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/recipe-books")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "recipe-books")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -59,7 +59,7 @@ public sealed class RecipeBookFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetByIdAsync))]
     public async Task<IActionResult> GetByIdAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/recipe-books/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "recipe-books/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -75,7 +75,7 @@ public sealed class RecipeBookFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateAsync))]
     public async Task<IActionResult> UpdateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "api/recipe-books/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "recipe-books/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -97,7 +97,7 @@ public sealed class RecipeBookFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteAsync))]
     public async Task<IActionResult> DeleteAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/recipe-books/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "recipe-books/{id:guid}")] HttpRequest request,
         Guid id,
         CancellationToken cancellationToken)
     {

@@ -29,7 +29,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(CreateAsync))]
     public async Task<IActionResult> CreateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/families")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "families")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -50,7 +50,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAsync))]
     public async Task<IActionResult> GetAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/families")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "families")] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var failure = await _authorizationService.EnsureAuthenticatedAsync(request, cancellationToken);
@@ -65,7 +65,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(AddMemberAsync))]
     public async Task<IActionResult> AddMemberAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/families/{familyId:guid}/members")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "families/{familyId:guid}/members")] HttpRequest request,
         Guid familyId,
         CancellationToken cancellationToken)
     {
@@ -87,7 +87,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteMemberAsync))]
     public async Task<IActionResult> DeleteMemberAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/families/{familyId:guid}/members/{memberId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "families/{familyId:guid}/members/{memberId:guid}")] HttpRequest request,
         Guid familyId,
         Guid memberId,
         CancellationToken cancellationToken)
@@ -104,7 +104,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateMemberAsync))]
     public async Task<IActionResult> UpdateMemberAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "api/families/{familyId:guid}/members/{memberId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "families/{familyId:guid}/members/{memberId:guid}")] HttpRequest request,
         Guid familyId,
         Guid memberId,
         CancellationToken cancellationToken)
@@ -127,7 +127,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateFamilyAsync))]
     public async Task<IActionResult> UpdateFamilyAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "api/families/{familyId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "families/{familyId:guid}")] HttpRequest request,
         Guid familyId,
         CancellationToken cancellationToken)
     {
@@ -149,7 +149,7 @@ public sealed class FamilyFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteFamilyAsync))]
     public async Task<IActionResult> DeleteFamilyAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/families/{familyId:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "families/{familyId:guid}")] HttpRequest request,
         Guid familyId,
         CancellationToken cancellationToken)
     {

@@ -29,7 +29,7 @@ public sealed class RecipeFunctions : FunctionsTriggerBase
 
     [Function(nameof(CreateAsync))]
     public async Task<IActionResult> CreateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/recipe-books/{recipeBookId:guid}/recipes")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "recipe-books/{recipeBookId:guid}/recipes")] HttpRequest request,
         Guid recipeBookId,
         CancellationToken cancellationToken)
     {
@@ -51,7 +51,7 @@ public sealed class RecipeFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetAllAsync))]
     public async Task<IActionResult> GetAllAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/recipe-books/{recipeBookId:guid}/recipes")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "recipe-books/{recipeBookId:guid}/recipes")] HttpRequest request,
         Guid recipeBookId,
         CancellationToken cancellationToken)
     {
@@ -67,7 +67,7 @@ public sealed class RecipeFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetByIdAsync))]
     public async Task<IActionResult> GetByIdAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/recipe-books/{recipeBookId:guid}/recipes/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "recipe-books/{recipeBookId:guid}/recipes/{id:guid}")] HttpRequest request,
         Guid recipeBookId,
         Guid id,
         CancellationToken cancellationToken)
@@ -84,7 +84,7 @@ public sealed class RecipeFunctions : FunctionsTriggerBase
 
     [Function(nameof(UpdateAsync))]
     public async Task<IActionResult> UpdateAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "api/recipe-books/{recipeBookId:guid}/recipes/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "recipe-books/{recipeBookId:guid}/recipes/{id:guid}")] HttpRequest request,
         Guid recipeBookId,
         Guid id,
         CancellationToken cancellationToken)
@@ -107,7 +107,7 @@ public sealed class RecipeFunctions : FunctionsTriggerBase
 
     [Function(nameof(DeleteAsync))]
     public async Task<IActionResult> DeleteAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "api/recipe-books/{recipeBookId:guid}/recipes/{id:guid}")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "recipe-books/{recipeBookId:guid}/recipes/{id:guid}")] HttpRequest request,
         Guid recipeBookId,
         Guid id,
         CancellationToken cancellationToken)
@@ -124,7 +124,7 @@ public sealed class RecipeFunctions : FunctionsTriggerBase
 
     [Function(nameof(GetMissingIngredientsAsync))]
     public async Task<IActionResult> GetMissingIngredientsAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/recipe-books/{recipeBookId:guid}/recipes/{id:guid}/missing-ingredients")] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "recipe-books/{recipeBookId:guid}/recipes/{id:guid}/missing-ingredients")] HttpRequest request,
         Guid recipeBookId,
         Guid id,
         CancellationToken cancellationToken)
