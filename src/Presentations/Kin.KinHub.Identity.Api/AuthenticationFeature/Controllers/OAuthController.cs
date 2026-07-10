@@ -21,6 +21,7 @@ public sealed class OAuthController : ControllerBase
     private readonly IOAuthSessionManager _sessionManager;
     private readonly IOAuthTokenIssuer _tokenIssuer;
     private readonly OAuthServerOptions _oauthOptions;
+    private readonly ILogger<OAuthController> _logger;
 
     public OAuthController(
         IIdentitySessionService sessionService,
@@ -33,7 +34,8 @@ public sealed class OAuthController : ControllerBase
         IRequestValidator<OAuthDynamicClientRegistrationRequest> dynamicClientRegistrationValidator,
         IOAuthSessionManager sessionManager,
         IOAuthTokenIssuer tokenIssuer,
-        OAuthServerOptions oauthOptions)
+        OAuthServerOptions oauthOptions,
+        ILogger<OAuthController> logger)
     {
         _sessionService = sessionService;
         _clientStore = clientStore;
@@ -46,6 +48,7 @@ public sealed class OAuthController : ControllerBase
         _sessionManager = sessionManager;
         _tokenIssuer = tokenIssuer;
         _oauthOptions = oauthOptions;
+        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -147,6 +150,11 @@ public sealed class OAuthController : ControllerBase
             {
                 return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "OAuth authorization code creation failed for client {ClientId}.", client!.ClientId);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, CreateOAuthError("service_unavailable", "OAuth session persistence is temporarily unavailable."));
+            }
         }
 
         return Content(_loginPageRenderer.Render(request, client!, scope, _oauthOptions.AuthorizationServerUrl, _oauthOptions.RegistrationUiUrl), "text/html");
@@ -221,6 +229,11 @@ public sealed class OAuthController : ControllerBase
         {
             return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OAuth identity session creation failed for client {ClientId}.", client!.ClientId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, CreateOAuthError("service_unavailable", "OAuth session persistence is temporarily unavailable."));
+        }
 
         _sessionManager.WriteIdentitySessionCookie(Request, Response, session);
 
@@ -239,6 +252,11 @@ public sealed class OAuthController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return StatusCode(StatusCodes.Status429TooManyRequests, CreateOAuthError("slow_down", ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OAuth authorization code creation failed for client {ClientId}.", client!.ClientId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, CreateOAuthError("service_unavailable", "OAuth session persistence is temporarily unavailable."));
         }
 
         return Redirect(_requestValidator.BuildAuthorizationSuccessRedirect(authorizeRequest.RedirectUri!, authorizeRequest.State, ticket.Code));

@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { apiClient } from "@/api/apiClient";
+import { kinHubApiClient } from "@/api/apiClient";
 import { useAuthContext } from "@/store/authContext";
 import type { Family } from "@/types";
 
@@ -32,7 +32,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   const { data: family, isLoading } = useQuery({
     queryKey: ["family"],
     queryFn: async () => {
-      const { data } = await apiClient.get<Family>("/api/families");
+      const { data } = await kinHubApiClient.get<Family>("/api/families");
       return data;
     },
     enabled: isAuthenticated,
@@ -47,7 +47,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: (name: string) => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
-      return apiClient.patch(`/api/families/${currentFamily.id}`, { name });
+      return kinHubApiClient.patch(`/api/families/${currentFamily.id}`, { name });
     },
     onSuccess: () => {
       toast.success(t("family.updated"));
@@ -59,7 +59,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: (name: string) => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
-      return apiClient.post(`/api/families/${currentFamily.id}/members`, { name });
+      return kinHubApiClient.post(`/api/families/${currentFamily.id}/members`, { name });
     },
     onSuccess: () => invalidate(),
   });
@@ -68,7 +68,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: ({ memberId, name }: { memberId: string; name: string }) => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
-      return apiClient.put(`/api/families/${currentFamily.id}/members/${memberId}`, {
+      return kinHubApiClient.put(`/api/families/${currentFamily.id}/members/${memberId}`, {
         name,
       });
     },
@@ -79,7 +79,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: (memberId: string) => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
-      return apiClient.delete(`/api/families/${currentFamily.id}/members/${memberId}`);
+      return kinHubApiClient.delete(`/api/families/${currentFamily.id}/members/${memberId}`);
     },
     onSuccess: () => {
       toast.success(t("family.memberRemoved"));
@@ -91,7 +91,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: (payload: {
       familyName: string;
       ownerProfileName: string;
-    }) => apiClient.post("/api/families", payload),
+    }) => kinHubApiClient.post("/api/families", payload),
     onSuccess: () => {
       invalidate();
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
@@ -103,7 +103,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
       if (!activeMember?.id) throw new Error("Active member not set");
-      return apiClient.delete(`/api/families/${currentFamily.id}/members/${activeMember.id}`);
+      return kinHubApiClient.delete(`/api/families/${currentFamily.id}/members/${activeMember.id}`);
     },
     onSuccess: () => {
       toast.success(t("family.left"));
@@ -115,7 +115,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     mutationFn: () => {
       const currentFamily = queryClient.getQueryData<Family>(["family"]);
       if (!currentFamily?.id) throw new Error("Family not loaded");
-      return apiClient.delete(`/api/families/${currentFamily.id}`);
+      return kinHubApiClient.delete(`/api/families/${currentFamily.id}`);
     },
     onSuccess: () => {
       toast.success(t("family.deleted"));

@@ -178,6 +178,19 @@ public sealed class OAuthAndAccessIntegrationTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task AuthorizationCodeFlow_WhenOAuthSessionPersistenceFails_ReturnsServiceUnavailable()
+    {
+        using var factory = new FailingOAuthPersistenceFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await AuthorizeAsync(client, OAuthApiFactory.ClientId, OAuthApiFactory.RedirectUri, "integration-pkce-code-verifier-rfc7636-aaaaaaaaaa");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("service_unavailable", body.GetProperty("error").GetString());
+    }
+
     private static async Task<HttpResponseMessage> AuthorizeAsync(HttpClient client, string clientId, string redirectUri, string codeVerifier)
     {
         var challenge = ComputeCodeChallenge(codeVerifier);
@@ -294,6 +307,45 @@ public class OAuthApiFactory : WebApplicationFactory<IdentityApi::Program>
             services.AddScoped<IFamilyOwnershipService>(_ => new FakeFamilyOwnershipService(_hasFamilyContext));
             services.AddSingleton<IOAuthClientStore>(new FixedOAuthClientStore());
         });
+    }
+}
+
+public sealed class FailingOAuthPersistenceFactory : OAuthApiFactory
+{
+    public FailingOAuthPersistenceFactory()
+        : base(hasFamilyContext: true)
+    {
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IOAuthIdentitySessionStore>();
+            services.AddSingleton<IOAuthIdentitySessionStore, FailingOAuthIdentitySessionStore>();
+        });
+    }
+}
+
+internal sealed class FailingOAuthIdentitySessionStore : IOAuthIdentitySessionStore
+{
+    public OAuthIdentitySession Create(LoginResponse loginResponse, TimeSpan lifetime) =>
+        throw new Exception("database unavailable");
+
+    public bool TryGet(string sessionId, out OAuthIdentitySession? session)
+    {
+        session = null;
+        return false;
+    }
+
+    public void Replace(string sessionId, LoginResponse loginResponse, TimeSpan lifetime) =>
+        throw new NotSupportedException();
+
+    public bool TryRemove(string sessionId, out OAuthIdentitySession? session)
+    {
+        session = null;
+        return false;
     }
 }
 
