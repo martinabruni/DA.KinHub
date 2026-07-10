@@ -1,28 +1,13 @@
-extern alias IdentityApi;
-
-using Kin.KinHub.Core.Business.FamilyFeature;
-using Kin.KinHub.Core.Domain.FamilyFeature;
-using Kin.KinHub.Identity.Business.AuthenticationFeature;
+using Kin.KinHub.App.Functions.Common;
+using Kin.KinHub.App.Functions.Common.Authorization;
+using Kin.KinHub.App.Functions.Common.Configuration;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Kin.KinHub.Identity.Domain.AuthenticationFeature;
-using Kin.KinHub.Identity.Api.AuthenticationFeature;
-using Kin.KinHub.Identity.Api.Common;
-using Kin.KinHub.Identity.Api.Common.Configuration;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
+using Kin.KinHub.Identity.Jwt.AuthenticationFeature;
 
 namespace Kin.KinHub.Core.Test;
 
-/// <summary>
-/// Gate tests for the shared family authorization policy: immediate revocation (no cache),
-/// fail-closed 503 when Core is unavailable, and RFC 9457 problem details.
-/// </summary>
 public sealed class FamilyAuthorizationGateTests
 {
     private static readonly Guid FamilyId = Guid.Parse("b5f1c687-3a8f-44cf-b75f-caa1f8c5b755");
@@ -31,162 +16,145 @@ public sealed class FamilyAuthorizationGateTests
     [Fact]
     public async Task RegisterWithoutFamily_FamilyContext_ReturnsForbidden()
     {
-        using var factory = new GateFactory(() => FamilyAccessResult.NotFound("Family not found for this user."));
-        using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
+        var (service, _, currentUser, _) = CreateService(
+            tokenClaims: ValidClaims(),
+            familyResolution: FamilyContextResolution.NoFamily());
 
-        var response = await client.GetAsync("/api/access/family-context");
+        var result = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("family_required", body.GetProperty("code").GetString());
-        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
+        var problem = AssertProblem(result, StatusCodes.Status403Forbidden, "family_required");
+        Assert.Equal("The authenticated user does not currently belong to a family.", problem.Detail);
+        Assert.False(currentUser.HasFamilyContext);
     }
 
     [Fact]
     public async Task CreateFamily_ThenFamilyContext_UsesSameTokenNoReissue()
     {
-        // Family is resolved from the request-scoped principal (repository), never the JWT.
-        // The same bearer token yields a family context once the family exists — no reissue.
-        using var factory = new GateFactory(() => FamilyAccessResult.Success(new Family
-        {
-            Id = FamilyId,
-            Name = "Kin Family",
-            UserId = UserId,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        }));
-        using var client = factory.CreateClient();
-        var token = factory.CreateAccessToken();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+        var (service, _, currentUser, familyResolver) = CreateService(
+            tokenClaims: ValidClaims(),
+            familyResolution: FamilyContextResolution.Success(FamilyId));
 
-        var response = await client.GetAsync("/api/access/family-context");
+        var firstResult = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(FamilyId, body.GetProperty("familyId").GetGuid());
+        Assert.Null(firstResult);
+        Assert.True(currentUser.HasFamilyContext);
+        Assert.Equal(FamilyId, currentUser.FamilyId);
+
+        familyResolver.Result = FamilyContextResolution.Success(FamilyId);
+        var secondResult = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
+
+        Assert.Null(secondResult);
+        Assert.Equal(FamilyId, currentUser.FamilyId);
     }
 
     [Fact]
     public async Task LeaveFamily_NextRequestImmediatelyForbidden_NoCache()
     {
-        // The middleware resolves the family on every request, so revoking membership takes
-        // effect on the very next call with the same token.
-        var hasFamily = true;
-        using var factory = new GateFactory(() => hasFamily
-            ? FamilyAccessResult.Success(new Family
-            {
-                Id = FamilyId,
-                Name = "Kin Family",
-                UserId = UserId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-            })
-            : FamilyAccessResult.NotFound("Family not found for this user."));
-        using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
+        var (service, _, _, familyResolver) = CreateService(
+            tokenClaims: ValidClaims(),
+            familyResolution: FamilyContextResolution.Success(FamilyId));
 
-        var first = await client.GetAsync("/api/access/family-context");
-        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var first = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
+        Assert.Null(first);
 
-        hasFamily = false;
-        var second = await client.GetAsync("/api/access/family-context");
-        Assert.Equal(HttpStatusCode.Forbidden, second.StatusCode);
+        familyResolver.Result = FamilyContextResolution.NoFamily();
+        var second = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
+
+        AssertProblem(second, StatusCodes.Status403Forbidden, "family_required");
     }
 
     [Fact]
     public async Task CoreUnavailable_FamilyEndpoint_FailsClosedWith503()
     {
-        using var factory = new GateFactory(() =>
-            FamilyAccessResult.ServiceUnavailable("Family context could not be resolved because Core is unavailable."));
-        using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
+        var (service, _, _, _) = CreateService(
+            tokenClaims: ValidClaims(),
+            familyResolution: FamilyContextResolution.Unavailable());
 
-        var response = await client.GetAsync("/api/access/family-context");
+        var result = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("family_context_unavailable", body.GetProperty("code").GetString());
+        var problem = AssertProblem(result, StatusCodes.Status503ServiceUnavailable, "family_context_unavailable");
+        Assert.Equal("Family context could not be resolved because Identity is unavailable.", problem.Detail);
     }
 
-    private sealed class GateFactory : WebApplicationFactory<IdentityApi::Program>
+    [Fact]
+    public async Task RegisterWithoutToken_ReturnsUnauthorized()
     {
-        internal const string ClientId = "integration-client";
-        internal const string RedirectUri = "http://127.0.0.1/callback";
+        var (service, _, _, _) = CreateService(
+            tokenClaims: ValidClaims(),
+            familyResolution: FamilyContextResolution.Success(FamilyId));
 
-        private readonly Func<FamilyAccessResult> _familyResultFactory;
+        var result = await service.EnsureFamilyContextAsync(new DefaultHttpContext().Request, CancellationToken.None);
 
-        public GateFactory(Func<FamilyAccessResult> familyResultFactory)
-        {
-            _familyResultFactory = familyResultFactory;
-        }
-
-        public string CreateAccessToken()
-        {
-            using var scope = Services.CreateScope();
-            var tokenGenerator = scope.ServiceProvider.GetRequiredService<ITokenGenerator>();
-            return tokenGenerator.GenerateAccessToken(
-                new KinUser
-                {
-                    Id = UserId,
-                    Email = "integration@kinhub.dev",
-                    DisplayName = "Integration User",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                },
-                [],
-                [OAuthScopes.Read]);
-        }
-
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            builder.UseEnvironment("Development");
-            builder.ConfigureAppConfiguration(configuration =>
-            {
-                configuration.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:KinHub"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
-                    ["Jwt:Issuer"] = "http://localhost",
-                    ["OAuth:AuthorizationServerUrl"] = "http://localhost",
-                    ["OAuth:Clients:0:ClientId"] = ClientId,
-                    ["OAuth:Clients:0:ClientName"] = "Integration Client",
-                    ["OAuth:Clients:0:RedirectUris:0"] = RedirectUri,
-                    ["OAuth:Clients:0:GrantTypes:0"] = "authorization_code",
-                    ["OAuth:Clients:0:ResponseTypes:0"] = "code",
-                    ["OAuth:Clients:0:TokenEndpointAuthMethod"] = "none",
-                    ["OAuth:Clients:0:Scope"] = OAuthScopes.Read,
-                    ["OAuth:SupportedScopes:0"] = OAuthScopes.Read,
-                    ["OAuth:SupportedScopes:1"] = OAuthScopes.Write,
-                    ["OAuth:SupportedScopes:2"] = OAuthScopes.Admin,
-                    ["OAuth:DynamicClientDefaultScopes:0"] = OAuthScopes.Read,
-                    ["OAuth:DynamicClientAllowedScopes:0"] = OAuthScopes.Read,
-                    ["OAuth:DynamicClientAllowedScopes:1"] = OAuthScopes.Write,
-                    ["OAuth:ElevatedConsentScopes:0"] = OAuthScopes.Write,
-                    ["OAuth:ElevatedConsentScopes:1"] = OAuthScopes.Admin,
-                });
-            });
-
-            builder.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<IFamilyOwnershipService>();
-                services.AddScoped<IFamilyOwnershipService>(_ => new ConfigurableFamilyOwnershipService(_familyResultFactory));
-            });
-        }
+        AssertProblem(result, StatusCodes.Status401Unauthorized, "authentication_required");
     }
 
-    private sealed class ConfigurableFamilyOwnershipService : IFamilyOwnershipService
+    [Fact]
+    public async Task RegisterWithoutReadScope_ReturnsUnauthorized()
     {
-        private readonly Func<FamilyAccessResult> _resultFactory;
+        var (service, _, _, _) = CreateService(
+            tokenClaims: ValidClaims(scopes: []),
+            familyResolution: FamilyContextResolution.Success(FamilyId));
 
-        public ConfigurableFamilyOwnershipService(Func<FamilyAccessResult> resultFactory)
-        {
-            _resultFactory = resultFactory;
-        }
+        var result = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
 
-        public Task<FamilyAccessResult> GetCurrentFamilyAsync(Guid userId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_resultFactory());
+        AssertProblem(result, StatusCodes.Status401Unauthorized, "authentication_required");
+    }
 
-        public Task<FamilyAccessResult> EnsureOwnershipAsync(Guid familyId, Guid userId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_resultFactory());
+    [Fact]
+    public async Task RegisterWithInvalidToken_ReturnsUnauthorized()
+    {
+        var (service, _, _, _) = CreateService(
+            tokenClaims: null,
+            familyResolution: FamilyContextResolution.Success(FamilyId));
+
+        var result = await service.EnsureFamilyContextAsync(CreateRequest(), CancellationToken.None);
+
+        AssertProblem(result, StatusCodes.Status401Unauthorized, "authentication_required");
+    }
+
+    private static (FunctionsAuthorizationService service, StubTokenValidator tokenValidator, CurrentUser currentUser, StubFamilyContextResolver familyResolver) CreateService(TokenClaims? tokenClaims, FamilyContextResolution familyResolution)
+    {
+        var tokenValidator = new StubTokenValidator { Result = tokenClaims };
+        var currentUser = new CurrentUser();
+        var familyResolver = new StubFamilyContextResolver { Result = familyResolution };
+        var service = new FunctionsAuthorizationService(tokenValidator, currentUser, familyResolver);
+        return (service, tokenValidator, currentUser, familyResolver);
+    }
+
+    private static TokenClaims ValidClaims(IReadOnlyList<string>? scopes = null) =>
+        new(UserId, "integration@kinhub.dev", [], scopes ?? [OAuthScopes.Read]);
+
+    private static HttpRequest CreateRequest()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/api/access/family-context";
+        context.Request.Headers.Authorization = "Bearer integration-token";
+        return context.Request;
+    }
+
+    private static ProblemDetails AssertProblem(IActionResult? result, int statusCode, string code)
+    {
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
+        Assert.Equal(statusCode, objectResult.StatusCode);
+
+        var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+        Assert.Equal(code, problem.Extensions["code"]);
+        Assert.False(string.IsNullOrWhiteSpace(problem.Extensions["correlationId"]?.ToString()));
+        return problem;
+    }
+
+    private sealed class StubTokenValidator : ITokenValidator
+    {
+        public TokenClaims? Result { get; set; }
+
+        public TokenClaims? ValidateAccessToken(string token) => Result;
+    }
+
+    private sealed class StubFamilyContextResolver : IFamilyContextResolver
+    {
+        public FamilyContextResolution Result { get; set; } = FamilyContextResolution.NoFamily();
+
+        public Task<FamilyContextResolution> ResolveAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Result);
     }
 }
