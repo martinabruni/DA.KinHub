@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { identityApiClient } from '@/api/apiClient'
+import { apiClient } from '@/api/apiClient'
 import { getApiErrorMessage } from '@/lib/errors'
 import type { Family } from '@/types'
 
@@ -31,7 +31,7 @@ export function OnboardingPage() {
   const { data: family, isLoading: checkingFamily } = useQuery({
     queryKey: ['family'],
     queryFn: async () => {
-      const { data } = await identityApiClient.get<Family>('/api/families')
+      const { data } = await apiClient.get<Family>('/api/families')
       return data
     },
     retry: false,
@@ -50,7 +50,7 @@ export function OnboardingPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: FormValues) =>
-      identityApiClient.post('/api/families', {
+      apiClient.post('/api/families', {
         familyName: values.familyName,
         ownerProfileName: values.ownerProfileName,
         additionalMembers: [],

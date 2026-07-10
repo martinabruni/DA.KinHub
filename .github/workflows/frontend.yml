@@ -131,6 +131,7 @@ jobs:
 
       - name: Build frontend
         env:
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
@@ -176,6 +177,7 @@ jobs:
 
       - name: Build frontend
         env:
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
@@ -313,6 +315,7 @@ jobs:
 
       - name: Build frontend
         env:
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}
@@ -358,6 +361,7 @@ jobs:
 
       - name: Build frontend
         env:
+          VITE_KINHUB_API_URL: ${{ vars.VITE_KINHUB_API_URL }}
           VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL }}
           VITE_CORE_URL: ${{ vars.VITE_CORE_URL }}
           VITE_KINRECIPE_URL: ${{ vars.VITE_KINRECIPE_URL }}

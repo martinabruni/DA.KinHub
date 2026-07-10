@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useAuthContext } from '@/store/authContext'
-import { apiClient } from '@/api/apiClient'
+import { kinHubApiClient } from '@/api/apiClient'
 import { useServices } from '@/features/family/ServicesProvider'
 import { serviceConfig, defaultServiceConfig } from '@/config/serviceConfig'
 import type { Family } from '@/types'
@@ -24,7 +24,7 @@ export function DashboardPage() {
   const { data: family, isLoading: loadingFamily } = useQuery({
     queryKey: ['family'],
     queryFn: async () => {
-      const { data } = await apiClient.get<Family>('/api/families')
+      const { data } = await kinHubApiClient.get<Family>('/api/families')
       return data
     },
     enabled: !!user?.familyId,
