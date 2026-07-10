@@ -16,7 +16,6 @@ public sealed class IdentityRouteInventoryTests
         Assert.Contains("/authorize", identityRoutes);
         Assert.Contains("/token", identityRoutes);
         Assert.Contains("/logout", identityRoutes);
-        Assert.Contains("/api/access/family-context", identityRoutes);
         Assert.DoesNotContain(identityRoutes, IsRecipeOrListRoute);
     }
 

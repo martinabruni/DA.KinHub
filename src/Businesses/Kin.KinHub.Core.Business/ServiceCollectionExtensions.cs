@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddKinHubFamilyBusiness(this IServiceCollection services)
     {
+        services.AddLogging();
         services.AddScoped<IFamilyOwnershipService, FamilyOwnershipService>();
         services.AddScoped<ICreateFamilyHandler, CreateFamilyHandler>();
         services.AddScoped<IAddFamilyMemberHandler, AddFamilyMemberHandler>();

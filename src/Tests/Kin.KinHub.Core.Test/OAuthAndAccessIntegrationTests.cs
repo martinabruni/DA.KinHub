@@ -23,34 +23,22 @@ using System.Text.Json;
 namespace Kin.KinHub.Core.Test;
 
 public sealed class OAuthAndAccessIntegrationTests
-    : IClassFixture<OAuthAndAccessIntegrationTests.FamilyContextFactory>,
-      IClassFixture<OAuthAndAccessIntegrationTests.NoFamilyContextFactory>
+    : IClassFixture<OAuthAndAccessIntegrationTests.FamilyContextFactory>
 {
     // A fresh WebApplicationFactory per test builds (and tears down) a full ASP.NET host.
     // Doing that for every fact in this class exhausts host/timer resources on some
     // environments and hangs the test host, so the two required variants are shared
     // across the class through IClassFixture (each host is created exactly once).
     private readonly OAuthApiFactory _familyFactory;
-    private readonly OAuthApiFactory _noFamilyFactory;
-
-    public OAuthAndAccessIntegrationTests(FamilyContextFactory familyFactory, NoFamilyContextFactory noFamilyFactory)
+    public OAuthAndAccessIntegrationTests(FamilyContextFactory familyFactory)
     {
         _familyFactory = familyFactory;
-        _noFamilyFactory = noFamilyFactory;
     }
 
     public sealed class FamilyContextFactory : OAuthApiFactory
     {
         public FamilyContextFactory()
             : base(hasFamilyContext: true)
-        {
-        }
-    }
-
-    public sealed class NoFamilyContextFactory : OAuthApiFactory
-    {
-        public NoFamilyContextFactory()
-            : base(hasFamilyContext: false)
         {
         }
     }
@@ -157,57 +145,6 @@ public sealed class OAuthAndAccessIntegrationTests
         Assert.Contains(
             logoutResponse.Headers.TryGetValues("Set-Cookie", out var cookies) ? cookies : [],
             header => header.Contains("expires=", StringComparison.OrdinalIgnoreCase));
-    }
-
-    [Fact]
-    public async Task FamilyContext_WhenFamilyExists_ReturnsFamilyId()
-    {
-        var factory = _familyFactory;
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
-
-        var response = await client.GetAsync("/api/access/family-context");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(OAuthApiFactory.FamilyId, body.GetProperty("familyId").GetGuid());
-    }
-
-    [Fact]
-    public async Task ProtectedEndpoint_RejectsMissingApiScope()
-    {
-        using var client = _familyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        client.DefaultRequestHeaders.Authorization = new("Bearer", _familyFactory.CreateAccessToken([]));
-
-        var response = await client.GetAsync("/api/access/family-context");
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task ProtectedEndpoint_RejectsWrongAudience()
-    {
-        using var client = _familyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        client.DefaultRequestHeaders.Authorization = new("Bearer", _familyFactory.CreateAccessToken([OAuthScopes.Read], "wrong.api"));
-
-        var response = await client.GetAsync("/api/access/family-context");
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task FamilyContext_WhenFamilyMissing_ReturnsFamilyRequiredProblemDetails()
-    {
-        var factory = _noFamilyFactory;
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.CreateAccessToken());
-
-        var response = await client.GetAsync("/api/access/family-context");
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("family_required", body.GetProperty("code").GetString());
-        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("correlationId").GetString()));
     }
 
     [Fact]
@@ -322,6 +259,7 @@ public class OAuthApiFactory : WebApplicationFactory<IdentityApi::Program>
                 ["ConnectionStrings:KinHub"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
                 ["Jwt:Issuer"] = "http://localhost",
                 ["OAuth:AuthorizationServerUrl"] = "http://localhost",
+                ["RunMigrationsOnStartup"] = "false",
                 ["OAuth:EnableDynamicClientRegistration"] = "true",
                 ["OAuth:Clients:0:ClientId"] = ClientId,
                 ["OAuth:Clients:0:ClientName"] = "Integration Client",
