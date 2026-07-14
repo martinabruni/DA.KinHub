@@ -1,0 +1,7 @@
+{
+  "items": [
+    {"id":"app-shell-scaffold","name":"App/Page scaffold","description":"Routing, pagina generica, dizionario locale e selettori concentrati in main.tsx","status":"scaffold","path":"src/frontend/src/main.tsx"},
+    {"id":"page-help-accordion","name":"PageHelpAccordion","description":"Accordion help localizzato obbligatorio per route","status":"planned","targetPath":"src/frontend/src/shared/components/PageHelpAccordion.tsx"},
+    {"id":"route-registry","name":"Documented route registry","description":"Fonte tipizzata per path, titolo, help e guida","status":"planned","targetPath":"src/frontend/src/app/routes.tsx"}
+  ]
+}

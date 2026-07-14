@@ -1,0 +1,15 @@
+{
+  "name": "kinhub-repository-tools",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "skills:list": "node tools/skill-harness/index.mjs list",
+    "skills:read": "node tools/skill-harness/index.mjs read",
+    "skills:build": "node tools/skill-harness/index.mjs build",
+    "skills:validate": "node tools/skill-harness/index.mjs validate",
+    "skills:watch": "node tools/skill-harness/index.mjs watch",
+    "skills:test": "node --test tools/skill-harness/*.test.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

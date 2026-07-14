@@ -1,1 +1,70 @@
-{"version":1,"skills":[{"area":"frontend","path":"skills/frontend/SKILL.md"},{"area":"backend","path":"skills/backend/SKILL.md"},{"area":"architecture","path":"skills/architecture/SKILL.md"},{"area":"documentation","path":"skills/documentation/SKILL.md"},{"area":"release","path":"skills/release/SKILL.md"}]}
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "architecture",
+      "name": "Architettura KinHub",
+      "area": "architecture",
+      "description": "Confini dei layer, dipendenze e decisioni strutturali",
+      "version": "1.0.0",
+      "path": "skills/architecture/SKILL.md",
+      "catalog": "skills/architecture/catalog.json",
+      "checksum": "sha256:d9682db546b9c0bee143a806bd3f70135672c33d44b94cb7a3e37b59b6d2bfbb",
+      "references": [
+        "skills/architecture/catalog.json"
+      ]
+    },
+    {
+      "id": "backend",
+      "name": "Backend KinHub",
+      "area": "backend",
+      "description": "Servizi business riutilizzabili e contratti DDD pragmatici",
+      "version": "1.0.0",
+      "path": "skills/backend/SKILL.md",
+      "catalog": "skills/backend/catalog.json",
+      "checksum": "sha256:e31ccb1cac30e8398d0fc601ebf6f80b54d6300cf440072f19331b8fc3c5619c",
+      "references": [
+        "skills/backend/catalog.json"
+      ]
+    },
+    {
+      "id": "documentation",
+      "name": "Documentazione KinHub",
+      "area": "documentation",
+      "description": "Guide bilingui, help contestuale e sincronizzazione Markdown",
+      "version": "1.0.0",
+      "path": "skills/documentation/SKILL.md",
+      "catalog": "skills/documentation/catalog.json",
+      "checksum": "sha256:5d550a901335f7eb6d8ffd39f75715c17871adc78a6b2a50dd38a61309c886d5",
+      "references": [
+        "skills/documentation/catalog.json"
+      ]
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend KinHub",
+      "area": "frontend",
+      "description": "Pattern React condivisi, routing documentato, i18n e accessibilità",
+      "version": "1.0.0",
+      "path": "skills/frontend/SKILL.md",
+      "catalog": "skills/frontend/catalog.json",
+      "checksum": "sha256:883b646e52f69532095711c2f67350f6e85f3faa13d35eb36df7113fbcf6933c",
+      "references": [
+        "skills/frontend/catalog.json"
+      ]
+    },
+    {
+      "id": "release",
+      "name": "Release KinHub",
+      "area": "release",
+      "description": "Versioning, change fragment, patch note e promozione verificata",
+      "version": "1.0.0",
+      "path": "skills/release/SKILL.md",
+      "catalog": "skills/release/catalog.json",
+      "checksum": "sha256:738e70b8577afbe0a9e56c4ba33c2f872385454798adc37c7ca41749787eca38",
+      "references": [
+        "skills/release/catalog.json"
+      ]
+    }
+  ]
+}
