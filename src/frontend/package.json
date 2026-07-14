@@ -1,0 +1,33 @@
+{
+  "name": "kinhub-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "tsc --noEmit",
+    "skills:list": "node ../../tools/skill-harness/index.mjs list",
+    "skills:validate": "node ../../tools/skill-harness/index.mjs validate",
+    "docs:validate": "node ../../tools/docs-sync/index.mjs validate",
+    "i18n:validate": "node ../../tools/docs-sync/index.mjs i18n",
+    "changes:validate": "node ../../tools/release-notes/index.mjs validate"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "typescript": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "latest",
+    "i18next": "latest",
+    "react-i18next": "latest",
+    "vite-plugin-pwa": "latest",
+    "@azure/msal-browser": "latest",
+    "@azure/msal-react": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}

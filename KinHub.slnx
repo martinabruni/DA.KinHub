@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/" />
+  <Folder Name="/src/backend/applications/">
+    <Project Path="src/backend/applications/KinHub.Api/KinHub.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/backend/business/">
+    <Project Path="src/backend/business/KinHub.Business/KinHub.Business.csproj" />
+  </Folder>
+  <Folder Name="/src/backend/domains/">
+    <Project Path="src/backend/domains/KinHub.Domain/KinHub.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/backend/infrastructure/">
+    <Project Path="src/backend/infrastructure/KinHub.Infrastructure/KinHub.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KinHub.Business.Tests/KinHub.Business.Tests.csproj" />
+    <Project Path="tests/KinHub.Domain.Tests/KinHub.Domain.Tests.csproj" />
+    <Project Path="tests/KinHub.IntegrationTests/KinHub.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

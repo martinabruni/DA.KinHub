@@ -12,8 +12,9 @@ Usa queste variabili come fonte autorevole in tutto il repository:
 
 ```text
 APP_NAME=KinHub
-APP_DOMAIN=kinhub
-APP_DOMAIN_DESCRIPTION=piattaforma semplice e intuitiva per la famiglia, che raggruppa piu servizi (es. KinRecipe, KinList, ecc...). Single page con pulsanti che ti mandano ai servizi. Meno inquinamento visivo c'e', meglio e'. Colori tema customizzabili, preesistenti dark, light.
+APP_DOMAIN=KinHub
+APP_DOMAIN_DESCRIPTION=Piattaforma semplice e intuitiva pensata per l'utilizzo in famiglia, che raccoglie in un unico punto di accesso diversi servizi, come KinRecipe, KinList, KinDrive e altri. La schermata principale è composta esclusivamente da una home essenziale con i pulsanti dei servizi disponibili: toccando un pulsante, l'utente viene reindirizzato direttamente alla pagina del servizio corrispondente.
+L'interfaccia deve privilegiare la semplicità, riducendo al minimo l'inquinamento visivo e mostrando solo gli elementi realmente necessari. L'esperienza deve risultare immediata, pulita e facilmente utilizzabile anche da smartphone. La piattaforma supporta temi grafici personalizzabili, includendo almeno i temi predefiniti Light e Dark.
 DEFAULT_LOCALE=it
 SUPPORTED_LOCALES=it,en
 ```

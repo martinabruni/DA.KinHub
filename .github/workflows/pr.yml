@@ -1,0 +1,16 @@
+name: PR quality
+on: pull_request
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - run: dotnet test KinHub.slnx
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install && npm run build
+        working-directory: src/frontend
+      - run: npm run skills:validate && npm run docs:validate && npm run i18n:validate && npm run changes:validate
+        working-directory: src/frontend
