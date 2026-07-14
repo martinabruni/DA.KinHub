@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "Kin.KinHub.App.Functions": {
-      "commandName": "Project",
-      "commandLineArgs": "--port 7155",
-      "launchBrowser": false
-    }
-  }
-}
