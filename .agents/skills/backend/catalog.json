@@ -1,7 +1,0 @@
-{
-  "items": [
-    {"id":"project-entity","name":"Project","description":"Entity con id generato, nome obbligatorio e trimming","status":"scaffold","contract":"KinHub.Domain.Project","path":"src/backend/domains/KinHub.Domain/Project.cs"},
-    {"id":"project-service","name":"IProjectService","description":"Servizio stateless di creazione progetto","status":"scaffold","contract":"KinHub.Business.IProjectService","implementation":"KinHub.Business.ProjectService","lifetime":"singleton","path":"src/backend/business/KinHub.Business/ProjectService.cs"},
-    {"id":"application-metadata","name":"Application metadata service","description":"Fonte iniettata per versione e build metadata senza SemVer duplicata","status":"planned"}
-  ]
-}
