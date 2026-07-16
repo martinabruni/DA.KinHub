@@ -1,0 +1,11 @@
+**/.git*
+**/.env*
+**/local.settings.json
+**/local.settings.*.json
+**/bin
+**/obj
+**/TestResults
+**/*.Tests.dll
+**/*.pdb
+README.md
+test.http

@@ -1,0 +1,66 @@
+{
+  "home": {
+    "summary": "Discover services and quickly reach the main areas.",
+    "purpose": "Provides an essential overview of KinHub.",
+    "actions": "Open Projects, Version, Release notes, or Settings.",
+    "prerequisites": "None.",
+    "fields": "Cards describe the available areas.",
+    "limits": "Specialized services will be added in later versions."
+  },
+  "projects": {
+    "summary": "Create and view shared initiatives.",
+    "purpose": "Collects family projects and their current stage.",
+    "actions": "Create a project and view its status.",
+    "prerequisites": "When authentication is configured, you must sign in.",
+    "fields": "The name identifies the project; the stage shows its progress.",
+    "limits": "This initial base supports creation and listing."
+  },
+  "about": {
+    "summary": "Check the version and build metadata.",
+    "purpose": "Helps identify the exact app instance in use.",
+    "actions": "Read version, commit and date, or open release notes.",
+    "prerequisites": "None.",
+    "fields": "SemVer version, commit, build date, and environment.",
+    "limits": "Local values may display the local marker."
+  },
+  "releaseNotes": {
+    "summary": "Review what changed between versions.",
+    "purpose": "Makes features, fixes, and breaking changes visible.",
+    "actions": "Review history, categories, and related links.",
+    "prerequisites": "A connection is needed to check a newly published version.",
+    "fields": "Version, date, area, category, and breaking indicator.",
+    "limits": "The PWA cache may require a controlled refresh."
+  },
+  "settings": {
+    "summary": "Customize language, theme, and tutorial.",
+    "purpose": "Stores experience preferences on this device.",
+    "actions": "Change language or theme, or restart the tutorial.",
+    "prerequisites": "The browser must allow local storage.",
+    "fields": "Language, light/dark/system theme, and tutorial.",
+    "limits": "Preferences are not yet synchronized across devices."
+  },
+  "notFound": {
+    "summary": "Explains why a page is unavailable.",
+    "purpose": "Provides recovery from an incorrect address.",
+    "actions": "Return home or use the navigation.",
+    "prerequisites": "None.",
+    "fields": "There are no fields.",
+    "limits": "Check the address when following an external link."
+  },
+  "docs": {
+    "summary": "Read the complete guide linked from each page.",
+    "purpose": "Displays localized Markdown documentation in the product.",
+    "actions": "Read the guide and return to the related feature.",
+    "prerequisites": "The guide must exist in the selected language.",
+    "fields": "Title, operational sections, and links.",
+    "limits": "Guides are refreshed during the build."
+  },
+  "error": {
+    "summary": "Provides safe recovery from an unexpected error.",
+    "purpose": "Avoids a blank screen and keeps an exit path available.",
+    "actions": "Reload or return home.",
+    "prerequisites": "None.",
+    "fields": "There are no fields.",
+    "limits": "If the error continues, note the version and commit."
+  }
+}

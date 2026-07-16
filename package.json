@@ -1,0 +1,21 @@
+{
+  "name": "kinhub-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "skills:list": "node tools/skill-harness/index.mjs list",
+    "skills:read": "node tools/skill-harness/index.mjs read",
+    "skills:validate": "node tools/skill-harness/index.mjs validate",
+    "skills:build": "node tools/skill-harness/index.mjs build",
+    "skills:watch": "node tools/skill-harness/index.mjs watch",
+    "docs:validate": "node tools/docs-sync/index.mjs validate",
+    "docs:sync": "node tools/docs-sync/index.mjs sync",
+    "release:validate": "node tools/release-notes/index.mjs validate",
+    "release:generate": "node tools/release-notes/index.mjs generate",
+    "release:prepare": "node tools/release-notes/index.mjs release"
+  }
+}

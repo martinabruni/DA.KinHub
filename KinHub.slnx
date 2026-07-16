@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/domains/AdvancedFrontier.Domain/AdvancedFrontier.Domain.csproj" />
+    <Project Path="src/backend/business/AdvancedFrontier.Business/AdvancedFrontier.Business.csproj" />
+    <Project Path="src/backend/infrastructure/AdvancedFrontier.Infrastructure/AdvancedFrontier.Infrastructure.csproj" />
+    <Project Path="src/backend/applications/AdvancedFrontier.Functions/AdvancedFrontier.Functions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdvancedFrontier.Domain.Tests/AdvancedFrontier.Domain.Tests.csproj" />
+    <Project Path="tests/AdvancedFrontier.Business.Tests/AdvancedFrontier.Business.Tests.csproj" />
+    <Project Path="tests/AdvancedFrontier.IntegrationTests/AdvancedFrontier.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

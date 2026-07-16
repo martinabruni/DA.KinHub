@@ -1,0 +1,116 @@
+name: Deploy application code
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  BUILD_ENVIRONMENT: Development
+  POSTGRES_MIGRATION_CONNECTION_STRING: ${{ secrets.POSTGRES_MIGRATION_CONNECTION_STRING }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Build, test and validate
+        run: |
+          dotnet restore KinHub.slnx
+          dotnet build KinHub.slnx --configuration Release --no-restore
+          dotnet test KinHub.slnx --configuration Release --no-build
+          npm ci --prefix src/frontend
+          npm run skills:validate
+          npm run docs:validate
+          npm run release:validate
+          npm run --prefix src/frontend i18n:validate
+          npm run --prefix src/frontend routes:validate
+
+      - name: Build migration bundle
+        run: |
+          dotnet tool restore
+          mkdir -p artifacts/migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/AdvancedFrontier.Infrastructure --startup-project src/backend/applications/AdvancedFrontier.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
+
+      - name: Apply database migrations
+        if: env.POSTGRES_MIGRATION_CONNECTION_STRING != ''
+        run: artifacts/migrations/kinhub-migrations --connection "$POSTGRES_MIGRATION_CONNECTION_STRING"
+
+      - name: Package backend
+        id: package
+        shell: bash
+        run: |
+          bash scripts/package-backend.sh "$BUILD_ENVIRONMENT"
+          package=$(find artifacts/backend -maxdepth 1 -name '*.zip' -print -quit)
+          test -n "$package"
+          echo "path=$package" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Function App with One Deploy
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ steps.package.outputs.path }}
+          sku: flexconsumption
+          remote-build: false
+
+      - name: Build frontend
+        env:
+          VITE_API_BASE_URL: https://${{ vars.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net
+          VITE_ENTRA_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
+          VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
+          VITE_ENTRA_REDIRECT_URI: ${{ vars.AZURE_STATIC_WEB_APP_URL }}
+        run: npm run --prefix src/frontend build
+
+      - name: Deploy Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: src/frontend/dist
+          skip_app_build: true
+          output_location: ""
+
+      - name: Smoke test API
+        run: |
+          curl --fail --retry 8 --retry-delay 10 "https://${{ vars.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/health/live"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ vars.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/version"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kinhub-backend-${{ github.sha }}
+          path: |
+            artifacts/backend/*.zip
+            artifacts/backend/*.sha256
+            artifacts/backend/build-manifest.json
+
+      - name: Deployment summary
+        run: |
+          echo "## KinHub code deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Function App: ${{ vars.AZURE_FUNCTIONAPP_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: $(basename '${{ steps.package.outputs.path }}')" >> "$GITHUB_STEP_SUMMARY"

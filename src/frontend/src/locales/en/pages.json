@@ -1,0 +1,55 @@
+{
+  "home": {
+    "title": "Family life, with less noise",
+    "subtitle": "KinHub brings simple services together in one calm, consistent space.",
+    "projectsCard": "Organize shared activities without losing context.",
+    "lifecycleCard": "Every service evolves with documentation and release notes."
+  },
+  "projects": {
+    "title": "Projects",
+    "intro": "A starting space for family initiatives and shared activities.",
+    "nameLabel": "Project name",
+    "namePlaceholder": "For example: weekly menu",
+    "empty": "There are no projects yet.",
+    "loadError": "Projects could not be loaded.",
+    "createError": "The project could not be created.",
+    "stage": "Stage: {{stage}}"
+  },
+  "about": {
+    "title": "Version",
+    "current": "Current version",
+    "commit": "Commit",
+    "buildDate": "Build date",
+    "environment": "Environment",
+    "releaseLink": "View all release notes"
+  },
+  "releaseNotes": {
+    "title": "Release notes",
+    "current": "Version {{version}}",
+    "date": "Published on {{date}}",
+    "breaking": "Breaking change",
+    "empty": "No release notes are available.",
+    "loadError": "Release notes could not be loaded."
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance and language",
+    "tutorial": "Getting-started tutorial",
+    "tutorialDescription": "You can revisit KinHub's main steps at any time.",
+    "pwa": "App installation",
+    "pwaDescription": "Use your browser's Install command to add KinHub to your device."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This address does not match a KinHub page.",
+    "home": "Return home"
+  },
+  "docs": {
+    "title": "User guide",
+    "missing": "This guide page is not available in the selected language."
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "KinHub caught an unexpected error. You can reload without losing local settings."
+  }
+}

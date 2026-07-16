@@ -1,0 +1,72 @@
+name: Pull request quality
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Restore and build backend
+        run: |
+          dotnet restore KinHub.slnx
+          dotnet build KinHub.slnx --configuration Release --no-restore -p:CommitSha="${GITHUB_SHA::12}" -p:BuildDate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -p:BuildEnvironment=CI
+
+      - name: Test backend
+        run: dotnet test KinHub.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx"
+
+      - name: Publish and validate Function package
+        run: bash scripts/package-backend.sh CI
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix src/frontend
+
+      - name: Validate repository tools
+        run: |
+          npm run skills:validate
+          npm run docs:validate
+          npm run release:validate
+          npm run --prefix src/frontend i18n:validate
+          npm run --prefix src/frontend routes:validate
+
+      - name: Lint, typecheck and build frontend
+        run: |
+          npm run --prefix src/frontend lint
+          npm run --prefix src/frontend typecheck
+          npm run --prefix src/frontend build
+
+      - name: Validate Bicep
+        run: |
+          az bicep install
+          az bicep build --file infra/app.bicep --outfile /tmp/kinhub-infra.json
+          az bicep build-params --file infra/main.dev.bicepparam --outfile /tmp/kinhub-dev-parameters.json
+
+      - name: Upload backend package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kinhub-backend-pr
+          path: |
+            artifacts/backend/*.zip
+            artifacts/backend/*.sha256
+            artifacts/backend/build-manifest.json
+          if-no-files-found: error

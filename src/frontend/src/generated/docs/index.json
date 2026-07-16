@@ -1,0 +1,109 @@
+{
+  "generatedBy": "tools/docs-sync",
+  "locales": [
+    "it",
+    "en"
+  ],
+  "pages": {
+    "it": [
+      {
+        "slug": "getting-started",
+        "locale": "it",
+        "title": "Primi passi",
+        "description": "Orientarsi in KinHub, personalizzare l'esperienza e capire come evolve la piattaforma.",
+        "content": "## Navigazione\n\nIl menu superiore porta a Home, Progetti, Note di rilascio, Versione e Impostazioni. Su schermi piccoli le icone mantengono le stesse destinazioni.\n\n## Lingua e tema\n\nScegli italiano o inglese e tema chiaro, scuro o di sistema. Le scelte restano su questo dispositivo e vengono applicate prima del rendering per evitare lampeggi del tema errato.\n\n## Guida contestuale\n\nSubito dopo il titolo di ogni pagina trovi un pannello chiuso per impostazione predefinita. Aprilo per vedere scopo, azioni, prerequisiti, campi e limiti, oppure segui il link alla guida completa.\n\n## Tutorial e ciclo di vita\n\nIl tutorial parte al primo avvio, può essere saltato e riavviato da Impostazioni. Versione e Note di rilascio mostrano l'evoluzione di KinHub: ogni funzionalità viene accompagnata da traduzioni, documentazione, test e patch note.",
+        "source": "docs/user-guide/it/getting-started.md"
+      },
+      {
+        "slug": "projects",
+        "locale": "it",
+        "title": "Progetti familiari",
+        "description": "Creare e consultare iniziative condivise in KinHub.",
+        "content": "## Creare un progetto\n\nInserisci un nome da 3 a 120 caratteri e seleziona **Crea**. Il nome viene normalizzato e deve essere univoco. Errori di validazione vengono mostrati senza perdere il contenuto del modulo.\n\n## Fasi\n\nUn progetto nasce in Discovery e può avanzare verso Planning, Delivery e Completed. Il dominio impedisce regressioni accidentali.\n\n## Accesso e limiti\n\nQuando Microsoft Entra External ID è configurato, l'area richiede l'accesso e lo scope API. In sviluppo locale l'autenticazione può essere disabilitata. La versione iniziale offre creazione ed elenco; modifica e archiviazione arriveranno tramite feature versionate.",
+        "source": "docs/user-guide/it/projects.md"
+      },
+      {
+        "slug": "release-notes",
+        "locale": "it",
+        "title": "Note di rilascio",
+        "description": "Capire novità, correzioni, sicurezza e modifiche incompatibili.",
+        "content": "Ogni voce riporta categoria e area. Le categorie seguono Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed e Security. Le modifiche incompatibili sono evidenziate.\n\nKinHub controlla la versione disponibile all'apertura, al ritorno del focus e periodicamente. Quando rileva un aggiornamento mostra una notifica localizzata. **Aggiorna ora** coordina service worker e refresh e impedisce cicli ripetuti.",
+        "source": "docs/user-guide/it/release-notes.md"
+      },
+      {
+        "slug": "settings",
+        "locale": "it",
+        "title": "Impostazioni, temi e installazione",
+        "description": "Gestire preferenze, tutorial e installazione PWA.",
+        "content": "## Preferenze\n\nLa lingua e il tema vengono salvati nel browser. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.\n\n## Tutorial\n\nSeleziona **Riavvia il tutorial** per rivedere tutti i passaggi. Il completamento è associato alla versione del tutorial: nuovi passaggi importanti possono apparire dopo un aggiornamento senza bloccare l'app.\n\n## Installazione PWA\n\nSu desktop e Android usa il comando Installa del browser. Su iOS usa Condividi → Aggiungi alla schermata Home. Le funzionalità disponibili offline sono limitate all'involucro applicativo e ai contenuti già memorizzati; dati e autenticazione richiedono rete.",
+        "source": "docs/user-guide/it/settings.md"
+      },
+      {
+        "slug": "troubleshooting",
+        "locale": "it",
+        "title": "Risoluzione dei problemi",
+        "description": "Recuperare da pagine mancanti, errori, problemi di accesso o cache.",
+        "content": "- **Pagina non trovata:** torna alla Home e verifica l'indirizzo.\n- **Errore inatteso:** usa Riprova; se continua, annota versione, commit e passaggi eseguiti.\n- **Accesso:** verifica tenant, client ID, redirect URI, scope e consenso dell'API.\n- **Aggiornamento non visibile:** apri Note di rilascio e usa Aggiorna ora; evita refresh ripetuti manuali.\n- **API non pronta:** liveness verifica il processo, readiness include PostgreSQL. Controlla connessione e migration.",
+        "source": "docs/user-guide/it/troubleshooting.md"
+      },
+      {
+        "slug": "version",
+        "locale": "it",
+        "title": "Versione e build",
+        "description": "Identificare la versione di KinHub e i relativi metadati.",
+        "content": "KinHub usa Semantic Versioning. La pagina Versione mostra versione applicativa, commit SHA, data build e ambiente. Questi dati consentono di descrivere con precisione un problema e verificare che un aggiornamento sia arrivato.\n\nLa stessa versione nasce dal file `VERSION` ed entra in assembly backend, bundle frontend, endpoint `/api/version`, pacchetto ZIP e note di rilascio. In locale commit e data possono usare marcatori di sviluppo.",
+        "source": "docs/user-guide/it/version.md"
+      }
+    ],
+    "en": [
+      {
+        "slug": "getting-started",
+        "locale": "en",
+        "title": "Getting started",
+        "description": "Navigate KinHub, customize the experience, and understand how the platform evolves.",
+        "content": "## Navigation\n\nThe top menu opens Home, Projects, Release notes, Version, and Settings. On smaller screens the icons keep the same destinations.\n\n## Language and theme\n\nChoose Italian or English and a light, dark, or system theme. Preferences stay on this device and are applied before rendering to avoid a wrong-theme flash.\n\n## Contextual help\n\nImmediately below every page title is a panel that is closed by default. Open it for purpose, actions, prerequisites, fields, and limits, or follow the full-guide link.\n\n## Tutorial and lifecycle\n\nThe tutorial starts on first launch, can be skipped, and can be restarted from Settings. Version and Release notes explain KinHub's evolution: each feature comes with translations, documentation, tests, and release notes.",
+        "source": "docs/user-guide/en/getting-started.md"
+      },
+      {
+        "slug": "projects",
+        "locale": "en",
+        "title": "Family projects",
+        "description": "Create and review shared initiatives in KinHub.",
+        "content": "## Create a project\n\nEnter a name between 3 and 120 characters and select **Create**. The name is normalized and must be unique. Validation errors are shown without losing the form contents.\n\n## Stages\n\nA project starts in Discovery and can advance to Planning, Delivery, and Completed. The domain prevents accidental regressions.\n\n## Access and limits\n\nWhen Microsoft Entra External ID is configured, this area requires sign-in and the API scope. Authentication may be disabled in local development. The initial version provides creation and listing; editing and archiving will arrive as versioned features.",
+        "source": "docs/user-guide/en/projects.md"
+      },
+      {
+        "slug": "release-notes",
+        "locale": "en",
+        "title": "Release notes",
+        "description": "Understand features, fixes, security work, and breaking changes.",
+        "content": "Each entry shows its category and area. Categories follow Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed, and Security. Breaking changes are highlighted.\n\nKinHub checks the available version on launch, when focus returns, and periodically. A localized notification appears when an update is detected. **Refresh now** coordinates the service worker and reload while preventing refresh loops.",
+        "source": "docs/user-guide/en/release-notes.md"
+      },
+      {
+        "slug": "settings",
+        "locale": "en",
+        "title": "Settings, themes, and installation",
+        "description": "Manage preferences, tutorial state, and PWA installation.",
+        "content": "## Preferences\n\nLanguage and theme are saved in the browser. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.\n\n## Tutorial\n\nSelect **Restart tutorial** to revisit every step. Completion is tied to the tutorial version, so important new steps can appear after an update without locking the app.\n\n## PWA installation\n\nOn desktop and Android, use the browser's Install command. On iOS, use Share → Add to Home Screen. Offline behavior is limited to the application shell and previously cached content; data and authentication require a connection.",
+        "source": "docs/user-guide/en/settings.md"
+      },
+      {
+        "slug": "troubleshooting",
+        "locale": "en",
+        "title": "Troubleshooting",
+        "description": "Recover from missing pages, errors, sign-in problems, or stale caches.",
+        "content": "- **Page not found:** return Home and check the address.\n- **Unexpected error:** use Retry; if it continues, record the version, commit, and steps taken.\n- **Sign-in:** verify tenant, client ID, redirect URI, scope, and API consent.\n- **Update not visible:** open Release notes and use Refresh now; avoid repeated manual reloads.\n- **API not ready:** liveness checks the process, while readiness includes PostgreSQL. Check the connection and migrations.",
+        "source": "docs/user-guide/en/troubleshooting.md"
+      },
+      {
+        "slug": "version",
+        "locale": "en",
+        "title": "Version and build",
+        "description": "Identify the KinHub version and its build metadata.",
+        "content": "KinHub uses Semantic Versioning. The Version page shows the application version, commit SHA, build date, and environment. These values make a problem report precise and confirm that an update has arrived.\n\nThe same version comes from the root `VERSION` file and is included in the backend assembly, frontend bundle, `/api/version` endpoint, ZIP package, and release notes. Local builds may use development markers for commit and date.",
+        "source": "docs/user-guide/en/version.md"
+      }
+    ]
+  }
+}

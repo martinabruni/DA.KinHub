@@ -1,0 +1,12 @@
+{
+  "title": "Welcome to KinHub",
+  "progress": "Step {{current}} of {{total}}",
+  "steps": {
+    "navigation": { "title": "Navigation", "body": "The menu reaches the main areas without crowding the page." },
+    "language": { "title": "Language", "body": "Choose Italian or English; KinHub remembers your preference." },
+    "theme": { "title": "Theme", "body": "Use light, dark, or your system theme." },
+    "help": { "title": "Contextual help", "body": "Every page explains purpose, actions, prerequisites, and limits." },
+    "version": { "title": "Version and updates", "body": "Version details and release notes make every change understandable." },
+    "lifecycle": { "title": "Lifecycle", "body": "Features evolve together with tests, documentation, translations, and patch notes." }
+  }
+}

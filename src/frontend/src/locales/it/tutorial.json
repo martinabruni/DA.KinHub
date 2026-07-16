@@ -1,0 +1,12 @@
+{
+  "title": "Benvenuti in KinHub",
+  "progress": "Passaggio {{current}} di {{total}}",
+  "steps": {
+    "navigation": { "title": "Navigazione", "body": "Il menu porta alle aree principali senza affollare la pagina." },
+    "language": { "title": "Lingua", "body": "Scegli italiano o inglese; KinHub ricorderà la preferenza." },
+    "theme": { "title": "Tema", "body": "Usa tema chiaro, scuro o quello del sistema." },
+    "help": { "title": "Guida contestuale", "body": "Ogni pagina spiega scopo, azioni, prerequisiti e limiti." },
+    "version": { "title": "Versione e novità", "body": "Versione e note di rilascio rendono ogni cambiamento comprensibile." },
+    "lifecycle": { "title": "Ciclo di vita", "body": "Le funzioni evolvono insieme a test, documentazione, traduzioni e patch note." }
+  }
+}

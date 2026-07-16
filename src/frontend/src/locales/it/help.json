@@ -1,0 +1,66 @@
+{
+  "home": {
+    "summary": "Scopri i servizi e raggiungi rapidamente le aree principali.",
+    "purpose": "Offre una panoramica essenziale di KinHub.",
+    "actions": "Aprire Progetti, Versione, Note di rilascio o Impostazioni.",
+    "prerequisites": "Nessuno.",
+    "fields": "Le schede descrivono le aree disponibili.",
+    "limits": "I servizi specialistici verranno aggiunti in versioni successive."
+  },
+  "projects": {
+    "summary": "Crea e consulta iniziative condivise.",
+    "purpose": "Raccoglie i progetti familiari e la loro fase.",
+    "actions": "Creare un progetto e consultarne lo stato.",
+    "prerequisites": "Con autenticazione configurata, è necessario accedere.",
+    "fields": "Il nome identifica il progetto; la fase ne indica l'avanzamento.",
+    "limits": "In questa base iniziale sono disponibili creazione ed elenco."
+  },
+  "about": {
+    "summary": "Controlla versione e metadati della build.",
+    "purpose": "Aiuta a identificare con precisione l'istanza in uso.",
+    "actions": "Leggere versione, commit, data e aprire le note di rilascio.",
+    "prerequisites": "Nessuno.",
+    "fields": "Versione SemVer, commit, data build e ambiente.",
+    "limits": "I valori locali possono mostrare il marcatore local."
+  },
+  "releaseNotes": {
+    "summary": "Consulta cosa è cambiato tra le versioni.",
+    "purpose": "Rende visibili novità, correzioni e modifiche incompatibili.",
+    "actions": "Esaminare cronologia, categorie e collegamenti correlati.",
+    "prerequisites": "Connessione necessaria per verificare una versione appena pubblicata.",
+    "fields": "Versione, data, area, categoria e indicatore breaking.",
+    "limits": "La cache PWA può richiedere un aggiornamento controllato."
+  },
+  "settings": {
+    "summary": "Personalizza lingua, tema e tutorial.",
+    "purpose": "Conserva le preferenze di esperienza sul dispositivo.",
+    "actions": "Cambiare lingua e tema o riavviare il tutorial.",
+    "prerequisites": "Il browser deve consentire l'archiviazione locale.",
+    "fields": "Lingua, tema chiaro/scuro/sistema e tutorial.",
+    "limits": "Le preferenze non sono ancora sincronizzate tra dispositivi."
+  },
+  "notFound": {
+    "summary": "Spiega perché una pagina non è disponibile.",
+    "purpose": "Permette di recuperare da un indirizzo errato.",
+    "actions": "Tornare alla home o usare la navigazione.",
+    "prerequisites": "Nessuno.",
+    "fields": "Non sono presenti campi.",
+    "limits": "Controlla l'indirizzo se hai seguito un link esterno."
+  },
+  "docs": {
+    "summary": "Leggi la guida completa collegata alle pagine.",
+    "purpose": "Mostra nel prodotto la documentazione Markdown localizzata.",
+    "actions": "Leggere la guida e tornare alla funzione correlata.",
+    "prerequisites": "La guida deve esistere nella lingua selezionata.",
+    "fields": "Titolo, sezioni operative e collegamenti.",
+    "limits": "Le guide sono aggiornate durante la build."
+  },
+  "error": {
+    "summary": "Fornisce un recupero sicuro da un errore inatteso.",
+    "purpose": "Evita una schermata vuota e conserva un percorso di uscita.",
+    "actions": "Ricaricare oppure tornare alla home.",
+    "prerequisites": "Nessuno.",
+    "fields": "Non sono presenti campi.",
+    "limits": "Se l'errore continua, annota versione e commit."
+  }
+}

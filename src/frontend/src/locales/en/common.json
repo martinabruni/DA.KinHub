@@ -1,0 +1,59 @@
+{
+  "appName": "KinHub",
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "releaseNotes": "Release notes",
+    "about": "Version",
+    "settings": "Settings"
+  },
+  "actions": {
+    "openGuide": "Open the full guide",
+    "close": "Close",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "restartTutorial": "Restart tutorial",
+    "refresh": "Refresh now",
+    "retry": "Retry",
+    "create": "Create",
+    "login": "Sign in",
+    "logout": "Sign out"
+  },
+  "language": {
+    "label": "Language",
+    "it": "Italian",
+    "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "auth": {
+    "notConfigured": "Entra authentication is not configured: local development mode.",
+    "required": "Sign in to continue.",
+    "error": "Sign-in failed. Please try again."
+  },
+  "states": {
+    "loading": "Loading…",
+    "empty": "No items available.",
+    "error": "The operation could not be completed."
+  },
+  "help": {
+    "title": "Help for this page",
+    "purpose": "Purpose",
+    "actions": "What you can do",
+    "prerequisites": "Prerequisites",
+    "fields": "Main fields and actions",
+    "limits": "Limitations"
+  },
+  "versionUpdate": {
+    "available": "KinHub {{version}} is available.",
+    "pwaAvailable": "An app update is available.",
+    "dismiss": "Later"
+  },
+  "footer": "KinHub {{version}} · {{environment}}"
+}

@@ -1,0 +1,55 @@
+{
+  "home": {
+    "title": "La famiglia, con meno rumore",
+    "subtitle": "KinHub riunisce servizi semplici in uno spazio calmo e coerente.",
+    "projectsCard": "Organizza attività condivise senza perdere il contesto.",
+    "lifecycleCard": "Ogni servizio evolve con documentazione e note di rilascio."
+  },
+  "projects": {
+    "title": "Progetti",
+    "intro": "Uno spazio iniziale per iniziative familiari e attività condivise.",
+    "nameLabel": "Nome del progetto",
+    "namePlaceholder": "Per esempio: menu settimanale",
+    "empty": "Non ci sono ancora progetti.",
+    "loadError": "Non è stato possibile caricare i progetti.",
+    "createError": "Non è stato possibile creare il progetto.",
+    "stage": "Fase: {{stage}}"
+  },
+  "about": {
+    "title": "Versione",
+    "current": "Versione corrente",
+    "commit": "Commit",
+    "buildDate": "Data build",
+    "environment": "Ambiente",
+    "releaseLink": "Consulta tutte le note di rilascio"
+  },
+  "releaseNotes": {
+    "title": "Note di rilascio",
+    "current": "Versione {{version}}",
+    "date": "Pubblicata il {{date}}",
+    "breaking": "Modifica incompatibile",
+    "empty": "Non sono disponibili note di rilascio.",
+    "loadError": "Non è stato possibile caricare le note di rilascio."
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "appearance": "Aspetto e lingua",
+    "tutorial": "Tutorial iniziale",
+    "tutorialDescription": "Puoi rivedere in qualsiasi momento i passaggi principali di KinHub.",
+    "pwa": "Installazione app",
+    "pwaDescription": "Usa il comando Installa del browser per aggiungere KinHub al dispositivo."
+  },
+  "notFound": {
+    "title": "Pagina non trovata",
+    "description": "L'indirizzo non corrisponde a una pagina di KinHub.",
+    "home": "Torna alla home"
+  },
+  "docs": {
+    "title": "Guida utente",
+    "missing": "La pagina della guida non è disponibile in questa lingua."
+  },
+  "error": {
+    "title": "Qualcosa non ha funzionato",
+    "description": "KinHub ha intercettato un errore inatteso. Puoi ricaricare la pagina senza perdere le impostazioni locali."
+  }
+}

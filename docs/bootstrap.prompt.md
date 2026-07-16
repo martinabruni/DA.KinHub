@@ -28,7 +28,7 @@ Usale coerentemente in:
 - documentazione;
 - database;
 - pipeline;
-- immagini Docker;
+- pacchetti di deployment backend e relativi metadati;
 - risorse Azure;
 - telemetria;
 - versioning;
@@ -48,7 +48,7 @@ Predisponi **KinHub** come piattaforma web full-stack pronta per:
 - sviluppo locale;
 - build;
 - test;
-- containerizzazione;
+- esecuzione locale e packaging della Function App;
 - osservabilità;
 - deploy Azure;
 - CI/CD GitHub;
@@ -71,7 +71,7 @@ Stack obbligatorio:
 - autenticazione: **Microsoft Entra External ID**;
 - deploy Azure: **Bicep**;
 - CI/CD: **GitHub Actions**;
-- backend: Docker container su Function App for Containers;
+- backend: **Azure Functions 4.x, .NET 10 Isolated Worker, Linux, piano Flex Consumption**;
 - frontend: Azure Static Web Apps;
 - frontend installabile come PWA desktop/mobile;
 - test backend: xUnit;
@@ -110,7 +110,6 @@ Crea almeno la seguente struttura, aggiungendo i file necessari:
 ├── VERSION
 ├── .editorconfig
 ├── .gitignore
-├── .dockerignore
 ├── docs/
 │   ├── README.md
 │   ├── architecture/
@@ -162,12 +161,18 @@ Crea almeno la seguente struttura, aggiungendo i file necessari:
 │   └── frontend/
 ├── infra/
 │   ├── modules/
-│   ├── acr.bicep
+│   │   ├── function-app-flex.bicep
+│   │   ├── storage.bicep
+│   │   ├── observability.bicep
+│   │   ├── postgres.bicep
+│   │   ├── key-vault.bicep
+│   │   └── static-web-app.bicep
 │   ├── app.bicep
 │   ├── main.dev.bicepparam
 │   └── README.md
-├── docker/
-│   └── backend.Dockerfile
+├── scripts/
+│   ├── package-backend.sh
+│   └── package-backend.ps1
 └── .github/
     ├── pull_request_template.md
     └── workflows/
@@ -204,7 +209,8 @@ Deve spiegare almeno:
 - sicurezza;
 - test;
 - CI/CD;
-- comandi principali;
+- comandi principali, inclusi avvio locale, publish e packaging della Function App;
+- regole specifiche di Azure Functions Isolated Worker e Flex Consumption;
 - obbligo di aggiornare `AGENTS.md` quando cambiano regole strutturali.
 
 Il file deve essere scritto in modo che un coding agent possa leggerlo prima di ogni modifica e operare senza perdere le convenzioni del progetto.
@@ -544,14 +550,15 @@ Crea una class library contenente:
 - implementazioni delle interfacce di dominio;
 - health check database.
 
-Le migration devono poter essere applicate automaticamente all’avvio, con:
+Le migration devono essere gestite in modo compatibile con un runtime serverless e multiistanza:
 
-- configurazione abilitabile/disabilitabile;
-- lock o strategia sicura per evitare concorrenza in ambienti multiistanza;
-- logging;
-- fallimento esplicito;
-- documentazione;
-- possibilità di applicazione manuale.
+- non assumere che la Function App sia singleton;
+- evitare migration lunghe o non deterministiche durante il cold start;
+- abilitare l’applicazione automatica all’avvio solo in locale/dev tramite feature flag;
+- in produzione, preferire un passaggio CI/CD esplicito prima del deploy del codice, usando migration EF Core o migration bundle;
+- se è previsto anche un fallback all’avvio, proteggerlo con PostgreSQL advisory lock o strategia equivalente;
+- logging, timeout e fallimento esplicito;
+- documentare applicazione, rollback e verifica manuale.
 
 ### 12.3 Business
 
@@ -570,8 +577,16 @@ I servizi riutilizzabili devono essere registrati nella skill backend.
 
 ### 12.4 Applications
 
-Crea una Function App Isoleted Worker .NET 10 contenente:
+Crea una **Azure Function App .NET 10 Isolated Worker**, basata su Azure Functions runtime 4.x e destinata a Linux Flex Consumption.
 
+La Function App deve contenere e configurare:
+
+- progetto `Microsoft.NET.Sdk` con Azure Functions Worker SDK compatibile con .NET 10;
+- `Program.cs` come entry point;
+- `host.json` versionato;
+- `local.settings.json.example` o documentazione equivalente, senza versionare `local.settings.json` reale;
+- `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated` negli ambienti Azure/locali appropriati;
+- integrazione ASP.NET Core per HTTP trigger, quando utile e supportata;
 - endpoint REST;
 - dependency injection;
 - Microsoft Entra ID JWT bearer;
@@ -592,7 +607,7 @@ Crea una Function App Isoleted Worker .NET 10 contenente:
 - rate limiting base se appropriato;
 - API versioning se utile, senza complessità superflua.
 
-Endpoint minimi consigliati:
+Configura il route prefix in `host.json` in modo coerente con gli endpoint richiesti. Endpoint minimi:
 
 ```text
 GET /health/live
@@ -609,6 +624,8 @@ GET /api/status
 - build date;
 - environment;
 - API version.
+
+L’avvio della Function App deve restare leggero: non eseguire scansioni, migrazioni o inizializzazioni che possano rendere il cold start fragile o superare i limiti del runtime.
 
 ---
 
@@ -759,7 +776,8 @@ Requisiti:
 - commit SHA;
 - build date;
 - environment;
-- immagine Docker taggata con versione e SHA;
+- pacchetto backend `.zip` denominato con versione e SHA, ad esempio `kinhub-backend-1.2.3-<sha>.zip`;
+- metadati di versione incorporati nell’assembly e inclusi nell’endpoint `/api/version`;
 - integrazione GitHub Actions;
 - About/Version;
 - release notes;
@@ -770,81 +788,100 @@ Requisiti:
 
 ## 18. Infrastruttura Azure con Bicep
 
-Dentro `infra/` crea file modulari e parametrizzabili.
-
-### Parte 1 — Container Registry
-
-`infra/acr.bicep` deve creare:
-
-- Azure Container Registry;
-- output utili;
-- naming parametrico;
-- ambiente;
-- tag;
-- configurazione coerente con pipeline.
-
-Questa parte deve poter essere eseguita prima del build/push dell’immagine.
-
 ### Parte 2 — Infrastruttura applicativa
+
+Dentro `infra/` crea file modulari e parametrizzabili per una Azure Function App Linux su piano Flex Consumption.
 
 `infra/app.bicep` deve creare almeno:
 
-- Azure App Service Plan Linux B1;
-- Azure Web App for Containers;
-- collegamento ad ACR;
+- Azure Functions Flex Consumption plan dedicato alla singola Function App, con SKU `FC1` e tier `FlexConsumption`;
+- Azure Function App Linux con runtime `dotnet-isolated` e versione runtime coerente con .NET 10;
+- `functionAppConfig` per runtime, deployment, scala e concorrenza;
+- Azure Storage Account richiesto da Functions;
+- blob container privato dedicato al pacchetto di deployment One Deploy;
+- autenticazione al deployment storage tramite managed identity, evitando shared key quando possibile;
+- configurazione `AzureWebJobsStorage` tramite identity-based connection quando supportata;
 - Azure Database for PostgreSQL Flexible Server;
 - database applicativo;
-- Storage Account;
 - Application Insights;
-- Log Analytics Workspace, se necessario;
+- Log Analytics Workspace;
 - Key Vault;
-- Azure Static Web Apps;
-- managed identity;
-- RBAC o access policy appropriate;
-- app settings;
-- Key Vault references;
-- configurazione health check;
-- configurazione container;
-- output utili.
+- Azure Static Web Apps, con location fissata a `westeurope` direttamente nel Bicep e non esposta come parametro o record di configurazione separato;
+- managed identity user-assigned o system-assigned, motivando la scelta;
+- RBAC least privilege verso Storage, Key Vault, Application Insights e altre risorse;
+- app settings e Key Vault references;
+- CORS/allowed origins;
+- HTTPS only e TLS minimo;
+- configurazione di rete parametrica, lasciando VNet integration opzionale e disabilitata di default per contenere costi e complessità;
+- output utili per pipeline e configurazione frontend.
 
-Usa parametri per:
+### 18.2 Parametri Flex Consumption
+
+Usa parametri espliciti per:
 
 - `environmentName`;
-- location;
+- location, verificando che supporti Flex Consumption;
 - naming prefix;
-- SKU;
-- immagine/tag;
+- runtime `dotnet-isolated`;
+- runtime version `.NET 10` nel formato richiesto dall’API Azure usata;
+- `instanceMemoryMB`, con valori consentiti `512`, `2048` o `4096` e default `2048`;
+- `maximumInstanceCount`, con limiti validati e default `20`, adeguato a un progetto personale e facile da aumentare in seguito;
+- concorrenza HTTP solo se realmente necessaria, lasciando il comportamento predefinito della piattaforma come scelta iniziale;
+- always-ready instances, default `0` per minimizzare i costi;
+- nome del deployment blob container;
 - Entra ID;
 - database;
 - allowed origins;
 - configurazioni non segrete.
 
-Non inserire password in file versionati. Usa parametri sicuri, Key Vault o secret pipeline.
+La location della Static Web App non deve essere parametrizzata: impostala in modo esplicito a `westeurope` nel template Bicep.
 
-Aggiungi almeno `main.dev.bicepparam` con placeholder non sensibili.
+Per questo repository considera best practice pragmatiche da progetto personale, non enterprise: semplicità operativa, costi bassi, system-assigned managed identity come scelta predefinita salvo necessità concrete, niente VNet di default, niente always-ready, niente tuning aggressivo della concorrenza finché non emerge un bisogno misurato.
+
+Tieni conto che ogni Flex Consumption plan ospita una sola Function App. Non usare proprietà o app setting deprecati per Flex Consumption quando la stessa configurazione è disponibile in `functionAppConfig`.
+
+### 18.3 Deployment storage
+
+Il Bicep deve:
+
+- creare il container Blob privato che ospita i pacchetti applicativi;
+- configurarlo in `functionAppConfig.deployment.storage`;
+- usare managed identity per autenticare la Function App al container;
+- assegnare i ruoli Storage minimi necessari;
+- produrre output per nome Function App, resource ID, hostname, storage account e container di deployment;
+- non includere direttamente il codice applicativo nel template Bicep.
+
+Il codice viene pubblicato separatamente dalla pipeline mediante pacchetto `.zip` e One Deploy.
+
+Non inserire password in file versionati. Usa parametri `@secure()`, Key Vault, OIDC e secret pipeline.
+
+Aggiungi almeno `main.dev.bicepparam` con placeholder non sensibili e valori Flex Consumption economici per l’ambiente dev.
 
 ---
 
-## 19. Docker
+## 19. Packaging e deployment backend
 
 Crea:
 
 ```text
-docker/backend.Dockerfile
-.dockerignore
+scripts/package-backend.sh
+scripts/package-backend.ps1
 ```
 
-Il Dockerfile deve:
+Gli script devono:
 
-- usare multi-stage build;
-- fare restore/build/publish;
-- eseguire come utente non root quando possibile;
-- esporre la porta corretta;
-- includere health check se appropriato;
-- essere compatibile con Azure Web App for Containers;
-- ricevere version/build metadata come build args;
-- produrre immagine minimale;
-- non contenere secret.
+- eseguire `dotnet restore`, `dotnet build` e `dotnet publish` sul progetto Function App;
+- usare configurazione `Release`;
+- iniettare semantic version, commit SHA, build date ed environment come proprietà MSBuild;
+- creare una cartella di publish pulita;
+- verificare che `host.json` e gli assembly siano nella root del contenuto pubblicato;
+- creare un archivio `.zip` pronto per Azure Functions;
+- generare checksum SHA-256 e manifest dei metadati;
+- produrre l’artefatto in una cartella ignorata da Git;
+- non includere `local.settings.json`, file `.env`, test output o secret;
+- fallire esplicitamente se il pacchetto non è valido.
+
+Il deployment Azure deve usare **One Deploy**, direttamente o tramite `Azure/functions-action`/Azure CLI quando rilevano il piano Flex Consumption.
 
 ---
 
@@ -859,6 +896,8 @@ Aggiungi un workflow PR che:
 - ripristina dipendenze;
 - builda backend;
 - esegue test backend;
+- esegue `dotnet publish` della Function App;
+- valida la struttura del pacchetto Azure Functions;
 - builda frontend;
 - controlla TypeScript/lint;
 - valida i18n;
@@ -882,18 +921,21 @@ on:
 Passaggi:
 
 1. checkout;
-2. calcolo versione/build metadata;
-3. login Azure;
-4. deploy ACR;
-5. login ACR;
-6. build backend container;
-7. push con tag versione e SHA;
-8. deploy infrastruttura applicativa;
-9. build frontend;
-10. generazione docs/patch note/version metadata;
-11. deploy Azure Static Web Apps;
-12. output e summary GitHub;
-13. nessun secret stampato.
+2. setup .NET 10, Node e Azure CLI;
+3. calcolo versione/build metadata;
+4. login Azure tramite OIDC;
+5. validazione e deploy dell’infrastruttura Bicep, inclusi Flex Consumption plan, Function App e deployment storage, usando i file `bicepparam` versionati del repository come fonte primaria dei parametri Function non sensibili;
+6. acquisizione degli output Bicep senza stampare secret;
+7. restore/build/test backend;
+8. applicazione controllata delle migration database, se prevista per l’ambiente;
+9. publish e creazione pacchetto `.zip` della Function App;
+10. deploy del pacchetto sulla Function App Flex Consumption tramite `Azure/functions-action` o comando ufficiale equivalente che utilizzi One Deploy;
+11. build frontend;
+12. generazione docs/patch note/version metadata;
+13. deploy Azure Static Web Apps;
+14. smoke check degli endpoint health/version;
+15. output e summary GitHub;
+16. nessun secret stampato.
 
 ### 20.3 Deploy solo codice su `main`
 
@@ -902,22 +944,27 @@ Trigger push su `main`.
 Passaggi:
 
 1. checkout;
-2. calcolo versione;
-3. build backend;
-4. test backend;
-5. validazioni skill/i18n/docs/change fragments;
-6. build Docker;
-7. push ACR;
-8. aggiornamento Web App con nuova immagine;
-9. build frontend;
-10. generazione metadata e release notes;
-11. deploy Static Web Apps;
-12. smoke check di health/version;
-13. summary.
+2. setup toolchain;
+3. calcolo versione;
+4. build backend;
+5. test backend;
+6. validazioni skill/i18n/docs/change fragments;
+7. applicazione controllata delle migration, se richiesta;
+8. `dotnet publish` e creazione pacchetto `.zip` versionato;
+9. login Azure tramite OIDC;
+10. deploy del pacchetto sull’Azure Function App Flex Consumption tramite One Deploy, senza alterare i parametri infrastrutturali della Function via variabili di repository;
+11. build frontend;
+12. generazione metadata e release notes;
+13. deploy Static Web Apps;
+14. smoke check di health/version;
+15. upload del pacchetto backend e checksum come GitHub Actions artifact;
+16. summary.
 
-L’infrastruttura completa si modifica solo tramite il workflow tag; `main` pubblica solo codice e configurazioni applicative previste.
+L’infrastruttura completa si modifica solo tramite il workflow tag; `main` pubblica codice backend/frontend e applica esclusivamente le operazioni applicative previste.
 
-Usa OIDC/federated credentials per Azure quando possibile, evitando client secret statici. Documenta entrambi solo se necessario, privilegiando OIDC.
+I parametri della Function App relativi a memoria, scala e concorrenza devono restare definiti in Bicep e nei relativi file `.bicepparam`, non in GitHub Variables del repository. Nelle pipeline GitHub mantieni come variabile della Function soltanto il nome della Function App necessario al deploy del codice.
+
+Usa OIDC/federated credentials per Azure. Un publish profile può essere documentato solo come fallback esplicito, non come percorso principale.
 
 ---
 
@@ -941,8 +988,7 @@ AZURE_TENANT_ID
 AZURE_SUBSCRIPTION_ID
 AZURE_RESOURCE_GROUP
 AZURE_LOCATION
-AZURE_ACR_NAME
-AZURE_WEBAPP_NAME
+AZURE_FUNCTIONAPP_NAME
 AZURE_STATIC_WEB_APPS_API_TOKEN
 ENTRA_FRONTEND_CLIENT_ID
 ENTRA_BACKEND_AUDIENCE
@@ -951,7 +997,9 @@ POSTGRES_ADMIN_USERNAME
 POSTGRES_ADMIN_PASSWORD
 ```
 
-Preferisci GitHub Variables per valori non sensibili.
+`AZURE_FUNCTIONAPP_PUBLISH_PROFILE` può essere previsto soltanto come secret opzionale di fallback, se il workflow implementato non può usare OIDC per il deployment.
+
+Preferisci GitHub Variables per valori non sensibili come resource group, location e Function App name; usa GitHub Secrets per credenziali e password. I parametri di memoria/scala/concorrenza della Function devono vivere nei file Bicep versionati.
 
 Fornisci comandi `gh secret set` e `gh variable set`, ad esempio:
 
@@ -959,6 +1007,11 @@ Fornisci comandi `gh secret set` e `gh variable set`, ad esempio:
 gh secret set AZURE_CLIENT_ID --body "<VALUE>"
 gh secret set AZURE_TENANT_ID --body "<VALUE>"
 gh secret set AZURE_SUBSCRIPTION_ID --body "<VALUE>"
+gh secret set POSTGRES_ADMIN_PASSWORD --body "<VALUE>"
+
+gh variable set AZURE_RESOURCE_GROUP --body "<VALUE>"
+gh variable set AZURE_LOCATION --body "<VALUE>"
+gh variable set AZURE_FUNCTIONAPP_NAME --body "<VALUE>"
 ```
 
 Non inserire valori reali.
@@ -971,13 +1024,17 @@ Predisponi:
 
 - `appsettings.json`;
 - `appsettings.Development.json`;
+- `host.json`;
+- `local.settings.json.example` o istruzioni equivalenti;
+- `.funcignore` coerente con il packaging;
 - environment variables backend;
 - `.env.example` frontend;
 - configuration validation all’avvio;
-- connection string;
+- connection string PostgreSQL;
 - Entra ID;
 - Application Insights;
-- storage;
+- AzureWebJobsStorage identity-based connection;
+- deployment storage configurato dall’infrastruttura, non dal codice;
 - database;
 - CORS;
 - versioning;
@@ -985,7 +1042,10 @@ Predisponi:
 - configurazione localizzazione;
 - configurazione skill harness;
 - file per Azure Static Web Apps routing/fallback;
-- nessun `.env` reale versionato.
+- configurazione locale per Azure Functions Core Tools;
+- nessun `.env` o `local.settings.json` reale versionato.
+
+Evita app setting legacy o deprecati per Flex Consumption quando la configurazione è gestita da `functionAppConfig` in Bicep.
 
 ---
 
@@ -1004,7 +1064,11 @@ Crea un `.gitignore` completo per:
 - coverage;
 - file temporanei;
 - file ambiente;
-- Docker;
+- `local.settings.json`;
+- output `dotnet publish`;
+- pacchetti `.zip` della Function App;
+- checksum e manifest di build locali;
+- Azure Functions Core Tools e cache locali;
 - Azure;
 - Bicep output;
 - log;
@@ -1026,13 +1090,15 @@ Crea un `README.md` completo con:
 - stack;
 - architettura;
 - struttura repository;
-- prerequisiti;
-- avvio backend;
+- prerequisiti, inclusi .NET 10 SDK, Node, Azure Functions Core Tools, Azure CLI e Bicep;
+- avvio backend locale con Functions Core Tools;
 - avvio frontend;
 - database locale;
 - migration create/apply;
 - test;
-- Docker;
+- publish e packaging `.zip` della Function App;
+- deployment One Deploy su Flex Consumption;
+- configurazione di instance memory, maximum instance count, HTTP concurrency e always-ready;
 - skill harness;
 - i18n;
 - sincronizzazione documentazione;
@@ -1048,7 +1114,8 @@ Crea un `README.md` completo con:
 - comandi `gh`;
 - configurazione Entra ID;
 - configurazione Azure;
-- troubleshooting;
+- gestione cold start e costi Flex Consumption;
+- troubleshooting di startup, deployment package, storage identity e quote regionali;
 - punti manuali.
 
 ---
@@ -1110,15 +1177,17 @@ Prima di concludere:
 1. stampa la struttura repository;
 2. esegui restore/build backend;
 3. esegui test backend;
-4. esegui install/build frontend;
-5. esegui controllo TypeScript/lint;
-6. valida traduzioni;
-7. valida documentazione route;
-8. valida skill;
-9. valida change fragments;
-10. valida Bicep;
-11. builda Docker, se l’ambiente lo consente;
-12. segnala con precisione ciò che non è stato possibile eseguire.
+4. esegui `dotnet publish` della Function App;
+5. crea e valida il pacchetto `.zip`, verificando `host.json` e assembly nella posizione corretta;
+6. esegui install/build frontend;
+7. esegui controllo TypeScript/lint;
+8. valida traduzioni;
+9. valida documentazione route;
+10. valida skill;
+11. valida change fragments;
+12. valida Bicep;
+13. esegui un avvio locale con Azure Functions Core Tools e smoke test degli endpoint, se l’ambiente lo consente;
+14. segnala con precisione ciò che non è stato possibile eseguire.
 
 Non dichiarare riuscite verifiche non realmente eseguite.
 
@@ -1139,13 +1208,17 @@ Al termine fornisci un riepilogo con:
 - skill harness;
 - patch note;
 - comandi principali;
-- risultato build/test/validation;
+- risultato build/test/publish/package/validation;
 - GitHub Secrets;
 - GitHub Variables;
 - comandi `gh secret set`;
 - comandi `gh variable set`;
 - configurazioni manuali Entra ID;
 - configurazioni manuali Azure;
+- parametri Flex Consumption adottati;
+- nome e percorso dell’artefatto `.zip` backend;
+- modalità One Deploy implementata;
+- esito smoke test health/version;
 - limiti o attività rimaste.
 
 L’obiettivo non è produrre soltanto uno scaffold dimostrativo, ma una **base coerente, compilabile, documentata ed evolvibile** per KinHub.

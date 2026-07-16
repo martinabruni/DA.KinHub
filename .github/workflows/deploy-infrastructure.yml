@@ -1,0 +1,157 @@
+name: Deploy complete infrastructure
+
+on:
+  push:
+    tags:
+      - "infra-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  BUILD_ENVIRONMENT: Development
+  POSTGRES_MIGRATION_CONNECTION_STRING: ${{ secrets.POSTGRES_MIGRATION_CONNECTION_STRING }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate infrastructure
+        shell: bash
+        run: |
+          az bicep install
+          az deployment group validate \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file infra/app.bicep \
+            --parameters infra/main.dev.bicepparam \
+            --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
+                         postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+                         entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                         entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                         entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+            --only-show-errors --output none
+
+      - name: Deploy infrastructure
+        id: infra
+        shell: bash
+        run: |
+          outputs=$(az deployment group create \
+            --name "kinhub-${GITHUB_RUN_ID}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file infra/app.bicep \
+            --parameters infra/main.dev.bicepparam \
+            --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
+                         postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+                         entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                         entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                         entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+            --query properties.outputs --only-show-errors --output json)
+          echo "function_app_name=$(jq -r '.functionAppName.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "function_hostname=$(jq -r '.functionAppHostname.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "static_web_app_name=$(jq -r '.staticWebAppName.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "static_web_app_hostname=$(jq -r '.staticWebAppHostname.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test backend
+        run: |
+          dotnet restore KinHub.slnx
+          dotnet build KinHub.slnx --configuration Release --no-restore
+          dotnet test KinHub.slnx --configuration Release --no-build
+
+      - name: Build migration bundle
+        run: |
+          dotnet tool restore
+          mkdir -p artifacts/migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/AdvancedFrontier.Infrastructure --startup-project src/backend/applications/AdvancedFrontier.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
+
+      - name: Apply database migrations
+        if: env.POSTGRES_MIGRATION_CONNECTION_STRING != ''
+        run: artifacts/migrations/kinhub-migrations --connection "$POSTGRES_MIGRATION_CONNECTION_STRING"
+
+      - name: Package backend
+        id: package
+        shell: bash
+        run: |
+          bash scripts/package-backend.sh "$BUILD_ENVIRONMENT"
+          package=$(find artifacts/backend -maxdepth 1 -name '*.zip' -print -quit)
+          test -n "$package"
+          echo "path=$package" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Function App with One Deploy
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.infra.outputs.function_app_name }}
+          package: ${{ steps.package.outputs.path }}
+          sku: flexconsumption
+          remote-build: false
+
+      - name: Install and validate frontend
+        run: |
+          npm ci --prefix src/frontend
+          npm run skills:validate
+          npm run docs:validate
+          npm run release:validate
+          npm run --prefix src/frontend i18n:validate
+          npm run --prefix src/frontend routes:validate
+
+      - name: Build frontend and release metadata
+        env:
+          VITE_API_BASE_URL: https://${{ steps.infra.outputs.function_hostname }}
+          VITE_ENTRA_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
+          VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
+          VITE_ENTRA_REDIRECT_URI: https://${{ steps.infra.outputs.static_web_app_hostname }}
+        run: npm run --prefix src/frontend build
+
+      - name: Deploy Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: src/frontend/dist
+          skip_app_build: true
+          output_location: ""
+
+      - name: Smoke test API
+        shell: bash
+        run: |
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.infra.outputs.function_hostname }}/health/live"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.infra.outputs.function_hostname }}/api/version"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kinhub-backend-${{ github.ref_name }}
+          path: |
+            artifacts/backend/*.zip
+            artifacts/backend/*.sha256
+            artifacts/backend/build-manifest.json
+
+      - name: Deployment summary
+        run: |
+          echo "## KinHub infrastructure deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Function App: ${{ steps.infra.outputs.function_app_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Static Web App: ${{ steps.infra.outputs.static_web_app_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Backend artifact: $(basename '${{ steps.package.outputs.path }}')" >> "$GITHUB_STEP_SUMMARY"

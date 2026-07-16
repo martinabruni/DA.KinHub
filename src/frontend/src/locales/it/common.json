@@ -1,0 +1,59 @@
+{
+  "appName": "KinHub",
+  "nav": {
+    "home": "Home",
+    "projects": "Progetti",
+    "releaseNotes": "Note di rilascio",
+    "about": "Versione",
+    "settings": "Impostazioni"
+  },
+  "actions": {
+    "openGuide": "Apri la guida completa",
+    "close": "Chiudi",
+    "skip": "Salta",
+    "back": "Indietro",
+    "next": "Avanti",
+    "finish": "Fine",
+    "restartTutorial": "Riavvia il tutorial",
+    "refresh": "Aggiorna ora",
+    "retry": "Riprova",
+    "create": "Crea",
+    "login": "Accedi",
+    "logout": "Esci"
+  },
+  "language": {
+    "label": "Lingua",
+    "it": "Italiano",
+    "en": "Inglese"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "system": "Sistema"
+  },
+  "auth": {
+    "notConfigured": "Autenticazione Entra non configurata: modalità sviluppo locale.",
+    "required": "Accedi per continuare.",
+    "error": "Accesso non riuscito. Riprova."
+  },
+  "states": {
+    "loading": "Caricamento…",
+    "empty": "Nessun elemento disponibile.",
+    "error": "Non è stato possibile completare l'operazione."
+  },
+  "help": {
+    "title": "Guida per questa pagina",
+    "purpose": "A cosa serve",
+    "actions": "Cosa puoi fare",
+    "prerequisites": "Prerequisiti",
+    "fields": "Campi e azioni principali",
+    "limits": "Limitazioni"
+  },
+  "versionUpdate": {
+    "available": "È disponibile KinHub {{version}}.",
+    "pwaAvailable": "È disponibile un aggiornamento dell'app.",
+    "dismiss": "Più tardi"
+  },
+  "footer": "KinHub {{version}} · {{environment}}"
+}
