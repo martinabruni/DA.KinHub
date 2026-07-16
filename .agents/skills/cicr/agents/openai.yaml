@@ -1,0 +1,4 @@
+interface:
+  display_name: "CICR"
+  short_description: "Prepara ricerche tecniche spiegate da zero"
+  default_prompt: "Usa $cicr per scomporre questa idea in task di ricerca e preparare i relativi file research.md. Non dare per noti pattern o termini tecnici: spiega prima il problema e il funzionamento, poi il nome, e confronta le collocazioni front-end, back-end o ibride quando la scelta non e gia un requisito."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brainstorming"
+  short_description: "Definisce scope, requisiti e architettura"
+  default_prompt: "Usa $brainstorming per trasformare idee e ricerca in analisi funzionale e architettura senza ampliare lo scope."
