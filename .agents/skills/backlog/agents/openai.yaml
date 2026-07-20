@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backlog autonomo"
+  short_description: "Crea feature autonome, dipendenze e ordine"
+  default_prompt: "Usa $backlog per trasformare analisi funzionale e architettura in feature autonome, dipendenze esplicite e un ordine di esecuzione."
