@@ -16,21 +16,30 @@ Le decisioni esplicitamente approvate nelle fonti sono:
 - identità gestita per l'accesso della Function App a PostgreSQL, evitando credenziali applicative statiche;
 - telemetria strutturata e audit funzionale, senza dati sensibili nei log;
 - centralizzazione di configurazioni, testi e comportamenti comuni per evitare duplicazione e stringhe magiche;
-- registrazione sincrona con durata massima di 60 secondi e dimensione massima stimata di 12 MB;
-- una sola chiamata a un modello multimodale su Azure AI Foundry per speech-to-text ed estrazione strutturata, con validazione JSON lato backend;
+- registrazione sincrona con durata massima di 60 secondi, dimensione massima stimata di 12 MB, supporto a Opus/MP3/AAC/WAV e audio soltanto in memoria;
+- una sola operazione logica verso un deployment multimodale Azure AI Foundry configurabile per ambiente, con versione modello pinned, contratto/schema strict versionato e validazione semantica lato backend;
+- timeout richiesta di 90 secondi, budget provider complessivo di 75 secondi, massimo un retry dopo un guasto transitorio senza risposta e nessun retry per output ricevuto ma invalido;
+- massimo 1000 item generati da una registrazione;
 - rilevamento automatico della lingua e risposta nella stessa lingua; per la UI italiano (`it`) predefinito e inglese (`en`) supportato e fallback tecnico, in coerenza con `AGENTS.md`;
 - mantenimento degli elementi pronunciati come risultato base dell'estrazione;
+- popup iniziale chiaro quando il permesso microfono non è ancora stato deciso, con spiegazione dell'uso della voce solo per generare tramite IA la lista; la concessione del permesso vale come consenso a questo uso;
 - catalogo categorie per famiglia, senza predefiniti, con riuso se possibile e creazione altrimenti;
 - salvataggio esplicito, nessun autosave;
 - undo con finestra di 5 secondi piu margine server per latenza;
 - timeline con evento `Riattivato` per l'undo;
 - coda di snackbar individuali per completamenti ravvicinati;
 - aggiornamento collaborativo con refresh manuale e concorrenza ottimistica;
-- nessun dato personale in cache.
-- browser target iniziali soprattutto Chrome e modalita installata;
+- nessun dato personale in cache, IndexedDB, altre persistenze browser o code; API autenticate network-only e sola shell pubblica offline;
+- browser primari Chrome desktop, Chrome Android, relative PWA installate ed Edge equivalente; Safari/iOS best effort secondario;
 - cancellazione collegata dei dati coerenti alla retention;
 - capacità uniformi per tutti i membri, senza ruoli o amministratori;
 - risoluzione dei conflitti tramite ricarica e riapplicazione consapevole.
+- identità esterna canonica `(iss, oid)`, con entrambi i claim obbligatori e nessun fallback su nome o email;
+- accesso a ogni collezione mediante paginazione keyset e cursori opachi, limite di lettura iniziale e assoluto 5000 e nessun `Get All`;
+- route Family canonica `/settings/family`, membri paginati con proiezione minima e fallback localizzati;
+- inviti Crockford Base32 di 12 caratteri, massimo cinque attivi, HMAC versionato e rate limit iniziale approvato;
+- un timer giornaliero alle 00:00 UTC che tenta retention e cleanup come casi applicativi distinti;
+- bulk sull'intera pagina filtrata fino a 5000 item, eseguito dal repository in chunk da massimo 1000 nella stessa transazione e con unico esito.
 
 Lo scope successivamente confermato integra inoltre:
 
@@ -45,7 +54,7 @@ Lo scope successivamente confermato integra inoltre:
 - selezione multipla esplicita, selezione di tutti i soli item visibili dopo il filtro, completamento atomico e un unico `Annulla N` entro cinque secondi;
 - `Visibility` con valori `Personal` e `Shared`, owner stabile e predicato server uniforme; tutte le creazioni correnti restano `Shared`, senza selettore o conversione.
 
-Le regole funzionali restano descritte in `functional-analysis.md`; questo documento ne traduce l'impatto tecnico per i18n `it`/`en`, famiglia, inviti, leave, bulk e visibility. I requisiti `FR-031`–`FR-048` e le decisioni `DEC-015`–`DEC-027` dell'analisi funzionale sono i riferimenti autorevoli per questo perimetro, insieme ai vincoli di `AGENTS.md`.
+Le regole funzionali restano descritte in `functional-analysis.md`; questo documento ne traduce l'impatto tecnico. I requisiti `FR-001`–`FR-055` e le decisioni `DEC-001`–`DEC-035` sono i riferimenti autorevoli, insieme ai vincoli di `AGENTS.md`.
 
 ## 2. Principi
 
@@ -61,6 +70,8 @@ Le regole funzionali restano descritte in `functional-analysis.md`; questo docum
 10. **Evoluzione compatibile**: contratti API e dati possono crescere senza obbligare una vecchia PWA già installata ad aggiornarsi nel mezzo di un'operazione.
 11. **Difesa in profondità dello scope**: la policy blocca l'ingresso non autorizzato, ma casi d'uso, query e scritture continuano a usare `familyId`, visibilità e owner come predicati autorevoli.
 12. **Cancellazioni esplicite e distinte**: soft delete di famiglia/membership/user, cleanup dopo 30 giorni di inattività e retention degli item `Completed` dopo 30 giorni da `CompletedAt` sono cicli diversi e non condividono il medesimo cutoff semantico.
+13. **I/O sempre limitato**: ogni collezione usa filtri server, ordinamento univoco, cursori opachi e limiti validati; il business non dispone di un'operazione `Get All`.
+14. **Budget end-to-end**: timeout e annullamento si propagano dal confine HTTP al provider e al database; retry e chunk non riavviano il budget né cambiano l'atomicità osservabile.
 
 ## 3. Architettura iniziale
 
@@ -77,8 +88,10 @@ flowchart LR
     DBP --> PG["PostgreSQL condiviso<br/>schema shared + schema kinlist"]
     APP --> AI["Porta voice-to-structure"]
     AI -. "Azure AI Foundry" .-> MM["Modello multimodale"]
-    TIMER["Timer esistente nella Function App"] --> RET["Retention item + cleanup dati inattivi"]
+    TIMER["Timer giornaliero esistente<br/>00:00 UTC"] --> RET["Retention item"]
+    TIMER --> CLEAN["Cleanup dati inattivi"]
     RET --> PG
+    CLEAN --> PG
     API --> OBS["OpenTelemetry / Application Insights condiviso"]
     TIMER --> OBS
 ```
@@ -93,22 +106,24 @@ flowchart LR
 - Il timer di retention riusa la stessa unità applicativa e gli stessi casi d'uso; non nasce un servizio autonomo.
 - Stato onboarding, create e join sono autenticati con `ApiAccess`; tutte e sole le API su famiglia esistente applicano `Family` senza alias o varianti.
 - `familyId` è un input di query string validato, non un claim né un valore dedotto dal client; l'identità utente arriva esclusivamente dai claim verificati.
+- La coppia `(iss, oid)` è l'identità esterna canonica; claim mancanti falliscono chiusi e non sono sostituiti da dati di profilo.
+- Repository di collezione espongono soltanto query paginabili; filtri e visibilità precedono paginazione e proiezione.
 - Non vengono introdotti CQRS, mediator, event bus, microservizi o nuove risorse Azure.
 
 ## 4. Componenti e responsabilità
 
 | Componente | Responsabilità | Input/output | Dipendenze autorizzate | Non gli compete | Requisiti |
 |---|---|---|---|---|---|
-| KinList PWA | UI, routing, onboarding, impostazioni, famiglia, permesso microfono, acquisizione audio, lista, selezione bulk, drawer, filtro, snackbar, temi e localizzazione `it`/`en` | Gesti e audio → richieste API; risposte → stato visibile | Browser API, MSAL, client API tipizzato, route registry e componenti UI esistenti | Fidarsi del token senza verifica, decidere permessi, chiamare servizi AI con segreti, persistere dati autorevoli | FR-001, FR-006–FR-011, FR-017–FR-025, FR-027–FR-029, FR-031–FR-041, FR-044–FR-048 |
-| Endpoint Functions | Confine HTTP, validazione sintattica, autenticazione token, mapping di errori, correlazione | HTTP → comandi/query; risultati → HTTP/Problem Details | Application layer, autenticazione configurata, telemetria | Regole di dominio, SQL, prompt AI | FR-001–FR-005, FR-012–FR-033, FR-036–FR-048 |
-| Identity & Access | Collegamento identità esterna/profilo, stato onboarding, policy `ApiAccess` e `Family`, appartenenza attiva e contesto utente | Claim verificati + `familyId` di query → esito e identità applicativa | Handler scoped, servizio/repository async shared | Accettare user ID dal client, incorporare SQL nell'handler, sostituire lo scope nei casi d'uso | FR-002–FR-005, FR-031, FR-032, FR-047 |
-| Family Application | Creazione atomica, lettura famiglia/membri, inviti, join, leave e lifecycle soft delete | Comandi/query autenticati → contesto famiglia o Problem Details | Dominio, repository shared, orologio, generatore crittografico, unità transazionale | Email/notifiche, rimozione altri membri, ruoli aggiuntivi, cancellazione account | FR-031–FR-043 |
-| KinList Application | Casi d'uso per lista, registrazione, modifica, categorie, completamento singolo/bulk, undo e retention | Comandi/query validati e scoped → risultati applicativi | Dominio, porte di persistenza, provider AI, orologio, identità corrente | Dettagli dell'host Azure o della UI | FR-004–FR-026, FR-042–FR-048 |
+| KinList PWA | UI, routing, capability detection, popup informativo iniziale sulla voce, audio in memoria, pagine/cursori, onboarding, famiglia, lista, bulk, drawer, filtro, temi e i18n | Gesti/audio → richieste; pagine/esiti → stato visibile | Browser API, MSAL, client API tipizzato, route registry e UI esistente | Fidarsi del token, decidere permessi, chiamare AI, persistere audio/dati personali o interpretare cursori | FR-001, FR-006–FR-011, FR-017–FR-025, FR-027–FR-029, FR-031–FR-055 |
+| Endpoint Functions | Confine HTTP, validazione sintattica, autenticazione token, mapping di errori, correlazione | HTTP → comandi/query; risultati → HTTP/Problem Details | Application layer, autenticazione configurata, telemetria | Regole di dominio, SQL, prompt AI | FR-001–FR-005, FR-012–FR-033, FR-036–FR-054 |
+| Identity & Access | Risoluzione `(iss, oid)`, profilo, onboarding, policy `ApiAccess`/`Family`, membership attiva e contesto utente | Claim verificati + `familyId` → esito e identità applicativa | Handler scoped, servizio/repository async shared | Fallback su email/nome, user ID dal client, SQL nell'handler o sostituzione dello scope nei casi d'uso | FR-001–FR-005, FR-031, FR-032, FR-047 |
+| Family Application | Creazione atomica, lettura famiglia/membri, inviti, join, leave e lifecycle soft delete | Comandi/query autenticati → contesto famiglia o Problem Details | Dominio, repository shared, orologio, generatore crittografico, unità transazionale | Email/notifiche, rimozione altri membri, ruoli aggiuntivi, cancellazione account | FR-031–FR-043, FR-054 |
+| KinList Application | Casi d'uso per lista, registrazione, modifica, categorie, completamento singolo/bulk, undo e retention | Comandi/query validati e scoped → risultati applicativi | Dominio, porte di persistenza, provider AI, orologio, identità corrente | Dettagli dell'host Azure o della UI | FR-004–FR-026, FR-042–FR-053 |
 | KinList Domain | Entità, value object, regole di stato, ordine, appartenenza e invarianti | Stato + intenzione → nuovo stato/eventi applicativi | Solo codice di dominio | I/O, logging, SDK, serializzazione HTTP | FR-004, FR-005, FR-012–FR-026, FR-042–FR-048 |
-| Persistence Adapter | Query scoped, soft delete, inviti, transazioni, concorrenza ottimistica, idempotenza e mapping PostgreSQL | Operazioni applicative ↔ dati persistenti | EF Core/Npgsql, PostgreSQL, managed identity | Decisioni UX e interpretazione AI | FR-002–FR-005, FR-013–FR-026, FR-031–FR-048 |
-| Voice Pipeline | Inviare l'audio a un modello multimodale, ottenere JSON strutturato, validarlo e restituire un risultato applicabile | Audio → item/categorie candidati + lingua rilevata | Porta provider AI, schema JSON applicativo, policy retry limitata | Autorizzare o salvare direttamente dati non validati | FR-012–FR-014 |
-| Multimodal AI Provider | Adattare Azure AI Foundry e isolare modello, versione e contratto di output | Audio → JSON strutturato/stato | SDK/provider approvato | Attribuire autore, timestamp, famiglia o RecordingId | FR-012–FR-014 |
-| Maintenance Timer | Avviare nel timer esistente retention item e cleanup fisico come casi d'uso distinti, con lotti e condizioni indipendenti | Schedule → run e conteggi separati | Application layer, telemetria | SQL o cancellazione fuori dalle regole applicative | FR-026, FR-030, FR-042, FR-043 |
+| Persistence Adapter | Query keyset scoped senza `Get All`, chunk bulk nella stessa transazione, soft delete, inviti, concorrenza e idempotenza | Operazioni applicative ↔ pagine/transazioni PostgreSQL | EF Core/Npgsql, PostgreSQL, managed identity | Decisioni UX, interpretazione AI o successo parziale tra chunk | FR-002–FR-005, FR-013–FR-026, FR-031–FR-051 |
+| Voice Pipeline | Coordinare budget 90/75 secondi, schema strict versionato, retry ristretto, validazione semantica e rilascio buffer | Audio in memoria → massimo 1000 item/categorie candidati + lingua | Porta provider AI, contratto versionato, cancellation e orologio | Autorizzare, persistere audio/output grezzo o salvare dati non validati | FR-012–FR-014, FR-052, FR-053 |
+| Multimodal AI Provider | Adattare Azure AI Foundry e isolare deployment per ambiente, versione pinned e Structured Output | Stream audio → output strutturato/stato | SDK/provider approvato e managed identity | Attribuire autore, timestamp, famiglia, RecordingId o fare fallback a chiavi | FR-012–FR-014, FR-052, FR-053 |
+| Maintenance Timer | Alle 00:00 UTC tentare retention e cleanup come casi d'uso distinti, con pagine e chunk limitati | Schedule → due esiti e conteggi separati | Application layer, telemetria | SQL diretto, `RunOnStartup` o cancellazione fuori dalle regole | FR-026, FR-030, FR-042, FR-043, FR-049, FR-050 |
 | Telemetry | Correlare richieste e job, misurare durata/errori, applicare redazione | Eventi tecnici → log, metriche e trace | OpenTelemetry/strumenti condivisi | Conservare audio, trascrizioni o contenuti della lista | FR-030, NFR-004, NFR-007 |
 
 ## 5. Organizzazione del codice
@@ -151,7 +166,8 @@ tests/
 - Configurazioni variabili per ambiente passano da opzioni tipizzate/backend e configurazione build/runtime/frontend.
 - Stati, codici errore, nomi permesso, claim applicativi, header e chiavi di telemetria sono definiti una volta nel rispettivo confine.
 - Testi UI usano chiavi i18n; non vengono duplicati nei componenti.
-- Durata invito di sette giorni e finestra undo di cinque secondi sono regole approvate; lunghezza/alfabeto del codice, soglie/finestra del rate limit e dimensioni dei lotti bulk/cleanup sono opzioni tipizzate centralizzate da verificare prima del backlog esecutivo, senza valori inventati.
+- Durata invito di sette giorni, finestra undo di cinque secondi, codice Crockford Base32 di 12 caratteri, massimo cinque inviti, barriera per istanza 5/5 minuti per identità e 20/5 minuti per origine attendibile, lettura 5000 e chunk scrittura 1000 sono valori approvati e validati da opzioni tipizzate.
+- Endpoint, deployment AI, versione modello pinned, versione contratto, limiti e timeout sono configurazioni esplicite; un cambio modello passa dalla pipeline e dalle verifiche, non da upgrade automatici runtime.
 - Una classe base astratta è ammessa solo quando più componenti condividono davvero un protocollo e invarianti comuni. Per il riuso ordinario sono preferite composizione, funzioni e piccoli servizi, perché riducono l'accoppiamento.
 - `SharedKernel` non diventa un contenitore generico: ogni elemento deve essere usato da più moduli e avere semantica stabile.
 
@@ -162,27 +178,36 @@ tests/
 1. La PWA avvia MSAL verso Entra External ID.
 2. Il client invia all'API un access token destinato all'audience del backend.
 3. Il backend verifica firma, issuer, audience, scadenza e claim richiesti.
-4. Un servizio applicativo cerca l'identità esterna nello schema condiviso.
+4. Un servizio applicativo richiede `iss` e `oid` dal token validato e cerca la coppia nello schema condiviso; claim mancanti falliscono chiusi senza fallback su nome o email.
 5. Se assente, crea in modo idempotente il profilo applicativo; con `ApiAccess` legge l'unica membership attiva.
 6. Se la membership esiste, restituisce il contesto famiglia; altrimenti restituisce lo stato onboarding e la PWA mostra soltanto `Crea famiglia` e `Unisciti con un codice`.
 7. `Crea famiglia` riceve il nome, ricontrolla in transazione che non esista alcuna membership attiva e crea famiglia più membership del creatore in un unico commit. Il creatore è l'unico membro iniziale e resta metadato stabile, non un nuovo ruolo privilegiato.
 8. Retry e richieste concorrenti non producono una seconda famiglia; il vincolo dati realizza una sola famiglia attiva per user.
 
+### 6.1-bis Informativa iniziale sulla voce e permesso microfono
+
+1. All'apertura dell'app, la PWA verifica se il permesso microfono non è ancora stato deciso dal browser.
+2. In questo solo caso mostra un popup chiaro che spiega che la voce viene usata soltanto per generare tramite IA una lista.
+3. La chiusura del popup non abilita la registrazione e non blocca le altre funzioni dell'app.
+4. Quando il membro sceglie di registrare, il browser richiede il permesso microfono; la concessione del permesso vale come consenso all'uso descritto nel popup.
+5. Se il permesso è già stato concesso o negato in precedenza, la PWA non ripresenta il popup come se fosse un nuovo consenso iniziale, ma guida l'utente con gli stati standard della registrazione.
+
 ### 6.2 Policy `Family`
 
 1. Ogni endpoint su una famiglia esistente richiede `familyId` nella query string e applica la policy esattamente `Family`.
-2. L'handler scoped legge lo user ID esclusivamente dal claim configurato e verificato, risolve il profilo applicativo e chiama asincronicamente il servizio/repository user+family.
+2. L'handler scoped legge `iss` e `oid` esclusivamente dal token verificato, risolve il profilo applicativo interno e chiama asincronicamente il servizio/repository user+family.
 3. Associazione attiva trovata soddisfa il requisito; esito `false` produce `403 Forbidden` senza dettagli della famiglia. Claim o input mancanti e guasti repository falliscono chiusi, con la rispettiva categoria di errore.
 4. Dopo la policy, il caso d'uso passa lo stesso `familyId` al repository e ogni query/scrittura continua a circoscrivere i dati: la policy non sostituisce lo scope dati.
 5. Stato onboarding, create e join non possono richiedere una membership preesistente e usano `ApiAccess` con i controlli specifici del caso d'uso.
 
 ### 6.3 Caricamento, visibilità e filtro della lista
 
-1. L'API ricava il perimetro famiglia dal contesto autorizzato.
-2. La query seleziona soltanto item `Active` di quella famiglia che soddisfano il predicato server: `Shared` oppure `Personal` con owner uguale all'utente corrente.
-3. Ordina per momento del gruppo decrescente, chiave stabile del gruppo, posizione crescente e ultimo tie-breaker univoco.
-4. Restituisce una proiezione minima; categorie, conteggi e aggregati sono calcolati sul medesimo insieme visibile e non rivelano item `Personal` altrui.
-5. Il client applica il filtro immediatamente ai dati completi già caricati; se in futuro esiste paginazione, il server resta autorevole per filtro e cursore.
+1. L'API ricava il perimetro famiglia dal contesto autorizzato e valida la dimensione richiesta; quella effettiva è `min(requestedPageSize, configuredReadMax)`, con `configuredReadMax` iniziale e assoluto 5000.
+2. La query applica prima famiglia, stato `Active`, visibility (`Shared` oppure `Personal` del chiamante) ed eventuale `CategoryId`.
+3. Ordina con chiavi stabili e univoche coerenti con la collezione; per la lista usa momento gruppo decrescente, chiave gruppo, posizione crescente e ID item finale.
+4. Applica keyset pagination e restituisce proiezione minima più cursori opachi precedente/successivo. Nessun repository espone un percorso `Get All`.
+5. Categorie, conteggi e aggregati usano lo stesso predicato visibile. Il client non decodifica il cursore; al cambio filtro riparte dalla prima pagina.
+6. Un cursore invalido, stale o legato a filtro/direzione diversi produce Problem Details recuperabile senza dati; la PWA conserva la pagina corrente e può ripartire dalla prima.
 
 ### 6.4 Audio → item
 
@@ -194,27 +219,32 @@ sequenceDiagram
     participant M as Multimodal adapter
     participant D as PostgreSQL
     U->>P: termina registrazione
-    P->>A: audio + RecordingId + formato; familyId in query
+    P->>A: stream audio + RecordingId + formato; familyId in query
     A->>A: autentica, autorizza e valida
     A->>D: verifica RecordingId
     alt risultato già completato
         D-->>A: gruppo esistente
         A-->>P: stesso risultato
     else nuova registrazione
-        A->>M: audio validato + istruzioni di output JSON
-        M-->>A: lingua rilevata + JSON candidato
-        A->>A: valida JSON e assegna famiglia, owner, Shared, ordine e timestamp
+        A->>M: audio + schema strict versionato; budget provider totale 75s
+        M-->>A: lingua rilevata + output strutturato o errore
+        A->>A: valida schema, semantica e massimo 1000
+        opt guasto transitorio senza risposta e budget residuo
+            A->>M: unico retry
+            M-->>A: output o errore
+        end
+        A->>A: assegna famiglia, owner, Shared, ordine e timestamp
         A->>D: transazione gruppo + item Shared + categorie + timeline
         D-->>A: commit
-        A-->>P: gruppo creato
+        A-->>P: gruppo creato entro 90s
     end
 ```
 
-L'elaborazione resta sincrona e termina entro il perimetro della richiesta HTTP; la registrazione è limitata a 60 secondi e a una dimensione massima stimata di 12 MB, senza introdurre code o storage temporaneo dedicato. Il provider AI non stabilisce `FamilyId`, owner, visibilità, autore, `RecordingId`, timestamp, stato o posizione autorevole. Il backend assegna owner stabile all'identità corrente e `Shared` a ogni nuova creazione; non esistono selettore o conversione `Personal`/`Shared` nello scope corrente.
+L'elaborazione resta sincrona e termina entro 90 secondi; il budget tecnico aggregato del provider, incluso l'eventuale unico retry, è 75 secondi. Il retry è ammesso soltanto dopo un guasto transitorio senza risposta; output ricevuto ma non conforme o semanticamente invalido fallisce senza retry. Audio e output grezzo restano in stream/buffer in memoria e sono rilasciati in successo, errore, annullamento e timeout: niente file locali o server, dischi temporanei, Blob, code o upload riprendibili. Ogni nuova registrazione riceve un nuovo `RecordingId`. Se il commit riesce ma la risposta si perde, il client esegue una richiesta di recupero con il solo `RecordingId`; non reinvia audio e il backend restituisce il gruppo già salvato. Il provider non stabilisce dati autorevoli; il backend assegna owner, `Shared`, ordine e metadati.
 
 ### 6.5 Modifica dell'item
 
-1. Il drawer carica proiezione di dettaglio, timeline, categorie e token di versione.
+1. Il drawer carica proiezione di dettaglio, prima pagina di timeline, prima pagina del catalogo categorie e token di versione; entrambe le collezioni usano cursori opachi e ordine stabile.
 2. Il client invia soltanto nome, categorie modificabili, eventuale nuova categoria e versione attesa.
 3. L'API riapplica policy famiglia, predicato di visibilità, permesso e validazione; modifica e completamento non cambiano l'owner.
 4. Una transazione risolve/crea categorie nel catalogo della famiglia, aggiorna l'item e aggiunge l'evento solo in presenza di cambiamenti.
@@ -227,52 +257,54 @@ L'elaborazione resta sincrona e termina entro il perimetro della richiesta HTTP;
 - Un retry restituisce l'esito registrato senza duplicare la transizione.
 - Annulla è un secondo comando condizionato; il server accetta il comando solo entro la finestra approvata di cinque secondi piu un margine tecnico per la latenza.
 - La reintegrazione usa la chiave d'ordine immutata, non un indice visuale memorizzato.
-- In modalità bulk il membro seleziona esplicitamente gli item; `Seleziona tutti` include soltanto gli item attualmente visibili dopo il filtro, non record nascosti o non caricati.
+- In modalità bulk il membro seleziona esplicitamente gli item; `Seleziona tutti` include soltanto gli item della pagina filtrata corrente, fino a 5000, non record nascosti o di altre pagine.
 - Il client invia un comando unico con ID distinti e versione attesa per ogni item a un endpoint protetto da `Family`.
 - Il caso d'uso valida ogni elemento: stessa famiglia, visibilità (`Shared` o `Personal` del chiamante), permesso, stato `Active` e versione. Un solo elemento non valido causa rollback e nessun completamento.
-- Un'unica transazione aggiorna tutti gli item e le relative timeline. Il successo produce una sola azione atomica `Annulla N`, valida entro cinque secondi secondo l'orologio server e riferita allo stesso comando; non vengono create N snackbar individuali per il bulk.
-- Il limite massimo del batch è configurato centralmente e deve essere verificato con payload, durata transazione e volumi reali prima di fissarne il valore.
+- Il repository suddivide internamente gli ID distinti in chunk da `min(elementi residui, configuredWriteMax)`, con `configuredWriteMax` iniziale e assoluto 1000, ma esegue tutti i chunk nella stessa transazione. Cinque chunk da 1000 restano un solo comando da 5000, senza chiamate HTTP aggiuntive o commit intermedi.
+- Un errore in qualunque chunk causa rollback completo. Il successo produce una sola azione atomica `Annulla N`, valida entro cinque secondi e riferita allo stesso comando.
 
 ### 6.7 Inviti e join
 
-1. Un membro autorizzato con `Family` può generare o revocare inviti della famiglia; tutti i membri hanno questa capacità iniziale.
-2. Il server genera il codice opaco con casualità crittografica, applica il formato centralizzato e conserva soltanto un'impronta HMAC deterministica e versionata, con chiave custodita tramite la configurazione sicura/Key Vault già esistente. Il chiaro è restituito una sola volta.
+1. Un membro autorizzato con `Family` può generare inviti o richiedere e confermare la revoca; tutti i membri hanno questa capacità iniziale.
+2. Se la famiglia ha meno di cinque inviti attivi, il server genera 12 caratteri Crockford Base32 con casualità crittografica, visualizzati `XXXX-XXXX-XXXX`, e conserva soltanto un HMAC deterministico e versionato. La chiave resta fuori dal database e la rotazione continua a validare inviti attivi; il chiaro è restituito una sola volta.
 3. Il record persiste famiglia, creatore, creazione, scadenza a sette giorni, revoca e consumo; l'elenco espone soltanto metadati e stato, mai codice o impronta.
-4. Join usa `ApiAccess`, rate limit configurato e risposta anti-enumeration uniforme per codice assente, scaduto, revocato o consumato. Nessun nome famiglia è mostrato prima del successo.
+4. Join normalizza spazi, trattini e maiuscole, usa `ApiAccess` e risposta anti-enumeration. Il rate limit locale all'istanza è 5 tentativi/5 minuti per `(iss, oid)` e 20/5 minuti per origine di rete attendibile configurata; risponde con `Retry-After`. Nessun nome famiglia è mostrato prima del successo.
 5. La transazione ricontrolla invito e assenza di altra membership attiva, consuma il singolo uso e crea oppure riattiva una membership storica soft-deleted. Due consumi concorrenti non possono riuscire entrambi.
 
 ### 6.8 Settings, pagina Famiglia e leave
 
 1. L'ingranaggio frontend, separato dal microfono e dalle snackbar, somma lo spazio di design agli inset `safe-area` e apre la `SettingsPage` già esistente.
 2. La pagina conserva lingua, tema e preferenze esistenti e aggiunge la voce `Famiglia`; non ricostruisce né sostituisce Settings.
-3. La route Famiglia è registrata nel route registry e usa `PageScaffold`, titolo e `PageHelpAccordion`, guida e chiavi i18n parallele `it`/`en`. Carica con `familyId` in query e policy `Family` una proiezione minima di nome, membri e inviti.
-4. `Lascia famiglia` richiede conferma UI. In transazione revoca gli inviti ancora utilizzabili creati dal membro e soft-delete la membership.
-5. Se era l'ultimo membro attivo, la stessa transazione soft-delete famiglia e dati KinList collegati; altrimenti owner e dati restano stabili e la visibilità continua a essere applicata ai membri rimasti.
-6. Dopo il commit il contesto locale viene invalidato e l'utente torna all'onboarding. Nessuna azione rimuove altri membri o cancella l'account.
+3. La route canonica `/settings/family` è registrata nel route registry, coperta dal fallback SPA e usa `PageScaffold`, titolo, `PageHelpAccordion`, guida e chiavi `it`/`en`. URL diretto, refresh, Indietro e Avanti ricostruiscono lo stato; al ritorno a KinList il focus torna all'ingranaggio quando possibile.
+4. Carica con `familyId` in query e policy `Family` il nome e pagine di membri/inviti. La proiezione membro contiene soltanto nome e iniziali, con fallback `Membro`/`Member` e `?`; la navigazione pagina ripristina un focus prevedibile.
+5. `Lascia famiglia` richiede conferma UI. In transazione revoca gli inviti ancora utilizzabili creati dal membro e soft-delete la membership.
+6. Se era l'ultimo membro attivo, la stessa transazione soft-delete famiglia e dati KinList collegati; altrimenti owner e dati restano stabili.
+7. Dopo il commit il contesto locale viene invalidato e l'utente torna all'onboarding. Nessuna azione rimuove altri membri o cancella l'account.
 
 ### 6.9 Retention item e cleanup lifecycle
 
-1. Il timer acquisisce una sola volta `nowUtc` e calcola il cutoff approvato.
-2. Il caso d'uso legge un lotto limitato di item `Completed` con `CompletedAt` oltre soglia.
-3. La cancellazione ricontrolla stato e soglia nella scrittura per non eliminare un item riattivato.
-4. Item, timeline e dati collegati seguono la politica di cancellazione collegata nello stesso confine coerente.
-5. Il processo continua per lotti entro i limiti operativi; una nuova esecuzione riprende gli elementi rimasti.
+1. Un Timer Trigger con NCRONTAB `0 0 0 * * *`, `RunOnStartup` disabilitato, acquisisce una volta `nowUtc` alle 00:00 UTC e calcola i due cutoff.
+2. Il coordinatore tenta retention e cleanup anche se uno dei due fallisce, mantiene esiti e metriche separati e considera fallita l'invocazione complessiva se almeno un caso fallisce.
+3. La retention legge pagine keyset di massimo 5000 item `Completed` con `CompletedAt <= retentionCutoff`, poi elimina in chunk di massimo 1000 ricontrollando stato e soglia.
+4. Item, timeline e dati collegati seguono la politica di cancellazione nello stesso confine transazionale limitato.
+5. Il processo può elaborare più pagine e chunk entro il budget operativo; una nuova esecuzione riprende in modo idempotente gli elementi rimasti.
 
-Questo job resta distinto dal cleanup lifecycle. Il cleanup riusa il timer e la Function App esistenti ma esegue un caso d'uso separato: seleziona in lotti configurabili user, membership, family e dati collegati soft-deleted/inattivi da almeno 30 giorni, ricontrolla cutoff e assenza di collegamenti attivi al momento della cancellazione, elimina fisicamente nel corretto ordine transazionale e pubblica metriche proprie. Non esiste endpoint/UI `delete account`; la predisposizione del soft delete user non lo rende invocabile dall'utente. I 30 giorni lifecycle decorrono dal timestamp di inattivazione, mentre i 30 giorni degli item completati decorrono da `CompletedAt` e possono riguardare famiglie ancora attive.
+Il cleanup lifecycle seleziona con pagine keyset di massimo 5000 user, membership, family e dati collegati con `InactiveAt <= lifecycleCutoff`, ricontrolla inattività continuativa e assenza di collegamenti attivi, quindi elimina in chunk transazionali di massimo 1000 nell'ordine imposto dalle foreign key. Record riattivati vengono saltati. Non esiste endpoint/UI `delete account`; la predisposizione del soft delete user non lo rende invocabile dall'utente. I 30 giorni sono periodi continui di 24 ore: per il lifecycle decorrono da `InactiveAt`, per gli item da `CompletedAt`.
 
 ## 7. Gestione degli errori
 
 | Categoria | Esempi | Comportamento osservabile | Logging e recupero |
 |---|---|---|---|
 | Input | nome vuoto, audio vuoto, formato o limite non valido | Errore vicino all'azione/campo, nessun effetto parziale | Codice errore, dimensione/durata aggregate; niente contenuto |
+| Cursore/pagina | cursore invalido, stale o usato con altro filtro; configurazione oltre 5000 | Pagina corrente preservata, azione per ripartire dalla prima; configurazione rifiutata | Dimensione richiesta/effettiva e presenza cursore, mai il contenuto del cursore |
 | Autenticazione | token assente, scaduto o non valido | Nuovo accesso o messaggio di sessione | Esito validazione e trace ID; mai token |
 | Autorizzazione | altra famiglia, permesso mancante | Accesso negato senza rivelare il dato | ID applicativi tecnici e policy fallita secondo redazione |
 | Onboarding/famiglia | seconda famiglia attiva, nome non valido, membership cambiata | Stato autorevole o Problem Details stabile; nessun record parziale | Codice applicativo, trace ID, nessun nome famiglia |
 | Invito | codice indisponibile, revocato, scaduto o consumato | Un solo rifiuto pubblico anti-enumeration; `Retry-After` quando limitato | Esito aggregato; mai codice, HMAC o motivo distinguibile |
-| Bulk | batch vuoto/oltre limite, item invisibile, stato/versione cambiati | Nessun item modificato; ricarica esplicita | Command ID, cardinalità, rollback e categoria, senza contenuti |
+| Bulk | comando vuoto/oltre la pagina, item invisibile, stato/versione o chunk cambiati | Nessun item modificato; ricarica esplicita | Command ID, cardinalità, numero chunk, rollback e categoria, senza contenuti |
 | Dominio | transizione non valida, categoria non ammessa | Messaggio specifico, stato autorevole preservato | Codice di dominio e correlazione |
 | Concorrenza | versione item cambiata | Drawer informa del conflitto e offre dati aggiornati | Item ID tecnico, versione attesa/corrente |
-| Dipendenza | Modello multimodale/PostgreSQL non disponibili, timeout | Retry utente o automatico solo se sicuro; nessun gruppo parziale | Dipendenza, durata, tentativo, stato; no audio/testo |
+| Dipendenza | Provider/PostgreSQL non disponibili, timeout | Un solo retry provider senza risposta e nel budget; altrimenti nuova registrazione o recupero con RecordingId se già committato | Dipendenza, durata, tentativo, versione contratto/deployment; no audio/output |
 | Inatteso | eccezione non classificata | Problem Details generico con trace ID | Eccezione completa nel canale protetto e redatto |
 | Job | lotto fallito o run in ritardo | Nessun messaggio all'utente; alert operativo | Run ID, cutoff, conteggi, durata, categoria errore |
 
@@ -284,7 +316,7 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 
 - MSAL gestisce il flusso client con Entra External ID.
 - L'API accetta soltanto token destinati alla propria audience e ne valida i parametri crittografici e temporali.
-- L'identificativo esterno viene collegato a un ID applicativo interno; non diventa direttamente chiave di dominio esposta ovunque.
+- La coppia canonica `(iss, oid)` viene collegata a un ID applicativo interno; entrambi i claim sono obbligatori e dati di profilo non fungono da fallback.
 
 ### Autorizzazione
 
@@ -296,14 +328,15 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 
 ### Dati e segreti
 
-- La Function App usa managed identity verso PostgreSQL e, quando supportato, verso i servizi Azure AI.
+- La Function App usa managed identity verso PostgreSQL e Azure AI Foundry con privilegi minimi; l'identità amministrativa della pipeline è separata e non viene assegnata al runtime.
 - Il browser non riceve chiavi di servizi AI, credenziali database o segreti di deploy.
 - Eventuali segreti inevitabili restano nel sistema di configurazione sicuro già adottato da Kin Hub; mai nel repository o nel bundle.
-- Audio e output AI sono buffer temporanei della richiesta sincrona. Blob Storage non è necessario nel percorso approvato e non è introdotto nel disegno iniziale.
-- Service worker e cache non archiviano token, audio, item, categorie o altre risposte personali.
+- Audio e output AI esistono soltanto in buffer/stream della richiesta; vengono rilasciati in ogni esito e non transitano in file, dischi temporanei, Blob o code.
+- Il testo informativo sulla voce vive nel frontend localizzato e anticipa la prima richiesta del permesso microfono; il consenso operativo coincide con la concessione del permesso browser, non con una persistenza separata di dati vocali.
+- Il service worker usa un'allowlist di asset pubblici versionati. API autenticate sono network-only; Cache API, IndexedDB e altre persistenze browser non archiviano token, audio, item, categorie o risposte personali.
 - Timeline applicativa e log tecnici sono separati: la prima serve all'utente, i secondi alla diagnosi.
 - Il codice invito in chiaro vive solo nella risposta di generazione e nello stato UI transitorio. Impronta/HMAC, chiave e codici non sono loggati né restituiti negli elenchi.
-- Il rate limit del join è una barriera proporzionata nella Function App esistente; la configurazione è centralizzata e testata, senza pretendere garanzia globale tra istanze né introdurre Redis/API Management.
+- Il rate limit join è locale all'istanza: 5 tentativi/5 minuti per `(iss, oid)` e 20/5 minuti per origine attendibile. Gli header client non sono una fonte attendibile; non si introducono Redis o API Management.
 
 ### PostgreSQL condiviso
 
@@ -325,7 +358,7 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 ### Metriche minime
 
 - durata e tasso di errore di caricamento lista, modifica, completamento e undo;
-- durata upload, trascrizione, estrazione e persistenza;
+- durata upload, provider multimodale, validazione e persistenza; tentativi e timeout entro i budget 75/90 secondi;
 - registrazioni vuote/rifiutate, gruppi creati e numero item in forma aggregata;
 - conflitti di concorrenza e comandi duplicati;
 - verifiche onboarding, create/join/leave, `403` della policy distinti dai guasti repository;
@@ -334,6 +367,9 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 - esecuzioni retention, candidati, eliminati, falliti, `PastDue` ed età massima oltre soglia;
 - esecuzioni cleanup lifecycle, candidati per tipo, eliminati, saltati per collegamenti attivi, falliti ed età massima oltre cutoff, separate dalla retention item;
 - versione client/API per riconoscere incompatibilità dopo aggiornamenti PWA.
+- dimensione pagina richiesta/effettiva, navigazioni e cursori invalidi senza registrarne il contenuto;
+- cardinalità bulk, numero chunk, rollback e massimo effettivo;
+- deployment, versione modello pinned e versione contratto/schema, senza output del provider;
 
 ### Log strutturati
 
@@ -349,12 +385,14 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 | Unitari dominio | Stati e regole deterministiche | ordine, transizioni, nome famiglia, invito sette giorni/monouso, visibility predicate, leave e cutoff distinti |
 | Unitari applicazione | Orchestrazione e autorizzazione | `ApiAccess`/`Family`, false → 403, create atomica, invito/join/riattivazione, leave ultimo/non ultimo, bulk tutti-o-nessuno |
 | Integrazione PostgreSQL reale | Query, vincoli, transazioni e concorrenza | una membership attiva, family+creator rollback, consumo concorrente singolo, filtri soft delete, no leak visibility, bulk/versioni, cleanup/retention condizionati |
-| Contratto provider | Isolamento dagli SDK esterni | mapping multimodale, schema JSON, timeout, errori e redazione |
+| Contratto provider | Isolamento dagli SDK esterni | schema strict/versionato, modello pinned, massimo 1000, budget 75/90, unico retry senza risposta, no retry su output invalido e redazione |
 | Contratto HTTP | Compatibilità PWA/API | `familyId` solo query, nomi policy, 401/403, anti-enumeration, rate limit, Problem Details e mapping codici |
-| Componenti frontend | Macchina a stati e accessibilità | onboarding, Settings preservata, safe area, FamilyPage/help, conferma leave, selezione visibile e unico Undo N, parità `it`/`en` |
+| Componenti frontend | Macchina a stati e accessibilità | capability detection, shell offline, pagine/cursori, `/settings/family`, conferma revoca/leave, focus/history, selezione pagina e unico Undo N, parità `it`/`en` |
 | End-to-end mirati | Percorsi a maggior rischio | login → create/join; invito/revoca/consumo; leave → onboarding; lista senza leak Personal; bulk atomico → undo; isolamento tra famiglie |
 | Manuali dispositivi | Differenze browser/PWA | permesso e formato audio, installazione, Chrome e modalita installata prioritari, iOS/Safari come verifica secondaria, tema, zoom e tastiera |
 | Job/operativi | Affidabilità retention/cleanup e telemetria | zero candidati, lotti, retry, ricontrollo condizioni, separazione cutoff/metriche e alert per job in ritardo |
+| Contratto paginazione | Limiti, ordine e isolamento | avanti/indietro, filtro legato al cursore, inserimenti/cancellazioni tra pagine, configurazione 5000, assenza di `Get All` |
+| Bulk a chunk | Atomicità oltre 1000 | comando da 5000, cinque chunk in una transazione, fallimento intermedio con rollback totale e unico undo |
 
 Non si duplica ogni test a ogni livello: le regole pure restano nei test unitari; persistenza, browser e provider sono verificati dove il rischio esiste davvero.
 
@@ -365,12 +403,12 @@ KinList deve riusare le risorse condivise di Kin Hub. Questo scope non richiede 
 | Risorsa | Problema risolto | Configurazione iniziale proporzionata | Costo/complessità | Responsabilità fuori dalla logica | Alternativa più semplice |
 |---|---|---|---|---|---|
 | Azure Static Web Apps condivisa | Hosting HTTPS e distribuzione PWA React | Route/fallback SPA, asset versionati, HTML non cacheato a lungo, ambiente coerente con Kin Hub, nessuna persistenza locale di dati personali | Bassa; coordinare deploy/versioni | TLS, hosting statico | Hosting statico già esistente equivalente, se presente |
-| Azure Function App condivisa | Endpoint .NET, policy, rate limit e timer | Moduli Family/KinList e trigger HTTP/timer esistenti; opzioni tipizzate, nessun lavoro lungo al cold start | Cold start e rate limit locale per istanza | Runtime, scaling, trigger | Nessun nuovo host; riuso obbligatorio |
+| Azure Function App condivisa | Endpoint .NET, policy, rate limit e timer | Moduli Family/KinList; timeout propagati; timer `0 0 0 * * *`, niente `RunOnStartup`; opzioni 5000/1000 validate | Cold start e rate limit locale per istanza | Runtime, scaling, trigger | Nessun nuovo host; riuso obbligatorio |
 | Azure Database for PostgreSQL condiviso | Stato transazionale, relazioni, inviti e lifecycle | Schema shared + `kinlist`, vincoli/indici verificati, soft delete e transazioni locali | Migrazioni coordinate e costo indici | Durabilità, backup, connessioni | Database condiviso già approvato |
-| Managed Identity della Function App | Accesso senza password a database e servizi | Privilegi minimi; provisioning DB in pipeline | Configurazione RBAC/DB | Emissione identità e token | Segreto in vault, solo se un servizio non supporta identità |
+| Managed Identity della Function App | Accesso senza password a database e Azure AI | Privilegi minimi; identità pipeline separata per provisioning | Configurazione RBAC/DB | Emissione identità e token | Nessun fallback a password/chiavi per le dipendenze approvate |
 | Microsoft Entra External ID | Autenticazione utenti esterni/familiari | Registrazione app, redirect PWA, scope API e claim minimi | Configurazione tenant e flussi | Login e token | Nessuna alternativa approvata |
 | Application Insights/OpenTelemetry condiviso | Tracce, metriche, log e alert | Instrumentation server, telemetria client minima e redatta, sampling misurato | Ingestion da controllare | Raccolta e consultazione | Strumento condiviso equivalente, se già presente |
-| Deployment Azure AI Foundry multimodale | Speech-to-text ed estrazione strutturata in una chiamata | Modello/versione, schema JSON, timeout e limiti coerenti con 60 secondi e 12 MB di registrazione | Token, latenza, governance | Inferenza | Provider isolato tramite porta |
+| Deployment Azure AI Foundry multimodale | Voce verso dati strutturati in una chiamata | Deployment per ambiente, modello pinned, schema strict/versionato, massimo 1000, budget provider 75 secondi | Token, latenza, governance | Inferenza | Provider isolato tramite porta |
 
 ### Risorse non necessarie inizialmente
 
@@ -412,8 +450,8 @@ KinList deve riusare le risorse condivise di Kin Hub. Questo scope non richiede 
 ### ADR-003 — Identità esterna separata dall'identità e autorizzazione applicative
 
 - **Contesto**: Entra autentica, mentre Kin Hub deve conoscere l'appartenenza attiva e il perimetro dati consentito.
-- **Overview**: collegamento univoco tra external user ID e user ID interno; autorizzazioni in dati applicativi.
-- **Scelta**: token verificato → profilo applicativo → appartenenza attiva alla famiglia → visibilità dei dati.
+- **Overview**: collegamento univoco tra `(iss, oid)` e user ID interno; autorizzazioni in dati applicativi.
+- **Scelta**: token verificato con entrambi i claim obbligatori → profilo applicativo → appartenenza attiva → visibilità; nessun fallback su email o nome.
 - **Motivazione**: evita che claim esterni diventino l'intero modello di dominio e consente evoluzioni applicative.
 - **Pro**: controllo locale, audit stabile, cambio di claim/provider più gestibile.
 - **Contro**: provisioning e coerenza dei dati applicativi da gestire.
@@ -430,35 +468,36 @@ KinList deve riusare le risorse condivise di Kin Hub. Questo scope non richiede 
 - **Motivazione**: riduce segreti, rotazioni manuali e rischio di esposizione.
 - **Pro**: credenziali non persistenti, controllo centralizzato, audit dell'identità risorsa.
 - **Contro**: bootstrap e sviluppo locale richiedono un flusso Entra coerente.
-- **Limiti**: dipende dal supporto del servizio; eventuali provider non Azure possono richiedere un segreto protetto.
+- **Limiti**: richiede corretta configurazione Entra/RBAC e un flusso locale coerente; per PostgreSQL e Azure AI approvati non esiste fallback silenzioso a segreti.
 - **Alternative scartate**: password in app settings/connection string come soluzione principale.
 - **Problemi futuri prevenuti/semplificati**: rotazione e gestione segreti in più ambienti.
 - **Requisiti**: NFR-004, NFR-005.
 
-### ADR-005 — Pipeline vocale sincrona con modello multimodale e validazione JSON server-side
+### ADR-005 — Pipeline vocale sincrona con modello multimodale e validazione server-side
 
-- **Contesto**: il flusso approvato richiede una sola chiamata AI, risposta sincrona e nessuna fiducia diretta nell'output del modello.
-- **Overview**: l'API invia l'audio a un modello multimodale Azure AI Foundry e valida il JSON restituito prima di qualsiasi scrittura.
-- **Scelta**: audio → chiamata multimodale unica → JSON strutturato → validazione applicativa → transazione.
+- **Contesto**: il flusso approvato richiede una sola operazione AI sincrona e nessuna fiducia diretta nell'output; un guasto senza risposta può causare un secondo e ultimo tentativo.
+- **Overview**: l'API invia lo stream a un deployment configurato con modello pinned e valida uno Structured Output strict/versionato prima di qualsiasi scrittura.
+- **Scelta**: audio in memoria → chiamata multimodale entro 75 secondi complessivi → massimo un retry solo senza risposta → massimo 1000 item validati → transazione entro 90 secondi → rilascio buffer.
+- **Origine del budget tecnico**: i 75 secondi sono una decisione architetturale approvata dalla ricerca `voice-to-list-ai`; riservano tempo nel requisito end-to-end di 90 secondi per validazione, salvataggio e risposta.
 - **Motivazione**: riduce latenza e complessità operativa mantenendo il backend come confine autorevole.
-- **Pro**: meno round-trip, nessuna coda, nessuno storage intermedio, lingua rilevata automaticamente nello stesso passaggio, mantenimento degli elementi pronunciati come base del risultato.
+- **Pro**: meno round-trip, niente file/coda/storage intermedio, lingua rilevata automaticamente, contratto ripetibile e limiti misurabili.
 - **Contro**: maggiore dipendenza dalla qualità del contratto JSON e dal timeout della singola chiamata.
-- **Limiti**: non garantisce correttezza semantica; servono regole prodotto, dataset di valutazione e limiti operativi coerenti con la richiesta sincrona da 60 secondi / 12 MB.
+- **Limiti**: non garantisce correttezza semantica; modello/versione/regione, MIME type, dataset e regole su duplicati/quantità/ambiguità devono essere chiusi prima del rilascio.
 - **Alternative scartate**: interpretazione nel client; pipeline a due chiamate; orchestrazione asincrona iniziale.
-- **Problemi futuri prevenuti/semplificati**: duplicazione di logica tra provider, storage temporaneo e rami sincroni/asincroni divergenti.
-- **Requisiti**: FR-012–FR-014.
+- **Problemi futuri prevenuti/semplificati**: upgrade modello involontari, retry costosi su risposte invalide, persistenza audio e rami sincroni/asincroni divergenti.
+- **Requisiti**: FR-012–FR-014, FR-052, FR-053.
 
 ### ADR-006 — Ordine persistente e deterministico
 
 - **Contesto**: `CreatedAt DESC` non ordina stabilmente item con lo stesso timestamp.
-- **Overview**: il backend salva gruppo e posizione pronunciata e restituisce tie-breaker stabili.
-- **Scelta**: ordine per gruppo recente, ID gruppo stabile, posizione crescente e ID item finale; `UpdatedAt` escluso.
+- **Overview**: il backend salva gruppo e posizione pronunciata e usa chiavi stabili anche nei cursori keyset.
+- **Scelta**: ordine completo per gruppo recente, ID gruppo stabile, posizione crescente e ID item finale; `UpdatedAt` escluso; ogni altra collezione definisce analogamente un ordine univoco.
 - **Motivazione**: refresh e dispositivi diversi devono mostrare lo stesso ordine.
-- **Pro**: modifica e undo non spostano righe; paginazione futura possibile.
+- **Pro**: modifica e undo non spostano righe; la navigazione keyset usa lo stesso ordine autorevole.
 - **Contro**: campi e indice aggiuntivi.
 - **Limiti**: la semantica di simultaneità tra due registrazioni resta tecnica ma stabile.
 - **Alternative scartate**: ordine in memoria del client o solo timestamp.
-- **Problemi futuri prevenuti/semplificati**: elementi duplicati/saltati durante refresh o cursori futuri.
+- **Problemi futuri prevenuti/semplificati**: elementi duplicati o saltati durante navigazione avanti/indietro e cambiamenti concorrenti.
 - **Requisiti**: FR-015, FR-025.
 
 ### ADR-007 — Stato corrente più timeline append-only, senza Event Sourcing
@@ -479,8 +518,8 @@ Nota: tra gli eventi approvati rientra `Riattivato` per rappresentare l'undo acc
 ### ADR-008 — Completamento immediato e retention esplicita da `CompletedAt`
 
 - **Contesto**: il completamento scompare subito, è annullabile brevemente ed eliminato dopo 30 giorni.
-- **Overview**: transizione persistita subito; timer idempotente elimina per lotti usando `CompletedAt`.
-- **Scelta**: niente commit differito e niente TTL basata sull'ultima modifica.
+- **Overview**: transizione persistita subito; il timer giornaliero legge pagine di massimo 5000 ed elimina chunk di massimo 1000 usando `CompletedAt`.
+- **Scelta**: cutoff inclusivo dopo 30 periodi UTC di 24 ore, timer `0 0 0 * * *`, niente `RunOnStartup`, commit differito o TTL su ultima modifica.
 - **Motivazione**: chiusure, retry e aggiornamenti tecnici non alterano lo stato o la scadenza.
 - **Pro**: stato autorevole, cutoff verificabile, job ripetibile.
 - **Contro**: Annulla richiede una seconda scrittura; monitoraggio del job necessario.
@@ -493,14 +532,14 @@ Nota: tra gli eventi approvati rientra `Riattivato` per rappresentare l'undo acc
 
 - **Contesto**: installabilità PWA non equivale a pieno funzionamento offline.
 - **Overview**: cache degli asset versionati; azioni remote disabilitate chiaramente senza rete.
-- **Scelta**: nessuna coda audio offline; nessuna cache di risposte personali.
+- **Scelta**: precache allowlist dei soli asset pubblici; API autenticate network-only; nessuna coda audio, Cache API/IndexedDB con dati personali o lista offline.
 - **Motivazione**: mantiene avvio/installabilità senza introdurre persistenza sensibile e sincronizzazione complessa.
 - **Pro**: comportamento onesto, service worker semplice, minori rischi privacy.
 - **Contro**: la funzione principale non lavora offline.
-- **Limiti**: la visualizzazione offline degli item non è inclusa nel disegno iniziale.
+- **Limiti**: offline è disponibile soltanto la shell; la parità browser è promessa ai target Chrome/Edge, non a Safari/iOS best effort.
 - **Alternative scartate**: coda audio e replica offline completa; nessuna shell cache, che ridurrebbe il valore PWA.
 - **Problemi futuri prevenuti/semplificati**: duplicati, conflitti e audio abbandonato sul dispositivo.
-- **Requisiti**: FR-027–FR-029; ASM-007.
+- **Requisiti**: FR-027–FR-029, NFR-014, NFR-015.
 
 Nota: il target operativo iniziale privilegia Chrome e la modalita installata della PWA.
 
@@ -520,12 +559,12 @@ Nota: il target operativo iniziale privilegia Chrome e la modalita installata de
 ### ADR-011 — Una famiglia attiva e autorizzazione database con policy `Family`
 
 - **Contesto**: un utente autenticato può non avere ancora una famiglia; le API su una famiglia esistente devono verificare l'associazione corrente e non fidarsi del browser o di claim di appartenenza potenzialmente obsoleti.
-- **Overview**: `ApiAccess` copre onboarding/create/join; la policy con nome esattamente `Family` copre tutte le API su famiglia esistente usando user ID dai claim, `familyId` dalla query e membership dal database.
-- **Scelta**: una sola membership attiva per user; handler scoped e asincrono che delega a servizio/repository; `false` produce `403`; casi d'uso e repository mantengono lo stesso scope. Create ricontrolla l'assenza di membership e salva famiglia con il solo creatore in una transazione.
+- **Overview**: `ApiAccess` copre onboarding/create/join; la policy `Family` copre le API su famiglia esistente risolvendo il profilo interno da `(iss, oid)`, con `familyId` dalla query e membership dal database.
+- **Scelta**: identità `(iss, oid)` fail-closed, una sola membership attiva per user garantita anche da indice univoco parziale; handler scoped/asincrono; `false` produce `403`; casi d'uso e repository mantengono lo scope. Create ricontrolla e salva famiglia con il solo creatore in una transazione.
 - **Motivazione**: separa autenticazione, bootstrap e autorizzazione della risorsa senza eccezioni nascoste nella policy e protegge anche richieste costruite fuori dalla PWA.
 - **Pro**: regola uniforme, revoche immediatamente efficaci, test mirati, nessuna famiglia orfana o seconda famiglia concorrente.
 - **Contro**: una lettura database su ogni richiesta `Family` e disciplina necessaria per passare sempre `familyId` fino alla persistenza.
-- **Limiti**: claim identificativo esatto e codici Problem Details per input malformato/guasto repository devono seguire la configurazione d'identità e i contratti API definitivi; nessuna cache membership è prevista.
+- **Limiti**: codici Problem Details per input malformato/guasto repository seguono i contratti API definitivi; nessuna cache membership è prevista e va verificata l'emissione stabile di `oid` per l'issuer atteso.
 - **Alternative scartate**: famiglia dal client o dal token; policy speciale che consente onboarding; controllo solo UI; middleware/servizio autorizzativo esterno; `404` per membership falsa, perché è confermato `403`.
 - **Problemi futuri prevenuti/semplificati**: accesso cross-family, autorizzazioni stale, alias di policy divergenti e creazioni concorrenti duplicate.
 - **Requisiti**: FR-001–FR-005, FR-031–FR-033, FR-047, NFR-005, NFR-006.
@@ -533,30 +572,30 @@ Nota: il target operativo iniziale privilegia Chrome e la modalita installata de
 ### ADR-012 — Inviti opachi monouso con impronta e consumo transazionale
 
 - **Contesto**: tutti i membri devono poter invitare senza email o notifiche; il codice è una credenziale temporanea esposta a digitazione, furto, enumerazione e consumo concorrente.
-- **Overview**: codice casuale crittografico valido sette giorni, mostrato una volta, rappresentato a riposo da impronta HMAC versionata e accompagnato da metadati elencabili.
-- **Scelta**: tutti i membri possono generare/revocare con `Family`; join usa `ApiAccess`, rate limit e risposta anti-enumeration. Il codice è opaco e monouso; consumo più creazione o riattivazione della membership avvengono in una transazione condizionata.
+- **Overview**: codice Crockford Base32 di 12 caratteri, mostrato `XXXX-XXXX-XXXX` una volta, rappresentato a riposo da HMAC versionato e accompagnato da metadati paginati.
+- **Scelta**: massimo cinque inviti attivi; tutti i membri generano e revocano previa conferma con `Family`; join normalizza l'input, usa `ApiAccess`, anti-enumeration e limiti per istanza 5/5 minuti per identità e 20/5 minuti per origine attendibile. Consumo e membership sono transazionali.
 - **Motivazione**: limita durata e riuso della credenziale, evita segreti recuperabili dal database e mantiene semplice il flusso manuale approvato.
 - **Pro**: nessun canale di consegna da gestire, revoca immediata, un solo vincitore concorrente, database privo del codice in chiaro.
 - **Contro**: gestione di una chiave HMAC/versione se adottata e minore dettaglio diagnostico pubblico per effetto dell'anti-enumeration.
-- **Limiti**: lunghezza/alfabeto, numero di inviti attivi e soglie/finestra del rate limit non sono approvati; restano configurazioni centralizzate da verificare con entropia, usabilità, scala e telemetria. Il limite in memoria per istanza non è globale.
+- **Limiti**: il rate limit in memoria è per istanza, non globale; l'origine di rete deve provenire da proxy/configurazione attendibile e la rotazione HMAC deve mantenere verificabili gli inviti ancora attivi.
 - **Alternative scartate**: codice permanente o multiuso; storage in chiaro; hash veloce non keyed senza valutare lo spazio dei codici; link/email/notifiche; Redis, API Management o servizio inviti dedicato senza abuso misurato.
 - **Problemi futuri prevenuti/semplificati**: riuso accidentale, enumerazione informativa, doppio join e compromissione immediata da sola lettura del database.
-- **Requisiti**: FR-036–FR-040, NFR-004–NFR-007, NFR-011.
+- **Requisiti**: FR-036–FR-040, FR-054, NFR-004–NFR-007, NFR-011.
 
 ### ADR-013 — Soft delete del lifecycle famiglia e cleanup fisico separato
 
 - **Contesto**: lasciare una famiglia deve rimuovere subito l'accesso, preservare la possibilità di riattivare una membership storica e, per l'ultimo membro, disattivare atomicamente famiglia e dati; user/membership/family devono essere predisposti alla cancellazione differita.
-- **Overview**: soft delete autorevole nelle query operative e cleanup fisico dopo almeno 30 giorni di inattività, eseguito per lotti dal timer esistente.
+- **Overview**: soft delete autorevole e cleanup giornaliero dopo 30 periodi di 24 ore da `InactiveAt`, con pagine 5000 e chunk 1000 nel timer esistente.
 - **Scelta**: leave revoca gli inviti creati e soft-delete la membership; se non restano membri attivi, soft-delete nella stessa transazione famiglia e dati KinList collegati. Il cleanup ricontrolla cutoff e assenza di legami attivi prima dell'hard delete. User soft delete è predisposto ma non esposto da endpoint/UI.
 - **Motivazione**: rende immediata la revoca logica, consente il join con riattivazione storica e limita cancellazioni concorrenti o premature senza introdurre un servizio separato.
 - **Pro**: operazioni atomiche, recupero tecnico durante la finestra, pulizia controllata, stesso database e stessa osservabilità.
 - **Contro**: query e vincoli devono distinguere attivo/inattivo; i record restano nel database operativo fino al cleanup.
-- **Limiti**: frequenza e dimensione lotto sono configurazioni operative da verificare; backup e point-in-time restore seguono politiche infrastrutturali separate. Non esiste recupero utente della famiglia soft-deleted.
+- **Limiti**: timeout host, retry/alert operativi, ordine fisico secondo foreign key e backup/PITR restano da verificare. Non esiste recupero utente della famiglia soft-deleted.
 - **Alternative scartate**: hard delete sincrono durante leave; cascade non condizionata; nuovo servizio o database di cleanup; endpoint delete-account non richiesto.
 - **Problemi futuri prevenuti/semplificati**: famiglie senza membri ancora accessibili, dati orfani, inviti del membro ancora validi e cancellazioni fisiche troppo lunghe nella richiesta utente.
 - **Requisiti**: FR-041–FR-043, NFR-004, NFR-006, NFR-007, NFR-011.
 
-La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. Non sostituisce ADR-008: la retention di un item `Completed` parte da `CompletedAt`, può avvenire in una famiglia attiva e conserva regole, metriche e query distinte.
+La soglia lifecycle parte da `InactiveAt`. Non sostituisce ADR-008: la retention di un item `Completed` parte da `CompletedAt`, può avvenire in una famiglia attiva e conserva regole, metriche e query distinte.
 
 ### ADR-014 — Visibilità item e owner stabili applicati dal server
 
@@ -574,12 +613,12 @@ La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. 
 ### ADR-015 — Bulk completion atomico con unico undo di gruppo
 
 - **Contesto**: la selezione multipla è una sola intenzione utente e ogni item può essere cambiato, invisibile o non autorizzato al momento del commit.
-- **Overview**: selezione esplicita, `Seleziona tutti` limitato alla vista dopo filtro, comando endpoint unico e transazione tutti-o-nessuno.
-- **Scelta**: il server valida ogni ID e versione inclusi famiglia, visibility `Personal`, owner, permesso e stato; un errore annulla tutto. Il successo registra le transizioni per item sotto un command ID e offre una sola operazione atomica `Annulla N` entro cinque secondi.
+- **Overview**: selezione esplicita dell'intera pagina filtrata fino a 5000, comando HTTP unico e transazione tutti-o-nessuno eseguita in chunk repository.
+- **Scelta**: il server valida ogni ID/versione; il repository suddivide in chunk da massimo 1000 dentro la stessa transazione. Un errore annulla tutto; il successo usa un command ID e un solo `Annulla N` entro cinque secondi.
 - **Motivazione**: il risultato resta comprensibile e riconciliabile senza successi parziali o una coda rumorosa di snackbar.
 - **Pro**: semantica semplice, nessuno stato misto, retry/idempotenza controllabili, undo coerente con l'intenzione.
 - **Contro**: un solo conflitto richiede ricarica e nuova selezione; la transazione cresce con il batch.
-- **Limiti**: il massimo numero di item non è approvato e deve essere una configurazione centralizzata verificata con payload e durata; `Seleziona tutti` non attraversa item non visibili o pagine non caricate.
+- **Limiti**: il comando non supera la pagina di massimo 5000; ogni chunk non supera 1000; `Seleziona tutti` non attraversa pagine non caricate. La transazione da 5000 va verificata contro timeout e contesa.
 - **Alternative scartate**: chiamate singole dal browser, successo parziale, validazione del solo sottoinsieme trovato, N snackbar e N undo indipendenti.
 - **Problemi futuri prevenuti/semplificati**: esiti misti, leak di item personali, perdita di aggiornamenti concorrenti e undo ambiguo.
 - **Requisiti**: FR-023–FR-025, FR-044–FR-047, NFR-005, NFR-006.
@@ -588,14 +627,27 @@ La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. 
 
 - **Contesto**: KinHub dispone già di `SettingsPage` e preferenze; il nuovo accesso deve restare mobile-first, non coprire microfono/snackbar e rispettare i vincoli documentali di ogni route.
 - **Overview**: ingranaggio safe-area come accesso secondario, voce `Famiglia` aggiunta alla pagina esistente e route Family conforme al framework frontend del repository.
-- **Scelta**: preservare tutte le preferenze esistenti; registrare la route; usare `PageScaffold` e `PageHelpAccordion` con guida e chiavi parallele. Italiano è default, inglese è lingua supportata e fallback tecnico.
+- **Scelta**: preservare le preferenze esistenti; registrare `/settings/family` con fallback SPA, URL diretto, refresh, Indietro/Avanti e ripristino focus; usare `PageScaffold`, `PageHelpAccordion`, guida e chiavi parallele.
 - **Motivazione**: evita una seconda pagina impostazioni divergente e allinea il nuovo flusso alle regole di navigazione, accessibilità e i18n già obbligatorie.
 - **Pro**: UX coerente, URL/Indietro/focus prevedibili, nessuna stringa hardcoded, nessun dato personale aggiunto alla cache.
 - **Contro**: richiede coordinare safe area, microfono, snackbar e spazio di scroll ai breakpoint.
-- **Limiti**: misure visuali e path URL definitivi appartengono al design/route registry in implementazione; non viene aggiunta analytics sull'apertura delle impostazioni.
+- **Limiti**: misure visuali e path dell'indice Settings restano al design/route registry; il path Family è approvato e non viene aggiunta analytics.
 - **Alternative scartate**: sostituire Settings; menu o dialog; pagina senza help; solo italiano; endpoint server per restituire una voce statica.
 - **Problemi futuri prevenuti/semplificati**: perdita delle preferenze esistenti, route non documentate, focus nascosto e divergenza delle traduzioni.
 - **Requisiti**: FR-027–FR-029, FR-034–FR-036, NFR-001–NFR-003, NFR-009, NFR-010.
+
+### ADR-017 — Accesso limitato alle collezioni con keyset pagination
+
+- **Contesto**: lista, categorie, timeline, membri, inviti e candidati di manutenzione non devono richiedere assunzioni sul volume o materializzazioni integrali.
+- **Overview**: ogni contratto di collezione restituisce una pagina limitata e cursori opachi legati a filtro, direzione e ordinamento stabile.
+- **Scelta**: keyset pagination avanti/indietro, `effectivePageSize = min(requestedPageSize, configuredReadMax)`, valore iniziale e tetto assoluto 5000, configurazione invalida rifiutata e nessun metodo `Get All` nei repository applicativi.
+- **Motivazione**: limita memoria, payload e tempo query in modo uniforme senza introdurre un'infrastruttura aggiuntiva.
+- **Pro**: comportamento prevedibile, migliore stabilità con inserimenti/cancellazioni concorrenti e contratto riusabile tra UI e manutenzione.
+- **Contro**: ogni collezione richiede un ordine totale, indici coerenti e gestione esplicita dei cursori stale.
+- **Limiti**: formato, protezione e durata del cursore e ordine esatto di categorie, membri, inviti e tipi lifecycle devono essere chiusi nei relativi contratti tecnici.
+- **Alternative scartate**: `Get All`, offset pagination e filtro client su dataset completo; virtualizzazione resta un'ottimizzazione UI distinta.
+- **Problemi futuri prevenuti/semplificati**: payload incontrollati, salti/duplicati da offset e divergenza tra limiti delle diverse query.
+- **Requisiti**: FR-015–FR-018, FR-020–FR-022, FR-036, FR-049–FR-051, NFR-013.
 
 ## 13. Evoluzioni future non implementate
 
@@ -603,8 +655,8 @@ La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. 
 |---|---|---|
 | Aggiornamento realtime tra membri | Gli utenti richiedono visibilità immediata oltre il refresh manuale o i conflitti misurati diventano frequenti | La scelta iniziale è refresh manuale con concorrenza ottimistica; un canale push aggiungerebbe complessità client/server |
 | Operazione AI asincrona con storage/coda | Latenza supera stabilmente il budget della richiesta sincrona o il lavoro deve sopravvivere alla disconnessione | La scelta iniziale approvata è sincrona, senza code o storage temporaneo dedicato |
-| Paginazione a cursore/virtualizzazione | Liste attive reali mostrano volume o rendering non sostenibile | Nessun volume approvato |
 | Cache dati offline in sola lettura | Ricerca utente dimostra valore e privacy approva la persistenza locale | La scelta iniziale vieta la persistenza locale di dati personali |
+| Virtualizzazione visuale delle pagine | Una singola pagina approvata produce rendering non sostenibile sui dispositivi target | La paginazione limita già I/O e la virtualizzazione non è un requisito corrente |
 | Temi personalizzati | Esiste requisito prodotto oltre chiaro/scuro | Esplicitamente futuro nella trascrizione |
 | Separazione Function App/database | Telemetria dimostra contesa, scala, ciclo di rilascio o isolamento normativo differenti | Il costo condiviso è un vincolo attuale |
 | Modello di autorizzazione più ricco | Compaiono ruoli reali con permessi differenti | Non si introducono gruppi/permessi ipotetici |
@@ -618,7 +670,7 @@ La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. 
 
 | Rischio | Probabilità/Impatto | Mitigazione proporzionata |
 |---|---|---|
-| Claim External ID insufficiente per profilo/iniziali | Media/Media | Definire claim minimi e fallback di profilo prima dell'implementazione |
+| `iss`/`oid` mancanti o non stabili | Bassa/Alta | Verifica configurazione Entra e test fail-closed; nessun fallback identificativo su profilo |
 | Accesso accidentale tra famiglie | Bassa/Alta | Scope famiglia in ogni query/comando, test di isolamento e policy centralizzate |
 | Policy `Family` applicata in modo incompleto o bypassata | Bassa/Alta | Nome unico, test endpoint/DI, handler scoped e scope ripetuto nei repository |
 | Enumerazione o furto di codici invito | Media/Alta | Casualità crittografica, HMAC/impronta, sette giorni, monouso, anti-enumeration, rate limit e niente log |
@@ -626,11 +678,13 @@ La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. 
 | Soft delete escluso da una query o incluso per errore | Media/Alta | Repository mirati, test filtri/riattivazione, vincoli su record attivi e review migrazioni |
 | Cleanup elimina dati ancora collegati | Bassa/Alta | Cutoff e assenza di legami attivi ricontrollati nella scrittura, lotti e metriche separate |
 | Leak di item `Personal` tramite categoria/aggregato/bulk | Media/Alta | Predicato server unico prima della proiezione e test negativi su ogni percorso |
-| Bulk troppo grande o conteso | Media/Media | Limite configurato da verificare, transazione breve, rollback totale e metriche cardinalità/durata |
+| Bulk da 5000 troppo lungo o conteso | Media/Media | Chunk da 1000 nella stessa transazione, rollback totale, indici e metriche per chunk/durata |
+| Cursore o ordine non coerenti | Media/Alta | Ordine totale per collezione, cursore legato a filtro/direzione e test con modifiche concorrenti |
+| Configurazione oltre i tetti 5000/1000 | Bassa/Alta | Validazione all'avvio e controllo difensivo prima dell'I/O |
 | Controlli fissi coprono focus o snackbar | Media/Media | Layout safe-area coordinato, spazio di scroll e test mobile/zoom/tastiera |
 | Output AI formalmente valido ma semanticamente errato | Alta/Media | Schema + validazione + modifica immediata; dataset di valutazione prima della scelta modello |
 | Audio/trascrizione nei log | Media/Alta | Redazione, divieto di payload logging, test/sink review e accessi limitati |
-| Latenza AI incompatibile con richiesta sincrona | Media/Media | Misurare il prototipo contro il budget della richiesta HTTP e valutare asincronia solo con evidenza |
+| Latenza AI incompatibile con 75/90 secondi | Media/Alta | Verifica end-to-end dei proxy, cancellation e tempo residuo; unico retry senza risposta; asincronia solo con nuova decisione |
 | Cold start/capacità della Function App condivisa | Media/Media | Telemetria per fase, query efficienti, nessuna inizializzazione pesante; separazione solo con evidenza |
 | Contesa o migrazioni sul DB condiviso | Media/Alta | Schemi/ownership chiari, migrazioni versionate, test e deploy coordinato |
 | Managed identity PostgreSQL configurata male | Media/Alta | Bootstrap in pipeline, privilegi minimi, test pre-deploy e niente fallback silenzioso a password |
@@ -641,7 +695,7 @@ La soglia lifecycle di 30 giorni parte da `DeletedAt`/istante di inattivazione. 
 
 ## 15. Ipotesi e decisioni aperte
 
-Le decisioni di prodotto e tecniche consolidate comprendono: limite 60 secondi / 12 MB con risposta sincrona; mantenimento degli elementi pronunciati; catalogo categorie per famiglia; salvataggio esplicito; undo singolo con margine server, evento `Riattivato` e coda snackbar; refresh manuale; nessun dato personale in cache; priorità a Chrome/modalità installata; capacità uniformi tra membri senza ruoli; una famiglia attiva per user; onboarding create/join; policy `Family`; inviti di sette giorni monouso; leave e soft delete; cleanup lifecycle; bulk atomico con unico undo; enum visibility con creazioni `Shared`; italiano default e inglese supportato/fallback.
+Le decisioni consolidate comprendono anche: identità `(iss, oid)`; sola shell offline; audio solo in memoria; richiesta AI 90 secondi con budget provider 75, modello pinned e schema strict versionato; limite 1000 item; recupero tramite `RecordingId`; paginazione keyset universale con tetto 5000; chunk scrittura 1000; timer giornaliero; `/settings/family`; formato, massimo e rate limit degli inviti.
 
 Le decisioni condivise riusano gli identificatori autorevoli dell'analisi funzionale:
 
@@ -653,8 +707,14 @@ Le decisioni condivise riusano gli identificatori autorevoli dell'analisi funzio
 | DEC-022–DEC-024 | Uscita, ultimo membro e ciclo di vita inattivo. |
 | DEC-025 | Selezione e completamento multiplo atomico. |
 | DEC-026, DEC-027 | Visibilità item e comportamento in caso di accesso negato. |
+| DEC-028 | Paginazione e limiti di lettura delle collezioni. |
+| DEC-029, DEC-030 | Pipeline vocale e recupero dell'esito senza persistenza audio. |
+| DEC-031, DEC-032 | Identità esterna canonica e protezione dei tentativi join. |
+| DEC-033 | Coordinamento giornaliero di retention e cleanup. |
+| DEC-034 | Rilevamento automatico e mantenimento della lingua parlata. |
+| DEC-035 | Informativa iniziale e consenso operativo per la voce. |
 
-Non restano decisioni di prodotto bloccanti nello scope confermato. Restano da verificare prima di fissare configurazioni esecutive: claim External ID stabile; lunghezza/alfabeto del codice; soglie e finestra del rate limit; massimo bulk; dimensione e frequenza dei lotti cleanup; dettagli fisici di indici/vincoli e path route. Sono decisioni tecniche aperte da chiudere con configurazione e misure nel relativo task, non autorizzano valori arbitrari e non cambiano i confini funzionali.
+Non restano decisioni aperte condivise con l'analisi funzionale. Prima dei contratti esecutivi vanno comunque definiti modello/versione/regione concreti, formato/protezione/durata cursori, ordine totale di ogni collezione, timeout host e soglie operative di alert. Queste scelte non autorizzano nuove funzionalità o risorse.
 
 Non è disponibile nelle fonti autorizzate la «carta delle risorse» citata nella trascrizione. Prima del backlog infrastrutturale vanno confrontati nomi, piano, regione, rete e risorse già esistenti di Kin Hub; questo documento non li inventa.
 
@@ -662,20 +722,20 @@ Non è disponibile nelle fonti autorizzate la «carta delle risorse» citata nel
 
 | Requisiti/vincoli | Componenti | ADR | Test principali |
 |---|---|---|---|
-| FR-001–FR-005 | PWA, Endpoint, Identity & Access, PostgreSQL shared | ADR-002, ADR-003, ADR-004 | contratto HTTP, integrazione DB, E2E isolamento famiglie |
-| FR-006–FR-011, FR-027–FR-029 | PWA | ADR-009, ADR-010 | componenti frontend, manuali browser/accessibilità |
-| FR-012–FR-014 | Endpoint, Application, Voice Pipeline, Multimodal AI Provider, PostgreSQL | ADR-005 | unitari applicazione, contratti provider, integrazione transazione |
-| FR-015–FR-018 | Application, Domain, Persistence, PWA | ADR-006 | unitari ordine, integrazione query, UI filtro |
-| FR-019–FR-023 | PWA, Application, Domain, Persistence | ADR-007, ADR-010 | unitari no-op, integrazione concorrenza, component drawer |
+| FR-001–FR-005 | PWA, Endpoint, Identity & Access, PostgreSQL shared | ADR-002, ADR-003, ADR-004, ADR-011 | claim `(iss, oid)`, contratto HTTP, integrazione DB, isolamento famiglie |
+| FR-006–FR-011, FR-027–FR-029, FR-055 | PWA | ADR-009, ADR-010 | componenti frontend, popup informativo, manuali browser/accessibilità |
+| FR-012–FR-014, FR-052, FR-053 | Endpoint, Application, Voice Pipeline, Multimodal AI Provider, PostgreSQL | ADR-005 | schema/versione, 75/90, retry, limite 1000, rilascio buffer e transazione |
+| FR-015–FR-018, FR-049–FR-051 | Application, Domain, Persistence, PWA | ADR-006, ADR-017 | ordine, cursori, limiti, query filtrate e UI pagine |
+| FR-019–FR-023 | PWA, Application, Domain, Persistence | ADR-007, ADR-010, ADR-017 | pagine timeline/categorie, no-op, concorrenza e drawer |
 | FR-024–FR-026 | PWA, Domain, Persistence, Maintenance Timer | ADR-007, ADR-008 | transizioni, idempotenza, E2E undo, test job |
 | FR-030, NFR-004, NFR-007 | Telemetry e tutti i confini I/O | ADR-004, ADR-008, ADR-010 | test redazione, tracing integration, alert/job |
 | NFR-008, NFR-009, NFR-011 | Tutti i moduli | ADR-001, ADR-002, ADR-010 | analisi statica, review architetturale, build/localizzazione |
 | FR-031–FR-033 | PWA onboarding, Endpoint, Identity & Access, Family Application, Persistence | ADR-003, ADR-011 | policy/DI, 403, create concorrente, rollback e E2E create/join |
-| FR-036–FR-040 | Family Application, Persistence, Telemetry | ADR-012 | casualità/impronta, anti-enumeration, rate limit, consumo/revoca concorrenti |
-| FR-041–FR-043 | Family Application, KinList Application, Persistence, Maintenance Timer | ADR-013 | leave ultimo/non ultimo, riattivazione, filtri soft delete, cleanup condizionato |
+| FR-036–FR-040, FR-054 | Family Application, Persistence, Telemetry | ADR-012 | casualità/impronta, anti-enumeration, rate limit per istanza, consumo/revoca concorrenti |
+| FR-041–FR-043, FR-049, FR-050 | Family Application, KinList Application, Persistence, Maintenance Timer | ADR-013, ADR-017 | leave, riattivazione, pagine/chunk, cleanup condizionato e timer |
 | FR-047, FR-048 | KinList Domain/Application, Persistence, Endpoint | ADR-014 | test no-leak lista/dettaglio/categorie/aggregati/comandi/bulk |
-| FR-044–FR-046 | PWA, Endpoint, KinList Application, Persistence | ADR-015 | selezione visibile, validazione ogni item, rollback, concorrenza e undo atomico |
-| FR-034–FR-036 | PWA, route/help/i18n | ADR-009, ADR-010, ADR-016 | safe area, focus, preferenze preservate, route/docs e parità `it`/`en` |
+| FR-044–FR-046 | PWA, Endpoint, KinList Application, Persistence | ADR-015, ADR-017 | pagina fino a 5000, chunk 1000, rollback, concorrenza e undo atomico |
+| FR-034–FR-036 | PWA, route/help/i18n | ADR-009, ADR-010, ADR-016, ADR-017 | `/settings/family`, pagine membri, focus/history, route/docs e parità `it`/`en` |
 
 Ogni componente serve almeno un requisito o un vincolo approvato. L'integrazione AI resta isolata dietro una porta applicativa, ma la scelta iniziale approvata è un modello multimodale Azure AI Foundry con validazione JSON lato backend.
 
@@ -683,4 +743,4 @@ Ogni componente serve almeno un requisito o un vincolo approvato. L'integrazione
 
 L'impostazione tecnica iniziale è coerente e proporzionata allo scope confermato: PWA React integrata nelle Impostazioni esistenti, backend .NET modulare nella Function App condivisa, policy `Family` e controlli applicativi scoped, PostgreSQL transazionale con soft delete/cleanup, External ID, managed identity, telemetria redatta e nessuna nuova risorsa o infrastruttura distribuita.
 
-Il documento è pronto come **architettura dello scope confermato** e consente di costruire il backlog senza inventare feature o valori operativi. Claim, formato codice, rate limit, massimo bulk, lotti cleanup, indici e path route devono essere verificati e configurati nel relativo task tecnico; non autorizzano microservizi, CQRS, mediator, event bus, nuove risorse Azure, delete-account, gestione ruoli, rimozione membri, selector/conversione visibility o altre funzioni non richieste.
+Il documento descrive l'architettura dello scope congelato senza introdurre feature: PWA con sola shell offline, popup iniziale informativo sulla voce, backend modulare, PostgreSQL paginato/transazionale, AI sincrona limitata, manutenzione giornaliera e risorse KinHub condivise. Il backlog può essere creato usando le decisioni funzionali chiuse e le selezioni tecniche elencate in sezione 15; nessuna di esse autorizza microservizi, CQRS, mediator, event bus, nuove risorse Azure, delete-account, ruoli, rimozione membri o UI Personal.
