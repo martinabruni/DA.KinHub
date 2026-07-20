@@ -1,6 +1,7 @@
 ---
 name: brainstorming
 description: Trasformare idee, preferenze e documenti di ricerca in uno scope approvabile, un'analisi funzionale comprensibile anche a chi non sviluppa e un documento di architettura didattico, pragmatico e orientato a .NET, Microsoft e Azure. Usare quando occorre fare brainstorming strutturato su una nuova applicazione, prodotto, feature o modifica, chiarire requisiti e flussi, separare in scope e out of scope, risolvere incoerenze, definire UX e impostazione tecnica prima di creare il backlog, senza aggiungere funzionalità non richieste.
+disable-model-invocation: true
 ---
 
 # Brainstorming

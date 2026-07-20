@@ -1,6 +1,7 @@
 ---
 name: cicr
 description: Scomporre idee, modifiche e feature in task di ricerca piccoli, chiari e indipendenti e creare per ciascuno un file research.md sotto tasks/task-code, didattico e orientato alle best practice Microsoft per UX, backend e infrastruttura Azure. Usare quando occorre analizzare un problema prima del brainstorming o dell'implementazione, chiarire flussi utente e tecnici, raccogliere raccomandazioni Microsoft motivate o preparare documenti research.md separati senza introdurre funzionalita fuori scope.
+disable-model-invocation: true
 ---
 
 # CICR
