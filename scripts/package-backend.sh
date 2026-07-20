@@ -4,7 +4,7 @@ set -euo pipefail
 environment="${1:-Development}"
 configuration="Release"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-project="$root/src/backend/applications/AdvancedFrontier.Functions/AdvancedFrontier.Functions.csproj"
+project="$root/src/backend/applications/DA.KinHub.Functions/DA.KinHub.Functions.csproj"
 artifact_root="$root/artifacts/backend"
 publish_dir="$artifact_root/publish"
 case "$publish_dir" in "$root"/artifacts/backend/*) ;; *) echo "Artifact path escaped repository" >&2; exit 1 ;; esac
@@ -26,7 +26,7 @@ dotnet build "$project" --configuration "$configuration" --no-restore "${propert
 dotnet publish "$project" --configuration "$configuration" --no-restore --output "$publish_dir" "${properties[@]}"
 
 test -f "$publish_dir/host.json" || { echo "host.json missing from publish root" >&2; exit 1; }
-test -f "$publish_dir/AdvancedFrontier.Functions.dll" || { echo "Function assembly missing from publish root" >&2; exit 1; }
+test -f "$publish_dir/DA.KinHub.Functions.dll" || { echo "Function assembly missing from publish root" >&2; exit 1; }
 if find "$publish_dir" -type f \( -name 'local.settings.json' -o -name '.env*' \) -print -quit | grep -q .; then
   echo "Forbidden local configuration found in publish output" >&2
   exit 1

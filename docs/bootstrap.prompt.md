@@ -149,9 +149,9 @@ Crea almeno la seguente struttura, aggiungendo i file necessari:
 │   ├── docs-sync/
 │   └── release-notes/
 ├── tests/
-│   ├── AdvancedFrontier.Domain.Tests/
-│   ├── AdvancedFrontier.Business.Tests/
-│   └── AdvancedFrontier.IntegrationTests/
+│   ├── DA.KinHub.Domain.Tests/
+│   ├── DA.KinHub.Business.Tests/
+│   └── DA.KinHub.IntegrationTests/
 ├── src/
 │   ├── backend/
 │   │   ├── domains/
@@ -518,7 +518,7 @@ src/backend/business
 src/backend/applications
 ```
 
-Usa namespace coerenti, ad esempio `AdvancedFrontier.*`.
+Usa namespace coerenti, ad esempio `DA.KinHub.*`.
 
 ### 12.1 Domains
 

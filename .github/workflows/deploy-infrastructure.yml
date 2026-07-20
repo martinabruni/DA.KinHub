@@ -85,7 +85,7 @@ jobs:
         run: |
           dotnet tool restore
           mkdir -p artifacts/migrations
-          dotnet ef migrations bundle --project src/backend/infrastructure/AdvancedFrontier.Infrastructure --startup-project src/backend/applications/AdvancedFrontier.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
 
       - name: Apply database migrations
         if: env.POSTGRES_MIGRATION_CONNECTION_STRING != ''

@@ -26,22 +26,22 @@
         {
           "id": "project-service",
           "name": "ProjectService",
-          "source": "src/backend/business/AdvancedFrontier.Business/Projects/ProjectService.cs"
+          "source": "src/backend/business/DA.KinHub.Business/Projects/ProjectService.cs"
         },
         {
           "id": "build-info-provider",
           "name": "BuildInfoProvider",
-          "source": "src/backend/applications/AdvancedFrontier.Functions/Configuration/BuildInfoProvider.cs"
+          "source": "src/backend/applications/DA.KinHub.Functions/Configuration/BuildInfoProvider.cs"
         },
         {
           "id": "api-results",
           "name": "ApiResults",
-          "source": "src/backend/applications/AdvancedFrontier.Functions/Http/ApiResults.cs"
+          "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiResults.cs"
         },
         {
           "id": "document-storage",
           "name": "BlobDocumentStorage",
-          "source": "src/backend/infrastructure/AdvancedFrontier.Infrastructure/Storage/BlobDocumentStorage.cs"
+          "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs"
         }
       ],
       "checksum": "86be015bbd9f1e252ce7cb0557e029e7e79425b563d9840b68e445bf0d237117"

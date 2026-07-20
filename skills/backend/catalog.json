@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "items": [
-    { "id": "project-service", "name": "ProjectService", "source": "src/backend/business/AdvancedFrontier.Business/Projects/ProjectService.cs", "purpose": "Creazione ed elenco progetti con regole condivise" },
-    { "id": "build-info-provider", "name": "BuildInfoProvider", "source": "src/backend/applications/AdvancedFrontier.Functions/Configuration/BuildInfoProvider.cs", "purpose": "Version metadata coerenti" },
-    { "id": "api-results", "name": "ApiResults", "source": "src/backend/applications/AdvancedFrontier.Functions/Http/ApiResults.cs", "purpose": "Correlation ID e Problem Details" },
-    { "id": "document-storage", "name": "BlobDocumentStorage", "source": "src/backend/infrastructure/AdvancedFrontier.Infrastructure/Storage/BlobDocumentStorage.cs", "purpose": "Astrazione documentale con adapter Azure Blob e Azurite locale" }
+    { "id": "project-service", "name": "ProjectService", "source": "src/backend/business/DA.KinHub.Business/Projects/ProjectService.cs", "purpose": "Creazione ed elenco progetti con regole condivise" },
+    { "id": "build-info-provider", "name": "BuildInfoProvider", "source": "src/backend/applications/DA.KinHub.Functions/Configuration/BuildInfoProvider.cs", "purpose": "Version metadata coerenti" },
+    { "id": "api-results", "name": "ApiResults", "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiResults.cs", "purpose": "Correlation ID e Problem Details" },
+    { "id": "document-storage", "name": "BlobDocumentStorage", "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs", "purpose": "Astrazione documentale con adapter Azure Blob e Azurite locale" }
   ]
 }

@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$project = Join-Path $root "src/backend/applications/AdvancedFrontier.Functions/AdvancedFrontier.Functions.csproj"
+$project = Join-Path $root "src/backend/applications/DA.KinHub.Functions/DA.KinHub.Functions.csproj"
 $artifactRoot = [System.IO.Path]::GetFullPath((Join-Path $root "artifacts/backend"))
 $publishPath = [System.IO.Path]::GetFullPath((Join-Path $artifactRoot "publish"))
 if (-not $artifactRoot.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase) -or -not $publishPath.StartsWith($artifactRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -42,7 +42,7 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
 dotnet publish $project --configuration $Configuration --no-restore --output $publishPath @properties
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
 
-$required = @("host.json", "AdvancedFrontier.Functions.dll")
+$required = @("host.json", "DA.KinHub.Functions.dll")
 foreach ($file in $required) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishPath $file))) { throw "$file is missing from the publish root." }
 }

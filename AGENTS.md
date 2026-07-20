@@ -199,10 +199,10 @@ npm run skills:watch
 dotnet restore KinHub.slnx
 dotnet build KinHub.slnx --configuration Release --no-restore
 dotnet test KinHub.slnx --configuration Release --no-build
-dotnet publish src/backend/applications/AdvancedFrontier.Functions/AdvancedFrontier.Functions.csproj -c Release -o artifacts/backend/publish
+dotnet publish src/backend/applications/DA.KinHub.Functions/DA.KinHub.Functions.csproj -c Release -o artifacts/backend/publish
 
 # Backend locale
-cd src/backend/applications/AdvancedFrontier.Functions
+cd src/backend/applications/DA.KinHub.Functions
 func start
 
 # Frontend

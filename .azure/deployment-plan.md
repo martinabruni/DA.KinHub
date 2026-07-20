@@ -44,10 +44,10 @@ Il repository applicativo era vuoto all'analisi iniziale; i componenti seguenti 
 
 | Component | Type | Technology | Path |
 |---|---|---|---|
-| KinHub Domain | Domain library | .NET 10 | `src/backend/domains/AdvancedFrontier.Domain` |
-| KinHub Infrastructure | Infrastructure library | EF Core + Npgsql | `src/backend/infrastructure/AdvancedFrontier.Infrastructure` |
-| KinHub Business | Application/business library | .NET 10 | `src/backend/business/AdvancedFrontier.Business` |
-| KinHub API | Serverless REST API | Azure Functions Isolated .NET 10 | `src/backend/applications/AdvancedFrontier.Functions` |
+| KinHub Domain | Domain library | .NET 10 | `src/backend/domains/DA.KinHub.Domain` |
+| KinHub Infrastructure | Infrastructure library | EF Core + Npgsql | `src/backend/infrastructure/DA.KinHub.Infrastructure` |
+| KinHub Business | Application/business library | .NET 10 | `src/backend/business/DA.KinHub.Business` |
+| KinHub API | Serverless REST API | Azure Functions Isolated .NET 10 | `src/backend/applications/DA.KinHub.Functions` |
 | KinHub Web | SPA/PWA | React + TypeScript + Vite | `src/frontend` |
 | Skill harness | Repository tool | Node.js + TypeScript | `tools/skill-harness` |
 | Documentation sync | Repository tool | Node.js + TypeScript | `tools/docs-sync` |
