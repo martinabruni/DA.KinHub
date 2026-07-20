@@ -5,6 +5,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>AdvancedFrontier.Functions</RootNamespace>
     <AssemblyName>AdvancedFrontier.Functions</AssemblyName>
+    <FunctionsEnableWorkerIndexing>false</FunctionsEnableWorkerIndexing>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

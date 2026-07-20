@@ -13,11 +13,14 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: false,
       includeAssets: ["icon.svg", "staticwebapp.config.json"],
+      devOptions: { enabled: false },
       manifest: {
         name: "KinHub",
         short_name: "KinHub",
-        description: "Family services in one calm, accessible place",
+        description: "I servizi familiari di KinHub in uno spazio calmo e accessibile",
         lang: "it",
+        id: "/",
+        scope: "/",
         start_url: "/",
         display: "standalone",
         background_color: "#f7f6f2",
@@ -30,6 +33,10 @@ export default defineConfig({
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//, /^\/health\//],
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
+            handler: "NetworkOnly"
+          },
           {
             urlPattern: ({ url }) => url.pathname === "/release-notes.json",
             handler: "NetworkFirst",

@@ -41,6 +41,8 @@ public sealed class FunctionContractTests
         var openApi = JsonSerializer.Serialize(openApiResult.Value);
         Assert.Contains("https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/authorize", openApi, StringComparison.Ordinal);
         Assert.DoesNotContain("https://https://", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinlist/bootstrap", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinlist/family-context", openApi, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -90,6 +92,8 @@ public sealed class FunctionContractTests
         using var scope = provider.CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetService<IProjectService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<AdvancedFrontier.Business.Identity.IKinListBootstrapService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<AdvancedFrontier.Business.Identity.IFamilyAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<AdvancedFrontier.Infrastructure.Persistence.KinHubDbContext>());
     }

@@ -2,7 +2,7 @@
   "appName": "KinHub",
   "nav": {
     "home": "Home",
-    "projects": "Projects",
+    "kinlist": "KinList",
     "releaseNotes": "Release notes",
     "about": "Version",
     "settings": "Settings"
@@ -18,8 +18,11 @@
     "refresh": "Refresh now",
     "retry": "Retry",
     "create": "Create",
+    "createFamily": "Create a family",
+    "joinFamily": "Join with a code",
     "login": "Sign in",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "skipToContent": "Skip to content"
   },
   "language": {
     "label": "Language",

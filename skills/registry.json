@@ -12,7 +12,7 @@
       "path": "skills/architecture/SKILL.md",
       "catalog": null,
       "catalogItems": [],
-      "checksum": "6ba7bc6c12e5946c69dbb57e6c857f32b222ac252560324f722420f4b50d8b01"
+      "checksum": "0e117a3b0bad5d3de524f66ba39131d526638e0a3d39ada6194e095fa6b8d026"
     },
     {
       "id": "kinhub-backend",
@@ -44,7 +44,7 @@
           "source": "src/backend/infrastructure/AdvancedFrontier.Infrastructure/Storage/BlobDocumentStorage.cs"
         }
       ],
-      "checksum": "0da0ea918858f1d9e536a768be66f8b7141d89ceaebbd22f8f2b378accd0b0a7"
+      "checksum": "86be015bbd9f1e252ce7cb0557e029e7e79425b563d9840b68e445bf0d237117"
     },
     {
       "id": "kinhub-documentation",
@@ -55,7 +55,7 @@
       "path": "skills/documentation/SKILL.md",
       "catalog": null,
       "catalogItems": [],
-      "checksum": "b465a0230e16b3aab067da26ab8ead0e2130658b2a0e19959fa075f792508333"
+      "checksum": "7b3c00c9a4cd3f75e54ba2d6b792460168bd9acb3b02d915f0fad50a77c70eb9"
     },
     {
       "id": "kinhub-frontend",
@@ -82,7 +82,7 @@
           "source": "src/frontend/src/components/ThemeProvider.tsx"
         }
       ],
-      "checksum": "a995a0758c2b71c4c384204219823e79af00ae86ba2176be0be12344616da22b"
+      "checksum": "78b78adad79b65bf09e61789a9f80603d01634d94c2b714981a63a5fa5f3815a"
     },
     {
       "id": "kinhub-release",
@@ -93,7 +93,7 @@
       "path": "skills/release/SKILL.md",
       "catalog": null,
       "catalogItems": [],
-      "checksum": "bdcc208f5092fcd091a274a7795f7111aca81fb8a743f3b58970a8da90215ed6"
+      "checksum": "59a96fabea5b0c0f5de6e50299331bbb3f0e071f6ec049d6b594c979db942460"
     }
   ]
 }

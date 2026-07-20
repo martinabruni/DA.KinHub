@@ -2,18 +2,20 @@
   "home": {
     "title": "Family life, with less noise",
     "subtitle": "KinHub brings simple services together in one calm, consistent space.",
-    "projectsCard": "Organize shared activities without losing context.",
+    "kinlistCard": "Verify family access and reach the correct post-login path.",
     "lifecycleCard": "Every service evolves with documentation and release notes."
   },
-  "projects": {
-    "title": "Projects",
-    "intro": "A starting space for family initiatives and shared activities.",
-    "nameLabel": "Project name",
-    "namePlaceholder": "For example: weekly menu",
-    "empty": "There are no projects yet.",
-    "loadError": "Projects could not be loaded.",
-    "createError": "The project could not be created.",
-    "stage": "Stage: {{stage}}"
+  "kinlist": {
+    "title": "KinList",
+    "loading": "Checking the family context…",
+    "offline": "Only the public shell is available offline. KinList does not load personal data or send remote requests without a network.",
+    "sessionExpired": "The session has expired or is no longer valid. Sign in again to continue.",
+    "forbidden": "Access to the requested family is not allowed.",
+    "error": "The family status could not be checked. Please try again.",
+    "onboarding": "To start with KinList, create a family or join with a code.",
+    "onboardingPending": "Create and join actions will be enabled by their dedicated features, but the post-login routing path is already enforced.",
+    "ready": "KinList has verified an active family membership.",
+    "readyDetail": "The shared list will arrive in later features without reusing stale data or personal cache from the current bootstrap."
   },
   "about": {
     "title": "Version",

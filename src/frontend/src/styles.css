@@ -38,6 +38,8 @@ button, input, select { font: inherit; }
 button, a, select, input { outline-offset: 3px; }
 :focus-visible { outline: 3px solid var(--focus); }
 a { color: inherit; }
+.skip-link { position: absolute; left: 1rem; top: -3rem; z-index: 30; padding: .7rem 1rem; border-radius: .65rem; background: var(--primary); color: var(--primary-foreground); text-decoration: none; }
+.skip-link:focus { top: 1rem; }
 
 .app-shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
 .app-header { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: center; padding: .8rem clamp(1rem, 3vw, 2.5rem); background: color-mix(in srgb, var(--background) 92%, transparent); border-bottom: 1px solid var(--border); backdrop-filter: blur(16px); }
@@ -76,15 +78,18 @@ footer { padding: 1rem; text-align: center; color: var(--muted); font-size: .82r
 .feature-card { min-height: 12rem; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.4rem; display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: start; background: var(--surface); text-decoration: none; }
 .feature-card:hover { border-color: var(--primary); transform: translateY(-2px); }
 .feature-card p { margin: 0; font-size: 1.15rem; line-height: 1.5; }
-.button { border: 1px solid var(--primary); border-radius: .65rem; padding: .62rem .9rem; background: var(--primary); color: var(--primary-foreground); text-decoration: none; cursor: pointer; font-weight: 700; }
+.button { min-height: 2.75rem; border: 1px solid var(--primary); border-radius: .65rem; padding: .62rem .9rem; background: var(--primary); color: var(--primary-foreground); text-decoration: none; cursor: pointer; font-weight: 700; }
 .button.secondary { background: var(--surface); color: var(--foreground); border-color: var(--border); }
 .button.ghost { background: transparent; color: var(--foreground); border-color: transparent; }
+.button:disabled { cursor: not-allowed; opacity: .6; }
 .actions, .tutorial-actions { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap; }
 .spacer { flex: 1; }
 .inline-form { display: flex; align-items: end; gap: .8rem; margin: 2rem 0 1rem; }
 .inline-form label { flex: 1; display: grid; gap: .4rem; font-weight: 650; }
 input { min-height: 2.7rem; padding: .55rem .7rem; border: 1px solid var(--border); border-radius: .65rem; background: var(--surface); color: var(--foreground); }
 .state-card, .settings-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; background: var(--surface); }
+.stack { display: grid; gap: .9rem; }
+.muted-text { margin: 0; color: var(--muted); }
 .error-message { color: var(--danger); }
 .project-list, .release-list { list-style: none; padding: 0; display: grid; gap: .7rem; }
 .project-list li { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; border-bottom: 1px solid var(--border); }

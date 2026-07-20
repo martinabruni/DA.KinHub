@@ -1,0 +1,36 @@
+using AdvancedFrontier.Business.Common;
+using AdvancedFrontier.Domain.Families;
+using AdvancedFrontier.Domain.Identity;
+
+namespace AdvancedFrontier.Business.Identity;
+
+public sealed class KinListBootstrapService(
+    IApplicationUserRepository applicationUserRepository,
+    IFamilyMembershipRepository familyMembershipRepository,
+    TimeProvider timeProvider) : IKinListBootstrapService
+{
+    public async Task<KinListBootstrapResult> GetBootstrapAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var applicationUser = await applicationUserRepository.GetOrCreateAsync(externalIdentity, timeProvider.GetUtcNow(), cancellationToken);
+            if (!applicationUser.IsActive)
+            {
+                throw new BusinessAccessDeniedException("auth.profileInactive", "The signed-in profile is inactive.");
+            }
+
+            var familyId = await familyMembershipRepository.FindActiveFamilyIdAsync(applicationUser.Id, cancellationToken);
+            return familyId is Guid activeFamilyId
+                ? KinListBootstrapResult.Family(activeFamilyId)
+                : KinListBootstrapResult.Onboarding();
+        }
+        catch (BusinessAccessDeniedException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new BusinessDependencyException("dependency.postgresqlUnavailable", "The family context could not be loaded.", exception);
+        }
+    }
+}

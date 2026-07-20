@@ -53,7 +53,8 @@ public sealed class MetadataFunctions(
                 ["/health/live"] = new { get = new { summary = "Liveness", responses = new Dictionary<string, object> { ["200"] = new { description = "Healthy" } } } },
                 ["/health/ready"] = new { get = new { summary = "Readiness", responses = new Dictionary<string, object> { ["200"] = new { description = "Ready" }, ["503"] = new { description = "Not ready" } } } },
                 ["/api/version"] = new { get = new { summary = "Build metadata", responses = new Dictionary<string, object> { ["200"] = new { description = "Version" } } } },
-                ["/api/projects"] = new { get = new { summary = "List projects" }, post = new { summary = "Create project" } }
+                ["/api/kinlist/bootstrap"] = new { get = new { summary = "Resolve the KinList post-login state" } },
+                ["/api/kinlist/family-context"] = new { get = new { summary = "Validate the Family policy for a familyId" } }
             },
             components = new
             {

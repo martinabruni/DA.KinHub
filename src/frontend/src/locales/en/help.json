@@ -2,18 +2,18 @@
   "home": {
     "summary": "Discover services and quickly reach the main areas.",
     "purpose": "Provides an essential overview of KinHub.",
-    "actions": "Open Projects, Version, Release notes, or Settings.",
+    "actions": "Open KinList, Version, Release notes, or Settings.",
     "prerequisites": "None.",
     "fields": "Cards describe the available areas.",
     "limits": "Specialized services will be added in later versions."
   },
-  "projects": {
-    "summary": "Create and view shared initiatives.",
-    "purpose": "Collects family projects and their current stage.",
-    "actions": "Create a project and view its status.",
-    "prerequisites": "When authentication is configured, you must sign in.",
-    "fields": "The name identifies the project; the stage shows its progress.",
-    "limits": "This initial base supports creation and listing."
+  "kinlist": {
+    "summary": "Checks the post-login bootstrap and shows the correct path to an active family or onboarding.",
+    "purpose": "Applies the authoritative family membership check before protected surfaces are shown.",
+    "actions": "Wait for the check, review the offline state, or prepare to create or join a family in later features.",
+    "prerequisites": "You need to sign in with a valid API token and have a live network connection for the online bootstrap.",
+    "fields": "The page distinguishes loading, onboarding, expired session, denied access, technical failure, and the offline shell without personal data.",
+    "limits": "This feature does not yet activate family creation, join, or the shared list; offline keeps only the public shell available."
   },
   "about": {
     "summary": "Check the version and build metadata.",

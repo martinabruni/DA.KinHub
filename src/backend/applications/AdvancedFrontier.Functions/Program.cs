@@ -1,7 +1,10 @@
 using AdvancedFrontier.Business;
 using AdvancedFrontier.Functions.Configuration;
+using AdvancedFrontier.Functions.Observability;
+using AdvancedFrontier.Functions.Security;
 using AdvancedFrontier.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,18 +34,26 @@ var host = new HostBuilder()
             options.Authority = $"{entra.Instance.TrimEnd('/')}/{entra.TenantId}/v2.0";
             options.Audience = entra.Audience;
             options.RequireHttpsMetadata = true;
+            options.MapInboundClaims = false;
         });
-        services.AddAuthorizationBuilder().AddPolicy(ApiAuthorization.PolicyName, policy => policy
-            .RequireAuthenticatedUser()
-            .RequireAssertion(auth => auth.User.Claims
-                .Where(claim => claim.Type is "scp" or "http://schemas.microsoft.com/identity/claims/scope")
-                .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                .Contains(entra.Scope, StringComparer.Ordinal)));
+        services.AddAuthorizationBuilder()
+            .AddPolicy(ApiAuthorization.PolicyName, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireAssertion(auth => auth.User.Claims
+                    .Where(claim => claim.Type is "scp" or "http://schemas.microsoft.com/identity/claims/scope")
+                    .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                    .Contains(entra.Scope, StringComparer.Ordinal)))
+            .AddPolicy(FamilyAuthorizationRequirement.PolicyName, policy => policy
+                .RequireAuthenticatedUser()
+                .AddRequirements(new FamilyAuthorizationRequirement()));
 
         services.AddBusiness();
         services.AddInfrastructure(context.Configuration);
         services.AddSingleton<BuildInfoProvider>();
-        services.AddSingleton<ApiAuthorization>();
+        services.AddSingleton<KinListTelemetry>();
+        services.AddSingleton<ExternalIdentityClaimsResolver>();
+        services.AddScoped<ApiAuthorization>();
+        services.AddScoped<IAuthorizationHandler, FamilyAuthorizationHandler>();
     })
     .Build();
 

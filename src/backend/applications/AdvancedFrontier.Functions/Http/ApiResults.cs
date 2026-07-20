@@ -16,6 +16,7 @@ public static class ApiResults
 
     public static ObjectResult Problem(HttpRequest request, int status, string title, string detail, string code)
     {
+        ApplyNoStore(request.HttpContext.Response);
         var problem = new ProblemDetails
         {
             Status = status,
@@ -27,4 +28,6 @@ public static class ApiResults
         problem.Extensions["traceId"] = ApplyCorrelationId(request);
         return new ObjectResult(problem) { StatusCode = status, ContentTypes = { "application/problem+json" } };
     }
+
+    public static void ApplyNoStore(HttpResponse response) => response.Headers.CacheControl = "no-store, private";
 }

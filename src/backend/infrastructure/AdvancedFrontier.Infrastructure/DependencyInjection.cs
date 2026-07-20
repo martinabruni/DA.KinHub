@@ -1,4 +1,6 @@
+using AdvancedFrontier.Domain.Families;
 using AdvancedFrontier.Domain.Documents;
+using AdvancedFrontier.Domain.Identity;
 using AdvancedFrontier.Domain.Projects;
 using AdvancedFrontier.Infrastructure.Persistence;
 using AdvancedFrontier.Infrastructure.Storage;
@@ -35,6 +37,8 @@ public static class DependencyInjection
             npgsql.MigrationsAssembly(typeof(KinHubDbContext).Assembly.FullName);
             npgsql.EnableRetryOnFailure(3);
         }));
+        services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
+        services.AddScoped<IFamilyMembershipRepository, FamilyMembershipRepository>();
         services.AddScoped<IFamilyProjectRepository, FamilyProjectRepository>();
         services.AddHealthChecks().AddDbContextCheck<KinHubDbContext>("postgresql", tags: ["ready"]);
         services.AddHostedService<DatabaseMigrationHostedService>();
