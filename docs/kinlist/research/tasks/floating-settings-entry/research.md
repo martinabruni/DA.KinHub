@@ -2,7 +2,7 @@
 
 Questo task studia un punto di accesso sempre disponibile alle impostazioni di KinList. Il problema concreto e offrire un'azione secondaria riconoscibile senza competere con il microfono, che resta l'azione principale, e senza coprire contenuto o messaggi temporanei su smartphone.
 
-Il flusso parte dall'attivazione di un pulsante flottante con icona a ingranaggio, fissato in basso a destra. Il pulsante apre una pagina Impostazioni che presenta una lista di voci; nella prima versione la sola voce e `Famiglia`. Il risultato atteso e una navigazione comprensibile e reversibile verso una pagina dedicata, mantenendo minimale la vista principale.
+Il flusso parte dall'attivazione di un pulsante flottante con icona a ingranaggio, fissato in basso a destra. Il pulsante apre una pagina Impostazioni che presenta una lista di voci; nella prima versione la sola voce e `Famiglia`, con destinazione canonica `/settings/family`. Il risultato atteso e una navigazione comprensibile e reversibile verso una pagina dedicata, mantenendo minimale la vista principale e supportando URL diretto, refresh e cronologia browser indietro/avanti.
 
 Per **safe area** si intende la parte dello schermo in cui i controlli essenziali restano visibili e raggiungibili nonostante angoli arrotondati, indicatori di sistema o ritagli del dispositivo. Il browser espone gli scostamenti dai bordi tramite variabili CSS come `safe-area-inset-bottom` e `safe-area-inset-right`; il margine ordinario del prodotto va sommato a tali valori, non sostituito da essi. La specifica CSS definisce anche un valore di fallback per `env()`, utile sui browser o nei contesti in cui l'inset non e disponibile ([CSS Environment Variables, safe area insets](https://www.w3.org/TR/css-env-1/#safe-area-insets)).
 
@@ -12,6 +12,8 @@ Per **safe area** si intende la parte dello schermo in cui i controlli essenzial
 - Il controllo deve rispettare la safe area degli smartphone.
 - L'attivazione apre una pagina Impostazioni composta da una lista di voci.
 - La lista contiene inizialmente la sola voce `Famiglia`.
+- La voce `Famiglia` naviga alla route `/settings/family`.
+- Impostazioni e Famiglia devono funzionare con navigazione browser indietro/avanti, apertura da URL diretto e refresh, ripristinando un focus prevedibile.
 - KinList e mobile-first, minimale e priva di pulsanti o testi superflui.
 - Nella lista popolata il microfono occupa il basso al centro; una snackbar con `Annulla` puo apparire per cinque secondi dopo il completamento di un item.
 - Nel repository ogni pagina usa `PageScaffold`, include il relativo help localizzato ed e registrata nel route registry. Questi sono vincoli gia definiti dal repository, non oggetto di implementazione in questa ricerca.
@@ -21,12 +23,11 @@ Per **safe area** si intende la parte dello schermo in cui i controlli essenzial
 - L'ingranaggio e disponibile nella pagina principale di KinList sia con lista vuota sia con lista popolata, salvo gli stati in cui una superficie modale impedisce correttamente l'interazione sottostante.
 - La lista delle voci Impostazioni e definita dal frontend e non richiede una chiamata di rete per essere mostrata.
 - `Famiglia` e una voce di navigazione, non un'impostazione modificabile direttamente nella riga.
-- La route Impostazioni puo essere aperta anche da URL diretto e dal pulsante Indietro del browser o della PWA.
+- La lista statica e le route possono essere ricostruite dal frontend anche dopo apertura diretta o refresh; i dati protetti di Famiglia restano caricati online dal backend.
 
 ### Decisioni aperte
 
-- Percorso URL definitivo della pagina Impostazioni e della destinazione `Famiglia`.
-- Destinazione e operazioni offerte dalla voce `Famiglia`; il requisito attuale definisce solo la sua presenza nella lista.
+- Percorso URL definitivo della sola pagina indice Impostazioni; la destinazione `Famiglia` e gia fissata a `/settings/family`.
 - Visibilita dell'ingranaggio nella stessa pagina Impostazioni, nelle pagine secondarie, durante registrazione/elaborazione e quando un drawer o un dialog e aperto.
 - Spaziatura visiva, dimensione finale del target e regola di coordinamento verticale tra ingranaggio, microfono e snackbar ai diversi breakpoint.
 - Comportamento della snackbar: spostamento sopra i controlli fissi, area dedicata o altra composizione che non li copra.
@@ -49,11 +50,11 @@ Il minimo WCAG 2.2 per un target e 24 x 24 CSS pixel, salvo eccezioni di spaziat
 | Dialog modale | La lista appare sopra la pagina corrente e trattiene il focus finche viene chiusa. | Mantiene visibile il contesto sottostante ed e adatto a un compito breve che deve essere concluso prima di tornare. | Aggiunge chiusura, focus trap e rischio di affollamento mobile; non rappresenta naturalmente una pagina e scala male se `Famiglia` apre contenuti piu ampi. | Non raccomandato dato il requisito pagina. |
 | Menu ancorato | Un piccolo elenco si apre vicino all'ingranaggio e si chiude dopo la scelta. | Rapido per poche azioni immediate e non persistenti. | Un menu serve a scegliere comandi, non a rappresentare una pagina Impostazioni; con una sola voce aggiunge un passaggio e puo sovrapporsi a microfono o snackbar. | Non raccomandato nello scope attuale. |
 
-La route e quindi la scelta proporzionata: non occorre nominare o introdurre un design pattern ulteriore. Un dialog diventerebbe appropriato per una decisione breve e modale; un menu per piu comandi immediati. Nessuna delle due condizioni e presente nel requisito attuale.
+La route e quindi la scelta proporzionata: non occorre nominare o introdurre un design pattern ulteriore. La destinazione Famiglia e `/settings/family`; deve essere risolta allo stesso modo quando raggiunta dalla lista, digitata direttamente, ricaricata o ripristinata con Avanti. Un dialog diventerebbe appropriato per una decisione breve e modale; un menu per piu comandi immediati. Nessuna delle due condizioni e presente nel requisito attuale.
 
 ### Focus e sovrapposizioni
 
-All'attivazione, il focus non deve restare su un controllo scomparso. Dopo il cambio route va portato in modo prevedibile al contenuto della pagina, preferibilmente al titolo gestito da `PageScaffold` o al contenitore principale con un'etichetta chiara. Al ritorno tramite navigazione Indietro, il focus dovrebbe tornare all'ingranaggio quando il controllo esiste ancora. Questo rende comprensibile il cambio di contesto senza annunciare l'intera pagina due volte.
+All'attivazione, il focus non deve restare su un controllo scomparso. Dopo ogni cambio route, compresi URL diretto, refresh e navigazione Avanti, va portato in modo prevedibile al contenuto della pagina, preferibilmente al titolo gestito da `PageScaffold` o al contenitore principale con un'etichetta chiara. Al ritorno tramite navigazione Indietro, il focus torna all'ingranaggio quando il controllo esiste ancora; se l'elemento di origine non esiste, il fallback e il titolo della pagina ripristinata. Questo rende comprensibile il cambio di contesto senza annunciare l'intera pagina due volte.
 
 La posizione fissa crea quattro rischi distinti:
 
@@ -74,7 +75,7 @@ Il confronto tra collocazioni e quindi semplice:
 - **Backend:** potrebbe restituire dinamicamente le voci, ma richiederebbe un endpoint, gestione loading/errori e una policy di cache per un elenco inizialmente costante. Non e giustificato.
 - **Ibrido:** avrebbe senso solo se alcune voci future dipendessero da permessi autorevoli. Il client potrebbe conoscere le destinazioni, mentre il server autorizzerebbe comunque ogni dato o operazione. Questo requisito futuro non va anticipato.
 
-La voce `Famiglia` non autorizza da sola l'accesso ai dati familiari. La destinazione usa autenticazione e policy `Family`, con `familyId` nella query string, verifica dell'associazione lato server e Problem Details previsti dal repository. Nascondere una voce nel frontend puo semplificare l'interfaccia, ma non sostituisce l'autorizzazione backend.
+La voce `Famiglia` non autorizza da sola l'accesso ai dati familiari. La destinazione `/settings/family` usa autenticazione e policy `Family`, con `familyId` nella query string, identita canonica `(iss, oid)`, verifica dell'associazione lato server e Problem Details previsti dal repository. Se uno dei claim manca il controllo fallisce in modo chiuso, senza fallback a email o nome. Nascondere una voce nel frontend puo semplificare l'interfaccia, ma non sostituisce l'autorizzazione backend.
 
 Non servono nuovi endpoint, entita, log applicativi o pattern. In particolare, non e utile registrare ogni apertura delle Impostazioni: sarebbe analytics di prodotto, gia fuori dallo scope KinList, e aggiungerebbe telemetria senza una necessita operativa. Gli errori di routing appartengono all'error boundary e alla pagina 404 esistenti; eventuali errori dei futuri contenuti `Famiglia` appartengono al relativo flusso, non a questo punto di ingresso.
 
@@ -84,10 +85,10 @@ Non servono nuove risorse Azure. Il pulsante, la route e la lista iniziale sono 
 
 La configurazione infrastrutturale pertinente e quella gia esistente:
 
-- il fallback di routing della SPA deve consentire apertura diretta e refresh della route Impostazioni;
+- il fallback di routing della SPA deve consentire apertura diretta e refresh della pagina Impostazioni e di `/settings/family`;
 - il pacchetto frontend deve mantenere CSP, temi e risorse localizzate gia previsti;
 - la shell PWA puo rendere disponibile la pagina e la sua lista statica dalla cache degli asset, senza conservare dati personali;
-- la destinazione futura `Famiglia`, se usa dati, resta online e protetta secondo l'architettura KinList esistente.
+- la destinazione `/settings/family` resta online per i dati e protetta secondo l'architettura KinList esistente.
 
 La safe area non e una funzione di Azure: e informazione fornita dal browser al CSS. Va verificata su browser, modalita installata e dispositivi rappresentativi, perche il valore puo cambiare con orientamento e interfacce di sistema. La specifica Web primaria e [CSS Environment Variables Module Level 1](https://www.w3.org/TR/css-env-1/); i controlli accessibili vanno verificati secondo [WCAG 2.2](https://www.w3.org/TR/WCAG22/). Non sono giustificati monitoraggio o alert specifici per la posizione del pulsante; verifiche responsive, tastiera, screen reader e screenshot nei temi sono piu adatte del monitoraggio server.
 
@@ -96,18 +97,26 @@ La safe area non e una funzione di Azure: e informazione fornita dal browser al 
 ```mermaid
 flowchart TD
     A["Membro visualizza KinList"] --> B{"L'ingranaggio e disponibile nello stato corrente?"}
+    A2["Browser richiede una route Impostazioni da URL, refresh o cronologia"] --> E
     B -- No --> C["Mantiene il focus nella superficie attiva"]
     B -- Si --> D["Membro attiva il pulsante Impostazioni"]
     D --> E{"La route puo essere risolta?"}
     E -- No --> F["Error boundary o pagina non trovata accessibile"]
-    E -- Si --> G["Apre la pagina Impostazioni"]
+    E -- Si --> G["Apre la route richiesta"]
     G --> H["Sposta il focus al titolo o al contenuto principale"]
-    H --> I["Mostra la lista con la voce Famiglia"]
+    H --> R{"E la pagina indice Impostazioni?"}
+    R -- Si --> I["Mostra la lista con la voce Famiglia"]
+    R -- No --> P["Mostra la pagina Famiglia"]
     I --> J{"Membro sceglie Famiglia?"}
     J -- No --> K{"Membro torna indietro?"}
-    J -- Si --> L["Naviga alla destinazione Famiglia da definire"]
+    J -- Si --> L["Naviga a /settings/family"]
     K -- No --> I
     K -- Si --> M["Torna a KinList e ripristina il focus sull'ingranaggio"]
+    L --> E
+    P --> N{"Nuova navigazione Indietro o Avanti?"}
+    N -- Si --> O["Ricostruisce la route e ripristina il focus previsto"]
+    N -- No --> P
+    O --> E
 ```
 
 Il ramo in cui l'ingranaggio non e disponibile rappresenta, per esempio, una superficie modale che ha correttamente preso il focus. Gli stati esatti in cui nasconderlo o disabilitarlo restano una decisione aperta; il diagramma non li assume come gia approvati.
@@ -169,5 +178,6 @@ IMPOSTAZIONI
 - **Caricamento:** nessun caricamento remoto per la lista iniziale statica; il cambio route deve essere immediato.
 - **Stato vuoto:** non previsto, perche `Famiglia` e obbligatoriamente presente. Un array vuoto indicherebbe una configurazione errata, non un normale empty state utente.
 - **Errore:** una route non risolta passa alla gestione 404/error boundary esistente; non lascia una pagina bianca e non mantiene il focus su un elemento rimosso.
-- **Successo:** pagina Impostazioni visibile, titolo annunciabile, help disponibile e focus collocato in modo prevedibile; il pulsante Indietro riporta alla vista precedente.
+- **Successo:** pagina Impostazioni visibile, titolo annunciabile, help disponibile e focus collocato in modo prevedibile; `Famiglia` apre `/settings/family`, mentre Indietro e Avanti ripristinano la destinazione corretta.
+- **URL diretto e refresh:** la shell risolve la route invece di restituire 404, ricostruisce la pagina e porta il focus al titolo; i dati protetti vengono richiesti nuovamente senza riusare dati personali obsoleti.
 - **Responsive e zoom:** il pulsante e l'ultima riga restano visibili senza scorrimento orizzontale al reflow; safe area, testo ingrandito e tastiera virtuale non devono produrre sovrapposizioni.

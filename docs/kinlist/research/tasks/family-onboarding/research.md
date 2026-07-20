@@ -4,11 +4,12 @@ Questo task copre il passaggio obbligatorio tra il login riuscito e l'accesso a 
 
 Dopo il login, KinList riceve un'identità verificata da Microsoft Entra External ID e chiede al backend se il profilo applicativo appartiene a una famiglia. Se appartiene, il risultato atteso è l'accesso diretto al servizio. Se non appartiene, il risultato atteso è una scelta obbligatoria tra creare una famiglia e unirsi mediante codice. Creare una famiglia associa soltanto il creatore: in questo passaggio non si cercano, selezionano o aggiungono altri membri. L'uso sicuro del codice è studiato separatamente in `family-invite-code`.
 
-Gli attori sono l'utente autenticato, la PWA KinList, il backend Kin Hub e PostgreSQL. L'input autorevole è l'identità ricavata dal token; appartenenza e permessi provengono dai dati applicativi, non dal browser. L'output è una famiglia associata al profilo oppure lo stato esplicito «onboarding necessario». Il servizio KinList non deve essere mostrato finché uno dei due percorsi non termina con successo.
+Gli attori sono l'utente autenticato, la PWA KinList, il backend Kin Hub e PostgreSQL. L'input autorevole è l'identità esterna canonica `(iss, oid)` ricavata dal token validato: issuer e identificativo oggetto devono essere entrambi presenti. Email e nome non identificano il profilo; appartenenza e permessi provengono dai dati applicativi, non dal browser. L'output è una famiglia associata al profilo oppure lo stato esplicito «onboarding necessario». Il servizio KinList non deve essere mostrato finché uno dei due percorsi non termina con successo.
 
 ### Fatti noti
 
 - Microsoft Entra External ID e MSAL gestiscono il login; il profilo, la famiglia e i permessi sono dati applicativi di Kin Hub.
+- Il profilo viene risolto tramite la coppia canonica `(iss, oid)`; claim mancante significa fallimento chiuso, senza fallback a email o nome.
 - Chi appartiene già a una famiglia entra direttamente in KinList.
 - Chi non appartiene a una famiglia deve creare una famiglia oppure unirsi con un codice; non può saltare questo passaggio per usare KinList.
 - La creazione non include l'aggiunta di altri membri.
@@ -16,15 +17,12 @@ Gli attori sono l'utente autenticato, la PWA KinList, il backend Kin Hub e Postg
 
 ### Ipotesi prudenti
 
-- «Appartiene a una famiglia» indica una sola appartenenza attiva rilevante per KinList. Se sono ammesse più famiglie, il reindirizzamento diretto non basta e servirebbe una scelta non richiesta.
+- «Appartiene a una famiglia» indica l'unica appartenenza attiva ammessa per l'utente.
 - Il profilo applicativo può esistere prima dell'appartenenza; la sua creazione idempotente al primo accesso resta distinta dalla creazione della famiglia.
 - Il controllo avviene online perché appartenenza e autorizzazione non devono dipendere da dati conservati nel browser.
 
 ### Decisioni aperte
 
-- Se una persona possa appartenere a una sola famiglia o a più famiglie.
-- Quali dati minimi siano obbligatori per creare una famiglia, in particolare se serva un nome visibile e con quali regole di validazione.
-- Quale azione sia consentita se un'appartenenza viene rimossa mentre KinList è aperta.
 - Se l'onboarding riguardi soltanto KinList o sia un passaggio condiviso da tutti i servizi Kin Hub.
 - Quale testo di prodotto distingua «famiglia» da eventuali gruppi tecnici senza confondere l'utente.
 
@@ -61,7 +59,7 @@ Il browser può decidere quale vista mostrare, ma non può decidere se l'utente 
 
 Il flusso più semplice è:
 
-1. verificare il token e collegarlo a un solo profilo applicativo;
+1. verificare il token e collegare la coppia `(iss, oid)` a un solo profilo applicativo, fallendo in modo chiuso se uno dei claim manca;
 2. leggere l'eventuale appartenenza attiva;
 3. restituire il contesto KinList se esiste, altrimenti lo stato di onboarding;
 4. alla creazione, salvare famiglia e appartenenza del creatore come un'unica operazione;
@@ -78,12 +76,14 @@ Validazione e errori devono restare stabili:
 - accesso non autorizzato non restituisce dati di altre famiglie;
 - guasti transitori non lasciano record parziali;
 - il backend non accetta dal client `FamilyId`, ruolo, autore o timestamp come valori autorevoli.
+- il backend non usa email o nome come chiavi alternative quando non riesce a risolvere `(iss, oid)`.
 
 La telemetria deve indicare durata ed esito di verifica, creazione e unione, usando identificativi tecnici redatti. Non deve includere token, nome della famiglia, codice d'invito o dati personali non necessari. Non serve un design pattern nominato oltre ai normali casi d'uso del monolite modulare: mediator, eventi, code o una saga aggiungerebbero passaggi senza risolvere un problema presente.
 
 ### Concetti spiegati
 
 - **Autorizzazione:** controllo server-side di ciò che l'identità autenticata può fare nel perimetro della famiglia.
+- **Identità esterna canonica:** coppia `(iss, oid)` del token validato; distingue lo stesso identificativo presso emittenti diversi e non cambia insieme a email o nome.
 - **Atomicità:** famiglia e appartenenza iniziale vengono salvate insieme oppure non vengono salvate.
 - **Idempotenza:** un retry non crea una seconda famiglia o una seconda appartenenza.
 
@@ -91,7 +91,7 @@ La telemetria deve indicare durata ed esito di verifica, creazione e unione, usa
 
 Non sono necessarie nuove risorse Azure per questo task. La PWA su Azure Static Web Apps, la Function App .NET, PostgreSQL, Microsoft Entra External ID e Application Insights già previsti da Kin Hub coprono hosting, identità, persistenza e osservabilità. Duplicare Function App o database soltanto per l'onboarding aumenterebbe costo, migrazioni e punti di guasto senza fornire isolamento richiesto.
 
-PostgreSQL deve conservare profilo, famiglia e appartenenza nel perimetro condiviso già previsto. Vincoli e indici devono riflettere le decisioni di dominio: collegamento univoco tra identità esterna e profilo, unicità dell'appartenenza ammessa e ricerca efficiente dell'appartenenza attiva. La forma esatta del vincolo resta condizionata alla decisione aperta su una o più famiglie. Le migrazioni seguono il processo controllato del repository e non vengono applicate durante il cold start negli ambienti condivisi.
+PostgreSQL deve conservare profilo, famiglia e appartenenza nel perimetro condiviso già previsto. Vincoli e indici devono riflettere le decisioni di dominio: collegamento univoco tra la coppia `(iss, oid)` e il profilo, al massimo una appartenenza attiva per utente e ricerca efficiente dell'appartenenza attiva. Un indice univoco parziale sui record attivi è la soluzione iniziale proporzionata; la migration ne definisce colonne e nome fisici. Le migrazioni seguono il processo controllato del repository e non vengono applicate durante il cold start negli ambienti condivisi.
 
 La Function App usa la policy `ApiAccess` e l'identità gestita già prevista per PostgreSQL. Non sono necessari segreti aggiuntivi nel browser. External ID autentica l'utente, ma non deve essere trasformato in un database della famiglia: mantenere l'appartenenza in PostgreSQL evita di dipendere da claim del token che potrebbero essere vecchi o non adatti alle regole applicative.
 
@@ -103,8 +103,8 @@ Non sono giustificati Service Bus, Durable Functions, Redis, un database dedicat
 
 ```mermaid
 flowchart TD
-    A["Utente completa il login"] --> B["Backend collega l'identità al profilo applicativo"]
-    B --> C{"Verifica riuscita?"}
+    A["Utente completa il login"] --> B["Backend legge la coppia canonica iss e oid"]
+    B --> C{"Entrambi i claim sono presenti e il profilo e risolvibile?"}
     C -- No --> D["Mostra errore di sessione o rete e Riprova"]
     D --> B
     C -- Sì --> E{"Esiste un'appartenenza attiva?"}

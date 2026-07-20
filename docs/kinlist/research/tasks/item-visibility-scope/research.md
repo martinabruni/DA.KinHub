@@ -12,6 +12,7 @@ Input del flusso: identita applicativa autenticata, famiglia corrente, operazion
 - Il default di creazione attuale e `Shared`.
 - `Personal` significa accesso del solo autore; `Shared` significa accesso dell'intera famiglia autorizzata.
 - I controlli devono coprire liste, dettagli, modifica, completamento e bulk sul server, non essere un semplice filtro client.
+- Tutte le letture di collezioni visibili sono paginate nel repository Infrastructure e non possono superare il massimo configurato, comunque entro il ceiling assoluto di 5000 record.
 - KinList dispone gia di identita applicativa, famiglia, autorizzazione per azione e item generati tramite voce.
 - Il brainstorming precedente considerava solo la lista condivisa; questo task introduce esplicitamente un'estensione di quel perimetro e non va reinterpretato come comportamento gia approvato in ogni dettaglio.
 
@@ -40,7 +41,7 @@ La lista ricevuta dal server contiene gia soltanto gli item visibili. Il client 
 
 Stati necessari:
 
-- **Caricamento lista:** nessun contenuto precedente appartenente a un'altra sessione o famiglia; il risultato server e autorevole.
+- **Caricamento lista o pagina:** nessun contenuto precedente appartenente a un'altra sessione o famiglia; il risultato server e autorevole e la navigazione conserva l'ultima pagina valida in caso di errore.
 - **Lista vuota:** significa che non esistono item visibili attivi, non che gli item della famiglia siano assenti in assoluto.
 - **Dettaglio non disponibile:** messaggio neutro e ritorno alla lista, senza mostrare nome, categorie, owner o timeline.
 - **Operazione negata:** nessun aggiornamento ottimistico definitivo; la UI riconcilia con la risposta server.
@@ -62,11 +63,13 @@ Microsoft distingue l'autenticazione dalla decisione su una risorsa concreta. Qu
 
 Copertura minima del controllo:
 
-- **Liste:** la query esclude alla fonte gli item personali altrui prima di proiezione, ordinamento, conteggio e paginazione.
+- **Liste:** la query esclude alla fonte gli item personali altrui prima di proiezione, ordinamento, conteggio e paginazione keyset con cursore opaco.
 - **Dettagli e timeline:** il server applica lo stesso predicato prima di restituire qualsiasi campo collegato.
 - **Modifica e completamento:** carica l'item nel perimetro autorizzato e verifica anche il permesso dell'operazione e la versione concorrente.
 - **Bulk:** valida ogni ID; un solo ID personale altrui non deve essere trattato come autorizzato perche gli altri appartengono alla famiglia.
 - **Categorie e aggregati:** conteggi, filtri e categorie derivate non devono rivelare indirettamente item personali non visibili.
+
+Ogni lettura di collezioni passa dal repository Infrastructure con paginazione obbligatoria; non esiste un percorso «Get All». Il client richiede la dimensione della pagina e il backend applica `min(requestedPageSize, configuredReadMax)`. Il massimo configurato è validato e non supera mai il ceiling assoluto di 5000. Un cursore assente indica la fine in quella direzione; un cursore invalido o stale produce un errore strutturato e recuperabile senza restituire dati fuori perimetro o causare crash nella UI.
 
 Il controllo solo client e da escludere. Attraverso la rete passerebbero nomi, categorie e metadati non autorizzati; il browser non contiene segreti utili a proteggere quei dati; dispositivi e versioni PWA potrebbero applicare filtri diversi; testare e osservare tutti i percorsi diventerebbe fragile. Il server possiede gia identita, famiglia e persistenza e puo applicare una regola unica a HTTP, bulk e futuri trigger senza duplicarla nella UI.
 
@@ -84,6 +87,8 @@ Non servono nuove risorse Azure. La regola appartiene all'applicazione e alle qu
 
 Il database deve sostenere query che combinano famiglia, stato, visibilita e owner. Gli indici vanno progettati dopo avere osservato le query e la distribuzione `Personal`/`Shared`: ogni indice accelera letture ma aumenta costo di scrittura e spazio. Se viene introdotto o popolato un owner, la migrazione deve evitare valori nulli o proprietari inventati e deve avere verifica e rollback secondo le regole del repository.
 
+Il massimo effettivo di lettura risiede nella configurazione della Function App, ha valore iniziale 5000 e viene validato tramite opzioni .NET contro lo stesso ceiling. Il frontend usa il valore esposto per non offrire dimensioni superiori, ma l'API resta il confine autorevole.
+
 Application Insights/OpenTelemetry puo misurare letture consentite/negate, tentativi per operazione, durata delle query e anomalie bulk, senza registrare contenuto o identificativi esterni. Non sono giustificati cache distribuita, database separato per item personali, API Management dedicato o cifratura applicativa distinta soltanto per realizzare questo scope. Eventuali requisiti normativi ulteriori potrebbero cambiare la valutazione, ma non sono fatti noti.
 
 ## flow chart
@@ -94,7 +99,7 @@ flowchart TD
     B --> C{"Operazione di lista?"}
     C -- Si --> D["Query per famiglia e stato"]
     D --> E["Include Shared oppure Personal con owner corrente"]
-    E --> F["Restituisce solo item e aggregati visibili"]
+    E --> F["Applica keyset, massimo configurato e restituisce una pagina visibile"]
     C -- No --> G["Carica la risorsa richiesta nel perimetro server"]
     G --> H{"Item trovato e stessa famiglia?"}
     H -- No --> I["Esito neutro senza dati"]

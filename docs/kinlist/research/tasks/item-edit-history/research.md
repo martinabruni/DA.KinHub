@@ -13,6 +13,7 @@ Input: item selezionato e sua versione corrente. Output: item aggiornato con `Up
 - La selezione categorie è multipla e una nuova categoria può essere confermata, per esempio, con Invio.
 - La timeline verticale mostra creazione, modifica e completamento con autore e data/ora.
 - Modificare un item non cambia la sua posizione nella lista.
+- Catalogo categorie e timeline sono collezioni paginate dal repository Infrastructure; non vengono mai caricati con «Get All».
 
 ### Ipotesi prudenti
 
@@ -42,6 +43,7 @@ Stati e comportamento raccomandati:
 - **Nuova categoria:** campo etichettato; Invio crea/seleziona solo un valore valido. Aggiungere un controllo visibile «Aggiungi» evita che l'azione sia scopribile soltanto da tastiera.
 - **Metadati:** testo secondario ma leggibile, con date localizzate; memorizzazione sempre UTC sul server.
 - **Timeline:** linea e nodi sono decorativi; tipo, autore e data rimangono testo strutturato per screen reader.
+- **Navigazione delle collezioni:** Avanti e Indietro sono disponibili soltanto con il relativo cursore; durante il caricamento conservano i dati correnti e un errore non chiude il drawer.
 
 Il salvataggio esplicito è la raccomandazione iniziale perché nome e più categorie formano un'unica intenzione, il drawer contiene cronologia e un conflitto può richiedere una scelta. L'autosave riduce un tocco, ma produce più eventi «Modificato», rende incerto quando l'operazione è conclusa e complica la chiusura. È valido solo se il prodotto accetta questi effetti e raggruppa le modifiche in modo comprensibile.
 
@@ -56,6 +58,8 @@ Il backend riceve soltanto campi modificabili e ricava autore e timestamp dalla 
 Due utenti possono aprire la stessa versione e salvarne due diverse. L'ultimo salvataggio non deve cancellare il primo senza avviso. La **concorrenza ottimistica** risolve questo problema senza bloccare l'item mentre il drawer è aperto: il client riceve un token di versione; l'update riesce solo se il token è ancora corrente. EF Core supporta concurrency token e, con SQL Server, `rowversion`; quando il dato è cambiato l'update non trova la versione attesa e l'app può chiedere all'utente di ricaricare ([EF Core concurrency](https://learn.microsoft.com/en-us/ef/core/saving/concurrency)). È utile qui se esistono più sessioni; sarebbe superflua soltanto con una garanzia reale di uso singolo.
 
 La cronologia può essere una tabella append-only `ItemHistory`: ogni modifica aggiunge un record con item, tipo evento, autore e timestamp. “Append-only” significa che gli eventi già scritti non vengono modificati durante una normale operazione. È un **audit log applicativo** semplice. Non serve Event Sourcing, un'architettura in cui lo stato viene ricostruito riproducendo tutti gli eventi: per KinList lo stato corrente può restare nella tabella item e la timeline è una vista informativa.
+
+Timeline e catalogo categorie sono letture di collezioni e devono quindi essere paginate nel repository Infrastructure. Un cursore opaco rappresenta l'ultima chiave dell'ordinamento stabile, per esempio timestamp e ID per la timeline: il client lo restituisce senza interpretarlo per muoversi avanti o indietro. La paginazione keyset evita i salti tipici dell'offset quando viene aggiunto un nuovo evento. Il backend applica `min(requestedPageSize, configuredReadMax)`; il valore configurato è validato e non può superare il ceiling assoluto di lettura di 5000 record. Cursore assente significa fine della raccolta, mentre un cursore invalido o stale restituisce un errore client strutturato e permette di ripartire dalla prima pagina.
 
 Per la creazione categorie, normalizzare sul backend per evitare «Spesa», « spesa » e «SPESA» come duplicati accidentali, ma conservare un nome di visualizzazione. La normalizzazione dipende dalla lingua e dal perimetro del catalogo: non va decisa implicitamente nel frontend. Un vincolo univoco nel database risolve anche due creazioni simultanee; il secondo tentativo recupera la categoria già creata.
 
@@ -76,11 +80,13 @@ Sicurezza: l'API autorizza sia lettura sia modifica dell'item, non accetta `Upda
 
 Non sono giustificati database eventi separato, Event Hubs, cache distribuita, ricerca full-text o un servizio categorie autonomo.
 
+La Function App contiene il massimo effettivo di lettura nelle proprie impostazioni, inizialmente pari a 5000 e associato a opzioni .NET validate all'avvio contro lo stesso ceiling. Il frontend non deve offrire dimensioni di pagina superiori a tale valore, ma l'API continua a imporre il limite.
+
 ## flow chart
 
 ```mermaid
 flowchart TD
-    A["Utente apre il dettaglio"] --> B["Carica item, categorie, versione e timeline"]
+    A["Utente apre il dettaglio"] --> B["Carica item e prime pagine di categorie e timeline"]
     B --> C{"Caricamento riuscito?"}
     C -- No --> D["Errore nel drawer con Riprova"]
     C -- Sì --> E["Mostra campi e metadati"]
@@ -95,6 +101,12 @@ flowchart TD
     L --> M{"Salvataggio riuscito?"}
     M -- No --> N["Mantiene input e mostra errore"]
     M -- Sì --> O["Aggiorna lista senza cambiare posizione"]
+    E --> P{"Utente naviga categorie o timeline?"}
+    P -- No --> F
+    P -- Sì --> Q["Invia cursore opaco e dimensione richiesta"]
+    Q --> R{"Cursore valido?"}
+    R -- No --> S["Mantiene pagina e offre ripartenza senza chiudere il drawer"]
+    R -- Sì --> E
 ```
 
 ## user experience
@@ -118,13 +130,14 @@ Su mobile il drawer può occupare tutta la larghezza; su desktop rimane laterale
 │ ● Creato · Martina · 18:42   │
 │ │                            │
 │ ● Modificato · Martina · …   │
+│ [Indietro]        [Avanti]   │
 │                              │
 ├──────────────────────────────┤
 │ [Annulla]        [Salva]     │
 └──────────────────────────────┘
 ```
 
-- **Loading:** scheletro nel drawer, senza svuotare la lista sottostante.
+- **Loading:** scheletro alla prima apertura; durante la navigazione conserva la pagina corrente senza svuotare lista o drawer.
 - **Empty:** timeline vuota è anomala perché ogni item ha almeno la creazione; mostrare stato tecnico recuperabile, non inventare eventi.
-- **Errore:** validazione vicino al campo; errore globale in alto; input dell'utente preservato.
+- **Errore:** validazione vicino al campo; errore globale in alto; input dell'utente preservato. Un cursore invalido consente di ripartire dalla prima pagina senza crash.
 - **Successo:** conferma breve, versione aggiornata, timeline aggiornata e posizione della riga invariata.

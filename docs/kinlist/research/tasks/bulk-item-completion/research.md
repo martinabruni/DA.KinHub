@@ -8,24 +8,23 @@ Input del flusso: un insieme senza duplicati di identificativi degli item selezi
 
 - KinList usa una lista familiare, aggiornamento collaborativo tramite refresh manuale e concorrenza ottimistica.
 - Il completamento singolo e persistito subito, nasconde l'item e registra stato, `CompletedAt`, autore e timeline.
-- La nuova esigenza comprende selezione multipla e completamento bulk; non definisce ancora il comportamento di undo del gruppo.
+- Il completamento bulk produce un solo `Annulla N` atomico entro cinque secondi.
 - Backend .NET, EF Core e PostgreSQL sono gia il confine transazionale previsto.
 - Autenticazione e autorizzazione devono essere applicate dal server, non dedotte dalla UI.
+- Il completamento bulk ha semantica tutti-o-nessuno.
+- «Seleziona tutti» seleziona soltanto gli item visibili nella pagina corrente dopo il filtro e non materializza il dataset completo.
+- Il massimo effettivo di scrittura bulk è configurato a 1000 record nella Function App, validato ed equivalente al ceiling assoluto.
+- Una richiesta oltre il massimo configurato viene rifiutata interamente e non viene spezzata silenziosamente.
 
 ### Ipotesi prudenti
 
 - Il bulk riguarda item attivi mostrati nella stessa vista KinList, non un processo lungo o una selezione che attraversa dataset non caricati.
-- Il numero di item per richiesta puo essere limitato per mantenere breve la transazione; il valore non e ancora deciso.
 - Ogni item conserva la propria chiave d'ordine, quindi un eventuale ripristino non richiede un indice visuale.
 
 ### Decisioni aperte
 
 - Come si entra ed esce dalla modalita di selezione su mobile e desktop.
-- Se «Seleziona tutti» riguarda gli item visibili dopo il filtro, tutti quelli caricati o tutti quelli esistenti sul server.
-- Numero massimo di item in una richiesta bulk.
-- Semantica definitiva: tutti o nessuno oppure successo parziale.
-- Comportamento quando un item cambia versione o stato dopo la selezione.
-- Se il bulk offre undo aggregato, undo per singolo item oppure nessun undo aggiuntivo; durata e regole server della finestra restano da decidere.
+- Dettaglio visuale della modalità di selezione sui breakpoint mobile e desktop.
 - Rappresentazione nella timeline: un evento per item e l'eventuale identificativo comune del comando, senza introdurre un nuovo tipo di evento non approvato.
 
 ## best practices microsoft ux
@@ -38,6 +37,7 @@ Stati necessari:
 
 - **Nessuna selezione:** azione di completamento disabilitata o assente, senza barra vuota che aumenti l'inquinamento visivo.
 - **Selezione attiva:** conteggio aggiornato e azioni essenziali «Annulla selezione» e «Completa N».
+- **Seleziona tutti:** seleziona solo le righe visibili nella pagina filtrata corrente; cambio filtro o pagina rende esplicito il nuovo perimetro e non accumula item invisibili.
 - **Invio:** controlli temporaneamente non modificabili; feedback indeterminato breve, senza percentuali inventate.
 - **Successo:** gli item completati scompaiono insieme e un feedback annuncia il numero effettivo.
 - **Conflitto o errore:** nessun messaggio generico; la UI ricarica lo stato autorevole e spiega che la lista e cambiata o che l'operazione non e riuscita.
@@ -47,13 +47,15 @@ Stati necessari:
 
 Con **tutti o nessuno**, l'utente esprime una sola intenzione: se uno degli item non puo essere completato, nessuno cambia. Il vantaggio UX e un risultato facile da spiegare e da riconciliare; il costo e dover ripetere la selezione dopo un solo conflitto. Con **successo parziale**, gli item validi cambiano e gli altri restano: e utile per batch grandi o con alta contesa, ma richiede un riepilogo per item, una selezione residua e regole di undo piu complesse.
 
-La raccomandazione pragmatica iniziale e tutti-o-nessuno, a condizione che il batch sia piccolo e limitato. KinList privilegia semplicita e una singola lista familiare; il costo di ripetere una selezione breve e probabilmente inferiore al costo cognitivo di un esito misto. Questa e una raccomandazione, non una decisione gia approvata. Se i volumi reali o i conflitti frequenti smentiscono l'ipotesi, il successo parziale diventa piu adatto.
+La decisione approvata per KinList e tutti-o-nessuno con dimensione limitata. KinList privilegia semplicità e una singola intenzione: il costo di ripetere una selezione breve è inferiore al costo cognitivo di un esito misto. Il successo parziale resta un'alternativa tecnica descritta per confronto, non il contratto corrente.
 
-Fluent 2 usa i toast per feedback temporaneo non critico e raccomanda una posizione prevedibile e pochi messaggi simultanei ([Fluent 2 Toast](https://fluent2.microsoft.design/components/web/react/core/toast/usage)). Un successo complessivo puo quindi usare un solo feedback. Un errore che richiede una nuova scelta non deve sparire troppo rapidamente. L'undo non va dedotto dal completamento singolo: un'unica azione «Annulla N» e semplice, ma deve essere approvata insieme alle regole per item modificati dopo il bulk; una coda di N snackbar sarebbe invece rumorosa e poco proporzionata.
+Fluent 2 usa i toast per feedback temporaneo non critico e raccomanda una posizione prevedibile e pochi messaggi simultanei ([Fluent 2 Toast](https://fluent2.microsoft.design/components/web/react/core/toast/usage)). Un successo complessivo usa quindi un solo feedback con `Annulla N` entro cinque secondi. Un errore che richiede una nuova scelta non deve sparire troppo rapidamente; una coda di N snackbar sarebbe rumorosa e contraria al contratto atomico approvato.
 
 ## best practices microsoft backend
 
 Il server riceve gli ID selezionati e non presume che siano sicuri perche provenienti dalla lista mostrata. Per ogni ID deve verificare nello stesso flusso: esistenza, appartenenza alla famiglia corrente, visibilita per l'utente, permesso di completamento, stato `Active` e versione attesa. Un ID non autorizzato non puo essere ignorato silenziosamente in un'operazione tutti-o-nessuno, altrimenti il client potrebbe credere completato un insieme diverso da quello richiesto.
+
+Prima di caricare gli item, il backend valida il numero di ID distinti contro `configuredWriteMax`, configurato inizialmente a 1000 e mai superiore al medesimo ceiling assoluto. Un batch oltre il massimo viene rifiutato senza modifiche; non viene diviso in più transazioni, perché lo spezzamento trasformerebbe silenziosamente un comando atomico in possibili successi parziali.
 
 Il problema dell'autorizzazione dipende dai dati dell'item, non soltanto dal fatto che l'utente sia autenticato. Microsoft definisce questo controllo **autorizzazione basata sulla risorsa**: la decisione usa insieme utente, operazione e risorsa caricata ([ASP.NET Core resource-based authorization](https://learn.microsoft.com/en-us/aspnet/core/security/authorization/resource-based?view=aspnetcore-10.0)). Nel bulk la verifica va applicata a ogni risorsa, anche se una query gia circoscritta riduce il set candidato. Confrontare il numero di ID distinti richiesti con il numero di item autorizzati e validi impedisce di accettare accidentalmente un sottoinsieme.
 
@@ -68,9 +70,9 @@ La transazione non risolve da sola la concorrenza. Ogni item porta una versione 
 - **Concorrenza ottimistica:** non blocca gli item mentre l'utente sceglie; al salvataggio rileva se qualcuno li ha cambiati.
 - **Successo parziale:** ogni item puo avere un esito diverso; richiede un contratto di risposta e una riconciliazione UI per elemento.
 
-Il successo parziale e tecnicamente valido, ma non dovrebbe essere simulato con piu chiamate indipendenti dal browser: una caduta di rete lascerebbe un esito difficile da ricostruire e moltiplicherebbe autorizzazione e feedback. Se venisse scelto, il backend dovrebbe comunque ricevere un solo comando, restituire esiti strutturati per ID e non rivelare se un ID estraneo esiste. Questa complessita e giustificata solo da volumi o contesa osservati.
+Il successo parziale e tecnicamente possibile, ma non fa parte del contratto approvato. Simularlo con piu chiamate indipendenti dal browser lascerebbe un esito difficile da ricostruire dopo una caduta di rete e moltiplicherebbe autorizzazione e feedback. KinList mantiene quindi un solo comando atomico entro il massimo configurato.
 
-Gli errori devono distinguere input vuoto o oltre limite, ID duplicati normalizzati, elemento non disponibile, accesso non consentito, transizione non valida e conflitto. I log possono includere command ID, numero richiesto, numero elaborato, durata e categoria d'errore; non nomi o categorie degli item. Un command ID puo rendere sicuro il retry dopo una risposta persa, ma la durata di conservazione dell'esito e una decisione tecnica successiva, non una nuova funzione utente.
+Gli errori devono distinguere input vuoto o oltre il massimo configurato, ID duplicati normalizzati, elemento non disponibile, accesso non consentito, transizione non valida e conflitto. I log possono includere command ID, numero richiesto, numero elaborato, durata e categoria d'errore; non nomi o categorie degli item. Un command ID puo rendere sicuro il retry dopo una risposta persa, ma la durata di conservazione dell'esito e una decisione tecnica successiva, non una nuova funzione utente.
 
 ## best practices microsoft infrastructure
 
@@ -78,7 +80,7 @@ Non servono nuove risorse Azure. Function App, PostgreSQL e Application Insights
 
 PostgreSQL deve essere l'arbitro tra istanze della Function App: condizioni su stato/versione, transazione e vincoli sono affidabili anche quando due richieste arrivano a istanze diverse. Lock in memoria e session affinity non lo sono. Indici su perimetro famiglia, ID e stato possono aiutare la lettura del batch, ma vanno verificati sui piani di esecuzione e sui volumi reali.
 
-L'osservabilita minima comprende dimensione del batch, durata, esito atomico, conflitti, rifiuti di autorizzazione e rollback, sempre in forma aggregata. Alert solo su crescita sostenuta di errori server o latenza, non su un singolo conflitto utente. Il limite massimo del batch protegge tempo di transazione, payload e consumo database; il valore va misurato e approvato, non inventato nella ricerca.
+L'osservabilita minima comprende dimensione del batch, durata, esito atomico, conflitti, rifiuti per limite o autorizzazione e rollback, sempre in forma aggregata. Alert solo su crescita sostenuta di errori server o latenza, non su un singolo conflitto utente. Il massimo effettivo della Function App è configurato inizialmente a 1000 ed è validato all'avvio contro lo stesso ceiling.
 
 ## flow chart
 
@@ -88,22 +90,24 @@ flowchart TD
     B --> C{"Conferma Completa N?"}
     C -- No --> D["Annulla la selezione senza modifiche"]
     C -- Si --> E["Client invia ID distinti e versioni"]
-    E --> F["Server ricava identita, famiglia e permesso"]
-    F --> G["Carica e autorizza ogni ID"]
-    G --> H{"Tutti esistono, sono visibili, Active e alla versione attesa?"}
-    H -- No --> I["Nessuna modifica; errore strutturato"]
-    H -- Si --> J["Aggiorna item e timeline nella transazione"]
-    J --> K{"Commit riuscito senza conflitti?"}
-    K -- No --> L["Rollback completo e ricarica richiesta"]
-    K -- Si --> M["Tutti gli item risultano Completed"]
-    M --> N{"Undo bulk previsto dal prodotto?"}
-    N -- No --> O["Feedback finale con conteggio"]
-    N -- Si --> P["Mostra unica azione di recupero secondo regole da approvare"]
+    E --> F{"Numero entro il massimo di scrittura configurato?"}
+    F -- No --> G["Rifiuta tutto senza dividere il batch"]
+    F -- Si --> H["Server ricava identita, famiglia e permesso"]
+    H --> I["Carica e autorizza ogni ID"]
+    I --> J{"Tutti esistono, sono visibili, Active e alla versione attesa?"}
+    J -- No --> K["Nessuna modifica; errore strutturato"]
+    J -- Si --> L["Aggiorna item e timeline nella transazione"]
+    L --> M{"Commit riuscito senza conflitti?"}
+    M -- No --> N["Rollback completo e ricarica richiesta"]
+    M -- Si --> O["Tutti gli item risultano Completed"]
+    O --> P{"Undo bulk previsto dal prodotto?"}
+    P -- No --> Q["Feedback finale con conteggio"]
+    P -- Si --> R["Mostra unica azione di recupero secondo regole da approvare"]
 ```
 
 ## user experience
 
-La vista principale resta riconoscibile. La modalita di selezione aggiunge soltanto controlli necessari e una barra azioni compatta; non apre una nuova schermata. Il filtro corrente rimane visibile, ma il perimetro di «Seleziona tutti» deve essere dichiarato prima di offrire quel comando.
+La vista principale resta riconoscibile. La modalita di selezione aggiunge soltanto controlli necessari e una barra azioni compatta; non apre una nuova schermata. Il filtro corrente rimane visibile e «Seleziona tutti» dichiara il proprio perimetro: solo gli item visibili nella pagina filtrata corrente.
 
 ```text
 +--------------------------------+
@@ -113,7 +117,7 @@ La vista principale resta riconoscibile. La modalita di selezione aggiunge solta
 | [ ] Pasta                      |
 | [x] Lamette                    |
 |                                |
-| 2 selezionati                  |
+| [Seleziona pagina] 2 selezionati|
 | [Annulla]        [Completa 2]  |
 +--------------------------------+
 ```
@@ -130,5 +134,6 @@ La vista principale resta riconoscibile. La modalita di selezione aggiunge solta
 - **Loading:** barra azioni in stato occupato, lista ancora leggibile e nessuna seconda conferma inviabile.
 - **Empty:** se non esistono item attivi, la modalita di selezione non e disponibile; dopo successo sugli ultimi item compare lo stato vuoto normale.
 - **Errore:** nell'esito tutti-o-nessuno si dichiara esplicitamente che nessun item e cambiato; dopo ricarica la selezione non viene riapplicata alla cieca.
+- **Oltre limite:** il backend rifiuta l'intero comando con un messaggio recuperabile; il client non tenta batch nascosti multipli.
 - **Successo:** le righe scompaiono insieme, il conteggio e annunciato e il focus passa a una posizione prevedibile.
 - **Undo:** wireframe e comportamento finali dipendono dalla decisione aperta tra recupero aggregato, individuale o assente; non mostrare N snackbar individuali per impostazione predefinita senza una scelta prodotto.

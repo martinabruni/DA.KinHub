@@ -36,6 +36,14 @@ La ricerca parte da `docs/kinlist/idea.md`, dai requisiti aggiuntivi forniti per
 
 ## Task
 
+- task_code: data-access-limits-pagination
+- task_title: Limiti di accesso ai dati e paginazione
+- goal: definire un contratto comune per paginare ogni lettura di collezioni e limitare in modo sicuro letture e scritture bulk.
+- why_separate: cursori, dimensioni di pagina e ceiling configurabili sono vincoli trasversali del repository e delle API, indipendenti dal filtro o comando funzionale che li usa.
+- output_file: tasks/data-access-limits-pagination/research.md
+
+## Task
+
 - task_code: item-edit-history
 - task_title: Dettaglio, modifica e cronologia dell'item
 - goal: definire il drawer che modifica nome e categorie e mostra metadati e timeline senza perdere aggiornamenti concorrenti.
@@ -57,6 +65,14 @@ La ricerca parte da `docs/kinlist/idea.md`, dai requisiti aggiuntivi forniti per
 - goal: eliminare definitivamente gli item completati in base a `CompletedAt` con un processo osservabile e ripetibile.
 - why_separate: è un flusso backend pianificato senza superficie UI e con requisiti specifici di affidabilità e conservazione.
 - output_file: tasks/completed-item-retention/research.md
+
+## Task
+
+- task_code: inactive-data-cleanup
+- task_title: Pulizia definitiva dei dati inattivi
+- goal: eliminare fisicamente user, membership, family e dati KinList soft-deleted o inattivi da almeno 30 giorni in modo limitato, coerente e osservabile.
+- why_separate: condivide il Timer Trigger con la retention degli item completati, ma usa `inactiveAt`, collegamenti attivi, ordine transazionale e metriche lifecycle propri.
+- output_file: tasks/inactive-data-cleanup/research.md
 
 ## Task
 
