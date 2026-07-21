@@ -39,7 +39,7 @@ public sealed class KinListBootstrapServiceTests
 
         var exception = await Assert.ThrowsAsync<BusinessDependencyException>(() => service.GetBootstrapAsync(new ExternalIdentity("https://issuer", Guid.NewGuid()), CancellationToken.None));
 
-        Assert.Equal("dependency.postgresqlUnavailable", exception.Code);
+        Assert.Equal(BusinessErrorCodes.PostgreSqlUnavailable, exception.Code);
     }
 
     private sealed class StubApplicationUserRepository(ApplicationUser user) : IApplicationUserRepository

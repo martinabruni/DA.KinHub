@@ -4,7 +4,7 @@
 
 KinHub usa OpenTelemetry nel worker .NET Isolated e Azure Monitor come exporter verso Application Insights. Log, metriche e trace applicativi condividono correlazione e configurazione; non affiancare una seconda pipeline Application Insights classica.
 
-Questo e lo standard approvato per nuove implementazioni. La migrazione del codice FEAT-001 ancora basato sulla SDK classica e tracciata in `docs/kinlist/backlog/features/accesso-instradamento/cr.md`; fino alla chiusura della CR non dichiarare operativa l'esportazione delle metriche custom.
+La Function App registra OpenTelemetry nel composition root con `UseFunctionsWorkerDefaults`, `UseAzureMonitorExporter`, `ActivitySource` `KinHub.KinList` e `Meter` `KinHub.KinList`. La credential dell'exporter e esplicita: `DefaultAzureCredential` in Development e managed identity system-assigned negli altri ambienti.
 
 ## Configurazione
 
@@ -14,6 +14,7 @@ Questo e lo standard approvato per nuove implementazioni. La migrazione del codi
 - In Azure usare la system-assigned managed identity e il ruolo least privilege `Monitoring Metrics Publisher` gia assegnato dal Bicep.
 - Configurare `host.json` nella modalita OpenTelemetry supportata dalla versione Functions in uso.
 - Validare all'avvio opzioni e combinazioni credential, senza fallback a secret versionati.
+- Non usare `logging.applicationInsights` in `host.json` quando `telemetryMode` e `OpenTelemetry`.
 
 ## Strumentazione
 

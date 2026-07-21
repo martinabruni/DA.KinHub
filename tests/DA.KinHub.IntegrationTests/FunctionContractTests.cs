@@ -1,9 +1,13 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 using DA.KinHub.Business;
+using DA.KinHub.Business.Common;
 using DA.KinHub.Domain.Documents;
 using DA.KinHub.Functions.Configuration;
 using DA.KinHub.Functions.Functions;
 using DA.KinHub.Functions.Http;
+using DA.KinHub.Functions.OpenApi;
+using DA.KinHub.Functions.Security;
 using DA.KinHub.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +23,7 @@ public sealed class FunctionContractTests
     public void VersionAndStatusEndpointsReturnBuildMetadata()
     {
         var provider = new BuildInfoProvider(Options.Create(new RuntimeOptions { AppName = "KinHub", ApiVersion = "1.0", Environment = "Test" }));
-        var functions = new MetadataFunctions(provider, TimeProvider.System, Options.Create(new EntraOptions
+        var openApiProvider = new OpenApiDocumentProvider(provider, Options.Create(new EntraOptions
         {
             Enabled = true,
             Instance = "https://login.microsoftonline.com",
@@ -27,6 +31,7 @@ public sealed class FunctionContractTests
             Audience = "api://kinhub-test",
             Scope = "access_as_user"
         }));
+        var functions = new MetadataFunctions(provider, TimeProvider.System, openApiProvider);
 
         var versionResult = Assert.IsType<OkObjectResult>(functions.Version(Request("/api/version")));
         var statusResult = Assert.IsType<OkObjectResult>(functions.Status(Request("/api/status")));
@@ -47,13 +52,16 @@ public sealed class FunctionContractTests
     [Fact]
     public void ProblemDetailsUsesStandardMediaTypeAndExtensions()
     {
-        var result = ApiResults.Problem(Request("/api/kinlist/bootstrap"), 400, "Invalid", "Invalid input", "request.invalid");
+        var request = Request("/api/kinlist/bootstrap");
+        ApiResults.EnsureCorrelationId(request.HttpContext);
+        var result = new ApiProblemDetailsFactory().Create(request.HttpContext, 400, "Invalid", "Invalid input", "request.invalid");
 
         var problem = Assert.IsType<ProblemDetails>(result.Value);
         var json = JsonSerializer.Serialize(problem);
-        Assert.Equal("application/problem+json", Assert.Single(result.ContentTypes));
+        Assert.Equal(ApiResults.ProblemMediaType, Assert.Single(result.ContentTypes));
         Assert.Contains("request.invalid", json, StringComparison.Ordinal);
         Assert.True(problem.Extensions.ContainsKey("traceId"));
+        Assert.True(problem.Extensions.ContainsKey("correlationId"));
     }
 
     [Fact]
@@ -96,10 +104,60 @@ public sealed class FunctionContractTests
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Infrastructure.Persistence.KinHubDbContext>());
     }
 
+    [Fact]
+    public void FunctionMetadataDefaultsToApiAccessAndRecognizesMarkers()
+    {
+        var provider = new FunctionAccessMetadataProvider();
+
+        var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinListBootstrapFunctions.Bootstrap"));
+        var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinListFamilyFunctions.FamilyContext"));
+        var version = provider.Get(Definition("DA.KinHub.Functions.Functions.MetadataFunctions.Version"));
+
+        Assert.True(bootstrap.IsHttp);
+        Assert.False(bootstrap.AllowAnonymous);
+        Assert.False(bootstrap.RequiresFamilyAccess);
+        Assert.True(family.RequiresFamilyAccess);
+        Assert.True(version.AllowAnonymous);
+    }
+
+    [Fact]
+    public void EntraValidatorRejectsNonHttpsInstanceWhenEnabled()
+    {
+        var validator = new EntraOptionsValidator();
+
+        var result = validator.Validate(null, new EntraOptions
+        {
+            Enabled = true,
+            Instance = "http://login.microsoftonline.com",
+            TenantId = "contoso.onmicrosoft.com",
+            Audience = "api://kinhub-test",
+            Scope = "access_as_user"
+        });
+
+        Assert.True(result.Failed);
+    }
+
     private static HttpRequest Request(string path)
     {
         var context = new DefaultHttpContext();
         context.Request.Path = path;
         return context.Request;
+    }
+
+    private static Microsoft.Azure.Functions.Worker.FunctionDefinition Definition(string entryPoint)
+    {
+        return new StubFunctionDefinition(entryPoint);
+    }
+
+    private sealed class StubFunctionDefinition(string entryPoint) : Microsoft.Azure.Functions.Worker.FunctionDefinition
+    {
+        public override string PathToAssembly => typeof(MetadataFunctions).Assembly.Location;
+        public override string EntryPoint => entryPoint;
+        public override string Id => entryPoint;
+        public override string Name => entryPoint;
+        public override IReadOnlyDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> InputBindings => new Dictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>();
+        public override IReadOnlyDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> OutputBindings => new Dictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>();
+        public override ImmutableArray<Microsoft.Azure.Functions.Worker.Middleware.IFunctionsWorkerMiddleware> CustomAttributes => ImmutableArray<Microsoft.Azure.Functions.Worker.Middleware.IFunctionsWorkerMiddleware>.Empty;
+        public override Microsoft.Azure.Functions.Worker.Retry.RetryOptions? Retry => null;
     }
 }

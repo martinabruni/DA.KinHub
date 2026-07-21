@@ -1,33 +1,77 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using DA.KinHub.Functions.Configuration;
 
 namespace DA.KinHub.Functions.Observability;
 
 public sealed class KinListTelemetry : IDisposable
 {
-    private readonly Meter meter = new("KinHub.KinList", "1.0.0");
+    private readonly Meter meter;
     private readonly Counter<long> outcomeCounter;
     private readonly Histogram<double> durationHistogram;
     private readonly ActivitySource activitySource = new("KinHub.KinList");
 
-    public KinListTelemetry()
+    public KinListTelemetry(BuildInfoProvider buildInfoProvider)
     {
+        meter = new Meter("KinHub.KinList", buildInfoProvider.Get().Version);
         outcomeCounter = meter.CreateCounter<long>("kinlist.outcomes");
         durationHistogram = meter.CreateHistogram<double>("kinlist.duration.ms");
     }
 
-    public Activity? StartActivity(string operation) => activitySource.StartActivity(operation, ActivityKind.Internal);
-
-    public void Track(string operation, string outcome, TimeSpan duration)
-    {
-        var tags = new TagList { { "operation", operation }, { "outcome", outcome } };
-        outcomeCounter.Add(1, tags);
-        durationHistogram.Record(duration.TotalMilliseconds, tags);
-    }
+    public OperationScope Begin(string operation) => new(operation, activitySource, outcomeCounter, durationHistogram);
 
     public void Dispose()
     {
         activitySource.Dispose();
         meter.Dispose();
+    }
+
+    public sealed class OperationScope : IDisposable
+    {
+        private readonly string operation;
+        private readonly Counter<long> outcomeCounter;
+        private readonly Histogram<double> durationHistogram;
+        private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+        private readonly Activity? activity;
+        private bool completed;
+
+        public OperationScope(string operation, ActivitySource activitySource, Counter<long> outcomeCounter, Histogram<double> durationHistogram)
+        {
+            this.operation = operation;
+            this.outcomeCounter = outcomeCounter;
+            this.durationHistogram = durationHistogram;
+            activity = activitySource.StartActivity(operation, ActivityKind.Internal);
+        }
+
+        public void Complete(string outcome)
+        {
+            if (completed)
+            {
+                return;
+            }
+
+            completed = true;
+            Record(outcome, ActivityStatusCode.Ok);
+        }
+
+        public void Dispose()
+        {
+            if (!completed)
+            {
+                Record("incomplete", ActivityStatusCode.Error);
+            }
+
+            activity?.Dispose();
+        }
+
+        private void Record(string outcome, ActivityStatusCode status)
+        {
+            var tags = new TagList { { "operation", operation }, { "outcome", outcome } };
+            activity?.SetStatus(status);
+            activity?.SetTag("operation", operation);
+            activity?.SetTag("outcome", outcome);
+            outcomeCounter.Add(1, tags);
+            durationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
+        }
     }
 }

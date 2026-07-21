@@ -1,7 +1,7 @@
 ---
 id: kinhub-backend
 name: KinHub backend patterns
-version: 0.2.0
+version: 0.3.0
 area: backend
 description: Servizi business, contratti DDD, Function endpoint e pattern infrastrutturali riutilizzabili.
 catalog: catalog.json
@@ -24,7 +24,7 @@ Non usare per testo UI, Bicep o workflow di release.
 
 ## Componenti e servizi disponibili
 
-`BuildInfoProvider`, `ApiResults`, repository EF per famiglie e membership, migration initializer locale e `IDocumentStorage` con adapter Azure Blob/Azurite. Il pattern approvato per la pipeline HTTP e descritto in `docs/architecture/http-functions.md`; il debito FEAT-001 e pianificato nella CR collegata e non deve essere copiato da nuovi endpoint.
+`BuildInfoProvider`, `ApiResults`, `ApiProblemDetailsFactory`, middleware HTTP Functions per correlation/eccezioni/autorizzazione, repository EF per famiglie e membership, migration initializer locale e `IDocumentStorage` con adapter Azure Blob/Azurite. Il pattern approvato per la pipeline HTTP e descritto in `docs/architecture/http-functions.md`; il debito FEAT-001 non deve essere copiato da nuovi endpoint.
 
 ## API e interfacce
 
@@ -63,6 +63,8 @@ Regola di dominio, validazione business, DI, configurazione critica, endpoint me
 Implementa nel layer corretto, applica prima la pipeline condivisa, aggiungi test/esempio, aggiorna catalogo e documentazione, crea fragment e rigenera registry. Se una nuova esigenza trasversale induce codice identico in piu endpoint, valuta un middleware o una factory mirata prima di aggiungere helper locali; non generalizzare un solo caso.
 
 ## Changelog
+
+0.3.0: aggiunti catalogo e riferimenti ai componenti riusabili della pipeline HTTP centralizzata e della factory Problem Details.
 
 0.2.0: aggiunte regole per pipeline HTTP centralizzata, sicurezza default-deny, Problem Details, configurazione fail-fast e Azure Monitor OpenTelemetry.
 

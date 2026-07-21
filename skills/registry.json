@@ -13,7 +13,7 @@
       "references": [
         {
           "path": "docs/architecture/overview.md",
-          "checksum": "b7bc7d004ab159ef7d26fffa915e5f3803dee9d54c76eec56d7a9c4169cf56ec"
+          "checksum": "689af398689c278a621a366309d0ee568bf51f9a20deac01155a847c9e493f22"
         },
         {
           "path": "docs/architecture/http-functions.md",
@@ -27,7 +27,7 @@
     {
       "id": "kinhub-backend",
       "name": "KinHub backend patterns",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "area": "backend",
       "description": "Servizi business, contratti DDD, Function endpoint e pattern infrastrutturali riutilizzabili.",
       "path": "skills/backend/SKILL.md",
@@ -38,7 +38,7 @@
         },
         {
           "path": "docs/operations/observability.md",
-          "checksum": "8667b46e99d7980bb7a4683197edcc3b7fb4d51baa9f390f0482d6456fea766e"
+          "checksum": "385aa9ce1e453a50ca7c206697a08e8de06ef97c440a203c088f2f4973031a0d"
         }
       ],
       "catalog": "skills/backend/catalog.json",
@@ -54,12 +54,22 @@
           "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiResults.cs"
         },
         {
+          "id": "api-problem-details-factory",
+          "name": "ApiProblemDetailsFactory",
+          "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiProblemDetailsFactory.cs"
+        },
+        {
+          "id": "functions-http-pipeline",
+          "name": "Functions HTTP pipeline",
+          "source": "src/backend/applications/DA.KinHub.Functions/Middleware/KinHubAuthorizationMiddleware.cs"
+        },
+        {
           "id": "document-storage",
           "name": "BlobDocumentStorage",
           "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs"
         }
       ],
-      "checksum": "b94562657959452c93e61404092a742389f7bbe3c905a95fe984ef23e79f4e90"
+      "checksum": "dace61261749ecb6d1b4c20adbc587a2628c2a87461788007e0864f59212781e"
     },
     {
       "id": "kinhub-documentation",

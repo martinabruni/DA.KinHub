@@ -2,7 +2,9 @@
   "schemaVersion": 1,
   "items": [
     { "id": "build-info-provider", "name": "BuildInfoProvider", "source": "src/backend/applications/DA.KinHub.Functions/Configuration/BuildInfoProvider.cs", "purpose": "Version metadata coerenti" },
-    { "id": "api-results", "name": "ApiResults", "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiResults.cs", "purpose": "Correlation ID e Problem Details" },
+    { "id": "api-results", "name": "ApiResults", "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiResults.cs", "purpose": "Header condivisi, correlation ID e cache policy" },
+    { "id": "api-problem-details-factory", "name": "ApiProblemDetailsFactory", "source": "src/backend/applications/DA.KinHub.Functions/Http/ApiProblemDetailsFactory.cs", "purpose": "Problem Details RFC 7807 coerenti e sicuri" },
+    { "id": "functions-http-pipeline", "name": "Functions HTTP pipeline", "source": "src/backend/applications/DA.KinHub.Functions/Middleware/KinHubAuthorizationMiddleware.cs", "purpose": "Middleware Functions per correlation, eccezioni e autorizzazione default-deny" },
     { "id": "document-storage", "name": "BlobDocumentStorage", "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs", "purpose": "Astrazione documentale con adapter Azure Blob e Azurite locale" }
   ]
 }
