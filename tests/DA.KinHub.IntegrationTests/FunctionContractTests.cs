@@ -1,6 +1,5 @@
 using System.Text.Json;
 using DA.KinHub.Business;
-using DA.KinHub.Business.Projects;
 using DA.KinHub.Domain.Documents;
 using DA.KinHub.Functions.Configuration;
 using DA.KinHub.Functions.Functions;
@@ -91,7 +90,6 @@ public sealed class FunctionContractTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        Assert.NotNull(scope.ServiceProvider.GetService<IProjectService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinListBootstrapService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
