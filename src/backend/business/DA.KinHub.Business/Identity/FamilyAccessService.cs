@@ -29,7 +29,7 @@ public sealed class FamilyAccessService(
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            throw new BusinessDependencyException("dependency.postgresqlUnavailable", "The family access check failed.", exception);
+            throw new BusinessDependencyException(BusinessErrorCodes.PostgreSqlUnavailable, "The family access check failed.", exception);
         }
     }
 }

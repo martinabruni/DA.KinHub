@@ -32,6 +32,11 @@ public sealed class EntraOptionsValidator : IValidateOptions<EntraOptions>
             return ValidateOptionsResult.Fail("Entra configuration must contain real environment values when authentication is enabled.");
         }
 
+        if (!Uri.TryCreate(options.Instance, UriKind.Absolute, out var instanceUri) || instanceUri.Scheme != Uri.UriSchemeHttps)
+        {
+            return ValidateOptionsResult.Fail("Entra:Instance must be an absolute HTTPS URI when authentication is enabled.");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }

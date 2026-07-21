@@ -20,8 +20,8 @@ public sealed class ExternalIdentityClaimsResolverTests
         var objectId = Guid.NewGuid();
         var resolver = new ExternalIdentityClaimsResolver();
         var principal = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim("iss", "https://issuer.example"),
-            new Claim("oid", objectId.ToString())
+            new Claim(SecurityConstants.IssuerClaim, "https://issuer.example"),
+            new Claim(SecurityConstants.ObjectIdClaim, objectId.ToString())
         ], "Bearer"));
 
         Assert.True(resolver.TryResolve(principal, out var externalIdentity));

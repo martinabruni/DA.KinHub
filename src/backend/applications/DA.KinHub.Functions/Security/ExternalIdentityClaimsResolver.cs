@@ -9,8 +9,8 @@ public sealed class ExternalIdentityClaimsResolver
     {
         externalIdentity = default;
 
-        var issuer = principal.FindFirst("iss")?.Value?.Trim();
-        var objectIdValue = principal.FindFirst("oid")?.Value?.Trim();
+        var issuer = principal.FindFirst(SecurityConstants.IssuerClaim)?.Value?.Trim();
+        var objectIdValue = principal.FindFirst(SecurityConstants.ObjectIdClaim)?.Value?.Trim();
         if (string.IsNullOrWhiteSpace(issuer) || !Guid.TryParse(objectIdValue, out var objectId) || objectId == Guid.Empty)
         {
             return false;

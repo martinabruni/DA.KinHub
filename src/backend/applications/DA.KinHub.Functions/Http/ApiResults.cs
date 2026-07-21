@@ -1,33 +1,52 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace DA.KinHub.Functions.Http;
 
 public static class ApiResults
 {
-    public static string ApplyCorrelationId(HttpRequest request)
+    public const string CorrelationIdHeaderName = "X-Correlation-ID";
+    public const string ProblemMediaType = "application/problem+json";
+    public const string NoStorePrivateCacheControl = "no-store, private";
+    public const string NoStoreCacheControl = "no-store";
+    private const int MaxCorrelationIdLength = 128;
+
+    public static string EnsureCorrelationId(HttpContext httpContext)
     {
-        var correlationId = request.Headers.TryGetValue("X-Correlation-ID", out var value) && !string.IsNullOrWhiteSpace(value)
-            ? value.ToString()
-            : request.HttpContext.TraceIdentifier;
-        request.HttpContext.Response.Headers["X-Correlation-ID"] = correlationId;
+        var correlationId = TryGetCorrelationId(httpContext.Request.Headers[CorrelationIdHeaderName], out var requestedCorrelationId)
+            ? requestedCorrelationId
+            : Guid.NewGuid().ToString("N");
+
+        httpContext.TraceIdentifier = correlationId;
+        httpContext.Response.Headers[CorrelationIdHeaderName] = correlationId;
         return correlationId;
     }
 
-    public static ObjectResult Problem(HttpRequest request, int status, string title, string detail, string code)
+    public static string GetCorrelationId(HttpContext httpContext)
     {
-        ApplyNoStore(request.HttpContext.Response);
-        var problem = new ProblemDetails
-        {
-            Status = status,
-            Title = title,
-            Detail = detail,
-            Instance = request.Path
-        };
-        problem.Extensions["code"] = code;
-        problem.Extensions["traceId"] = ApplyCorrelationId(request);
-        return new ObjectResult(problem) { StatusCode = status, ContentTypes = { "application/problem+json" } };
+        return httpContext.Response.Headers.TryGetValue(CorrelationIdHeaderName, out var correlationId) && !string.IsNullOrWhiteSpace(correlationId)
+            ? correlationId.ToString()
+            : httpContext.TraceIdentifier;
     }
 
-    public static void ApplyNoStore(HttpResponse response) => response.Headers.CacheControl = "no-store, private";
+    public static void ApplyNoStorePrivate(HttpResponse response) => response.Headers.CacheControl = NoStorePrivateCacheControl;
+
+    public static void ApplyNoStore(HttpResponse response) => response.Headers.CacheControl = NoStoreCacheControl;
+
+    private static bool TryGetCorrelationId(string? value, out string correlationId)
+    {
+        correlationId = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Length > MaxCorrelationIdLength || trimmed.Contains(','))
+        {
+            return false;
+        }
+
+        correlationId = trimmed;
+        return true;
+    }
 }

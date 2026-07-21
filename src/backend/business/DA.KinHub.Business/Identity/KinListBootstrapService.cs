@@ -30,7 +30,7 @@ public sealed class KinListBootstrapService(
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            throw new BusinessDependencyException("dependency.postgresqlUnavailable", "The family context could not be loaded.", exception);
+            throw new BusinessDependencyException(BusinessErrorCodes.PostgreSqlUnavailable, "The family context could not be loaded.", exception);
         }
     }
 }
