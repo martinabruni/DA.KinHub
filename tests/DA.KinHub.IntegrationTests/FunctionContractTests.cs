@@ -151,13 +151,12 @@ public sealed class FunctionContractTests
 
     private sealed class StubFunctionDefinition(string entryPoint) : Microsoft.Azure.Functions.Worker.FunctionDefinition
     {
+        public override ImmutableArray<Microsoft.Azure.Functions.Worker.FunctionParameter> Parameters => ImmutableArray<Microsoft.Azure.Functions.Worker.FunctionParameter>.Empty;
         public override string PathToAssembly => typeof(MetadataFunctions).Assembly.Location;
         public override string EntryPoint => entryPoint;
         public override string Id => entryPoint;
         public override string Name => entryPoint;
-        public override IReadOnlyDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> InputBindings => new Dictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>();
-        public override IReadOnlyDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> OutputBindings => new Dictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>();
-        public override ImmutableArray<Microsoft.Azure.Functions.Worker.Middleware.IFunctionsWorkerMiddleware> CustomAttributes => ImmutableArray<Microsoft.Azure.Functions.Worker.Middleware.IFunctionsWorkerMiddleware>.Empty;
-        public override Microsoft.Azure.Functions.Worker.Retry.RetryOptions? Retry => null;
+        public override IImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> InputBindings => ImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>.Empty;
+        public override IImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> OutputBindings => ImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>.Empty;
     }
 }
