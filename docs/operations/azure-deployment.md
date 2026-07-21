@@ -9,6 +9,6 @@ OIDC è obbligatorio come percorso primario. La federated credential GitHub deve
 ## Diagnostica
 
 - 403 sul deployment storage: verificare ruolo Storage Blob Data Owner e propagazione RBAC.
-- package non avviabile: verificare `host.json` e `AdvancedFrontier.Functions.dll` nella root ZIP.
-- readiness 503: controllare PostgreSQL, connection string Key Vault e migration.
+- package non avviabile: verificare `host.json` e `DA.KinHub.Functions.dll` nella root ZIP.
+- readiness 503: controllare PostgreSQL, bootstrap KinList, settings database e migration.
 - provisioning Flex negato: eseguire `az functionapp list-flexconsumption-locations` e verificare quota regionale.

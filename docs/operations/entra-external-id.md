@@ -14,6 +14,8 @@ Creare due app registration nel tenant External ID.
 1. Registra `KinHub Web` come Single-page application.
 2. Aggiungi `http://localhost:5173` e l'URL Static Web Apps come redirect URI SPA.
 3. Aggiungi il permesso delegato allo scope KinHub API e concedi il consenso richiesto.
-4. Configura `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_FRONTEND_CLIENT_ID`, `VITE_ENTRA_API_SCOPE` e `VITE_ENTRA_REDIRECT_URI` in fase build.
+4. Configura `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_FRONTEND_CLIENT_ID`, `VITE_ENTRA_API_SCOPE`, `VITE_ENTRA_AUTHORITY` e `VITE_ENTRA_REDIRECT_URI` in fase build.
 
-Il frontend usa popup con selezione account. Il backend convalida issuer, audience, firma, scadenza e scope tramite JWT bearer. I placeholder non sono validi quando `Entra:Enabled=true`.
+Il frontend usa popup con selezione account e mantiene i token soltanto in memoria. Il backend convalida issuer, audience, firma, scadenza e scope tramite JWT bearer con `MapInboundClaims=false`.
+
+Per KinList il bootstrap post-login richiede sempre i claim canonici `iss` e `oid`. Se uno dei due manca o `oid` non e un GUID valido, l'accesso fallisce chiuso con `401` e nessun profilo viene creato come fallback da nome o email.

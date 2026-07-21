@@ -5,8 +5,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AboutPage } from "./pages/AboutPage";
 import { DocsPage } from "./pages/DocsPage";
 import { HomePage } from "./pages/HomePage";
+import { KinListPage } from "./pages/KinListPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { ProjectsPage } from "./pages/ProjectsPage";
 import { ReleaseNotesPage } from "./pages/ReleaseNotesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
@@ -16,7 +16,7 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
-          <Route path="projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+          <Route path="kinlist" element={<ProtectedRoute routeId="kinlist"><KinListPage /></ProtectedRoute>} />
           <Route path="about" element={<AboutPage />} />
           <Route path="release-notes" element={<ReleaseNotesPage />} />
           <Route path="settings" element={<SettingsPage />} />

@@ -1,10 +1,21 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "160f1cc",
-  "buildDate": "2026-07-16T16:38:42.939Z",
+  "commit": "639bf3c",
+  "buildDate": "2026-07-20T21:23:03.618Z",
   "environment": "Development",
   "entries": [
+    {
+      "id": "added-backlog-skill",
+      "type": "added",
+      "area": "developer-experience",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Aggiunta una skill per trasformare analisi funzionale e architettura in feature autonome, tracciabili e ordinate per dipendenze e parallelismi sicuri.",
+        "en": "Added a skill that turns functional analysis and architecture into autonomous, traceable features ordered by dependencies and safe parallel work."
+      }
+    },
     {
       "id": "bootstrap-added-platform",
       "type": "added",
@@ -14,6 +25,39 @@
       "descriptions": {
         "it": "Aggiunta la base full-stack di KinHub con API, PWA bilingue, temi, tutorial, guida contestuale, skill, infrastruttura Azure e pipeline.",
         "en": "Added the KinHub full-stack foundation with API, bilingual PWA, themes, tutorial, contextual help, skills, Azure infrastructure, and pipelines."
+      }
+    },
+    {
+      "id": "changed-kinlist-research-decisions",
+      "type": "changed",
+      "area": "docs",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Consolidate nella ricerca KinList le decisioni su paginazione repository, limiti batch, timer giornaliero, identità, inviti, pipeline vocale e comportamento PWA.",
+        "en": "Consolidated KinList research decisions for repository pagination, batch limits, the daily timer, identity, invitations, the voice pipeline, and PWA behavior."
+      }
+    },
+    {
+      "id": "none-added-kinlist-backlog",
+      "type": "added",
+      "area": "docs",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Aggiunto il backlog esecutivo KinList con 13 feature autonome, tracciabilità completa, dipendenze, wave, gate e criteri verificabili.",
+        "en": "Added the KinList execution backlog with 13 autonomous features, complete traceability, dependencies, waves, gates, and verifiable acceptance criteria."
+      }
+    },
+    {
+      "id": "none-changed-kinlist-access-routing",
+      "type": "changed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "KinList ora crea o riusa un profilo applicativo da `(iss, oid)`, verifica la membership familiare attiva nel bootstrap post-login, espone la policy `Family` e mantiene offline soltanto la shell pubblica senza dati personali.",
+        "en": "KinList now creates or reuses an application profile from `(iss, oid)`, verifies the active family membership during the post-login bootstrap, exposes the `Family` policy, and keeps only the public shell available offline without personal data."
       }
     }
   ]

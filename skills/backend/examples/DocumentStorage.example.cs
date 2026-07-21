@@ -1,4 +1,4 @@
-using AdvancedFrontier.Domain.Documents;
+using DA.KinHub.Domain.Documents;
 
 public static class DocumentStorageExample
 {

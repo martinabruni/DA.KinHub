@@ -7,7 +7,7 @@ description: Orientarsi in KinHub, personalizzare l'esperienza e capire come evo
 
 ## Navigazione
 
-Il menu superiore porta a Home, Progetti, Note di rilascio, Versione e Impostazioni. Su schermi piccoli le icone mantengono le stesse destinazioni.
+Il menu superiore porta a Home, KinList, Note di rilascio, Versione e Impostazioni. Su schermi piccoli le icone mantengono le stesse destinazioni.
 
 ## Lingua e tema
 

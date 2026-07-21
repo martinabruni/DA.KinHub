@@ -54,20 +54,20 @@ Consulta [AGENTS.md](AGENTS.md) prima di modificare il repository e [l'overview]
 Crea database e utente locali `kinhub`; la password di esempio è esclusivamente locale. Copia il file impostazioni:
 
 ```powershell
-Copy-Item src/backend/applications/AdvancedFrontier.Functions/local.settings.json.example src/backend/applications/AdvancedFrontier.Functions/local.settings.json
+Copy-Item src/backend/applications/DA.KinHub.Functions/local.settings.json.example src/backend/applications/DA.KinHub.Functions/local.settings.json
 ```
 
 Avvia Azurite e PostgreSQL, quindi applica le migration:
 
 ```bash
 dotnet tool install --global dotnet-ef --version 10.*
-dotnet ef database update --project src/backend/infrastructure/AdvancedFrontier.Infrastructure --startup-project src/backend/applications/AdvancedFrontier.Functions
+dotnet ef database update --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions
 ```
 
 Per creare una migration:
 
 ```bash
-dotnet ef migrations add <Name> --project src/backend/infrastructure/AdvancedFrontier.Infrastructure --startup-project src/backend/applications/AdvancedFrontier.Functions
+dotnet ef migrations add <Name> --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions
 ```
 
 In ambienti condivisi usa il migration bundle descritto in [database-migrations.md](docs/operations/database-migrations.md); non abilitare migration al cold start.
@@ -77,11 +77,11 @@ In ambienti condivisi usa il migration bundle descritto in [database-migrations.
 ```bash
 dotnet restore KinHub.slnx
 dotnet build KinHub.slnx
-cd src/backend/applications/AdvancedFrontier.Functions
+cd src/backend/applications/DA.KinHub.Functions
 func start
 ```
 
-Endpoint: `GET /health/live`, `GET /health/ready`, `GET /api/version`, `GET /api/status`, `GET /api/openapi.json`, `GET|POST /api/projects`.
+Endpoint: `GET /health/live`, `GET /health/ready`, `GET /api/version`, `GET /api/status`, `GET /api/openapi.json`, `GET /api/kinlist/bootstrap`, `GET /api/kinlist/family-context?familyId=<uuid>`.
 
 ### Frontend
 

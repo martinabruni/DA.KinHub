@@ -12,6 +12,7 @@ export function VersionNotification() {
 
   useEffect(() => {
     const check = async () => {
+      if (!navigator.onLine) return;
       try {
         const response = await fetch(`/release-notes.json?now=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) return;

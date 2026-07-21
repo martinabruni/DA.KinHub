@@ -66,9 +66,9 @@ Nessuno: questa feature stabilisce i contratti iniziali di identità, membership
 
 ### Touchpoint previsti
 
-- **Dominio/business**: `src/backend/domains/AdvancedFrontier.Domain`, `src/backend/business/AdvancedFrontier.Business` per identità applicativa, membership e risoluzione del contesto.
-- **Persistenza/migration**: `src/backend/infrastructure/AdvancedFrontier.Infrastructure/Persistence`, schema shared, vincoli univoci e migration con verifica/rollback in `docs/operations/database-migrations.md`.
-- **API/integrazioni**: `src/backend/applications/AdvancedFrontier.Functions/Program.cs`, configurazione auth, endpoint bootstrap e Problem Details.
+- **Dominio/business**: `src/backend/domains/DA.KinHub.Domain`, `src/backend/business/DA.KinHub.Business` per identità applicativa, membership e risoluzione del contesto.
+- **Persistenza/migration**: `src/backend/infrastructure/DA.KinHub.Infrastructure/Persistence`, schema shared, vincoli univoci e migration con verifica/rollback in `docs/operations/database-migrations.md`.
+- **API/integrazioni**: `src/backend/applications/DA.KinHub.Functions/Program.cs`, configurazione auth, endpoint bootstrap e Problem Details.
 - **Frontend/UX**: `src/frontend/src/App.tsx`, `components/ProtectedRoute.tsx`, `lib/auth.ts`, `lib/api.ts`, route e risorse `it`/`en`.
 - **Infrastruttura/configurazione**: `infra/modules/postgres.bicep`, composition Bicep/workflow per Entra auth e provisioning identity-based già approvato.
 - **Documentazione/operazioni**: guida onboarding bilingue, help route, runbook autenticazione/DB e change fragment.

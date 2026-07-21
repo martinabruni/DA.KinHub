@@ -7,7 +7,7 @@ description: Navigate KinHub, customize the experience, and understand how the p
 
 ## Navigation
 
-The top menu opens Home, Projects, Release notes, Version, and Settings. On smaller screens the icons keep the same destinations.
+The top menu opens Home, KinList, Release notes, Version, and Settings. On smaller screens the icons keep the same destinations.
 
 ## Language and theme
 

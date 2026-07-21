@@ -23,7 +23,7 @@ Non usare per testo UI, Bicep o workflow di release.
 
 ## Componenti e servizi disponibili
 
-`ProjectService`, `BuildInfoProvider`, `ApiResults`, repository EF, migration initializer locale e `IDocumentStorage` con adapter Azure Blob/Azurite.
+`BuildInfoProvider`, `ApiResults`, repository EF per famiglie e membership, migration initializer locale e `IDocumentStorage` con adapter Azure Blob/Azurite.
 
 ## API e interfacce
 
@@ -31,7 +31,7 @@ I servizi business e storage espongono interfacce async con `CancellationToken`.
 
 ## Esempi
 
-Vedi `examples/ProjectService.example.cs`, `examples/DocumentStorage.example.cs` e i test business/integration.
+Vedi `examples/DocumentStorage.example.cs` e i test business/integration.
 
 ## Dipendenze
 

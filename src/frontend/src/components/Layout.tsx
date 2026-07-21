@@ -11,21 +11,22 @@ export function Layout() {
   const { t } = useTranslation("common");
   const links = [
     { to: "/", key: "home", icon: Home, end: true },
-    { to: "/projects", key: "projects", icon: ListChecks },
+    { to: "/kinlist", key: "kinlist", icon: ListChecks },
     { to: "/release-notes", key: "releaseNotes", icon: BookOpen },
     { to: "/about", key: "about", icon: Info },
     { to: "/settings", key: "settings", icon: Settings }
   ];
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">{t("actions.skipToContent")}</a>
       <header className="app-header">
         <NavLink className="brand" to="/" aria-label={t("appName")}>K</NavLink>
         <nav aria-label={t("appName")} data-tour="navigation">
-          {links.map(({ to, key, icon: Icon, end }) => <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? "active" : ""}><Icon size={18} aria-hidden="true" /><span>{t(`nav.${key}`)}</span></NavLink>)}
+          {links.map(({ to, key, icon: Icon, end }) => <NavLink key={to} to={to} end={end} aria-label={t(`nav.${key}`)} className={({ isActive }) => isActive ? "active" : ""}><Icon size={18} aria-hidden="true" /><span>{t(`nav.${key}`)}</span></NavLink>)}
         </nav>
         <div className="header-controls"><LanguageSelector /><ThemeSelector /><AuthControls /></div>
       </header>
-      <main id="main-content"><Outlet /></main>
+      <main id="main-content" tabIndex={-1}><Outlet /></main>
       <footer>{t("footer", { version: __APP_VERSION__, environment: __BUILD_ENVIRONMENT__ })}</footer>
       <VersionNotification />
       <Onboarding />

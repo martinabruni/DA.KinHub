@@ -1,6 +1,6 @@
 [
   { "id": "home", "path": "/", "titleKey": "home.title", "helpKey": "home", "guideSlug": "getting-started" },
-  { "id": "projects", "path": "/projects", "titleKey": "projects.title", "helpKey": "projects", "guideSlug": "projects" },
+  { "id": "kinlist", "path": "/kinlist", "titleKey": "kinlist.title", "helpKey": "kinlist", "guideSlug": "kinlist" },
   { "id": "about", "path": "/about", "titleKey": "about.title", "helpKey": "about", "guideSlug": "version" },
   { "id": "releaseNotes", "path": "/release-notes", "titleKey": "releaseNotes.title", "helpKey": "releaseNotes", "guideSlug": "release-notes" },
   { "id": "settings", "path": "/settings", "titleKey": "settings.title", "helpKey": "settings", "guideSlug": "settings" },
