@@ -24,11 +24,6 @@
       "catalog": "skills/backend/catalog.json",
       "catalogItems": [
         {
-          "id": "project-service",
-          "name": "ProjectService",
-          "source": "src/backend/business/DA.KinHub.Business/Projects/ProjectService.cs"
-        },
-        {
           "id": "build-info-provider",
           "name": "BuildInfoProvider",
           "source": "src/backend/applications/DA.KinHub.Functions/Configuration/BuildInfoProvider.cs"
@@ -44,7 +39,7 @@
           "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs"
         }
       ],
-      "checksum": "0da0ea918858f1d9e536a768be66f8b7141d89ceaebbd22f8f2b378accd0b0a7"
+      "checksum": "62b03e5595331c39b6a89875cc03ddc976722f4b42cb4040eca48709e4f0be40"
     },
     {
       "id": "kinhub-documentation",
