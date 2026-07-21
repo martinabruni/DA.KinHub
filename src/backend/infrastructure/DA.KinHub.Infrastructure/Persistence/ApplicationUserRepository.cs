@@ -1,44 +1,51 @@
+using System.Data.Common;
+using DA.KinHub.Domain.Common;
 using DA.KinHub.Domain.Identity;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace DA.KinHub.Infrastructure.Persistence;
 
 internal sealed class ApplicationUserRepository(KinHubDbContext dbContext) : IApplicationUserRepository
 {
-    public Task<ApplicationUser?> FindByExternalIdentityAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken) =>
-        dbContext.ApplicationUsers
-            .SingleOrDefaultAsync(
-                applicationUser => applicationUser.ExternalIssuer == externalIdentity.Issuer
-                    && applicationUser.ExternalObjectId == externalIdentity.ObjectId,
-                cancellationToken);
+    public async Task<ApplicationUser?> FindByExternalIdentityAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await dbContext.ApplicationUsers
+                .SingleOrDefaultAsync(
+                    applicationUser => applicationUser.ExternalIssuer == externalIdentity.Issuer
+                        && applicationUser.ExternalObjectId == externalIdentity.ObjectId,
+                    cancellationToken);
+        }
+        catch (Exception exception) when (IsRepositoryUnavailable(exception))
+        {
+            throw new RepositoryUnavailableException("The application user could not be loaded.", exception);
+        }
+    }
 
     public async Task<ApplicationUser> GetOrCreateAsync(ExternalIdentity externalIdentity, DateTimeOffset createdAt, CancellationToken cancellationToken)
     {
-        var existing = await FindByExternalIdentityAsync(externalIdentity, cancellationToken);
-        if (existing is not null)
-        {
-            return existing;
-        }
-
-        var applicationUser = ApplicationUser.Create(externalIdentity, createdAt);
-        dbContext.ApplicationUsers.Add(applicationUser);
-
         try
         {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return applicationUser;
+            var applicationUser = ApplicationUser.Create(externalIdentity, createdAt);
+            return await dbContext.ApplicationUsers
+                .FromSqlInterpolated($"""
+                    INSERT INTO shared.application_users (id, external_issuer, external_object_id, created_at, inactive_at)
+                    VALUES ({applicationUser.Id}, {externalIdentity.Issuer}, {externalIdentity.ObjectId}, {createdAt}, {null})
+                    ON CONFLICT (external_issuer, external_object_id)
+                    DO UPDATE SET external_issuer = EXCLUDED.external_issuer
+                    RETURNING id, external_issuer, external_object_id, created_at, inactive_at
+                    """)
+                .SingleAsync(cancellationToken);
         }
-        catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (Exception exception) when (IsRepositoryUnavailable(exception))
         {
-            dbContext.Entry(applicationUser).State = EntityState.Detached;
-            var resolved = await FindByExternalIdentityAsync(externalIdentity, cancellationToken);
-            if (resolved is null)
-            {
-                throw;
-            }
-
-            return resolved;
+            throw new RepositoryUnavailableException("The application user could not be stored.", exception);
         }
     }
+
+    private static bool IsRepositoryUnavailable(Exception exception) =>
+        exception is TimeoutException
+        or DbException
+        or DbUpdateException { InnerException: DbException };
 }

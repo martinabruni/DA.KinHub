@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "639bf3c",
-  "buildDate": "2026-07-20T21:23:03.618Z",
+  "commit": "a9f8c65",
+  "buildDate": "2026-07-21T17:49:42.555Z",
   "environment": "Development",
   "entries": [
     {
@@ -50,6 +50,28 @@
       }
     },
     {
+      "id": "none-changed-functions-http-guidance",
+      "type": "changed",
+      "area": "architecture",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Documentata la pipeline HTTP Functions centralizzata e sicura per default, con Change Request FEAT-001, regole OpenTelemetry, convenzioni CR e reference skill validate dall'harness.",
+        "en": "Documented the centralized, secure-by-default Functions HTTP pipeline, including the FEAT-001 change request, OpenTelemetry rules, CR conventions, and skill references validated by the harness."
+      }
+    },
+    {
+      "id": "none-changed-functions-http-pipeline-implementation",
+      "type": "changed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Implementata la pipeline HTTP condivisa della Function App con correlation ID, Problem Details centralizzati, autorizzazione default-deny, route/OpenAPI condivise e telemetria worker basata su Azure Monitor OpenTelemetry.",
+        "en": "Implemented the shared Function App HTTP pipeline with correlation ID, centralized Problem Details, default-deny authorization, shared routes/OpenAPI, and Azure Monitor OpenTelemetry-based worker telemetry."
+      }
+    },
+    {
       "id": "none-changed-kinlist-access-routing",
       "type": "changed",
       "area": "backend",
@@ -58,6 +80,17 @@
       "descriptions": {
         "it": "KinList ora crea o riusa un profilo applicativo da `(iss, oid)`, verifica la membership familiare attiva nel bootstrap post-login, espone la policy `Family` e mantiene offline soltanto la shell pubblica senza dati personali.",
         "en": "KinList now creates or reuses an application profile from `(iss, oid)`, verifies the active family membership during the post-login bootstrap, exposes the `Family` policy, and keeps only the public shell available offline without personal data."
+      }
+    },
+    {
+      "id": "none-fixed-kinlist-access-routing-finalization",
+      "type": "fixed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "KinList ora usa un upsert atomico per il profilo applicativo `(iss, oid)`, tratta come indisponibilita del repository solo i guasti reali di persistenza e richiede una configurazione database esplicita tra `ConnectionString` locale e `ManagedIdentity`.",
+        "en": "KinList now uses an atomic upsert for the `(iss, oid)` application profile, treats only real persistence failures as repository unavailability, and requires an explicit database configuration between local `ConnectionString` and `ManagedIdentity`."
       }
     }
   ]
