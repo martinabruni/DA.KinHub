@@ -6,21 +6,41 @@
     {
       "id": "kinhub-architecture",
       "name": "KinHub architecture rules",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "area": "architecture",
       "description": "Confini DDD, decisioni serverless e procedura per nuove convenzioni strutturali.",
       "path": "skills/architecture/SKILL.md",
+      "references": [
+        {
+          "path": "docs/architecture/overview.md",
+          "checksum": "b7bc7d004ab159ef7d26fffa915e5f3803dee9d54c76eec56d7a9c4169cf56ec"
+        },
+        {
+          "path": "docs/architecture/http-functions.md",
+          "checksum": "0310d92b9bd6b6d5b08cd4e805e861f5b7b311eeea51cc3343d7f67594344c23"
+        }
+      ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "6ba7bc6c12e5946c69dbb57e6c857f32b222ac252560324f722420f4b50d8b01"
+      "checksum": "c547376ba94650e9edbe9026f1d81f0d654401c00cfa4d99963efe86566b6464"
     },
     {
       "id": "kinhub-backend",
       "name": "KinHub backend patterns",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "area": "backend",
       "description": "Servizi business, contratti DDD, Function endpoint e pattern infrastrutturali riutilizzabili.",
       "path": "skills/backend/SKILL.md",
+      "references": [
+        {
+          "path": "docs/architecture/http-functions.md",
+          "checksum": "0310d92b9bd6b6d5b08cd4e805e861f5b7b311eeea51cc3343d7f67594344c23"
+        },
+        {
+          "path": "docs/operations/observability.md",
+          "checksum": "8667b46e99d7980bb7a4683197edcc3b7fb4d51baa9f390f0482d6456fea766e"
+        }
+      ],
       "catalog": "skills/backend/catalog.json",
       "catalogItems": [
         {
@@ -39,18 +59,24 @@
           "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs"
         }
       ],
-      "checksum": "62b03e5595331c39b6a89875cc03ddc976722f4b42cb4040eca48709e4f0be40"
+      "checksum": "b94562657959452c93e61404092a742389f7bbe3c905a95fe984ef23e79f4e90"
     },
     {
       "id": "kinhub-documentation",
       "name": "KinHub documentation rules",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "area": "documentation",
       "description": "Guide bilingui, help contestuale e sincronizzazione Markdown nel frontend.",
       "path": "skills/documentation/SKILL.md",
+      "references": [
+        {
+          "path": "docs/CR/README.md",
+          "checksum": "56e6b476d9cb264be6a157373a7a70249271e0846c615a45b1b2bd221f0deb28"
+        }
+      ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "b465a0230e16b3aab067da26ab8ead0e2130658b2a0e19959fa075f792508333"
+      "checksum": "bee5a7690bfcd352403330e6f9eddb6002ee1ad2a9af290eab77d88898be7d4a"
     },
     {
       "id": "kinhub-frontend",
@@ -59,6 +85,7 @@
       "area": "frontend",
       "description": "Pattern UI React riutilizzabili, accessibili, localizzati e compatibili con temi e PWA.",
       "path": "skills/frontend/SKILL.md",
+      "references": [],
       "catalog": "skills/frontend/catalog.json",
       "catalogItems": [
         {
@@ -86,6 +113,7 @@
       "area": "release",
       "description": "Semantic Versioning, change fragment, patch note e metadati di build condivisi.",
       "path": "skills/release/SKILL.md",
+      "references": [],
       "catalog": null,
       "catalogItems": [],
       "checksum": "bdcc208f5092fcd091a274a7795f7111aca81fb8a743f3b58970a8da90215ed6"

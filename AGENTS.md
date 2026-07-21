@@ -60,6 +60,22 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Configura CORS dall'ambiente/Bicep, mai con wildcard in produzione.
 - L'avvio deve restare leggero: niente scansioni skill/docs, chiamate remote arbitrarie o lavoro lungo.
 
+### Pipeline HTTP e comportamenti trasversali
+
+- `HttpTrigger.AuthorizationLevel` protegge con Function key e non sostituisce autenticazione Entra o policy applicative. Le API bearer chiamate dalla SPA usano `AuthorizationLevel.Anonymous`; non distribuire Function key nel frontend.
+- Le HTTP Function sono protette da `ApiAccess` per default; usa `[AllowAnonymous]` solo per endpoint pubblici approvati e `[RequiresFamilyAccess]` per API su una famiglia esistente. La policy deve restare esattamente `Family`.
+- Applica autenticazione, autorizzazione, correlation ID, mapping delle eccezioni e cache privata nella pipeline middleware Functions. Non replicare guard, `try/catch` trasversali o header in ogni endpoint.
+- Mantieni middleware piccoli e ordinati: correlation ID, exception handling, authorization, endpoint. Non usare base class Function, service locator, generic endpoint executor o result wrapper universali.
+- Le policy usano `IAuthorizationService`, requirement e handler; nomi policy, claim, route, query parameter, codici condivisi e operation name hanno costanti autorevoli. Non usare magic string negli endpoint.
+- Il contesto verificato della richiesta puo vivere in una feature HTTP tipizzata nell'Application layer. Business e Domain non accedono a `HttpContext`, `IHttpContextAccessor`, `AsyncLocal` o current user ambientali; identita e `familyId` restano parametri espliciti dei casi d'uso e repository.
+- Problem Details nasce da una factory unica. Gli errori tecnici espongono dettagli pubblici fissi, loggano la causa internamente e non convertono una cancellazione attesa in `500`.
+- Le API protette e gli errori usano `Cache-Control: no-store, private`; health/status/version usano `no-store`; non disabilitare globalmente la cache di contenuti pubblici approvati.
+- Route e OpenAPI condividono una sola fonte e test di parita. Ogni endpoint documenta security, parametri, risposte e `application/problem+json` applicabili.
+- Options Entra, database, storage e integrazioni critiche usano validazione tipizzata `ValidateOnStart`, condizionata per ambiente senza bypass di sicurezza.
+- Log, metriche e trace custom usano OpenTelemetry e Azure Monitor con dimensioni a bassa cardinalita. Non mantenere in parallelo exporter classico e OpenTelemetry ne registrare token, claim completi, issuer, oid, familyId, nomi o payload.
+- I nuovi endpoint non devono copiare il pattern manuale esistente di FEAT-001; il debito corrente e tracciato in `docs/kinlist/backlog/features/accesso-instradamento/cr.md` e `cr.plan.md`.
+- La guida autorevole e `docs/architecture/http-functions.md`; le verifiche operative sono in `docs/operations/observability.md`.
+
 ### Azure Functions Isolated e Flex Consumption
 
 - Usa `Microsoft.NET.Sdk`, `TargetFramework=net10.0`, `AzureFunctionsVersion=v4`, `OutputType=Exe` e `ConfigureFunctionsWebApplication()`.
@@ -149,6 +165,8 @@ npm run skills:validate
 npm run skills:build
 npm run skills:watch
 ```
+
+Il frontmatter di una skill puo dichiarare `references` come elenco separato da virgole di documenti Markdown/JSON repository-relative. L'harness verifica formato, esistenza, confine nel repository e checksum e li include nel registry; le reference sono passive e non vengono eseguite.
 
 ### Promuovere un componente UI
 

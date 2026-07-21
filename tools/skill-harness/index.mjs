@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, statSync, watch, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync, watch, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
+const realRoot = realpathSync(root);
 const skillsRoot = join(root, "skills");
 const registryPath = join(skillsRoot, "registry.json");
 const requiredHeadings = [
@@ -41,6 +42,35 @@ function frontmatter(content, source) {
   }));
 }
 
+function isOutsideRoot(path) {
+  return isAbsolute(path) || path === ".." || path.startsWith(`..${sep}`);
+}
+
+function repositoryFile(reference, source, kind) {
+  const path = resolve(root, reference);
+  const repositoryPath = relative(root, path);
+  if (isOutsideRoot(repositoryPath)) throw new Error(`${source}: ${kind} fuori dal repository: ${reference}`);
+  if (!existsSync(path) || !statSync(path).isFile()) throw new Error(`${source}: ${kind} inesistente: ${reference}`);
+  if (isOutsideRoot(relative(realRoot, realpathSync(path)))) throw new Error(`${source}: ${kind} risolve fuori dal repository: ${reference}`);
+  return { path, repositoryPath };
+}
+
+function loadReferences(metadata, source) {
+  if (!metadata.references) return [];
+  const seen = new Set();
+  return metadata.references.split(",").map((value) => value.trim()).filter(Boolean).map((reference) => {
+    if (!/\.(md|json)$/i.test(reference)) throw new Error(`${source}: reference non documentale: ${reference}`);
+    const { path, repositoryPath } = repositoryFile(reference, source, "reference");
+    if (seen.has(repositoryPath)) throw new Error(`${source}: reference duplicata: ${reference}`);
+    seen.add(repositoryPath);
+    const content = normalizeText(readFileSync(path, "utf8"));
+    return {
+      path: repositoryPath.replaceAll("\\", "/"),
+      checksum: createHash("sha256").update(content).digest("hex")
+    };
+  });
+}
+
 function loadSkills() {
   const files = walk(skillsRoot).filter((path) => path.endsWith("SKILL.md"));
   if (files.length === 0) throw new Error("Nessuna skill trovata");
@@ -57,6 +87,7 @@ function loadSkills() {
     for (const heading of requiredHeadings) {
       if (!content.includes(heading)) throw new Error(`${relative(root, path)}: sezione mancante ${heading}`);
     }
+    const references = loadReferences(metadata, relative(root, path));
     let catalog = [];
     if (metadata.catalog) {
       const catalogPath = resolve(dirname(path), metadata.catalog);
@@ -68,7 +99,7 @@ function loadSkills() {
         const globalId = `${metadata.area}:${item.id}`;
         if (catalogIds.has(globalId)) throw new Error(`Elemento catalogo duplicato: ${globalId}`);
         catalogIds.add(globalId);
-        if (!existsSync(resolve(root, item.source))) throw new Error(`${relative(root, catalogPath)}: source inesistente ${item.source}`);
+        repositoryFile(item.source, relative(root, catalogPath), "source");
       }
     }
     return {
@@ -78,6 +109,7 @@ function loadSkills() {
       area: metadata.area,
       description: metadata.description,
       path: relative(root, path).replaceAll("\\", "/"),
+      references,
       catalog: metadata.catalog ? relative(root, resolve(dirname(path), metadata.catalog)).replaceAll("\\", "/") : null,
       catalogItems: catalog.map(({ id, name, source }) => ({ id, name, source })),
       checksum: createHash("sha256").update(content).digest("hex")

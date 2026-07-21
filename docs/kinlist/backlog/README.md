@@ -173,6 +173,8 @@ Le frecce continue sono dipendenze `hard`; le tratteggiate indicano coordinament
 | FEAT-012 | `retention-item-completati` | Eliminare gli item completati oltre retention | blocked | 6 | `features/retention-item-completati/feature.md` |
 | FEAT-013 | `cleanup-dati-inattivi` | Eliminare in sicurezza i dati inattivi | blocked | 7 | `features/cleanup-dati-inattivi/feature.md` |
 
+FEAT-001 ha una correzione architetturale pianificata in `features/accesso-instradamento/cr.md`; il piano originario e conservato in `feature.plan.md` e quello correttivo in `cr.plan.md`. Le feature dipendenti non devono copiare il pattern HTTP manuale corrente e seguono invece `docs/architecture/http-functions.md`.
+
 ## Matrice di tracciabilità
 
 | Requisito o vincolo | Feature primaria | Feature di supporto | Criteri che lo verificano |

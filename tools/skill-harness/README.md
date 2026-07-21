@@ -11,3 +11,11 @@ npm run skills:watch
 ```
 
 `build` rigenera il registry deterministico; `validate` fallisce se metadati, sezioni, cataloghi, riferimenti o registry non sono validi.
+
+Una skill puo dichiarare documenti passivi repository-relative nel frontmatter:
+
+```yaml
+references: docs/architecture/http-functions.md, docs/operations/observability.md
+```
+
+L'harness accetta solo documenti Markdown/JSON, rifiuta reference mancanti, duplicate o esterne al repository e ne registra il checksum. Le reference vengono lette come testo e non sono mai importate o eseguite.
