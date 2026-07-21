@@ -20,6 +20,10 @@ const requiredHeadings = [
   "## Changelog"
 ];
 
+function normalizeText(content) {
+  return content.replace(/\r\n/g, "\n");
+}
+
 function walk(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -43,7 +47,7 @@ function loadSkills() {
   const ids = new Set();
   const catalogIds = new Set();
   return files.map((path) => {
-    const content = readFileSync(path, "utf8");
+    const content = normalizeText(readFileSync(path, "utf8"));
     const metadata = frontmatter(content, relative(root, path));
     for (const key of ["id", "name", "version", "area", "description"]) {
       if (!metadata[key]) throw new Error(`${relative(root, path)}: metadato ${key} mancante`);
