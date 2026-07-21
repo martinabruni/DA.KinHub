@@ -85,13 +85,15 @@ public sealed class FunctionContractTests
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:PostgreSql"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
+            ["Database:Mode"] = "ConnectionString",
+            ["Database:ConnectionString"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
             ["Database:ApplyMigrationsOnStartup"] = "false",
             ["Storage:AccountUri"] = "https://kinhubtest.blob.core.windows.net/",
             ["Storage:ContainerName"] = "documents"
         }).Build();
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(new HostingEnvironmentStub(isDevelopment: true));
         services.AddBusiness();
         services.AddInfrastructure(configuration);
 
@@ -102,6 +104,37 @@ public sealed class FunctionContractTests
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Infrastructure.Persistence.KinHubDbContext>());
+    }
+
+    [Fact]
+    public void DatabaseOptionsRejectConnectionStringOutsideDevelopment()
+    {
+        var validator = new DA.KinHub.Infrastructure.Persistence.DatabaseOptionsValidator(new HostingEnvironmentStub(isDevelopment: false));
+
+        var result = validator.Validate(null, new DA.KinHub.Infrastructure.Persistence.DatabaseOptions
+        {
+            Mode = "ConnectionString",
+            ConnectionString = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub"
+        });
+
+        Assert.True(result.Failed);
+    }
+
+    [Fact]
+    public void DatabaseOptionsAcceptManagedIdentityOutsideDevelopment()
+    {
+        var validator = new DA.KinHub.Infrastructure.Persistence.DatabaseOptionsValidator(new HostingEnvironmentStub(isDevelopment: false));
+
+        var result = validator.Validate(null, new DA.KinHub.Infrastructure.Persistence.DatabaseOptions
+        {
+            Mode = "ManagedIdentity",
+            Host = "kinhub.postgres.database.azure.com",
+            DatabaseName = "kinhub",
+            Username = "kinhub-runtime",
+            RequireSsl = true
+        });
+
+        Assert.False(result.Failed);
     }
 
     [Fact]
@@ -158,5 +191,13 @@ public sealed class FunctionContractTests
         public override string Name => entryPoint;
         public override IImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> InputBindings => ImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>.Empty;
         public override IImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata> OutputBindings => ImmutableDictionary<string, Microsoft.Azure.Functions.Worker.BindingMetadata>.Empty;
+    }
+
+    private sealed class HostingEnvironmentStub(bool isDevelopment) : Microsoft.Extensions.Hosting.IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = isDevelopment ? Microsoft.Extensions.Hosting.Environments.Development : Microsoft.Extensions.Hosting.Environments.Production;
+        public string ApplicationName { get; set; } = "KinHub.Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new Microsoft.Extensions.FileProviders.NullFileProvider();
     }
 }

@@ -6,10 +6,11 @@
     "DOTNET_ENVIRONMENT": "Development",
     "KinHub__Environment": "Development",
     "Entra__Enabled": "false",
+    "Database__Mode": "ConnectionString",
     "Database__ApplyMigrationsOnStartup": "false",
+    "Database__ConnectionString": "Host=localhost;Port=5432;Database=kinhub;Username=kinhub;Password=kinhub",
     "Storage__ConnectionString": "UseDevelopmentStorage=true",
     "Storage__ContainerName": "documents",
-    "ConnectionStrings__PostgreSql": "Host=localhost;Port=5432;Database=kinhub;Username=kinhub;Password=kinhub",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": ""
   },
   "Host": {

@@ -1,4 +1,5 @@
 using DA.KinHub.Business.Common;
+using DA.KinHub.Domain.Common;
 using DA.KinHub.Domain.Families;
 using DA.KinHub.Domain.Identity;
 
@@ -28,7 +29,7 @@ public sealed class KinListBootstrapService(
         {
             throw;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (RepositoryUnavailableException exception)
         {
             throw new BusinessDependencyException(BusinessErrorCodes.PostgreSqlUnavailable, "The family context could not be loaded.", exception);
         }

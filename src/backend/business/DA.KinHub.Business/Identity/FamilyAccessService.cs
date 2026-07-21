@@ -1,4 +1,5 @@
 using DA.KinHub.Business.Common;
+using DA.KinHub.Domain.Common;
 using DA.KinHub.Domain.Families;
 using DA.KinHub.Domain.Identity;
 
@@ -27,7 +28,7 @@ public sealed class FamilyAccessService(
                 ? FamilyAccessOutcome.Granted
                 : FamilyAccessOutcome.MembershipInactiveOrMissing;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (RepositoryUnavailableException exception)
         {
             throw new BusinessDependencyException(BusinessErrorCodes.PostgreSqlUnavailable, "The family access check failed.", exception);
         }

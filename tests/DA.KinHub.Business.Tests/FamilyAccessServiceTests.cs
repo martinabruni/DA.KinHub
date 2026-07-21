@@ -1,5 +1,6 @@
 using DA.KinHub.Business.Common;
 using DA.KinHub.Business.Identity;
+using DA.KinHub.Domain.Common;
 using DA.KinHub.Domain.Families;
 using DA.KinHub.Domain.Identity;
 
@@ -38,6 +39,14 @@ public sealed class FamilyAccessServiceTests
         Assert.Equal(BusinessErrorCodes.PostgreSqlUnavailable, exception.Code);
     }
 
+    [Fact]
+    public async Task NonDependencyFailureIsNotRemapped()
+    {
+        var service = new FamilyAccessService(new BuggyApplicationUserRepository(), new StubMembershipRepository(false));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CheckAccessAsync(new ExternalIdentity("https://issuer", Guid.NewGuid()), Guid.NewGuid(), CancellationToken.None));
+    }
+
     private sealed class StubApplicationUserRepository(ApplicationUser? user) : IApplicationUserRepository
     {
         public Task<ApplicationUser?> FindByExternalIdentityAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken) => Task.FromResult(user);
@@ -47,9 +56,16 @@ public sealed class FamilyAccessServiceTests
 
     private sealed class ThrowingApplicationUserRepository : IApplicationUserRepository
     {
-        public Task<ApplicationUser?> FindByExternalIdentityAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken) => throw new InvalidOperationException("db down");
+        public Task<ApplicationUser?> FindByExternalIdentityAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken) => throw new RepositoryUnavailableException("db down");
 
-        public Task<ApplicationUser> GetOrCreateAsync(ExternalIdentity externalIdentity, DateTimeOffset createdAt, CancellationToken cancellationToken) => throw new InvalidOperationException("db down");
+        public Task<ApplicationUser> GetOrCreateAsync(ExternalIdentity externalIdentity, DateTimeOffset createdAt, CancellationToken cancellationToken) => throw new RepositoryUnavailableException("db down");
+    }
+
+    private sealed class BuggyApplicationUserRepository : IApplicationUserRepository
+    {
+        public Task<ApplicationUser?> FindByExternalIdentityAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken) => throw new InvalidOperationException("bug");
+
+        public Task<ApplicationUser> GetOrCreateAsync(ExternalIdentity externalIdentity, DateTimeOffset createdAt, CancellationToken cancellationToken) => throw new InvalidOperationException("bug");
     }
 
     private sealed class StubMembershipRepository(bool hasAccess) : IFamilyMembershipRepository
