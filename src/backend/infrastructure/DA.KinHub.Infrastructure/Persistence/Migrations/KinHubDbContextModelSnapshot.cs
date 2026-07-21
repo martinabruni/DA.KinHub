@@ -112,36 +112,6 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
                     b.ToTable("application_users", "shared");
                 });
 
-            modelBuilder.Entity("DA.KinHub.Domain.Projects.FamilyProject", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Stage")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasColumnName("stage");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("family_projects", (string)null);
-                });
-
             modelBuilder.Entity("DA.KinHub.Domain.Families.FamilyMembership", b =>
                 {
                     b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
