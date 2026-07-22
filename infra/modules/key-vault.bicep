@@ -2,9 +2,9 @@ param name string
 param location string
 param tags object = {}
 param enablePurgeProtection bool = false
-param secretName string
+param secretName string = ''
 @secure()
-param secretValue string
+param secretValue string = ''
 
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: name
@@ -22,7 +22,7 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-resource secret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource secret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(secretName)) {
   parent: vault
   name: secretName
   properties: {

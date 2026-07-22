@@ -12,7 +12,8 @@ permissions:
 
 env:
   BUILD_ENVIRONMENT: Development
-  POSTGRES_MIGRATION_CONNECTION_STRING: ${{ secrets.POSTGRES_MIGRATION_CONNECTION_STRING }}
+  POSTGRES_RUNTIME_USERNAME: kinhub_app
+  POSTGRES_MIGRATION_USERNAME: kinhub_migrator
 
 jobs:
   deploy:
@@ -40,6 +41,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Resolve PostgreSQL Entra administrator
+        id: postgres_admin
+        shell: bash
+        run: |
+          principal=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query '{displayName:displayName,id:id}' --output json)
+          echo "name=$(jq -r '.displayName' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
+          echo "object_id=$(jq -r '.id' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
+
       - name: Validate infrastructure
         shell: bash
         run: |
@@ -48,12 +57,15 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file infra/app.bicep \
             --parameters infra/main.dev.bicepparam \
-            --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-                         postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
-                         entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
-                         entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                         entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
-            --only-show-errors --output none
+             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
+                          postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+                          entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                          entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                          entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+                          postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
+                          postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
+                          postgresEntraAdministratorPrincipalType="ServicePrincipal" \
+             --only-show-errors --output none
 
       - name: Deploy infrastructure
         id: infra
@@ -64,16 +76,23 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file infra/app.bicep \
             --parameters infra/main.dev.bicepparam \
-            --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-                         postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
-                         entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
-                         entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                         entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
-            --query properties.outputs --only-show-errors --output json)
+             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
+                          postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+                          entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                          entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                          entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+                          postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
+                          postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
+                          postgresEntraAdministratorPrincipalType="ServicePrincipal" \
+             --query properties.outputs --only-show-errors --output json)
           echo "function_app_name=$(jq -r '.functionAppName.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
           echo "function_hostname=$(jq -r '.functionAppHostname.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "function_principal_id=$(jq -r '.functionAppPrincipalId.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
           echo "static_web_app_name=$(jq -r '.staticWebAppName.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
           echo "static_web_app_hostname=$(jq -r '.staticWebAppHostname.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "postgres_server_name=$(jq -r '.postgresServerName.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "postgres_fqdn=$(jq -r '.postgresServerFqdn.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
+          echo "postgres_db_name=$(jq -r '.postgresDatabaseName.value' <<< "$outputs")" >> "$GITHUB_OUTPUT"
 
       - name: Build and test backend
         run: |
@@ -87,9 +106,84 @@ jobs:
           mkdir -p artifacts/migrations
           dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+
+      - name: Open temporary PostgreSQL firewall rule
+        id: postgres_firewall
+        shell: bash
+        run: |
+          runner_ip=$(curl --silent https://ifconfig.me)
+          rule_name="gha-${GITHUB_RUN_ID}"
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.infra.outputs.postgres_server_name }}" \
+            --rule-name "$rule_name" \
+            --start-ip-address "$runner_ip" \
+            --end-ip-address "$runner_ip" \
+            --only-show-errors --output none
+          echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
+
+      - name: Provision database principals
+        shell: bash
+        env:
+          POSTGRES_ADMIN_USERNAME: ${{ steps.postgres_admin.outputs.name }}
+          POSTGRES_ADMIN_OBJECT_ID: ${{ steps.postgres_admin.outputs.object_id }}
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          export PGPASSWORD="$token"
+          psql \
+            --host "${{ steps.infra.outputs.postgres_fqdn }}" \
+            --dbname postgres \
+            --username "$POSTGRES_ADMIN_USERNAME" \
+            --set ON_ERROR_STOP=1 <<SQL
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_RUNTIME_USERNAME }}') THEN
+              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_RUNTIME_USERNAME }}', '${{ steps.infra.outputs.function_principal_id }}', 'service', false, false);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_MIGRATION_USERNAME }}') THEN
+              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_MIGRATION_USERNAME }}', '$POSTGRES_ADMIN_OBJECT_ID', 'service', true, false);
+            END IF;
+          END
+          $$;
+          SQL
+
       - name: Apply database migrations
-        if: env.POSTGRES_MIGRATION_CONNECTION_STRING != ''
-        run: artifacts/migrations/kinhub-migrations --connection "$POSTGRES_MIGRATION_CONNECTION_STRING"
+        shell: bash
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          artifacts/migrations/kinhub-migrations --connection "Host=${{ steps.infra.outputs.postgres_fqdn }};Port=5432;Database=${{ steps.infra.outputs.postgres_db_name }};Username=${{ env.POSTGRES_MIGRATION_USERNAME }};Password=${token};SSL Mode=Require;Trust Server Certificate=false"
+
+      - name: Grant runtime database privileges
+        shell: bash
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          export PGPASSWORD="$token"
+          psql \
+            --host "${{ steps.infra.outputs.postgres_fqdn }}" \
+            --dbname "${{ steps.infra.outputs.postgres_db_name }}" \
+            --username "${{ env.POSTGRES_MIGRATION_USERNAME }}" \
+            --set ON_ERROR_STOP=1 <<SQL
+          GRANT CONNECT ON DATABASE "${{ steps.infra.outputs.postgres_db_name }}" TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          GRANT USAGE ON SCHEMA shared TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA shared TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA shared TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          ALTER DEFAULT PRIVILEGES FOR ROLE "${{ env.POSTGRES_MIGRATION_USERNAME }}" IN SCHEMA shared
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          ALTER DEFAULT PRIVILEGES FOR ROLE "${{ env.POSTGRES_MIGRATION_USERNAME }}" IN SCHEMA shared
+            GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          SQL
+
+      - name: Close temporary PostgreSQL firewall rule
+        if: always() && steps.postgres_firewall.outputs.rule_name != ''
+        shell: bash
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.infra.outputs.postgres_server_name }}" \
+            --rule-name "${{ steps.postgres_firewall.outputs.rule_name }}" \
+            --yes --only-show-errors
 
       - name: Package backend
         id: package
@@ -111,6 +205,9 @@ jobs:
       - name: Install and validate frontend
         run: |
           npm ci --prefix src/frontend
+          npm run --prefix src/frontend test
+          npm run --prefix src/frontend lint
+          npm run --prefix src/frontend typecheck
           npm run skills:validate
           npm run docs:validate
           npm run release:validate

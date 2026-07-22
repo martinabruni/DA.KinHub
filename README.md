@@ -6,7 +6,7 @@ Versione corrente: `0.1.0`. Lingua predefinita: italiano; lingua supportata e fa
 
 ## Funzionalità iniziali
 
-- Dashboard e area Progetti con creazione/elenco.
+- Dashboard, accesso KinList post-login e shell pubblica offline senza dati personali.
 - Microsoft Entra External ID con MSAL e API JWT bearer.
 - Help contestuale obbligatorio e guide Markdown visibili nel sito.
 - Tutorial iniziale versionato, riavviabile e accessibile.
@@ -88,6 +88,7 @@ Endpoint: `GET /health/live`, `GET /health/ready`, `GET /api/version`, `GET /api
 ```bash
 cd src/frontend
 npm install
+npm run test
 npm run dev
 ```
 
@@ -106,6 +107,7 @@ npm run release:validate
 
 cd src/frontend
 npm ci
+npm run test
 npm run lint
 npm run typecheck
 npm run i18n:validate
@@ -188,7 +190,7 @@ Il frontend usa popup con selezione account; il backend convalida JWT e scope. N
 
 - piano `FC1/FlexConsumption` dedicato e Function App Linux .NET 10 isolated;
 - Storage LRS e container One Deploy privato;
-- PostgreSQL Flexible Server Burstable `Standard_B1ms`, 32 GiB;
+- PostgreSQL Flexible Server Burstable `Standard_B1ms`, 32 GiB, con Microsoft Entra admin e autenticazione passwordless per runtime/migration;
 - Key Vault RBAC, Application Insights e Log Analytics;
 - Static Web Apps Free con location fissata nel modulo a `westeurope`.
 
@@ -207,8 +209,8 @@ Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, loc
 ## CI/CD
 
 - `pr-quality.yml`: qualità completa, package e Bicep; nessun deploy.
-- `deploy-infrastructure.yml`: tag `infra-*`; Bicep completo, migration, One Deploy, frontend e smoke test.
-- `deploy-code.yml`: push `main`; build/test/validatori, migration opzionale, One Deploy e Static Web Apps, senza modifiche infrastrutturali.
+- `deploy-infrastructure.yml`: tag `infra-*`; Bicep completo, provisioning principal PostgreSQL Entra, migration bundle con token, One Deploy, frontend e smoke test.
+- `deploy-code.yml`: push `main`; build/test/validatori, riallineamento principal PostgreSQL Entra, migration bundle con token, One Deploy e Static Web Apps, senza modifiche infrastrutturali.
 
 Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il token dedicato del servizio. Il publish profile Function è solo fallback opzionale e non è usato dal percorso primario.
 
@@ -220,9 +222,8 @@ Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il toke
 | `AZURE_TENANT_ID` | tenant Azure | configurazione manuale |
 | `AZURE_SUBSCRIPTION_ID` | subscription target | configurazione manuale |
 | `AZURE_STATIC_WEB_APPS_API_TOKEN` | deploy frontend | generato da Static Web Apps |
-| `POSTGRES_ADMIN_USERNAME` | amministratore deployment DB | scelto manualmente; secret per semplicità |
-| `POSTGRES_ADMIN_PASSWORD` | password amministratore DB | generata e conservata come secret |
-| `POSTGRES_MIGRATION_CONNECTION_STRING` | esecuzione migration da runner, opzionale per ambiente | configurata manualmente con accesso di rete controllato |
+| `POSTGRES_ADMIN_USERNAME` | bootstrap del server PostgreSQL Flexible Server | scelto manualmente; usato solo in provisioning infrastrutturale |
+| `POSTGRES_ADMIN_PASSWORD` | bootstrap del server PostgreSQL Flexible Server | generata e conservata come secret; non usata dal runtime applicativo |
 | `ENTRA_FRONTEND_CLIENT_ID` | build SPA | app registration frontend |
 | `ENTRA_BACKEND_AUDIENCE` | API audience | app registration API |
 | `ENTRA_API_SCOPE` | scope completo | app registration API |
@@ -252,7 +253,6 @@ gh secret set AZURE_SUBSCRIPTION_ID --body "<VALUE>"
 gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_USERNAME --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_PASSWORD --body "<VALUE>"
-gh secret set POSTGRES_MIGRATION_CONNECTION_STRING --body "<VALUE>"
 gh secret set ENTRA_FRONTEND_CLIENT_ID --body "<VALUE>"
 gh secret set ENTRA_BACKEND_AUDIENCE --body "<VALUE>"
 gh secret set ENTRA_API_SCOPE --body "<VALUE>"
@@ -269,12 +269,12 @@ gh variable set BUILD_ENVIRONMENT --body "Development"
 
 Flex scala a zero e non usa always-ready in dev. PostgreSQL Burstable è il costo persistente principale e può essere arrestato quando non usato. Mantieni startup leggero e telemetria campionata.
 
-- Startup fallisce: controlla `DOTNET_ENVIRONMENT`, placeholder Entra e connection string.
+- Startup fallisce: controlla `DOTNET_ENVIRONMENT`, placeholder Entra e impostazioni `Database__Mode`/`Database__Host`/`Database__Username`.
 - `host.json` non trovato: ricrea il package con lo script e non zippare la cartella padre.
 - Storage 403: verifica managed identity, ruolo Blob Data Owner, container privato e propagazione RBAC.
 - Function non scala/provisiona: verifica `italynorth`, quota Flex e registrazione provider.
 - Frontend su F5 restituisce 404: verifica che `staticwebapp.config.json` sia nel `dist`.
-- Readiness 503: controlla PostgreSQL, Key Vault reference e migration.
+- Readiness 503: controlla PostgreSQL, principal Entra, grant runtime e migration.
 
 ## Passaggi manuali
 

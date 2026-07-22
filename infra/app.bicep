@@ -20,6 +20,10 @@ param deploymentBlobContainerName string = 'function-packages'
 param entraTenantId string
 param entraBackendAudience string
 param entraApiScope string
+param postgresEntraAdministratorName string
+param postgresEntraAdministratorObjectId string
+@allowed(['User', 'Group', 'ServicePrincipal'])
+param postgresEntraAdministratorPrincipalType string = 'ServicePrincipal'
 param postgresAdminUsername string
 @secure()
 param postgresAdminPassword string
@@ -38,7 +42,7 @@ var baseName = '${namingPrefix}-${environmentName}-${token}'
 var storageName = take(replace('${namingPrefix}${environmentName}${token}', '-', ''), 24)
 var keyVaultName = take('${namingPrefix}-${environmentName}-${token}', 24)
 var postgresName = take('${baseName}-pg', 63)
-var postgresSecretName = 'postgres-connection-string'
+var postgresRuntimeUsername = 'kinhub_app'
 
 module storage './modules/storage.bicep' = {
   name: 'storage'
@@ -67,6 +71,10 @@ module postgres './modules/postgres.bicep' = {
     databaseName: 'kinhub'
     location: location
     tags: tags
+    entraTenantId: entraTenantId
+    entraAdministratorPrincipalName: postgresEntraAdministratorName
+    entraAdministratorObjectId: postgresEntraAdministratorObjectId
+    entraAdministratorPrincipalType: postgresEntraAdministratorPrincipalType
     administratorLogin: postgresAdminUsername
     administratorPassword: postgresAdminPassword
   }
@@ -79,8 +87,6 @@ module keyVault './modules/key-vault.bicep' = {
     location: location
     tags: tags
     enablePurgeProtection: enablePurgeProtection
-    secretName: postgresSecretName
-    secretValue: 'Host=${postgres.outputs.fqdn};Port=5432;Database=${postgres.outputs.databaseName};Username=${postgresAdminUsername};Password=${postgresAdminPassword};SSL Mode=Require;Trust Server Certificate=false'
   }
 }
 
@@ -105,12 +111,13 @@ module functionApp './modules/function-app-flex.bicep' = {
     applicationContainerName: storage.outputs.applicationContainerName
     applicationInsightsName: observability.outputs.applicationInsightsName
     applicationInsightsConnectionString: observability.outputs.applicationInsightsConnectionString
-    keyVaultName: keyVault.outputs.name
-    postgresSecretName: keyVault.outputs.createdSecretName
     entraTenantId: entraTenantId
     entraBackendAudience: entraBackendAudience
     entraApiScope: entraApiScope
     environmentName: environmentName
+    postgresHost: postgres.outputs.fqdn
+    postgresDatabaseName: postgres.outputs.databaseName
+    postgresRuntimeUsername: postgresRuntimeUsername
     allowedOrigins: union(allowedOrigins, ['https://${staticWebApp.outputs.defaultHostname}'])
     enableVnetIntegration: enableVnetIntegration
     virtualNetworkSubnetResourceId: virtualNetworkSubnetResourceId
@@ -128,6 +135,7 @@ module staticWebApp './modules/static-web-app.bicep' = {
 output functionAppName string = functionApp.outputs.name
 output functionAppId string = functionApp.outputs.id
 output functionAppHostname string = functionApp.outputs.hostname
+output functionAppPrincipalId string = functionApp.outputs.principalId
 output functionPlanId string = functionApp.outputs.planId
 output storageAccountName string = storage.outputs.name
 output storageAccountId string = storage.outputs.id
@@ -136,4 +144,6 @@ output deploymentContainerUri string = storage.outputs.deploymentContainerUri
 output staticWebAppName string = staticWebApp.outputs.name
 output staticWebAppHostname string = staticWebApp.outputs.defaultHostname
 output postgresServerName string = postgres.outputs.name
+output postgresServerFqdn string = postgres.outputs.fqdn
+output postgresDatabaseName string = postgres.outputs.databaseName
 output keyVaultName string = keyVault.outputs.name

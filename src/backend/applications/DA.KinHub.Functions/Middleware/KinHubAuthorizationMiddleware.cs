@@ -1,6 +1,7 @@
 using DA.KinHub.Domain.Identity;
 using DA.KinHub.Functions.Configuration;
 using DA.KinHub.Functions.Http;
+using DA.KinHub.Functions.Observability;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ public sealed class KinHubAuthorizationMiddleware(
     IAuthorizationService authorizationService,
     ExternalIdentityClaimsResolver externalIdentityClaimsResolver,
     IOptions<EntraOptions> entraOptions,
+    KinListTelemetry telemetry,
     ApiProblemDetailsFactory problemDetailsFactory) : IFunctionsWorkerMiddleware
 {
     public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
@@ -38,6 +40,7 @@ public sealed class KinHubAuthorizationMiddleware(
 
         if (!entraOptions.Value.Enabled)
         {
+            telemetry.RecordSignal(KinListOperations.ApiAccess, "auth.required", "authentication");
             ShortCircuit(context, httpContext, StatusCodes.Status401Unauthorized, "Unauthorized", "Authentication must be enabled to access KinHub APIs.", "auth.required");
             return;
         }
@@ -45,6 +48,7 @@ public sealed class KinHubAuthorizationMiddleware(
         var authentication = await authenticationService.AuthenticateAsync(httpContext);
         if (!authentication.Succeeded || authentication.Principal is null)
         {
+            telemetry.RecordSignal(KinListOperations.ApiAccess, "auth.required", "authentication");
             ShortCircuit(context, httpContext, StatusCodes.Status401Unauthorized, "Unauthorized", "A valid KinHub API token is required.", "auth.required");
             return;
         }
@@ -54,12 +58,14 @@ public sealed class KinHubAuthorizationMiddleware(
         var apiAccess = await authorizationService.AuthorizeAsync(httpContext.User, resource: null, SecurityConstants.ApiAccessPolicy);
         if (!apiAccess.Succeeded)
         {
+            telemetry.RecordSignal(KinListOperations.ApiAccess, "auth.scopeRequired", "authorization");
             ShortCircuit(context, httpContext, StatusCodes.Status403Forbidden, "Forbidden", "The signed-in user does not have the required API scope.", "auth.scopeRequired");
             return;
         }
 
         if (!externalIdentityClaimsResolver.TryResolve(httpContext.User, out var externalIdentity))
         {
+            telemetry.RecordSignal(KinListOperations.ApiAccess, "auth.requiredClaims", "identity");
             ShortCircuit(context, httpContext, StatusCodes.Status401Unauthorized, "Unauthorized", "The token is missing required KinHub identity claims.", "auth.requiredClaims");
             return;
         }
@@ -70,6 +76,12 @@ public sealed class KinHubAuthorizationMiddleware(
             var familyIdOutcome = TryResolveFamilyId(httpContext.Request, out familyId);
             if (familyIdOutcome is ObjectResult problem)
             {
+                var outcome = problem.Value is ProblemDetails details
+                    && details.Extensions.TryGetValue(ApiProblemDetailsExtensions.Code, out var code)
+                    && code is string problemCode
+                    ? problemCode
+                    : "family.invalid";
+                telemetry.RecordSignal(KinListOperations.FamilyAuthorization, outcome, "validation");
                 context.GetInvocationResult().Value = problem;
                 return;
             }
@@ -81,6 +93,7 @@ public sealed class KinHubAuthorizationMiddleware(
 
             if (!authorized.Succeeded)
             {
+                telemetry.RecordSignal(KinListOperations.FamilyAuthorization, "family.accessDenied", "authorization");
                 ShortCircuit(context, httpContext, StatusCodes.Status403Forbidden, "Forbidden", "Access is not allowed.", "family.accessDenied");
                 return;
             }

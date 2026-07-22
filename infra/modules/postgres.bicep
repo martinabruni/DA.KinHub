@@ -2,6 +2,15 @@ param name string
 param databaseName string = 'kinhub'
 param location string
 param tags object = {}
+param entraTenantId string
+param entraAdministratorPrincipalName string
+param entraAdministratorObjectId string
+@allowed([
+  'User'
+  'Group'
+  'ServicePrincipal'
+])
+param entraAdministratorPrincipalType string = 'ServicePrincipal'
 param administratorLogin string
 @secure()
 param administratorPassword string
@@ -31,9 +40,20 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     highAvailability: { mode: 'Disabled' }
     network: { publicNetworkAccess: 'Enabled' }
     authConfig: {
-      activeDirectoryAuth: 'Disabled'
-      passwordAuth: 'Enabled'
+      activeDirectoryAuth: 'Enabled'
+      passwordAuth: 'Disabled'
+      tenantId: entraTenantId
     }
+  }
+}
+
+resource entraAdministrator 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
+  parent: server
+  name: entraAdministratorObjectId
+  properties: {
+    principalName: entraAdministratorPrincipalName
+    principalType: entraAdministratorPrincipalType
+    tenantId: entraTenantId
   }
 }
 
@@ -53,3 +73,4 @@ output id string = server.id
 output name string = server.name
 output fqdn string = server.properties.fullyQualifiedDomainName
 output databaseName string = database.name
+output entraAdministratorName string = entraAdministrator.properties.principalName

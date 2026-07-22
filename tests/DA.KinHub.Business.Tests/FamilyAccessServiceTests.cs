@@ -30,6 +30,18 @@ public sealed class FamilyAccessServiceTests
     }
 
     [Fact]
+    public async Task InactiveUserIsReported()
+    {
+        var user = ApplicationUser.Create(new ExternalIdentity("https://issuer", Guid.NewGuid()), DateTimeOffset.UtcNow);
+        user.Deactivate(DateTimeOffset.UtcNow.AddMinutes(1));
+        var service = new FamilyAccessService(new StubApplicationUserRepository(user), new StubMembershipRepository(true));
+
+        var result = await service.CheckAccessAsync(user.ExternalIdentity, Guid.NewGuid(), CancellationToken.None);
+
+        Assert.Equal(FamilyAccessOutcome.ProfileInactive, result);
+    }
+
+    [Fact]
     public async Task RepositoryFailureBecomesDependencyError()
     {
         var service = new FamilyAccessService(new ThrowingApplicationUserRepository(), new StubMembershipRepository(false));

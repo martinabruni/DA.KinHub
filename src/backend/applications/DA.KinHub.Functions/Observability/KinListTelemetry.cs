@@ -8,6 +8,7 @@ public sealed class KinListTelemetry : IDisposable
 {
     private readonly Meter meter;
     private readonly Counter<long> outcomeCounter;
+    private readonly Counter<long> signalCounter;
     private readonly Histogram<double> durationHistogram;
     private readonly ActivitySource activitySource = new("KinHub.KinList");
 
@@ -15,10 +16,24 @@ public sealed class KinListTelemetry : IDisposable
     {
         meter = new Meter("KinHub.KinList", buildInfoProvider.Get().Version);
         outcomeCounter = meter.CreateCounter<long>("kinlist.outcomes");
+        signalCounter = meter.CreateCounter<long>("kinlist.signals");
         durationHistogram = meter.CreateHistogram<double>("kinlist.duration.ms");
     }
 
     public OperationScope Begin(string operation) => new(operation, activitySource, outcomeCounter, durationHistogram);
+
+    public void RecordSignal(string operation, string outcome, string? errorCategory = null)
+    {
+        var tags = CreateTags(operation, outcome, errorCategory);
+        Activity.Current?.SetTag("operation", operation);
+        Activity.Current?.SetTag("outcome", outcome);
+        if (!string.IsNullOrWhiteSpace(errorCategory))
+        {
+            Activity.Current?.SetTag("errorCategory", errorCategory);
+        }
+
+        signalCounter.Add(1, tags);
+    }
 
     public void Dispose()
     {
@@ -66,12 +81,23 @@ public sealed class KinListTelemetry : IDisposable
 
         private void Record(string outcome, ActivityStatusCode status)
         {
-            var tags = new TagList { { "operation", operation }, { "outcome", outcome } };
+            var tags = CreateTags(operation, outcome, errorCategory: null);
             activity?.SetStatus(status);
             activity?.SetTag("operation", operation);
             activity?.SetTag("outcome", outcome);
             outcomeCounter.Add(1, tags);
             durationHistogram.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
         }
+    }
+
+    private static TagList CreateTags(string operation, string outcome, string? errorCategory)
+    {
+        var tags = new TagList { { "operation", operation }, { "outcome", outcome } };
+        if (!string.IsNullOrWhiteSpace(errorCategory))
+        {
+            tags.Add("errorCategory", errorCategory);
+        }
+
+        return tags;
     }
 }

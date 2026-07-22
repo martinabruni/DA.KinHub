@@ -51,6 +51,7 @@ jobs:
 
       - name: Lint, typecheck and build frontend
         run: |
+          npm run --prefix src/frontend test
           npm run --prefix src/frontend lint
           npm run --prefix src/frontend typecheck
           npm run --prefix src/frontend build

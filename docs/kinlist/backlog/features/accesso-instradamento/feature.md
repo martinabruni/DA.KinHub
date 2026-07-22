@@ -47,8 +47,8 @@ Nessuna.
 
 | ID | Stato | Impatto | Evidenza per chiudere |
 |---|---|---|---|
-| TECH-001 | open | Conferma claim e configurazione token senza cambiare il contratto approvato | Test token validi/mancanti e configurazione audience/scope |
-| TECH-002 | open | Determina il percorso di migrazione infrastrutturale e i principal, non il comportamento prodotto | Inventario, preflight identity-based e rollback documentato |
+| TECH-001 | closed | Claim canonici e configurazione token confermati senza cambiare il contratto approvato | `docs/operations/entra-external-id.md`, test claim mancanti e configurazione audience/scope |
+| TECH-002 | closed | Percorso infrastrutturale identity-based e principal PostgreSQL definiti e automatizzati | `docs/operations/database-migrations.md`, `docs/operations/azure-deployment.md`, workflow OIDC con principal/grant e rollback documentato |
 
 ### Parallelismo consentito
 
