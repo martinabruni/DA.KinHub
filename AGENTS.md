@@ -166,6 +166,8 @@ npm run skills:build
 npm run skills:watch
 ```
 
+Per ogni richiesta di implementazione di una feature esegui anche `npm run skills:read -- implementation` prima di modificare il codice.
+
 Il frontmatter di una skill puo dichiarare `references` come elenco separato da virgole di documenti Markdown/JSON repository-relative. L'harness verifica formato, esistenza, confine nel repository e checksum e li include nel registry; le reference sono passive e non vengono eseguite.
 
 ### Promuovere un componente UI
@@ -185,6 +187,16 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 4. Registra il servizio in `skills/backend/catalog.json` e aggiorna `SKILL.md`.
 5. Rigenera registry, aggiungi fragment e verifica coerenza di questo file.
 
+## Esecuzione autonoma delle feature
+
+- Dopo l'avvio dell'implementazione non fermarti finche la Definition of Done applicabile non e verificata, la documentazione non e aggiornata e build, test, lint e validatori applicabili non passano.
+- Un errore di compilazione, test, lint, validazione, packaging o documentazione non e un motivo per fermarsi: diagnosticalo, correggilo e ripeti la verifica.
+- Puoi interrompere il lavoro solo quando l'utilizzo del contesto raggiunge o supera il 35% oppure quando serve davvero human in the loop, per esempio una decisione di prodotto non deducibile, un'approvazione obbligatoria, credenziali o un'azione esterna riservata all'utente.
+- Prima di una di queste interruzioni aggiorna `implementation-progress.md` nella cartella della feature. Usa il formato della skill `implementation`, registra stato, decisioni, file modificati, verifiche con esito, lavoro residuo, blocco e prima azione di ripresa; non inserire secret o PII.
+- Alla ripresa leggi per primo `implementation-progress.md`, verifica lo stato reale del worktree e continua dalla prima azione incompleta. Rimuovi il file quando la feature e conclusa: non deve restare nella consegna finale.
+- Quando tutte le verifiche applicabili passano, controlla diff e stato Git, crea un commit con le sole modifiche della feature, esegui il push del branch e apri una pull request verso `main`.
+- Non eseguire mai il merge di una pull request. Se commit, push o apertura della PR richiedono credenziali o autorizzazioni umane, trattali come human in the loop e salva prima il checkpoint.
+
 ## Sicurezza
 
 - Mai tenant, client ID, subscription secret, password, token o connection string reali in Git.
@@ -198,7 +210,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 ## Test e qualità
 
 - Backend: xUnit copre invarianti dominio, business, endpoint metadata, DI, Problem Details e configurazione critica.
-- Frontend: niente suite completa iniziale; obbligatori lint, typecheck, build, parità i18n e route help.
+- Frontend: test mirati, lint, typecheck, build, parità i18n e route help sono obbligatori.
 - Tool: validate skill, docs, fragment e registry generati.
 - Infra: `az bicep build` e, con contesto Azure, `az deployment group validate`.
 - Non dichiarare passata una verifica non eseguita.
@@ -206,7 +218,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 ## CI/CD
 
 - `pr-quality.yml`: restore/build/test/publish/package, frontend, tool e Bicep; nessun deploy.
-- `deploy-infrastructure.yml`: tag `infra-*`, deploy Bicep, migration controllata, One Deploy, Static Web Apps e smoke test.
+- `deploy-infrastructure.yml`: tag `infra-*`, deploy Bicep, principal PostgreSQL Entra, migration bundle con token identity-based, One Deploy, Static Web Apps e smoke test.
 - `deploy-code.yml`: push `main`, solo operazioni applicative; non modifica memoria/scala/concorrenza.
 - Parametri Flex restano in Bicep/bicepparam; GitHub Variable contiene solo il nome Function App necessario al deploy.
 - Non stampare secret o output sensibili nei log.
@@ -227,6 +239,7 @@ func start
 cd src/frontend
 npm ci
 npm run dev
+npm run test
 npm run lint
 npm run typecheck
 npm run build

@@ -11,7 +11,7 @@
         "locale": "it",
         "title": "Primi passi",
         "description": "Orientarsi in KinHub, personalizzare l'esperienza e capire come evolve la piattaforma.",
-        "content": "## Navigazione\r\n\r\nIl menu superiore porta a Home, KinList, Note di rilascio, Versione e Impostazioni. Su schermi piccoli le icone mantengono le stesse destinazioni.\n\r\n## Lingua e tema\r\n\r\nScegli italiano o inglese e tema chiaro, scuro o di sistema. Le scelte restano su questo dispositivo e vengono applicate prima del rendering per evitare lampeggi del tema errato.\r\n\r\n## Guida contestuale\r\n\r\nSubito dopo il titolo di ogni pagina trovi un pannello chiuso per impostazione predefinita. Aprilo per vedere scopo, azioni, prerequisiti, campi e limiti, oppure segui il link alla guida completa.\r\n\r\n## Tutorial e ciclo di vita\r\n\r\nIl tutorial parte al primo avvio, può essere saltato e riavviato da Impostazioni. Versione e Note di rilascio mostrano l'evoluzione di KinHub: ogni funzionalità viene accompagnata da traduzioni, documentazione, test e patch note.",
+        "content": "## Navigazione\r\n\r\nIl menu superiore porta a Home, KinList, Note di rilascio, Versione e Impostazioni. Su schermi piccoli le icone mantengono le stesse destinazioni.\r\n\r\n## Lingua e tema\r\n\r\nScegli italiano o inglese e tema chiaro, scuro o di sistema. Le scelte restano su questo dispositivo e vengono applicate prima del rendering per evitare lampeggi del tema errato.\r\n\r\n## Guida contestuale\r\n\r\nSubito dopo il titolo di ogni pagina trovi un pannello chiuso per impostazione predefinita. Aprilo per vedere scopo, azioni, prerequisiti, campi e limiti, oppure segui il link alla guida completa.\r\n\r\n## Tutorial e ciclo di vita\r\n\r\nIl tutorial parte al primo avvio, può essere saltato e riavviato da Impostazioni. Versione e Note di rilascio mostrano l'evoluzione di KinHub: ogni funzionalità viene accompagnata da traduzioni, documentazione, test e patch note.",
         "source": "docs/user-guide/it/getting-started.md"
       },
       {
@@ -19,7 +19,7 @@
         "locale": "it",
         "title": "KinList",
         "description": "Verifica del percorso corretto dopo il login, onboarding obbligatorio e shell offline sicura.",
-        "content": "## Cosa succede dopo il login\n\nKinList verifica sempre in modo autorevole se il tuo profilo ha una membership familiare attiva. Se la verifica trova una famiglia attiva, la PWA ti porta nell'area KinList. Se la famiglia manca oppure la membership non e attiva, vedi solo l'onboarding con le azioni **Crea una famiglia** e **Unisciti con un codice**.\n\n## Cosa non viene mostrato\n\nQuando non esiste una membership attiva, KinHub non mostra nome famiglia, membri, lista o altri dati condivisi. Anche l'accesso negato resta distinto da uno stato vuoto.\n\n## Offline e privacy\n\nOffline resta disponibile solo la shell pubblica della PWA. KinList non conserva dati personali in cache, non esegue richieste API autenticate e non accoda operazioni remote.\n\n## Stato attuale della feature\n\nQuesta slice introduce accesso, bootstrap e autorizzazione `Family`. Creazione famiglia, join e lista condivisa arriveranno nelle feature successive del backlog KinList.",
+        "content": "## Cosa succede dopo il login\r\n\r\nKinList verifica sempre in modo autorevole se il tuo profilo ha una membership familiare attiva. Se la verifica trova una famiglia attiva, la PWA ti porta nell'area KinList. Se la famiglia manca oppure la membership non e attiva, vedi solo l'onboarding con le azioni **Crea una famiglia** e **Unisciti con un codice**.\r\n\r\n## Cosa non viene mostrato\r\n\r\nQuando non esiste una membership attiva, KinHub non mostra nome famiglia, membri, lista o altri dati condivisi. Anche l'accesso negato resta distinto da uno stato vuoto.\r\n\r\n## Offline e privacy\r\n\r\nOffline resta disponibile solo la shell pubblica della PWA. KinList non conserva dati personali in cache, non esegue richieste API autenticate e non accoda operazioni remote.\r\n\r\n## Stato attuale della feature\r\n\r\nQuesta slice introduce accesso, bootstrap e autorizzazione `Family`. Creazione famiglia, join e lista condivisa arriveranno nelle feature successive del backlog KinList.",
         "source": "docs/user-guide/it/kinlist.md"
       },
       {
@@ -27,7 +27,7 @@
         "locale": "it",
         "title": "Progetti familiari",
         "description": "Creare e consultare iniziative condivise in KinHub.",
-        "content": "## Creare un progetto\r\n\r\nInserisci un nome da 3 a 120 caratteri e seleziona **Crea**. Il nome viene normalizzato e deve essere univoco. Errori di validazione vengono mostrati senza perdere il contenuto del modulo.\r\n\r\n## Fasi\r\n\r\nUn progetto nasce in Discovery e può avanzare verso Planning, Delivery e Completed. Il dominio impedisce regressioni accidentali.\r\n\r\n## Accesso e limiti\r\n\r\nQuando Microsoft Entra External ID è configurato, l'area richiede l'accesso e lo scope API. In sviluppo locale l'autenticazione può essere disabilitata. La versione iniziale offre creazione ed elenco; modifica e archiviazione arriveranno tramite feature versionate.",
+        "content": "## Creare un progetto\n\nInserisci un nome da 3 a 120 caratteri e seleziona **Crea**. Il nome viene normalizzato e deve essere univoco. Errori di validazione vengono mostrati senza perdere il contenuto del modulo.\n\n## Fasi\n\nUn progetto nasce in Discovery e può avanzare verso Planning, Delivery e Completed. Il dominio impedisce regressioni accidentali.\n\n## Accesso e limiti\n\nQuando Microsoft Entra External ID è configurato, l'area richiede l'accesso e lo scope API. In sviluppo locale l'autenticazione può essere disabilitata. La versione iniziale offre creazione ed elenco; modifica e archiviazione arriveranno tramite feature versionate.",
         "source": "docs/user-guide/it/projects.md"
       },
       {
@@ -35,7 +35,7 @@
         "locale": "it",
         "title": "Note di rilascio",
         "description": "Capire novità, correzioni, sicurezza e modifiche incompatibili.",
-        "content": "Ogni voce riporta categoria e area. Le categorie seguono Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed e Security. Le modifiche incompatibili sono evidenziate.\r\n\r\nKinHub controlla la versione disponibile all'apertura, al ritorno del focus e periodicamente. Quando rileva un aggiornamento mostra una notifica localizzata. **Aggiorna ora** coordina service worker e refresh e impedisce cicli ripetuti.",
+        "content": "Ogni voce riporta categoria e area. Le categorie seguono Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed e Security. Le modifiche incompatibili sono evidenziate.\n\nKinHub controlla la versione disponibile all'apertura, al ritorno del focus e periodicamente. Quando rileva un aggiornamento mostra una notifica localizzata. **Aggiorna ora** coordina service worker e refresh e impedisce cicli ripetuti.",
         "source": "docs/user-guide/it/release-notes.md"
       },
       {
@@ -43,7 +43,7 @@
         "locale": "it",
         "title": "Impostazioni, temi e installazione",
         "description": "Gestire preferenze, tutorial e installazione PWA.",
-        "content": "## Preferenze\r\n\r\nLa lingua e il tema vengono salvati nel browser. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.\r\n\r\n## Tutorial\r\n\r\nSeleziona **Riavvia il tutorial** per rivedere tutti i passaggi. Il completamento è associato alla versione del tutorial: nuovi passaggi importanti possono apparire dopo un aggiornamento senza bloccare l'app.\r\n\r\n## Installazione PWA\r\n\r\nSu desktop e Android usa il comando Installa del browser. Su iOS usa Condividi → Aggiungi alla schermata Home. Le funzionalità disponibili offline sono limitate all'involucro applicativo e ai contenuti già memorizzati; dati e autenticazione richiedono rete.",
+        "content": "## Preferenze\n\nLa lingua e il tema vengono salvati nel browser. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.\n\n## Tutorial\n\nSeleziona **Riavvia il tutorial** per rivedere tutti i passaggi. Il completamento è associato alla versione del tutorial: nuovi passaggi importanti possono apparire dopo un aggiornamento senza bloccare l'app.\n\n## Installazione PWA\n\nSu desktop e Android usa il comando Installa del browser. Su iOS usa Condividi → Aggiungi alla schermata Home. Le funzionalità disponibili offline sono limitate all'involucro applicativo e ai contenuti già memorizzati; dati e autenticazione richiedono rete.",
         "source": "docs/user-guide/it/settings.md"
       },
       {
@@ -51,7 +51,7 @@
         "locale": "it",
         "title": "Risoluzione dei problemi",
         "description": "Recuperare da pagine mancanti, errori, problemi di accesso o cache.",
-        "content": "- **Pagina non trovata:** torna alla Home e verifica l'indirizzo.\r\n- **Errore inatteso:** usa Riprova; se continua, annota versione, commit e passaggi eseguiti.\r\n- **Accesso:** verifica tenant, client ID, redirect URI, scope e consenso dell'API.\r\n- **Aggiornamento non visibile:** apri Note di rilascio e usa Aggiorna ora; evita refresh ripetuti manuali.\r\n- **API non pronta:** liveness verifica il processo, readiness include PostgreSQL. Controlla connessione e migration.",
+        "content": "- **Pagina non trovata:** torna alla Home e verifica l'indirizzo.\n- **Errore inatteso:** usa Riprova; se continua, annota versione, commit e passaggi eseguiti.\n- **Accesso:** verifica tenant, client ID, redirect URI, scope e consenso dell'API.\n- **Aggiornamento non visibile:** apri Note di rilascio e usa Aggiorna ora; evita refresh ripetuti manuali.\n- **API non pronta:** liveness verifica il processo, readiness include PostgreSQL. Controlla connessione e migration.",
         "source": "docs/user-guide/it/troubleshooting.md"
       },
       {
@@ -59,7 +59,7 @@
         "locale": "it",
         "title": "Versione e build",
         "description": "Identificare la versione di KinHub e i relativi metadati.",
-        "content": "KinHub usa Semantic Versioning. La pagina Versione mostra versione applicativa, commit SHA, data build e ambiente. Questi dati consentono di descrivere con precisione un problema e verificare che un aggiornamento sia arrivato.\r\n\r\nLa stessa versione nasce dal file `VERSION` ed entra in assembly backend, bundle frontend, endpoint `/api/version`, pacchetto ZIP e note di rilascio. In locale commit e data possono usare marcatori di sviluppo.",
+        "content": "KinHub usa Semantic Versioning. La pagina Versione mostra versione applicativa, commit SHA, data build e ambiente. Questi dati consentono di descrivere con precisione un problema e verificare che un aggiornamento sia arrivato.\n\nLa stessa versione nasce dal file `VERSION` ed entra in assembly backend, bundle frontend, endpoint `/api/version`, pacchetto ZIP e note di rilascio. In locale commit e data possono usare marcatori di sviluppo.",
         "source": "docs/user-guide/it/version.md"
       }
     ],
@@ -69,7 +69,7 @@
         "locale": "en",
         "title": "Getting started",
         "description": "Navigate KinHub, customize the experience, and understand how the platform evolves.",
-        "content": "## Navigation\r\n\r\nThe top menu opens Home, KinList, Release notes, Version, and Settings. On smaller screens the icons keep the same destinations.\n\r\n## Language and theme\r\n\r\nChoose Italian or English and a light, dark, or system theme. Preferences stay on this device and are applied before rendering to avoid a wrong-theme flash.\r\n\r\n## Contextual help\r\n\r\nImmediately below every page title is a panel that is closed by default. Open it for purpose, actions, prerequisites, fields, and limits, or follow the full-guide link.\r\n\r\n## Tutorial and lifecycle\r\n\r\nThe tutorial starts on first launch, can be skipped, and can be restarted from Settings. Version and Release notes explain KinHub's evolution: each feature comes with translations, documentation, tests, and release notes.",
+        "content": "## Navigation\r\n\r\nThe top menu opens Home, KinList, Release notes, Version, and Settings. On smaller screens the icons keep the same destinations.\r\n\r\n## Language and theme\r\n\r\nChoose Italian or English and a light, dark, or system theme. Preferences stay on this device and are applied before rendering to avoid a wrong-theme flash.\r\n\r\n## Contextual help\r\n\r\nImmediately below every page title is a panel that is closed by default. Open it for purpose, actions, prerequisites, fields, and limits, or follow the full-guide link.\r\n\r\n## Tutorial and lifecycle\r\n\r\nThe tutorial starts on first launch, can be skipped, and can be restarted from Settings. Version and Release notes explain KinHub's evolution: each feature comes with translations, documentation, tests, and release notes.",
         "source": "docs/user-guide/en/getting-started.md"
       },
       {
@@ -77,7 +77,7 @@
         "locale": "en",
         "title": "KinList",
         "description": "Correct post-login routing, required onboarding, and a safe offline shell.",
-        "content": "## What happens after sign-in\n\nKinList always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the PWA routes you into KinList. If the family is missing or the membership is no longer active, you only see onboarding with **Create a family** and **Join with a code**.\n\n## What is not shown\n\nWhen there is no active membership, KinHub does not show a family name, members, list data, or any other shared information. Denied access also stays distinct from an empty state.\n\n## Offline and privacy\n\nOnly the public PWA shell stays available offline. KinList does not keep personal data in cache, does not call authenticated APIs, and does not queue remote operations.\n\n## Current feature scope\n\nThis slice introduces access, bootstrap, and `Family` authorization. Family creation, join, and the shared list arrive in later KinList backlog features.",
+        "content": "## What happens after sign-in\r\n\r\nKinList always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the PWA routes you into KinList. If the family is missing or the membership is no longer active, you only see onboarding with **Create a family** and **Join with a code**.\r\n\r\n## What is not shown\r\n\r\nWhen there is no active membership, KinHub does not show a family name, members, list data, or any other shared information. Denied access also stays distinct from an empty state.\r\n\r\n## Offline and privacy\r\n\r\nOnly the public PWA shell stays available offline. KinList does not keep personal data in cache, does not call authenticated APIs, and does not queue remote operations.\r\n\r\n## Current feature scope\r\n\r\nThis slice introduces access, bootstrap, and `Family` authorization. Family creation, join, and the shared list arrive in later KinList backlog features.",
         "source": "docs/user-guide/en/kinlist.md"
       },
       {
@@ -85,7 +85,7 @@
         "locale": "en",
         "title": "Family projects",
         "description": "Create and review shared initiatives in KinHub.",
-        "content": "## Create a project\r\n\r\nEnter a name between 3 and 120 characters and select **Create**. The name is normalized and must be unique. Validation errors are shown without losing the form contents.\r\n\r\n## Stages\r\n\r\nA project starts in Discovery and can advance to Planning, Delivery, and Completed. The domain prevents accidental regressions.\r\n\r\n## Access and limits\r\n\r\nWhen Microsoft Entra External ID is configured, this area requires sign-in and the API scope. Authentication may be disabled in local development. The initial version provides creation and listing; editing and archiving will arrive as versioned features.",
+        "content": "## Create a project\n\nEnter a name between 3 and 120 characters and select **Create**. The name is normalized and must be unique. Validation errors are shown without losing the form contents.\n\n## Stages\n\nA project starts in Discovery and can advance to Planning, Delivery, and Completed. The domain prevents accidental regressions.\n\n## Access and limits\n\nWhen Microsoft Entra External ID is configured, this area requires sign-in and the API scope. Authentication may be disabled in local development. The initial version provides creation and listing; editing and archiving will arrive as versioned features.",
         "source": "docs/user-guide/en/projects.md"
       },
       {
@@ -93,7 +93,7 @@
         "locale": "en",
         "title": "Release notes",
         "description": "Understand features, fixes, security work, and breaking changes.",
-        "content": "Each entry shows its category and area. Categories follow Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed, and Security. Breaking changes are highlighted.\r\n\r\nKinHub checks the available version on launch, when focus returns, and periodically. A localized notification appears when an update is detected. **Refresh now** coordinates the service worker and reload while preventing refresh loops.",
+        "content": "Each entry shows its category and area. Categories follow Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed, and Security. Breaking changes are highlighted.\n\nKinHub checks the available version on launch, when focus returns, and periodically. A localized notification appears when an update is detected. **Refresh now** coordinates the service worker and reload while preventing refresh loops.",
         "source": "docs/user-guide/en/release-notes.md"
       },
       {
@@ -101,7 +101,7 @@
         "locale": "en",
         "title": "Settings, themes, and installation",
         "description": "Manage preferences, tutorial state, and PWA installation.",
-        "content": "## Preferences\r\n\r\nLanguage and theme are saved in the browser. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.\r\n\r\n## Tutorial\r\n\r\nSelect **Restart tutorial** to revisit every step. Completion is tied to the tutorial version, so important new steps can appear after an update without locking the app.\r\n\r\n## PWA installation\r\n\r\nOn desktop and Android, use the browser's Install command. On iOS, use Share → Add to Home Screen. Offline behavior is limited to the application shell and previously cached content; data and authentication require a connection.",
+        "content": "## Preferences\n\nLanguage and theme are saved in the browser. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.\n\n## Tutorial\n\nSelect **Restart tutorial** to revisit every step. Completion is tied to the tutorial version, so important new steps can appear after an update without locking the app.\n\n## PWA installation\n\nOn desktop and Android, use the browser's Install command. On iOS, use Share → Add to Home Screen. Offline behavior is limited to the application shell and previously cached content; data and authentication require a connection.",
         "source": "docs/user-guide/en/settings.md"
       },
       {
@@ -109,7 +109,7 @@
         "locale": "en",
         "title": "Troubleshooting",
         "description": "Recover from missing pages, errors, sign-in problems, or stale caches.",
-        "content": "- **Page not found:** return Home and check the address.\r\n- **Unexpected error:** use Retry; if it continues, record the version, commit, and steps taken.\r\n- **Sign-in:** verify tenant, client ID, redirect URI, scope, and API consent.\r\n- **Update not visible:** open Release notes and use Refresh now; avoid repeated manual reloads.\r\n- **API not ready:** liveness checks the process, while readiness includes PostgreSQL. Check the connection and migrations.",
+        "content": "- **Page not found:** return Home and check the address.\n- **Unexpected error:** use Retry; if it continues, record the version, commit, and steps taken.\n- **Sign-in:** verify tenant, client ID, redirect URI, scope, and API consent.\n- **Update not visible:** open Release notes and use Refresh now; avoid repeated manual reloads.\n- **API not ready:** liveness checks the process, while readiness includes PostgreSQL. Check the connection and migrations.",
         "source": "docs/user-guide/en/troubleshooting.md"
       },
       {
@@ -117,7 +117,7 @@
         "locale": "en",
         "title": "Version and build",
         "description": "Identify the KinHub version and its build metadata.",
-        "content": "KinHub uses Semantic Versioning. The Version page shows the application version, commit SHA, build date, and environment. These values make a problem report precise and confirm that an update has arrived.\r\n\r\nThe same version comes from the root `VERSION` file and is included in the backend assembly, frontend bundle, `/api/version` endpoint, ZIP package, and release notes. Local builds may use development markers for commit and date.",
+        "content": "KinHub uses Semantic Versioning. The Version page shows the application version, commit SHA, build date, and environment. These values make a problem report precise and confirm that an update has arrived.\n\nThe same version comes from the root `VERSION` file and is included in the backend assembly, frontend bundle, `/api/version` endpoint, ZIP package, and release notes. Local builds may use development markers for commit and date.",
         "source": "docs/user-guide/en/version.md"
       }
     ]

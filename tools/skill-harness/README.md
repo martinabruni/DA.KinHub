@@ -5,12 +5,15 @@ Tool Node.js senza dipendenze esterne. Scansiona esclusivamente documenti e cata
 ```bash
 npm run skills:list
 npm run skills:read -- frontend
+npm run skills:read -- implementation
 npm run skills:validate
 npm run skills:build
 npm run skills:watch
 ```
 
 `build` rigenera il registry deterministico; `validate` fallisce se metadati, sezioni, cataloghi, riferimenti o registry non sono validi.
+
+La skill `implementation` e obbligatoria per le richieste di implementazione feature. Definisce gli unici arresti ammessi, il checkpoint `implementation-progress.md` nella cartella della feature e la consegna tramite commit, push e pull request verso `main`, senza merge.
 
 Una skill puo dichiarare documenti passivi repository-relative nel frontmatter:
 

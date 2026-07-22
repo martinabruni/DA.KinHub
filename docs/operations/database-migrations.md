@@ -10,7 +10,14 @@ Per ambienti condivisi genera un bundle:
 dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --self-contained false --output artifacts/migrations/kinhub-migrations
 ```
 
-Esegui il bundle una volta prima del deploy applicativo. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
+Esegui il bundle una volta prima del deploy applicativo. In Azure il bundle usa una connection string costruita al volo con host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
+
+Prima della migration in ambienti condivisi verifica anche:
+
+- Microsoft Entra administrator presente sul server PostgreSQL;
+- principal database `kinhub_migrator` e `kinhub_app` creati o riallineati;
+- grant runtime sullo schema `shared` applicati dopo il bundle;
+- eventuale firewall rule temporanea del runner rimossa a fine workflow.
 
 Per FEAT-001 verificare inoltre:
 

@@ -34,6 +34,18 @@ public sealed class KinListBootstrapServiceTests
     }
 
     [Fact]
+    public async Task InactiveProfileIsDenied()
+    {
+        var user = ApplicationUser.Create(new ExternalIdentity("https://issuer", Guid.NewGuid()), DateTimeOffset.UtcNow);
+        user.Deactivate(DateTimeOffset.UtcNow.AddMinutes(1));
+        var service = new KinListBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(null), TimeProvider.System);
+
+        var exception = await Assert.ThrowsAsync<BusinessAccessDeniedException>(() => service.GetBootstrapAsync(user.ExternalIdentity, CancellationToken.None));
+
+        Assert.Equal("auth.profileInactive", exception.Code);
+    }
+
+    [Fact]
     public async Task RepositoryFailureBecomesDependencyError()
     {
         var service = new KinListBootstrapService(new ThrowingApplicationUserRepository(), new StubMembershipRepository(null), TimeProvider.System);
