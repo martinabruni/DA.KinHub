@@ -45,12 +45,9 @@ jobs:
         id: postgres_admin
         shell: bash
         run: |
-          IFS=$'\t' read -r principal_name principal_object_id < <(
-            az ad sp show \
-              --id "${{ secrets.AZURE_CLIENT_ID }}" \
-              --query "[displayName,id]" \
-              --output tsv
-          )
+          principal_name=$(az account show --query user.name --output tsv)
+          access_token=$(az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv)
+          principal_object_id=$(node -e "const token=process.argv[1].split('.')[1]; const normalized=token.replace(/-/g,'+').replace(/_/g,'/'); const padded=normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '='); const payload=JSON.parse(Buffer.from(padded, 'base64').toString('utf8')); process.stdout.write(payload.oid ?? '');" "$access_token")
 
           test -n "$principal_name"
           test -n "$principal_object_id"
@@ -66,11 +63,11 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file infra/app.bicep \
             --parameters infra/main.dev.bicepparam \
-             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-                          postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
-                          entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
-                          entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                          entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
+                           postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
+                           entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                           entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
                           postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
                           postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
                           postgresEntraAdministratorPrincipalType="ServicePrincipal" \
@@ -85,11 +82,11 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file infra/app.bicep \
             --parameters infra/main.dev.bicepparam \
-             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-                          postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
-                          entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
-                          entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                          entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
+                           postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
+                           entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                           entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
                           postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
                           postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
                           postgresEntraAdministratorPrincipalType="ServicePrincipal" \
@@ -236,7 +233,7 @@ jobs:
       - name: Deploy Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN || secrets.CORE_AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: upload
           app_location: src/frontend/dist
           skip_app_build: true
