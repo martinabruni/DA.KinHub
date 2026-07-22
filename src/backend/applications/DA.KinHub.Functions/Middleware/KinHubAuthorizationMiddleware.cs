@@ -7,14 +7,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace DA.KinHub.Functions.Security;
 
 public sealed class KinHubAuthorizationMiddleware(
     FunctionAccessMetadataProvider metadataProvider,
-    RequestAuthenticationService authenticationService,
-    IAuthorizationService authorizationService,
     ExternalIdentityClaimsResolver externalIdentityClaimsResolver,
     IOptions<EntraOptions> entraOptions,
     KinHubTelemetry telemetry,
@@ -44,6 +43,9 @@ public sealed class KinHubAuthorizationMiddleware(
             ShortCircuit(context, httpContext, StatusCodes.Status401Unauthorized, "Unauthorized", "Authentication must be enabled to access KinHub APIs.", "auth.required");
             return;
         }
+
+        var authenticationService = context.InstanceServices.GetRequiredService<RequestAuthenticationService>();
+        var authorizationService = context.InstanceServices.GetRequiredService<IAuthorizationService>();
 
         var authentication = await authenticationService.AuthenticateAsync(httpContext);
         if (!authentication.Succeeded || authentication.Principal is null)
