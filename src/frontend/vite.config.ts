@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { defineConfig } from "vitest/config";
 
 const version = readFileSync(resolve(import.meta.dirname, "../../VERSION"), "utf8").trim();
 
@@ -66,5 +66,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: { "/api": "http://localhost:7071", "/health": "http://localhost:7071" }
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"]
   }
 });

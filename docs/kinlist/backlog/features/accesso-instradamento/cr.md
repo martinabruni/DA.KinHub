@@ -2,7 +2,7 @@
 
 - **Feature interessata**: FEAT-001 `accesso-instradamento`
 - **Tipo**: refactoring architetturale e correzione tecnica
-- **Stato**: approvata per pianificazione
+- **Stato**: implementata
 - **Breaking change prodotto**: no
 - **Piano**: `cr.plan.md`
 - **Piano originario**: `feature.plan.md`

@@ -20,18 +20,18 @@ param deploymentContainerName string
 param applicationContainerName string
 param applicationInsightsName string
 param applicationInsightsConnectionString string
-param keyVaultName string
-param postgresSecretName string
 param entraTenantId string
 param entraBackendAudience string
 param entraApiScope string
 param environmentName string
+param postgresHost string
+param postgresDatabaseName string
+param postgresRuntimeUsername string = 'kinhub_app'
 param allowedOrigins array = []
 param enableVnetIntegration bool = false
 param virtualNetworkSubnetResourceId string = ''
 
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
-var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 var monitoringMetricsPublisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb'
 
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
@@ -89,7 +89,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureWebJobsStorage__tableServiceUri', value: storageTableEndpoint }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: applicationInsightsConnectionString }
         { name: 'APPLICATIONINSIGHTS_AUTHENTICATION_STRING', value: 'Authorization=AAD' }
-        { name: 'ConnectionStrings__PostgreSql', value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=${postgresSecretName})' }
         { name: 'KinHub__AppName', value: 'KinHub' }
         { name: 'KinHub__Environment', value: environmentName }
         { name: 'KinHub__ApiVersion', value: '1.0' }
@@ -98,6 +97,12 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'Entra__TenantId', value: entraTenantId }
         { name: 'Entra__Audience', value: entraBackendAudience }
         { name: 'Entra__Scope', value: entraApiScope }
+        { name: 'Database__Mode', value: 'ManagedIdentity' }
+        { name: 'Database__Host', value: postgresHost }
+        { name: 'Database__Port', value: '5432' }
+        { name: 'Database__DatabaseName', value: postgresDatabaseName }
+        { name: 'Database__Username', value: postgresRuntimeUsername }
+        { name: 'Database__RequireSsl', value: 'true' }
         { name: 'Database__ApplyMigrationsOnStartup', value: 'false' }
         { name: 'Storage__AccountUri', value: storageBlobEndpoint }
         { name: 'Storage__ContainerName', value: applicationContainerName }
@@ -107,7 +112,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 }
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' existing = { name: storageAccountName }
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = { name: keyVaultName }
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing = { name: applicationInsightsName }
 
 resource storageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -115,16 +119,6 @@ resource storageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storage
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource keyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, functionApp.id, keyVaultSecretsUserRoleId)
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
     principalId: functionApp.identity.principalId
     principalType: 'ServicePrincipal'
   }

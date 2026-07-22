@@ -11,7 +11,8 @@ permissions:
 
 env:
   BUILD_ENVIRONMENT: Development
-  POSTGRES_MIGRATION_CONNECTION_STRING: ${{ secrets.POSTGRES_MIGRATION_CONNECTION_STRING }}
+  POSTGRES_RUNTIME_USERNAME: kinhub_app
+  POSTGRES_MIGRATION_USERNAME: kinhub_migrator
 
 jobs:
   deploy:
@@ -38,6 +39,9 @@ jobs:
           dotnet build KinHub.slnx --configuration Release --no-restore
           dotnet test KinHub.slnx --configuration Release --no-build
           npm ci --prefix src/frontend
+          npm run --prefix src/frontend test
+          npm run --prefix src/frontend lint
+          npm run --prefix src/frontend typecheck
           npm run skills:validate
           npm run docs:validate
           npm run release:validate
@@ -49,10 +53,6 @@ jobs:
           dotnet tool restore
           mkdir -p artifacts/migrations
           dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
-
-      - name: Apply database migrations
-        if: env.POSTGRES_MIGRATION_CONNECTION_STRING != ''
-        run: artifacts/migrations/kinhub-migrations --connection "$POSTGRES_MIGRATION_CONNECTION_STRING"
 
       - name: Package backend
         id: package
@@ -69,6 +69,98 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve PostgreSQL deployment settings
+        id: postgres
+        shell: bash
+        run: |
+          app_settings=$(az functionapp config appsettings list \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_FUNCTIONAPP_NAME }}" \
+            --output json)
+          echo "host=$(jq -r '.[] | select(.name == \"Database__Host\") | .value' <<< \"$app_settings\")" >> "$GITHUB_OUTPUT"
+          echo "database=$(jq -r '.[] | select(.name == \"Database__DatabaseName\") | .value' <<< \"$app_settings\")" >> "$GITHUB_OUTPUT"
+          echo "server_name=$(jq -r '.[] | select(.name == \"Database__Host\") | .value' <<< \"$app_settings\" | cut -d'.' -f1)" >> "$GITHUB_OUTPUT"
+          echo "function_principal_id=$(az functionapp identity show --resource-group \"${{ vars.AZURE_RESOURCE_GROUP }}\" --name \"${{ vars.AZURE_FUNCTIONAPP_NAME }}\" --query principalId --output tsv)" >> "$GITHUB_OUTPUT"
+          principal=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query '{displayName:displayName,id:id}' --output json)
+          echo "admin_name=$(jq -r '.displayName' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
+          echo "admin_object_id=$(jq -r '.id' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+
+      - name: Open temporary PostgreSQL firewall rule
+        id: postgres_firewall
+        shell: bash
+        run: |
+          runner_ip=$(curl --silent https://ifconfig.me)
+          rule_name="gha-${GITHUB_RUN_ID}"
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.postgres.outputs.server_name }}" \
+            --rule-name "$rule_name" \
+            --start-ip-address "$runner_ip" \
+            --end-ip-address "$runner_ip" \
+            --only-show-errors --output none
+          echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
+
+      - name: Provision database principals
+        shell: bash
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          export PGPASSWORD="$token"
+          psql \
+            --host "${{ steps.postgres.outputs.host }}" \
+            --dbname postgres \
+            --username "${{ steps.postgres.outputs.admin_name }}" \
+            --set ON_ERROR_STOP=1 <<SQL
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_RUNTIME_USERNAME }}') THEN
+              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_RUNTIME_USERNAME }}', '${{ steps.postgres.outputs.function_principal_id }}', 'service', false, false);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_MIGRATION_USERNAME }}') THEN
+              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_MIGRATION_USERNAME }}', '${{ steps.postgres.outputs.admin_object_id }}', 'service', true, false);
+            END IF;
+          END
+          $$;
+          SQL
+
+      - name: Apply database migrations
+        shell: bash
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          artifacts/migrations/kinhub-migrations --connection "Host=${{ steps.postgres.outputs.host }};Port=5432;Database=${{ steps.postgres.outputs.database }};Username=${{ env.POSTGRES_MIGRATION_USERNAME }};Password=${token};SSL Mode=Require;Trust Server Certificate=false"
+
+      - name: Grant runtime database privileges
+        shell: bash
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          export PGPASSWORD="$token"
+          psql \
+            --host "${{ steps.postgres.outputs.host }}" \
+            --dbname "${{ steps.postgres.outputs.database }}" \
+            --username "${{ env.POSTGRES_MIGRATION_USERNAME }}" \
+            --set ON_ERROR_STOP=1 <<SQL
+          GRANT CONNECT ON DATABASE "${{ steps.postgres.outputs.database }}" TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          GRANT USAGE ON SCHEMA shared TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA shared TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA shared TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          ALTER DEFAULT PRIVILEGES FOR ROLE "${{ env.POSTGRES_MIGRATION_USERNAME }}" IN SCHEMA shared
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          ALTER DEFAULT PRIVILEGES FOR ROLE "${{ env.POSTGRES_MIGRATION_USERNAME }}" IN SCHEMA shared
+            GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO "${{ env.POSTGRES_RUNTIME_USERNAME }}";
+          SQL
+
+      - name: Close temporary PostgreSQL firewall rule
+        if: always() && steps.postgres_firewall.outputs.rule_name != ''
+        shell: bash
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.postgres.outputs.server_name }}" \
+            --rule-name "${{ steps.postgres_firewall.outputs.rule_name }}" \
+            --yes --only-show-errors
 
       - name: Deploy Function App with One Deploy
         uses: Azure/functions-action@v1

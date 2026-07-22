@@ -210,7 +210,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 ## Test e qualità
 
 - Backend: xUnit copre invarianti dominio, business, endpoint metadata, DI, Problem Details e configurazione critica.
-- Frontend: niente suite completa iniziale; obbligatori lint, typecheck, build, parità i18n e route help.
+- Frontend: test mirati, lint, typecheck, build, parità i18n e route help sono obbligatori.
 - Tool: validate skill, docs, fragment e registry generati.
 - Infra: `az bicep build` e, con contesto Azure, `az deployment group validate`.
 - Non dichiarare passata una verifica non eseguita.
@@ -218,7 +218,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 ## CI/CD
 
 - `pr-quality.yml`: restore/build/test/publish/package, frontend, tool e Bicep; nessun deploy.
-- `deploy-infrastructure.yml`: tag `infra-*`, deploy Bicep, migration controllata, One Deploy, Static Web Apps e smoke test.
+- `deploy-infrastructure.yml`: tag `infra-*`, deploy Bicep, principal PostgreSQL Entra, migration bundle con token identity-based, One Deploy, Static Web Apps e smoke test.
 - `deploy-code.yml`: push `main`, solo operazioni applicative; non modifica memoria/scala/concorrenza.
 - Parametri Flex restano in Bicep/bicepparam; GitHub Variable contiene solo il nome Function App necessario al deploy.
 - Non stampare secret o output sensibili nei log.
@@ -239,6 +239,7 @@ func start
 cd src/frontend
 npm ci
 npm run dev
+npm run test
 npm run lint
 npm run typecheck
 npm run build

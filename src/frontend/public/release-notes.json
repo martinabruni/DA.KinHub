@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "a9f8c65",
-  "buildDate": "2026-07-21T17:49:42.555Z",
+  "commit": "f14e5b1",
+  "buildDate": "2026-07-22T08:15:45.842Z",
   "environment": "Development",
   "entries": [
     {
@@ -80,6 +80,17 @@
       "descriptions": {
         "it": "KinList ora crea o riusa un profilo applicativo da `(iss, oid)`, verifica la membership familiare attiva nel bootstrap post-login, espone la policy `Family` e mantiene offline soltanto la shell pubblica senza dati personali.",
         "en": "KinList now creates or reuses an application profile from `(iss, oid)`, verifies the active family membership during the post-login bootstrap, exposes the `Family` policy, and keeps only the public shell available offline without personal data."
+      }
+    },
+    {
+      "id": "none-changed-kinlist-access-routing-final-state",
+      "type": "changed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "FEAT-001 ora completa il percorso finale di accesso KinList con contesto famiglia solo in memoria, test frontend mirati, guardrail repository-wide per route/OpenAPI Functions e deploy Azure PostgreSQL basato su Microsoft Entra e token identity-based per principal e migration.",
+        "en": "FEAT-001 now completes the final KinList access-routing path with in-memory family context, targeted frontend tests, repository-wide Functions route/OpenAPI guardrails, and Azure PostgreSQL deployment based on Microsoft Entra plus identity-based tokens for principals and migrations."
       }
     },
     {
