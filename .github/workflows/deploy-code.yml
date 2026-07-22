@@ -52,7 +52,7 @@ jobs:
         run: |
           dotnet tool restore
           mkdir -p artifacts/migrations
-          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --force --output artifacts/migrations/kinhub-migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
 
       - name: Package backend
         id: package
