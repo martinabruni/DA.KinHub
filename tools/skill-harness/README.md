@@ -13,7 +13,7 @@ npm run skills:watch
 
 `build` rigenera il registry deterministico; `validate` fallisce se metadati, sezioni, cataloghi, riferimenti o registry non sono validi.
 
-La skill `implementation` e obbligatoria per le richieste di implementazione feature. Definisce gli unici arresti ammessi, il checkpoint `implementation-progress.md` nella cartella della feature e la consegna tramite commit, push e pull request verso `main`, senza merge.
+La skill `implementation` e obbligatoria per le richieste di implementazione feature. Definisce gli unici arresti ammessi, il checkpoint `implementation-progress.md` nella cartella della feature e la consegna tramite commit, push e pull request verso `main`. Tutte le GitHub Actions attivate dalla PR devono essere verdi sull'ultimo commit; i run rossi richiedono correzione e nuovo push. Il merge resta vietato.
 
 Una skill puo dichiarare documenti passivi repository-relative nel frontmatter:
 
