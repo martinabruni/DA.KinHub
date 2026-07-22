@@ -45,9 +45,18 @@ jobs:
         id: postgres_admin
         shell: bash
         run: |
-          principal=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query '{displayName:displayName,id:id}' --output json)
-          echo "name=$(jq -r '.displayName' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
-          echo "object_id=$(jq -r '.id' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
+          IFS=$'\t' read -r principal_name principal_object_id < <(
+            az ad sp show \
+              --id "${{ secrets.AZURE_CLIENT_ID }}" \
+              --query "[displayName,id]" \
+              --output tsv
+          )
+
+          test -n "$principal_name"
+          test -n "$principal_object_id"
+
+          echo "name=$principal_name" >> "$GITHUB_OUTPUT"
+          echo "object_id=$principal_object_id" >> "$GITHUB_OUTPUT"
 
       - name: Validate infrastructure
         shell: bash
