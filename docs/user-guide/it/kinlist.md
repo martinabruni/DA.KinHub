@@ -7,7 +7,7 @@ description: Verifica del percorso corretto dopo il login, onboarding obbligator
 
 ## Cosa succede dopo il login
 
-KinList verifica sempre in modo autorevole se il tuo profilo ha una membership familiare attiva. Se la verifica trova una famiglia attiva, la PWA ti porta nell'area KinList. Se la famiglia manca oppure la membership non e attiva, vedi solo l'onboarding con le azioni **Crea una famiglia** e **Unisciti con un codice**.
+KinHub verifica sempre in modo autorevole se il tuo profilo ha una membership familiare attiva. Se la verifica trova una famiglia attiva, la PWA ti porta nell'area KinList. Se la famiglia manca oppure la membership non e attiva, vedi solo l'onboarding KinHub con le azioni **Crea una famiglia** e **Unisciti con un codice**.
 
 ## Cosa non viene mostrato
 
@@ -19,4 +19,4 @@ Offline resta disponibile solo la shell pubblica della PWA. KinList non conserva
 
 ## Stato attuale della feature
 
-Questa slice introduce accesso, bootstrap e autorizzazione `Family`. Creazione famiglia, join e lista condivisa arriveranno nelle feature successive del backlog KinList.
+Questa slice collega KinList al bootstrap e all'autorizzazione `Family` condivisi di KinHub. Creazione famiglia, join e lista condivisa arriveranno nelle feature successive.

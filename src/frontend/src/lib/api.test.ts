@@ -16,10 +16,10 @@ describe("KinHubApiClient", () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ state: "onboarding" }), { status: 200 }));
     const client = new KinHubApiClient(() => Promise.resolve("token-123"));
 
-    await expect(client.getKinListBootstrap()).resolves.toEqual({ state: "onboarding" });
+    await expect(client.getKinHubBootstrap()).resolves.toEqual({ state: "onboarding" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [path, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe("/api/kinlist/bootstrap");
+    expect(path).toBe("/api/kinhub/bootstrap");
     expect(requestInit.cache).toBe("no-store");
     expect(requestInit.credentials).toBe("omit");
     expect(requestInit.headers).toEqual(expect.objectContaining({
@@ -33,7 +33,7 @@ describe("KinHubApiClient", () => {
     Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
     const client = new KinHubApiClient(() => Promise.resolve("token-123"));
 
-    await expect(client.getKinListBootstrap()).rejects.toBeInstanceOf(ApiNetworkError);
+    await expect(client.getKinHubBootstrap()).rejects.toBeInstanceOf(ApiNetworkError);
   });
 
   it("maps problem details responses", async () => {
@@ -44,7 +44,7 @@ describe("KinHubApiClient", () => {
     const client = new KinHubApiClient(() => Promise.resolve("token-123"));
 
     try {
-      await client.getKinListBootstrap();
+      await client.getKinHubBootstrap();
       throw new Error("The response should have failed.");
     } catch (error) {
       const apiError = error as ApiResponseError;

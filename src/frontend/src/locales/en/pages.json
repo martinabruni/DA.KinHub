@@ -12,9 +12,9 @@
     "sessionExpired": "The session has expired or is no longer valid. Sign in again to continue.",
     "forbidden": "Access to the requested family is not allowed.",
     "error": "The family status could not be checked. Please try again.",
-    "onboarding": "To start with KinList, create a family or join with a code.",
+    "onboarding": "To use KinHub services, create a family or join with a code.",
     "onboardingPending": "Create and join actions will be enabled by their dedicated features, but the post-login routing path is already enforced.",
-    "ready": "KinList has verified an active family membership.",
+    "ready": "KinHub has verified an active family membership.",
     "readyDetail": "The shared list will arrive in later features without reusing stale data or personal cache from the current bootstrap."
   },
   "about": {

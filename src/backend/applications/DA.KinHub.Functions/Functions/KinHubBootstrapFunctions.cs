@@ -8,19 +8,19 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace DA.KinHub.Functions.Functions;
 
-public sealed class KinListBootstrapFunctions(
-    IKinListBootstrapService bootstrapService,
-    KinListTelemetry telemetry)
+public sealed class KinHubBootstrapFunctions(
+    IKinHubBootstrapService bootstrapService,
+    KinHubTelemetry telemetry)
 {
-    [Function("KinListBootstrap")]
+    [Function("KinHubBootstrap")]
     public async Task<IActionResult> Bootstrap(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ApiRoutes.KinList.Bootstrap)] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ApiRoutes.KinHub.Bootstrap)] HttpRequest request,
         CancellationToken cancellationToken)
     {
         var authorization = request.HttpContext.Features.Get<KinHubAuthorizationFeature>()
             ?? throw new InvalidOperationException("Authorized request feature is missing.");
 
-        using var operation = telemetry.Begin(KinListOperations.Bootstrap);
+        using var operation = telemetry.Begin(KinHubOperations.Bootstrap);
         var result = await bootstrapService.GetBootstrapAsync(authorization.ExternalIdentity, cancellationToken);
         operation.Complete(result.State);
         return new OkObjectResult(result);

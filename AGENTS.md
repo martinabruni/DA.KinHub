@@ -6,6 +6,8 @@ Leggi questo file e la skill pertinente prima di ogni modifica. Se una regola st
 
 KinHub è una piattaforma semplice e intuitiva per la famiglia che raggruppa servizi come KinRecipe e KinList. Ridurre l'inquinamento visivo è un requisito di prodotto. Nome applicazione: `KinHub`; dominio tecnico: `kinhub`; lingua predefinita: italiano (`it`); lingua supportata e fallback tecnico: inglese (`en`).
 
+KinHub possiede identita, profili applicativi, famiglie, membership, inviti, bootstrap post-login e policy `Family`. I KinService, incluso KinList, consumano questo contesto condiviso e possiedono soltanto dati e comportamenti specifici del servizio; nomi, route e telemetria condivisi non usano il namespace di un KinService.
+
 ## Stack e architettura
 
 - Backend .NET 10, Azure Functions runtime 4.x, Isolated Worker, Linux Flex Consumption.
@@ -73,7 +75,7 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Route e OpenAPI condividono una sola fonte e test di parita. Ogni endpoint documenta security, parametri, risposte e `application/problem+json` applicabili.
 - Options Entra, database, storage e integrazioni critiche usano validazione tipizzata `ValidateOnStart`, condizionata per ambiente senza bypass di sicurezza.
 - Log, metriche e trace custom usano OpenTelemetry e Azure Monitor con dimensioni a bassa cardinalita. Non mantenere in parallelo exporter classico e OpenTelemetry ne registrare token, claim completi, issuer, oid, familyId, nomi o payload.
-- I nuovi endpoint non devono copiare il pattern manuale esistente di FEAT-001; il debito corrente e tracciato in `docs/kinlist/backlog/features/accesso-instradamento/cr.md` e `cr.plan.md`.
+- I nuovi endpoint non devono copiare il pattern manuale esistente di FEAT-001; il debito corrente e tracciato in `docs/backlog/features/accesso-instradamento/cr.md` e `cr.plan.md`.
 - La guida autorevole e `docs/architecture/http-functions.md`; le verifiche operative sono in `docs/operations/observability.md`.
 
 ### Azure Functions Isolated e Flex Consumption
@@ -194,7 +196,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 - Puoi interrompere il lavoro solo quando l'utilizzo del contesto raggiunge o supera il 35% oppure quando serve davvero human in the loop, per esempio una decisione di prodotto non deducibile, un'approvazione obbligatoria, credenziali o un'azione esterna riservata all'utente.
 - Prima di una di queste interruzioni aggiorna `implementation-progress.md` nella cartella della feature. Usa il formato della skill `implementation`, registra stato, decisioni, file modificati, verifiche con esito, lavoro residuo, blocco e prima azione di ripresa; non inserire secret o PII.
 - Alla ripresa leggi per primo `implementation-progress.md`, verifica lo stato reale del worktree e continua dalla prima azione incompleta. Rimuovi il file solo quando la feature e conclusa e le GitHub Actions dell'ultimo commit sono verdi: non deve restare nella consegna finale.
-- Quando tutte le verifiche applicabili passano, controlla diff e stato Git, crea un commit con le sole modifiche della feature, esegui il push del branch e apri una pull request verso `main`.
+- Ogni pull request deve avere `dev` come branch sorgente e `main` come branch destinazione. Quando tutte le verifiche applicabili passano, controlla diff e stato Git, crea un commit con le sole modifiche della feature su `dev`, esegui il push di `dev` e apri la pull request verso `main`.
 - Dopo ogni push monitora le GitHub Actions attivate dalla pull request sull'ultimo commit. Una action queued o in progress significa che il lavoro non e concluso; tutte le action devono terminare con esito `success` prima di fermarti.
 - Se una action fallisce, viene cancellata, va in timeout o richiede intervento, ispeziona log e annotazioni, correggi la causa, riesegui le verifiche applicabili, crea un nuovo commit, esegui il push e monitora il nuovo run. Ripeti finche tutte le action dell'ultimo commit sono verdi.
 - Non eseguire mai il merge di una pull request. Se commit, push o apertura della PR richiedono credenziali o autorizzazioni umane, trattali come human in the loop e salva prima il checkpoint.

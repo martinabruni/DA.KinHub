@@ -18,4 +18,4 @@ Creare due app registration nel tenant External ID.
 
 Il frontend usa popup con selezione account e mantiene i token soltanto in memoria. Il backend convalida issuer, audience, firma, scadenza e scope tramite JWT bearer con `MapInboundClaims=false`.
 
-Per KinList il bootstrap post-login richiede sempre i claim canonici `iss` e `oid`. Se uno dei due manca o `oid` non e un GUID valido, l'accesso fallisce chiuso con `401` e nessun profilo viene creato come fallback da nome o email.
+Per KinHub il bootstrap post-login richiede sempre i claim canonici `iss` e `oid`. Se uno dei due manca o `oid` non e un GUID valido, l'accesso fallisce chiuso con `401` e nessun profilo viene creato come fallback da nome o email.

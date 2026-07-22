@@ -6,14 +6,14 @@ using DA.KinHub.Domain.Identity;
 
 namespace DA.KinHub.Business.Tests;
 
-public sealed class KinListBootstrapServiceTests
+public sealed class KinHubBootstrapServiceTests
 {
     [Fact]
     public async Task ActiveMembershipReturnsFamilyState()
     {
         var user = ApplicationUser.Create(new ExternalIdentity("https://issuer", Guid.NewGuid()), DateTimeOffset.UtcNow);
         var familyId = Guid.NewGuid();
-        var service = new KinListBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(familyId), TimeProvider.System);
+        var service = new KinHubBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(familyId), TimeProvider.System);
 
         var result = await service.GetBootstrapAsync(user.ExternalIdentity, CancellationToken.None);
 
@@ -25,7 +25,7 @@ public sealed class KinListBootstrapServiceTests
     public async Task MissingMembershipReturnsOnboarding()
     {
         var user = ApplicationUser.Create(new ExternalIdentity("https://issuer", Guid.NewGuid()), DateTimeOffset.UtcNow);
-        var service = new KinListBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(null), TimeProvider.System);
+        var service = new KinHubBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(null), TimeProvider.System);
 
         var result = await service.GetBootstrapAsync(user.ExternalIdentity, CancellationToken.None);
 
@@ -38,7 +38,7 @@ public sealed class KinListBootstrapServiceTests
     {
         var user = ApplicationUser.Create(new ExternalIdentity("https://issuer", Guid.NewGuid()), DateTimeOffset.UtcNow);
         user.Deactivate(DateTimeOffset.UtcNow.AddMinutes(1));
-        var service = new KinListBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(null), TimeProvider.System);
+        var service = new KinHubBootstrapService(new StubApplicationUserRepository(user), new StubMembershipRepository(null), TimeProvider.System);
 
         var exception = await Assert.ThrowsAsync<BusinessAccessDeniedException>(() => service.GetBootstrapAsync(user.ExternalIdentity, CancellationToken.None));
 
@@ -48,7 +48,7 @@ public sealed class KinListBootstrapServiceTests
     [Fact]
     public async Task RepositoryFailureBecomesDependencyError()
     {
-        var service = new KinListBootstrapService(new ThrowingApplicationUserRepository(), new StubMembershipRepository(null), TimeProvider.System);
+        var service = new KinHubBootstrapService(new ThrowingApplicationUserRepository(), new StubMembershipRepository(null), TimeProvider.System);
 
         var exception = await Assert.ThrowsAsync<BusinessDependencyException>(() => service.GetBootstrapAsync(new ExternalIdentity("https://issuer", Guid.NewGuid()), CancellationToken.None));
 
@@ -58,7 +58,7 @@ public sealed class KinListBootstrapServiceTests
     [Fact]
     public async Task NonDependencyFailureIsNotRemapped()
     {
-        var service = new KinListBootstrapService(new BuggyApplicationUserRepository(), new StubMembershipRepository(null), TimeProvider.System);
+        var service = new KinHubBootstrapService(new BuggyApplicationUserRepository(), new StubMembershipRepository(null), TimeProvider.System);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetBootstrapAsync(new ExternalIdentity("https://issuer", Guid.NewGuid()), CancellationToken.None));
     }

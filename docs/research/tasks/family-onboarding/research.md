@@ -2,9 +2,9 @@
 
 Questo task copre il passaggio obbligatorio tra il login riuscito e l'accesso a KinList. Il problema concreto è distinguere un'identità autenticata da un membro già autorizzato a lavorare nel perimetro di una famiglia. Microsoft definisce **autenticazione** la verifica di chi è l'utente e **autorizzazione** la decisione su ciò che può fare; la seconda dipende dalla prima ma non coincide con essa ([introduzione all'autorizzazione ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/security/authorization/introduction?view=aspnetcore-10.0)).
 
-Dopo il login, KinList riceve un'identità verificata da Microsoft Entra External ID e chiede al backend se il profilo applicativo appartiene a una famiglia. Se appartiene, il risultato atteso è l'accesso diretto al servizio. Se non appartiene, il risultato atteso è una scelta obbligatoria tra creare una famiglia e unirsi mediante codice. Creare una famiglia associa soltanto il creatore: in questo passaggio non si cercano, selezionano o aggiungono altri membri. L'uso sicuro del codice è studiato separatamente in `family-invite-code`.
+Dopo il login, KinHub riceve un'identità verificata da Microsoft Entra External ID e chiede al backend se il profilo applicativo appartiene a una famiglia. Se appartiene, il risultato atteso è l'accesso diretto al KinService richiesto. Se non appartiene, il risultato atteso è una scelta obbligatoria tra creare una famiglia e unirsi mediante codice. Creare una famiglia associa soltanto il creatore: in questo passaggio non si cercano, selezionano o aggiungono altri membri. L'uso sicuro del codice è studiato separatamente in `family-invite-code`.
 
-Gli attori sono l'utente autenticato, la PWA KinList, il backend Kin Hub e PostgreSQL. L'input autorevole è l'identità esterna canonica `(iss, oid)` ricavata dal token validato: issuer e identificativo oggetto devono essere entrambi presenti. Email e nome non identificano il profilo; appartenenza e permessi provengono dai dati applicativi, non dal browser. L'output è una famiglia associata al profilo oppure lo stato esplicito «onboarding necessario». Il servizio KinList non deve essere mostrato finché uno dei due percorsi non termina con successo.
+Gli attori sono l'utente autenticato, la PWA KinHub, il backend KinHub e PostgreSQL. L'input autorevole è l'identità esterna canonica `(iss, oid)` ricavata dal token validato: issuer e identificativo oggetto devono essere entrambi presenti. Email e nome non identificano il profilo; appartenenza e permessi provengono dai dati applicativi, non dal browser. L'output è una famiglia associata al profilo oppure lo stato esplicito «onboarding necessario». Il KinService richiesto non deve essere mostrato finché uno dei due percorsi non termina con successo.
 
 ### Fatti noti
 
@@ -23,7 +23,6 @@ Gli attori sono l'utente autenticato, la PWA KinList, il backend Kin Hub e Postg
 
 ### Decisioni aperte
 
-- Se l'onboarding riguardi soltanto KinList o sia un passaggio condiviso da tutti i servizi Kin Hub.
 - Quale testo di prodotto distingua «famiglia» da eventuali gruppi tecnici senza confondere l'utente.
 
 ## best practices microsoft ux
@@ -61,7 +60,7 @@ Il flusso più semplice è:
 
 1. verificare il token e collegare la coppia `(iss, oid)` a un solo profilo applicativo, fallendo in modo chiuso se uno dei claim manca;
 2. leggere l'eventuale appartenenza attiva;
-3. restituire il contesto KinList se esiste, altrimenti lo stato di onboarding;
+3. restituire il contesto famiglia KinHub se esiste, altrimenti lo stato di onboarding;
 4. alla creazione, salvare famiglia e appartenenza del creatore come un'unica operazione;
 5. all'unione, delegare validazione e consumo al caso d'uso del codice d'invito.
 

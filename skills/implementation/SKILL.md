@@ -41,7 +41,7 @@ Dipende dalla feature approvata, dalla Definition of Done del repository, dalle 
 
 ## Vincoli
 
-Gli unici arresti ammessi sono utilizzo del contesto almeno al 35% e human in the loop realmente necessario. Non fermarti con documentazione incompleta, verifiche applicabili fallite o GitHub Actions della PR queued, in progress o non concluse con `success` sull'ultimo SHA. Non inserire secret o PII nel checkpoint, non includere modifiche estranee nel commit e non eseguire mai merge della pull request.
+Gli unici arresti ammessi sono utilizzo del contesto almeno al 35% e human in the loop realmente necessario. Non fermarti con documentazione incompleta, verifiche applicabili fallite o GitHub Actions della PR queued, in progress o non concluse con `success` sull'ultimo SHA. Non inserire secret o PII nel checkpoint, non includere modifiche estranee nel commit e non eseguire mai merge della pull request. Ogni pull request parte dal branch sorgente `dev` ed e destinata a `main`.
 
 ## Test richiesti
 
@@ -49,10 +49,10 @@ Esegui tutte le verifiche richieste dalla feature e da `AGENTS.md`. Prima della 
 
 ## Checklist di aggiornamento
 
-Leggi gli artefatti e l'eventuale checkpoint; implementa la feature; aggiorna codice, test, documentazione, traduzioni, guide, skill e fragment applicabili; ripeti le verifiche fino al successo; controlla diff e stato; crea commit e push; apri una PR verso `main`; monitora le Actions dell'ultimo SHA; per ogni esito non verde correggi, verifica, committa e pusha di nuovo; rimuovi il checkpoint solo quando tutti i check sono verdi; non eseguire il merge.
+Leggi gli artefatti e l'eventuale checkpoint; verifica di lavorare su `dev`; implementa la feature; aggiorna codice, test, documentazione, traduzioni, guide, skill e fragment applicabili; ripeti le verifiche fino al successo; controlla diff e stato; crea commit e push su `dev`; apri una PR da `dev` verso `main`; monitora le Actions dell'ultimo SHA; per ogni esito non verde correggi, verifica, committa e pusha di nuovo; rimuovi il checkpoint solo quando tutti i check sono verdi; non eseguire il merge.
 
 ## Changelog
 
-0.2.0: richiesto l'esito verde di tutte le GitHub Actions della PR, con ciclo obbligatorio di diagnosi, correzione e push per ogni run non riuscito.
+0.2.0: imposto `dev` come branch sorgente obbligatorio di ogni pull request verso `main` e richiedo l'esito verde di tutte le GitHub Actions della PR, con ciclo obbligatorio di diagnosi, correzione e push per ogni run non riuscito.
 
 0.1.0: introdotti continuita obbligatoria, checkpoint al 35% o human in the loop e consegna tramite pull request senza merge.

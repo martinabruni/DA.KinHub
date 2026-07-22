@@ -15,9 +15,9 @@ public static class ApiRoutes
         public const string OpenApi = "api/openapi.json";
     }
 
-    public static class KinList
+    public static class KinHub
     {
-        public const string Bootstrap = "api/kinlist/bootstrap";
-        public const string FamilyContext = "api/kinlist/family-context";
+        public const string Bootstrap = "api/kinhub/bootstrap";
+        public const string FamilyContext = "api/kinhub/family-context";
     }
 }

@@ -2,7 +2,7 @@
 
 La Function App può avere più istanze: non applicare migration indiscriminatamente al cold start. In locale la feature flag `Database:ApplyMigrationsOnStartup` abilita l'esecuzione protetta da advisory lock PostgreSQL e timeout esplicito.
 
-La slice KinList FEAT-001 introduce lo schema `shared` con profili applicativi, famiglie e membership. Ogni migration deve quindi verificare sia `__EFMigrationsHistory` sia la presenza di vincoli univoci su identità esterna e membership attiva.
+La slice KinHub FEAT-001 introduce lo schema `shared` con profili applicativi, famiglie e membership. Ogni migration deve quindi verificare sia `__EFMigrationsHistory` sia la presenza di vincoli univoci su identità esterna e membership attiva.
 
 Per ambienti condivisi genera un bundle:
 

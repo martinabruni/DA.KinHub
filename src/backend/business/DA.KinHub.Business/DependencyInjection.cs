@@ -7,6 +7,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddBusiness(this IServiceCollection services) => services
         .AddSingleton(TimeProvider.System)
-        .AddScoped<IKinListBootstrapService, KinListBootstrapService>()
+        .AddScoped<IKinHubBootstrapService, KinHubBootstrapService>()
         .AddScoped<IFamilyAccessService, FamilyAccessService>();
 }

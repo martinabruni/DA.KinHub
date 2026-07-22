@@ -6,9 +6,13 @@ using DA.KinHub.Domain.Documents;
 using DA.KinHub.Functions.Configuration;
 using DA.KinHub.Functions.Functions;
 using DA.KinHub.Functions.Http;
+using DA.KinHub.Functions.Middleware;
+using DA.KinHub.Functions.Observability;
 using DA.KinHub.Functions.OpenApi;
 using DA.KinHub.Functions.Security;
 using DA.KinHub.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -45,14 +49,14 @@ public sealed class FunctionContractTests
         var openApi = JsonSerializer.Serialize(openApiResult.Value);
         Assert.Contains("https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/authorize", openApi, StringComparison.Ordinal);
         Assert.DoesNotContain("https://https://", openApi, StringComparison.Ordinal);
-        Assert.Contains("/api/kinlist/bootstrap", openApi, StringComparison.Ordinal);
-        Assert.Contains("/api/kinlist/family-context", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/bootstrap", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/family-context", openApi, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ProblemDetailsUsesStandardMediaTypeAndExtensions()
     {
-        var request = Request("/api/kinlist/bootstrap");
+        var request = Request("/api/kinhub/bootstrap");
         ApiResults.EnsureCorrelationId(request.HttpContext);
         var result = new ApiProblemDetailsFactory().Create(request.HttpContext, 400, "Invalid", "Invalid input", "request.invalid");
 
@@ -100,10 +104,71 @@ public sealed class FunctionContractTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinListBootstrapService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinHubBootstrapService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Infrastructure.Persistence.KinHubDbContext>());
+    }
+
+    [Fact]
+    public void DependencyInjectionRegistersSecurityAndApplicationServices()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [RuntimeOptions.SectionName + ":AppName"] = "KinHub",
+            [RuntimeOptions.SectionName + ":ApiVersion"] = "1.0",
+            [RuntimeOptions.SectionName + ":Environment"] = "Test",
+            [EntraOptions.SectionName + ":Enabled"] = "true",
+            [EntraOptions.SectionName + ":Instance"] = "https://login.microsoftonline.com",
+            [EntraOptions.SectionName + ":TenantId"] = "contoso.onmicrosoft.com",
+            [EntraOptions.SectionName + ":Audience"] = "api://kinhub-test",
+            [EntraOptions.SectionName + ":Scope"] = "access_as_user",
+            ["Database:Mode"] = "ConnectionString",
+            ["Database:ConnectionString"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
+            ["Database:ApplyMigrationsOnStartup"] = "false",
+            ["Storage:AccountUri"] = "https://kinhubtest.blob.core.windows.net/",
+            ["Storage:ContainerName"] = "documents"
+        }).Build();
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddLogging();
+        services.AddRouting();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(new HostingEnvironmentStub(isDevelopment: true));
+        services.AddOptions<RuntimeOptions>().BindConfiguration(RuntimeOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<RuntimeOptions>, RuntimeOptionsValidator>();
+        services.AddKinHubSecurity(configuration);
+        services.AddBusiness();
+        services.AddInfrastructure(configuration);
+        services.AddSingleton<BuildInfoProvider>();
+        services.AddSingleton<KinHubTelemetry>();
+        services.AddSingleton<ApiProblemDetailsFactory>();
+        services.AddSingleton<OpenApiDocumentProvider>();
+        services.AddSingleton<KinHubAuthorizationMiddleware>();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = provider.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<RequestAuthenticationService>());
+        Assert.NotNull(provider.GetRequiredService<ExternalIdentityClaimsResolver>());
+        Assert.NotNull(provider.GetRequiredService<FunctionAccessMetadataProvider>());
+        Assert.NotNull(provider.GetRequiredService<BuildInfoProvider>());
+        Assert.NotNull(provider.GetRequiredService<KinHubTelemetry>());
+        Assert.NotNull(provider.GetRequiredService<ApiProblemDetailsFactory>());
+        Assert.NotNull(provider.GetRequiredService<OpenApiDocumentProvider>());
+
+        var authorizationHandlers = scope.ServiceProvider.GetServices<IAuthorizationHandler>().ToArray();
+        Assert.Contains(authorizationHandlers, handler => handler is ApiScopeAuthorizationHandler);
+        Assert.Contains(authorizationHandlers, handler => handler is FamilyAuthorizationHandler);
+
+        var jwtOptions = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        Assert.Equal("https://login.microsoftonline.com/contoso.onmicrosoft.com/v2.0", jwtOptions.Authority);
+        Assert.Equal("api://kinhub-test", jwtOptions.Audience);
+        Assert.NotNull(provider.GetRequiredService<KinHubAuthorizationMiddleware>());
     }
 
     [Fact]
@@ -142,8 +207,8 @@ public sealed class FunctionContractTests
     {
         var provider = new FunctionAccessMetadataProvider();
 
-        var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinListBootstrapFunctions.Bootstrap"));
-        var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinListFamilyFunctions.FamilyContext"));
+        var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubBootstrapFunctions.Bootstrap"));
+        var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubFamilyFunctions.FamilyContext"));
         var version = provider.Get(Definition("DA.KinHub.Functions.Functions.MetadataFunctions.Version"));
 
         Assert.True(bootstrap.IsHttp);

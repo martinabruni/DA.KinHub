@@ -7,7 +7,7 @@ description: Correct post-login routing, required onboarding, and a safe offline
 
 ## What happens after sign-in
 
-KinList always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the PWA routes you into KinList. If the family is missing or the membership is no longer active, you only see onboarding with **Create a family** and **Join with a code**.
+KinHub always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the PWA routes you into KinList. If the family is missing or the membership is no longer active, you only see KinHub onboarding with **Create a family** and **Join with a code**.
 
 ## What is not shown
 
@@ -19,4 +19,4 @@ Only the public PWA shell stays available offline. KinList does not keep persona
 
 ## Current feature scope
 
-This slice introduces access, bootstrap, and `Family` authorization. Family creation, join, and the shared list arrive in later KinList backlog features.
+This slice connects KinList to KinHub's shared bootstrap and `Family` authorization. Family creation, join, and the shared list arrive in later features.

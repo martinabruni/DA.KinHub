@@ -18,5 +18,5 @@ Le migration non usano piu una connection string segreta. I workflow:
 
 - 403 sul deployment storage: verificare ruolo Storage Blob Data Owner e propagazione RBAC.
 - package non avviabile: verificare `host.json` e `DA.KinHub.Functions.dll` nella root ZIP.
-- readiness 503: controllare PostgreSQL, bootstrap KinList, settings database, principal Entra e migration.
+- readiness 503: controllare PostgreSQL, bootstrap KinHub, settings database, principal Entra e migration.
 - provisioning Flex negato: eseguire `az functionapp list-flexconsumption-locations` e verificare quota regionale.

@@ -4,7 +4,7 @@
 
 KinHub usa OpenTelemetry nel worker .NET Isolated e Azure Monitor come exporter verso Application Insights. Log, metriche e trace applicativi condividono correlazione e configurazione; non affiancare una seconda pipeline Application Insights classica.
 
-La Function App registra OpenTelemetry nel composition root con `UseFunctionsWorkerDefaults`, `UseAzureMonitorExporter`, `ActivitySource` `KinHub.KinList` e `Meter` `KinHub.KinList`. La credential dell'exporter e esplicita: `DefaultAzureCredential` in Development e managed identity system-assigned negli altri ambienti.
+La Function App registra OpenTelemetry nel composition root con `UseFunctionsWorkerDefaults`, `UseAzureMonitorExporter`, `ActivitySource` `KinHub` e `Meter` `KinHub`. La credential dell'exporter e esplicita: `DefaultAzureCredential` in Development e managed identity system-assigned negli altri ambienti.
 
 ## Configurazione
 
@@ -47,7 +47,7 @@ Dopo il deploy verificare in Application Insights:
 1. request HTTP presenti e correlate;
 2. dependency PostgreSQL/HTTP presenti;
 3. trace applicativi collegati allo stesso trace;
-4. metriche custom KinList con sole dimensioni approvate;
+4. metriche custom KinHub con sole dimensioni approvate;
 5. eccezioni tecniche senza dettagli sensibili;
 6. assenza di duplicati fra host Functions e worker;
 7. sampling coerente con i volumi e request operative non perse.

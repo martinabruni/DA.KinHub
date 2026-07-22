@@ -200,10 +200,10 @@ Non mantenere due exporter. Verificare in Application Insights request, dependen
 
 ## 11. Operation scope e logging
 
-Rifattorizzare `KinListTelemetry` per esporre uno scope:
+Rifattorizzare `KinHubTelemetry` per esporre uno scope:
 
 ```csharp
-using var operation = telemetry.Begin(KinListOperations.Bootstrap);
+using var operation = telemetry.Begin(KinHubOperations.Bootstrap);
 var result = await service.GetBootstrapAsync(...);
 operation.Complete(result.State);
 ```

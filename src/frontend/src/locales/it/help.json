@@ -8,8 +8,8 @@
     "limits": "I servizi specialistici verranno aggiunti in versioni successive."
   },
   "kinlist": {
-    "summary": "Verifica il bootstrap post-login e mostra il percorso corretto verso famiglia attiva oppure onboarding.",
-    "purpose": "Applica il controllo autorevole della membership familiare prima di mostrare superfici protette.",
+    "summary": "Usa il bootstrap KinHub post-login e mostra il percorso corretto verso famiglia attiva oppure onboarding.",
+    "purpose": "Consuma il controllo autorevole KinHub della membership familiare prima di mostrare KinList.",
     "actions": "Attendere la verifica, rileggere lo stato offline, oppure prepararsi a creare o unirsi a una famiglia nelle feature successive.",
     "prerequisites": "È necessario accedere con un token API valido e una connessione attiva per il bootstrap online.",
     "fields": "La pagina distingue caricamento, onboarding, sessione scaduta, accesso negato, errore tecnico e shell offline senza dati personali.",
