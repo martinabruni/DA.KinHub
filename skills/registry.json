@@ -126,16 +126,16 @@
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "1b290e8e62395ade0760361cb968f835982ae016d9cb92324a77cbfd85348c1d"
+          "checksum": "753f822aa6d57e77f61df370d6def3df16093e91b80f4c4f392667e0827f0a76"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",
-          "checksum": "41252fba03d809855c71ff1abfcfb83e1ee45f519369a4d8b3823959252da2e6"
+          "checksum": "8ee651b93d2d45a5ef460e4a252e8cf4a6b8c22715c951c9e95a799e707eb4bb"
         }
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "61161c35463b3caee67ea9cdc37d89aa76e31de7c1130a82ff54aa03f5574e10"
+      "checksum": "e30c7cc8737fd69633b33e79e8badc660dab328ce02bf3bb4b22c4ce7813c37b"
     },
     {
       "id": "kinhub-release",
