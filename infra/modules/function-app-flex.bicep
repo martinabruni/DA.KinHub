@@ -82,7 +82,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         supportCredentials: false
       }
       appSettings: [
-        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'dotnet-isolated' }
         { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
         { name: 'AzureWebJobsStorage__blobServiceUri', value: storageBlobEndpoint }
         { name: 'AzureWebJobsStorage__queueServiceUri', value: storageQueueEndpoint }

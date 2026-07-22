@@ -22,4 +22,4 @@ param allowedOrigins = [
 ]
 param enableVnetIntegration = false
 param virtualNetworkSubnetResourceId = ''
-param enablePurgeProtection = false
+param enablePurgeProtection = true
