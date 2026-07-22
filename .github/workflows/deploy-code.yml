@@ -101,8 +101,8 @@ jobs:
           rule_name="gha-${GITHUB_RUN_ID}"
           az postgres flexible-server firewall-rule create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ steps.postgres.outputs.server_name }}" \
-            --rule-name "$rule_name" \
+            --server-name "${{ steps.postgres.outputs.server_name }}" \
+            --name "$rule_name" \
             --start-ip-address "$runner_ip" \
             --end-ip-address "$runner_ip" \
             --only-show-errors --output none
@@ -162,8 +162,8 @@ jobs:
         run: |
           az postgres flexible-server firewall-rule delete \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ steps.postgres.outputs.server_name }}" \
-            --rule-name "${{ steps.postgres_firewall.outputs.rule_name }}" \
+            --server-name "${{ steps.postgres.outputs.server_name }}" \
+            --name "${{ steps.postgres_firewall.outputs.rule_name }}" \
             --yes --only-show-errors
 
       - name: Deploy Function App with One Deploy
