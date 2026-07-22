@@ -5,12 +5,12 @@ using DA.KinHub.Domain.Identity;
 
 namespace DA.KinHub.Business.Identity;
 
-public sealed class KinListBootstrapService(
+public sealed class KinHubBootstrapService(
     IApplicationUserRepository applicationUserRepository,
     IFamilyMembershipRepository familyMembershipRepository,
-    TimeProvider timeProvider) : IKinListBootstrapService
+    TimeProvider timeProvider) : IKinHubBootstrapService
 {
-    public async Task<KinListBootstrapResult> GetBootstrapAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken)
+    public async Task<KinHubBootstrapResult> GetBootstrapAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken)
     {
         try
         {
@@ -22,8 +22,8 @@ public sealed class KinListBootstrapService(
 
             var familyId = await familyMembershipRepository.FindActiveFamilyIdAsync(applicationUser.Id, cancellationToken);
             return familyId is Guid activeFamilyId
-                ? KinListBootstrapResult.Family(activeFamilyId)
-                : KinListBootstrapResult.Onboarding();
+                ? KinHubBootstrapResult.Family(activeFamilyId)
+                : KinHubBootstrapResult.Onboarding();
         }
         catch (BusinessAccessDeniedException)
         {

@@ -6,7 +6,7 @@ export interface ApiProblem {
   traceId?: string;
 }
 
-export type KinListBootstrap =
+export type KinHubBootstrap =
   | { state: "family"; familyId: string }
   | { state: "onboarding" };
 
@@ -27,8 +27,8 @@ export class ApiNetworkError extends ApiError {
 export class KinHubApiClient {
   constructor(private readonly accessToken: () => Promise<string>) {}
 
-  async getKinListBootstrap(signal?: AbortSignal): Promise<KinListBootstrap> {
-    return this.request<KinListBootstrap>("/api/kinlist/bootstrap", { signal });
+  async getKinHubBootstrap(signal?: AbortSignal): Promise<KinHubBootstrap> {
+    return this.request<KinHubBootstrap>("/api/kinhub/bootstrap", { signal });
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {

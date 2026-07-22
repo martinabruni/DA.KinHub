@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { ConnectivityProvider } from "./components/ConnectivityProvider";
-import { KinListFamilyProvider } from "./components/KinListFamilyContext";
+import { KinHubFamilyProvider } from "./components/KinHubFamilyContext";
 import { ThemeProvider } from "./components/ThemeProvider";
 import "./i18n";
 import { msalInstance } from "./lib/auth";
@@ -17,9 +17,9 @@ createRoot(document.getElementById("root")!).render(
     <MsalProvider instance={msalInstance}>
       <ThemeProvider>
         <ConnectivityProvider>
-          <KinListFamilyProvider>
+          <KinHubFamilyProvider>
             <BrowserRouter><App /></BrowserRouter>
-          </KinListFamilyProvider>
+          </KinHubFamilyProvider>
         </ConnectivityProvider>
       </ThemeProvider>
     </MsalProvider>

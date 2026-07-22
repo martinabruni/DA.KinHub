@@ -81,7 +81,7 @@ cd src/backend/applications/DA.KinHub.Functions
 func start
 ```
 
-Endpoint: `GET /health/live`, `GET /health/ready`, `GET /api/version`, `GET /api/status`, `GET /api/openapi.json`, `GET /api/kinlist/bootstrap`, `GET /api/kinlist/family-context?familyId=<uuid>`.
+Endpoint: `GET /health/live`, `GET /health/ready`, `GET /api/version`, `GET /api/status`, `GET /api/openapi.json`, `GET /api/kinhub/bootstrap`, `GET /api/kinhub/family-context?familyId=<uuid>`.
 
 ### Frontend
 

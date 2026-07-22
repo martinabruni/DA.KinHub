@@ -9,7 +9,7 @@
 
 ## Motivazione
 
-FEAT-001 ha introdotto correttamente i contratti `ApiAccess` e `Family`, la verifica della membership e la telemetria KinList, ma l'implementazione distribuisce responsabilita trasversali fra Function, helper, policy e composition root. Ogni nuovo endpoint dovrebbe oggi ricordare manualmente autenticazione, autorizzazione, correlation ID, cache privata, mapping delle eccezioni e misurazione dell'operazione.
+FEAT-001 ha introdotto correttamente i contratti `ApiAccess` e `Family`, la verifica della membership e la telemetria KinHub, ma l'implementazione distribuisce responsabilita trasversali fra Function, helper, policy e composition root. Ogni nuovo endpoint dovrebbe oggi ricordare manualmente autenticazione, autorizzazione, correlation ID, cache privata, mapping delle eccezioni e misurazione dell'operazione.
 
 La CR rende questi comportamenti sicuri per default e riutilizzabili, senza cambiare il comportamento prodotto di bootstrap, onboarding o membership.
 
@@ -20,7 +20,7 @@ La CR rende questi comportamenti sicuri per default e riutilizzabili, senza camb
 - La policy `Family` usa un handler scoped, ma la composizione con `ApiAccess`, la risoluzione dei claim e la validazione di `familyId` sono orchestrate da un helper chiamato esplicitamente.
 - Correlation ID, `no-store`, mapping di `BusinessDependencyException` e timing telemetrico richiedono chiamate ripetute.
 - Policy, claim, route, codici errore e operation name non hanno una sola fonte completa.
-- `KinListTelemetry` espone `ActivitySource` e `Meter`, ma non esiste un exporter OpenTelemetry configurato per le sorgenti custom.
+- `KinHubTelemetry` espone `ActivitySource` e `Meter`, ma non esiste un exporter OpenTelemetry configurato per le sorgenti custom.
 - L'OpenAPI manuale non e una rappresentazione completa degli endpoint e dei relativi requisiti di sicurezza.
 
 ## Comportamento desiderato
@@ -36,7 +36,7 @@ La CR rende questi comportamenti sicuri per default e riutilizzabili, senza camb
 
 ## Contratti invariati
 
-- `GET /api/kinlist/bootstrap` resta protetto da `ApiAccess`.
+- `GET /api/kinhub/bootstrap` resta protetto da `ApiAccess`.
 - Le API su una famiglia esistente restano protette dalla policy esattamente `Family`.
 - `familyId` resta un UUID obbligatorio in query e viene propagato esplicitamente fino alla persistenza.
 - Restano validi i codici `auth.required`, `auth.scopeRequired`, `auth.requiredClaims`, `family.idRequired`, `family.idInvalid`, `family.accessDenied` e `dependency.postgresqlUnavailable`.
@@ -53,7 +53,7 @@ La CR rende questi comportamenti sicuri per default e riutilizzabili, senza camb
 - Validazione fail-fast di Entra, PostgreSQL e Blob Storage.
 - Route/OpenAPI da fonti condivise e test di copertura.
 - Migrazione dalla SDK Application Insights classica ad Azure Monitor OpenTelemetry.
-- Operation scope monotono per metriche e trace KinList.
+- Operation scope monotono per metriche e trace KinHub.
 - Aggiornamento di test, documentazione, skill e harness.
 
 ## Fuori scope

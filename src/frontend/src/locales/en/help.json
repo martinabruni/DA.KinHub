@@ -8,8 +8,8 @@
     "limits": "Specialized services will be added in later versions."
   },
   "kinlist": {
-    "summary": "Checks the post-login bootstrap and shows the correct path to an active family or onboarding.",
-    "purpose": "Applies the authoritative family membership check before protected surfaces are shown.",
+    "summary": "Uses the KinHub post-login bootstrap and shows the correct path to an active family or onboarding.",
+    "purpose": "Consumes KinHub's authoritative family membership check before showing KinList.",
     "actions": "Wait for the check, review the offline state, or prepare to create or join a family in later features.",
     "prerequisites": "You need to sign in with a valid API token and have a live network connection for the online bootstrap.",
     "fields": "The page distinguishes loading, onboarding, expired session, denied access, technical failure, and the offline shell without personal data.",

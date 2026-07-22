@@ -38,7 +38,7 @@
         },
         {
           "path": "docs/operations/observability.md",
-          "checksum": "385aa9ce1e453a50ca7c206697a08e8de06ef97c440a203c088f2f4973031a0d"
+          "checksum": "a218cc70c28ab8b482f87056754a46190f68bcee191b0f3279b10c6e375a2e15"
         }
       ],
       "catalog": "skills/backend/catalog.json",
@@ -69,7 +69,7 @@
           "source": "src/backend/infrastructure/DA.KinHub.Infrastructure/Storage/BlobDocumentStorage.cs"
         }
       ],
-      "checksum": "dace61261749ecb6d1b4c20adbc587a2628c2a87461788007e0864f59212781e"
+      "checksum": "585531a24f865ed4e9b1800e93333ee2c97c2087d46de416bf36fcd8b6c9840f"
     },
     {
       "id": "kinhub-documentation",
@@ -119,14 +119,14 @@
     {
       "id": "kinhub-implementation",
       "name": "KinHub feature implementation workflow",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "area": "implementation",
       "description": "Esecuzione autonoma end-to-end delle feature, checkpoint riprendibili e consegna tramite pull request.",
       "path": "skills/implementation/SKILL.md",
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "1cb084d392241fa6202af0bd3cebbb79a49801373c1c08bc3854f096009eff6c"
+          "checksum": "1b290e8e62395ade0760361cb968f835982ae016d9cb92324a77cbfd85348c1d"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",
@@ -135,7 +135,7 @@
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "3ab8d69d1529ba71555e472ba3eef47d56905893c7b5f42d8714ac8cfa24fd4d"
+      "checksum": "61161c35463b3caee67ea9cdc37d89aa76e31de7c1130a82ff54aa03f5574e10"
     },
     {
       "id": "kinhub-release",

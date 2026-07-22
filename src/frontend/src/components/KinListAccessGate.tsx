@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { acquireApiAccessToken, getActiveAccount } from "../lib/auth";
 import { ApiError, ApiNetworkError, ApiResponseError, KinHubApiClient } from "../lib/api";
 import { useConnectivity } from "./ConnectivityProvider";
-import { useKinListFamily } from "./KinListFamilyContext";
+import { useKinHubFamily } from "./KinHubFamilyContext";
 
 type GateState =
   | { status: "loading" }
@@ -19,7 +19,7 @@ export function KinListAccessGate() {
   const { t } = useTranslation(["pages", "common"]);
   const { instance } = useMsal();
   const { online } = useConnectivity();
-  const { setFamilyId } = useKinListFamily();
+  const { setFamilyId } = useKinHubFamily();
   const [reloadToken, setReloadToken] = useState(0);
   const [state, setState] = useState<GateState>({ status: online ? "loading" : "offline" });
   const account = getActiveAccount(instance);
@@ -46,7 +46,7 @@ export function KinListAccessGate() {
     setFamilyId(null);
     setState({ status: "loading" });
 
-    void client.getKinListBootstrap(controller.signal)
+    void client.getKinHubBootstrap(controller.signal)
       .then((result) => {
         setFamilyId(result.state === "family" ? result.familyId : null);
         setState(result.state === "family"

@@ -77,9 +77,9 @@ Le regole funzionali restano descritte in `functional-analysis.md`; questo docum
 
 ```mermaid
 flowchart LR
-    U["Utente autenticato / membro"] --> PWA["KinList PWA<br/>onboarding, lista, Settings e Family"]
+    U["Utente autenticato / membro"] --> PWA["KinHub PWA<br/>onboarding, KinService, Settings e Family"]
     PWA -->|"MSAL / OIDC"| EXT["Microsoft Entra External ID"]
-    PWA -->|"HTTPS + access token"| API["Kin Hub Function App<br/>modulo KinList .NET"]
+    PWA -->|"HTTPS + access token"| API["KinHub Function App<br/>moduli shared e KinService"]
     API --> AUTH["ApiAccess / policy Family<br/>handler scoped asincrono"]
     API --> FAM["Casi d'uso Family<br/>create, invite, join, leave"]
     API --> APP["Casi d'uso KinList<br/>single e bulk"]
@@ -99,9 +99,9 @@ flowchart LR
 ### Confini iniziali
 
 - La PWA acquisisce l'audio, gestisce stato e accessibilità, ma non contiene segreti, regole di autorizzazione o interpretazione AI.
-- Il modulo KinList nella Function App autentica, autorizza, valida e orchestra i casi d'uso.
+- Il modulo shared di KinHub autentica e autorizza; ogni modulo KinService valida e orchestra i propri casi d'uso specifici.
 - Il dominio contiene invarianti e transizioni; non conosce HTTP, timer, SDK AI o driver PostgreSQL.
-- L'infrastruttura implementa persistenza, provider AI, orologio, identità corrente e telemetria.
+- L'infrastruttura implementa persistenza, provider AI e orologio; identita e telemetria condivise appartengono a KinHub.
 - PostgreSQL è condiviso fisicamente ma separa i dati comuni da KinList tramite schemi e privilegi.
 - Il timer di retention riusa la stessa unità applicativa e gli stessi casi d'uso; non nasce un servizio autonomo.
 - Stato onboarding, create e join sono autenticati con `ApiAccess`; tutte e sole le API su famiglia esistente applicano `Family` senza alias o varianti.
@@ -114,7 +114,7 @@ flowchart LR
 
 | Componente | Responsabilità | Input/output | Dipendenze autorizzate | Non gli compete | Requisiti |
 |---|---|---|---|---|---|
-| KinList PWA | UI, routing, capability detection, popup informativo iniziale sulla voce, audio in memoria, pagine/cursori, onboarding, famiglia, lista, bulk, drawer, filtro, temi e i18n | Gesti/audio → richieste; pagine/esiti → stato visibile | Browser API, MSAL, client API tipizzato, route registry e UI esistente | Fidarsi del token, decidere permessi, chiamare AI, persistere audio/dati personali o interpretare cursori | FR-001, FR-006–FR-011, FR-017–FR-025, FR-027–FR-029, FR-031–FR-055 |
+| KinHub PWA | UI, routing, onboarding, famiglia, impostazioni, temi, i18n e shell dei KinService; KinList aggiunge audio in memoria, pagine/cursori, lista, bulk, drawer e filtro | Gesti/audio → richieste; pagine/esiti → stato visibile | Browser API, MSAL, client API tipizzato, route registry e UI esistente | Fidarsi del token, decidere permessi, chiamare AI, persistere audio/dati personali o interpretare cursori | FR-001, FR-006–FR-011, FR-017–FR-025, FR-027–FR-029, FR-031–FR-055 |
 | Endpoint Functions | Confine HTTP, validazione sintattica, autenticazione token, mapping di errori, correlazione | HTTP → comandi/query; risultati → HTTP/Problem Details | Application layer, autenticazione configurata, telemetria | Regole di dominio, SQL, prompt AI | FR-001–FR-005, FR-012–FR-033, FR-036–FR-054 |
 | Identity & Access | Risoluzione `(iss, oid)`, profilo, onboarding, policy `ApiAccess`/`Family`, membership attiva e contesto utente | Claim verificati + `familyId` → esito e identità applicativa | Handler scoped, servizio/repository async shared | Fallback su email/nome, user ID dal client, SQL nell'handler o sostituzione dello scope nei casi d'uso | FR-001–FR-005, FR-031, FR-032, FR-047 |
 | Family Application | Creazione atomica, lettura famiglia/membri, inviti, join, leave e lifecycle soft delete | Comandi/query autenticati → contesto famiglia o Problem Details | Dominio, repository shared, orologio, generatore crittografico, unità transazionale | Email/notifiche, rimozione altri membri, ruoli aggiuntivi, cancellazione account | FR-031–FR-043, FR-054 |
@@ -136,13 +136,14 @@ src/
     KinHub.Functions/               host, endpoint HTTP, timer, composizione
     KinList.Domain/                 entità, value object, regole e transizioni
     KinList.Application/            casi d'uso, porte, validazione applicativa
-    KinList.Infrastructure/         PostgreSQL, AI, identità, telemetria
+    KinList.Infrastructure/         PostgreSQL e AI specifici di KinList
+    KinHub.Infrastructure/          identita, famiglie, telemetria e adapter condivisi
     SharedKernel/                   solo primitive realmente comuni e stabili
   frontend/
     kinlist/
-      app/                           bootstrap, route, provider
-      features/                      list, recording, item-detail, completion
-                                     onboarding, family, bulk-completion
+      app/                           route e provider specifici di KinList
+      features/                      list, recording, item-detail, completion,
+                                     bulk-completion
       shared/                        controlli riusabili, i18n, tema, API client
 tests/
   unit/

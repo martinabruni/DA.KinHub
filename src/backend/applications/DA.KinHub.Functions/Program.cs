@@ -36,8 +36,8 @@ var host = new HostBuilder()
         services.AddSingleton<IValidateOptions<RuntimeOptions>, RuntimeOptionsValidator>();
 
         var openTelemetry = services.AddOpenTelemetry();
-        openTelemetry.WithTracing(builder => builder.AddSource("KinHub.KinList"));
-        openTelemetry.WithMetrics(builder => builder.AddMeter("KinHub.KinList"));
+        openTelemetry.WithTracing(builder => builder.AddSource("KinHub"));
+        openTelemetry.WithMetrics(builder => builder.AddMeter("KinHub"));
         openTelemetry.UseFunctionsWorkerDefaults().UseAzureMonitorExporter();
         services.Configure<OpenTelemetryLoggerOptions>(options => options.IncludeScopes = true);
         services.AddSingleton<IConfigureOptions<AzureMonitorExporterOptions>, AzureMonitorExporterOptionsSetup>();
@@ -46,7 +46,7 @@ var host = new HostBuilder()
         services.AddBusiness();
         services.AddInfrastructure(context.Configuration);
         services.AddSingleton<BuildInfoProvider>();
-        services.AddSingleton<KinListTelemetry>();
+        services.AddSingleton<KinHubTelemetry>();
         services.AddSingleton<ApiProblemDetailsFactory>();
         services.AddSingleton<OpenApiDocumentProvider>();
     })

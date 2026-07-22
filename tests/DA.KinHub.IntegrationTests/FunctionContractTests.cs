@@ -45,14 +45,14 @@ public sealed class FunctionContractTests
         var openApi = JsonSerializer.Serialize(openApiResult.Value);
         Assert.Contains("https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/authorize", openApi, StringComparison.Ordinal);
         Assert.DoesNotContain("https://https://", openApi, StringComparison.Ordinal);
-        Assert.Contains("/api/kinlist/bootstrap", openApi, StringComparison.Ordinal);
-        Assert.Contains("/api/kinlist/family-context", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/bootstrap", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/family-context", openApi, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ProblemDetailsUsesStandardMediaTypeAndExtensions()
     {
-        var request = Request("/api/kinlist/bootstrap");
+        var request = Request("/api/kinhub/bootstrap");
         ApiResults.EnsureCorrelationId(request.HttpContext);
         var result = new ApiProblemDetailsFactory().Create(request.HttpContext, 400, "Invalid", "Invalid input", "request.invalid");
 
@@ -100,7 +100,7 @@ public sealed class FunctionContractTests
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinListBootstrapService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinHubBootstrapService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Infrastructure.Persistence.KinHubDbContext>());
@@ -142,8 +142,8 @@ public sealed class FunctionContractTests
     {
         var provider = new FunctionAccessMetadataProvider();
 
-        var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinListBootstrapFunctions.Bootstrap"));
-        var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinListFamilyFunctions.FamilyContext"));
+        var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubBootstrapFunctions.Bootstrap"));
+        var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubFamilyFunctions.FamilyContext"));
         var version = provider.Get(Definition("DA.KinHub.Functions.Functions.MetadataFunctions.Version"));
 
         Assert.True(bootstrap.IsHttp);

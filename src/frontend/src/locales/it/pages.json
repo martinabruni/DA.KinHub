@@ -12,9 +12,9 @@
     "sessionExpired": "La sessione è scaduta oppure non è più valida. Accedi di nuovo per continuare.",
     "forbidden": "L'accesso alla famiglia richiesta non è consentito.",
     "error": "Non è stato possibile verificare lo stato familiare. Riprova.",
-    "onboarding": "Per iniziare con KinList devi creare una famiglia oppure unirti con un codice.",
+    "onboarding": "Per usare i servizi KinHub devi creare una famiglia oppure unirti con un codice.",
     "onboardingPending": "Le azioni di creazione e join verranno attivate dalle prossime feature dedicate, ma il percorso post-login è già instradato correttamente.",
-    "ready": "KinList ha verificato una membership familiare attiva.",
+    "ready": "KinHub ha verificato una membership familiare attiva.",
     "readyDetail": "La lista condivisa arriverà nelle feature successive senza riutilizzare dati residui o cache personali dal bootstrap corrente."
   },
   "about": {

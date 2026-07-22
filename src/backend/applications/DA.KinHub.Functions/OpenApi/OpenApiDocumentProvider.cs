@@ -38,10 +38,10 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                 [$"/{ApiRoutes.Metadata.Version}"] = new { get = PublicOperation("Build metadata", new Dictionary<string, object> { ["200"] = new { description = "Version" } }) },
                 [$"/{ApiRoutes.Metadata.Status}"] = new { get = PublicOperation("Application status", new Dictionary<string, object> { ["200"] = new { description = "Status" } }) },
                 [$"/{ApiRoutes.Metadata.OpenApi}"] = new { get = PublicOperation("OpenAPI document", new Dictionary<string, object> { ["200"] = new { description = "Document" } }) },
-                [$"/{ApiRoutes.KinList.Bootstrap}"] = new
+                [$"/{ApiRoutes.KinHub.Bootstrap}"] = new
                 {
                     get = ProtectedOperation(
-                        "Resolve the KinList post-login state",
+                        "Resolve the KinHub post-login state",
                         new Dictionary<string, object>
                         {
                             ["200"] = new { description = "Bootstrap resolved" },
@@ -51,7 +51,7 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                             ["503"] = problemResponse
                         })
                 },
-                [$"/{ApiRoutes.KinList.FamilyContext}"] = new
+                [$"/{ApiRoutes.KinHub.FamilyContext}"] = new
                 {
                     get = FamilyOperation(
                         "Validate the Family policy for a familyId",

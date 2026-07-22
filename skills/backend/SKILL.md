@@ -48,6 +48,8 @@ Vedi `examples/DocumentStorage.example.cs`, `docs/architecture/http-functions.md
 
 Il dominio non dipende da EF o Azure. Niente migration di produzione al cold start. Niente log di token, password o dati sensibili.
 
+KinHub possiede identita, profili, famiglie, membership, inviti, bootstrap post-login e policy `Family`. I KinService consumano questo contesto: contratti, route e telemetria condivisi usano nomi KinHub e non il namespace KinList o di altri servizi.
+
 Policy, claim, route, query parameter, codici condivisi e operation name hanno una fonte autorevole. Route e OpenAPI hanno test di parita. Entra, database, storage ed exporter critici usano options tipizzate e `ValidateOnStart` senza bypass di sicurezza.
 
 Problem Details nasce da una factory unica e gli errori tecnici non espongono cause interne. API protette ed errori sono `no-store, private`; health/status/version sono `no-store`. Non mantenere SDK Application Insights classica e OpenTelemetry in parallelo.

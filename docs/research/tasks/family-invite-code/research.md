@@ -1,6 +1,6 @@
 ## description
 
-Questo task copre l'invito pragmatico a una famiglia mediante codice. Il problema concreto è permettere a un utente già autenticato ma senza famiglia di aderire al perimetro corretto senza introdurre ricerca persone, email o notifiche. Il sistema genera un codice, lo mostra a un membro autorizzato e lascia che sia quella persona a condividerlo fuori da KinList con il canale che preferisce. KinList non invia messaggi e non deve conoscere il canale usato.
+Questo task copre l'invito pragmatico a una famiglia mediante codice. Il problema concreto è permettere a un utente già autenticato ma senza famiglia di aderire al perimetro corretto senza introdurre ricerca persone, email o notifiche. KinHub genera un codice, lo mostra a un membro autorizzato e lascia che sia quella persona a condividerlo fuori dalla piattaforma con il canale che preferisce. KinHub non invia messaggi e non deve conoscere il canale usato.
 
 Un codice d'invito è una credenziale temporanea: chi lo presenta dimostra di possedere il valore, ma il codice da solo non sostituisce il login. Il backend deve verificare insieme identità autenticata, stato del codice e regole di appartenenza. L'input è la richiesta autorizzata di generare, revocare o consumare un codice; l'output è un codice mostrato una volta al generatore, uno stato revocato oppure una nuova appartenenza atomica alla famiglia.
 
@@ -148,7 +148,7 @@ flowchart TD
 
 ## user experience
 
-Il membro autorizzato gestisce il codice in una superficie essenziale della famiglia. Il valore compare soltanto dopo una generazione riuscita; scadenza e stato sono testo, non sole icone. Non esiste un campo destinatario e KinList non promette di inviare nulla.
+Il membro autorizzato gestisce il codice in una superficie essenziale della famiglia. Il valore compare soltanto dopo una generazione riuscita; scadenza e stato sono testo, non sole icone. Non esiste un campo destinatario e KinHub non promette di inviare nulla.
 
 ```text
 +--------------------------------+

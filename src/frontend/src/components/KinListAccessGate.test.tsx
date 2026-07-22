@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { KinListAccessGate } from "./KinListAccessGate";
-import { KinListFamilyProvider, useKinListFamily } from "./KinListFamilyContext";
+import { KinHubFamilyProvider, useKinHubFamily } from "./KinHubFamilyContext";
 
 let online = true;
 let account: { homeAccountId: string } | null = null;
@@ -39,7 +39,7 @@ vi.mock("../lib/api", () => {
     ApiNetworkError,
     ApiResponseError,
     KinHubApiClient: class {
-      getKinListBootstrap(signal?: AbortSignal) {
+      getKinHubBootstrap(signal?: AbortSignal) {
         return bootstrapHandler(signal);
       }
     }
@@ -47,16 +47,16 @@ vi.mock("../lib/api", () => {
 });
 
 function Probe() {
-  const { familyId } = useKinListFamily();
+  const { familyId } = useKinHubFamily();
   return <output data-testid="family-id">{familyId ?? ""}</output>;
 }
 
 function renderGate() {
   return render(
-    <KinListFamilyProvider>
+    <KinHubFamilyProvider>
       <KinListAccessGate />
       <Probe />
-    </KinListFamilyProvider>
+    </KinHubFamilyProvider>
   );
 }
 
@@ -88,10 +88,10 @@ describe("KinListAccessGate", () => {
     account = { homeAccountId: "account-b" };
     bootstrapHandler = () => Promise.resolve({ state: "onboarding" });
     view.rerender(
-      <KinListFamilyProvider>
+      <KinHubFamilyProvider>
         <KinListAccessGate />
         <Probe />
-      </KinListFamilyProvider>
+      </KinHubFamilyProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent(""));
@@ -108,10 +108,10 @@ describe("KinListAccessGate", () => {
 
     online = false;
     view.rerender(
-      <KinListFamilyProvider>
+      <KinHubFamilyProvider>
         <KinListAccessGate />
         <Probe />
-      </KinListFamilyProvider>
+      </KinHubFamilyProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent(""));

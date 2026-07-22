@@ -6,7 +6,7 @@ Implementare il collegamento idempotente `(iss, oid)` verso il profilo interno, 
 
 ## Contratti esecutivi
 
-- Bootstrap: `GET /api/kinlist/bootstrap`, protetto da `ApiAccess`.
+- Bootstrap: `GET /api/kinhub/bootstrap`, protetto da `ApiAccess`.
 - Risposta associata: `{ "state": "family", "familyId": "<uuid>" }`.
 - Risposta non associata: `{ "state": "onboarding" }`, senza campi familiari.
 - `familyId`: UUID obbligatorio nella query di ogni futura API protetta da `Family`.

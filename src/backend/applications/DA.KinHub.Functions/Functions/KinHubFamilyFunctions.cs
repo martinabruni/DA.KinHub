@@ -7,18 +7,18 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace DA.KinHub.Functions.Functions;
 
-public sealed class KinListFamilyFunctions(KinListTelemetry telemetry)
+public sealed class KinHubFamilyFunctions(KinHubTelemetry telemetry)
 {
     [RequiresFamilyAccess]
-    [Function("KinListFamilyContext")]
+    [Function("KinHubFamilyContext")]
     public async Task<IActionResult> FamilyContext(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ApiRoutes.KinList.FamilyContext)] HttpRequest request,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ApiRoutes.KinHub.FamilyContext)] HttpRequest request,
         CancellationToken cancellationToken)
     {
         _ = request.HttpContext.Features.Get<KinHubAuthorizationFeature>()
             ?? throw new InvalidOperationException("Authorized request feature is missing.");
 
-        using var operation = telemetry.Begin(KinListOperations.FamilyAuthorization);
+        using var operation = telemetry.Begin(KinHubOperations.FamilyAuthorization);
         await Task.CompletedTask;
         operation.Complete("granted");
         return new NoContentResult();

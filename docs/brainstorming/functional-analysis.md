@@ -122,7 +122,7 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - **Trigger**: l'utente completa il login.
 - **Precondizioni**: l'identità è stata riconosciuta dal sistema approvato.
 - **Percorso principale**:
-  1. KinList collega l'identità a un solo profilo applicativo, creandolo se necessario.
+  1. KinHub collega l'identità a un solo profilo applicativo, creandolo se necessario.
   2. Verifica se esiste un'appartenenza familiare attiva.
   3. Se l'appartenenza esiste, apre direttamente KinList nella famiglia associata.
   4. Se non esiste, mostra la scelta obbligatoria tra `Crea una famiglia` e `Unisciti con un codice`.
@@ -232,9 +232,9 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - **Trigger**: l'utente senza famiglia sceglie `Crea una famiglia`.
 - **Precondizioni**: utente autenticato senza appartenenza attiva.
 - **Percorso principale**:
-  1. KinList mostra il solo campo Nome famiglia.
+  1. KinHub mostra il solo campo Nome famiglia.
   2. L'utente inserisce un nome valido e conferma.
-  3. KinList crea la famiglia e aggiunge esclusivamente il creatore.
+  3. KinHub crea la famiglia e aggiunge esclusivamente il creatore.
   4. L'utente entra direttamente nel servizio.
 - **Alternative**: l'utente può tornare alla scelta e usare un codice.
 - **Errori e recupero**: input non valido viene spiegato vicino al campo; un invio ripetuto non crea famiglie duplicate; un errore preserva il nome e offre Riprova.
@@ -248,7 +248,7 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
   1. L'ingranaggio apre la pagina Impostazioni generali esistente.
   2. La pagina continua a mostrare lingua, tema, tutorial e PWA e include la nuova voce Famiglia.
   3. Il membro apre la route canonica `/settings/family`, raggiungibile anche da URL diretto, refresh e navigazione Indietro/Avanti.
-  4. KinList mostra nome, membri paginati, inviti attivi con metadati, Invita e Lascia famiglia. Per un membro senza nome usa `Membro`/`Member` e iniziale `?`.
+  4. KinHub mostra nome, membri paginati, inviti attivi con metadati, Invita e Lascia famiglia. Per un membro senza nome usa `Membro`/`Member` e iniziale `?`.
 - **Alternative**: il membro torna alla vista precedente con la normale navigazione.
 - **Errori e recupero**: caricamento ed errore non mostrano dati precedenti non autorizzati; accesso negato non viene confuso con un elenco vuoto.
 - **Risultato osservabile**: il membro raggiunge le impostazioni familiari senza che l'ingranaggio copra contenuti, microfono o feedback temporanei.
@@ -259,12 +259,12 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - **Precondizioni**: per generare o revocare, appartenenza attiva; per usare il codice, autenticazione e nessuna famiglia attiva.
 - **Percorso principale — generazione e condivisione**:
   1. Se esistono meno di cinque inviti attivi, il membro genera un codice opaco di 12 caratteri Crockford Base32, visualizzato come `XXXX-XXXX-XXXX`, monouso e valido sette giorni.
-  2. KinList mostra il valore segreto soltanto in questo momento, insieme alla scadenza.
-  3. Il membro lo condivide manualmente fuori da KinList.
+  2. KinHub mostra il valore segreto soltanto in questo momento, insieme alla scadenza.
+  3. Il membro lo condivide manualmente fuori da KinHub.
   4. Tornando alla pagina Famiglia, vede soltanto i metadati dell'invito attivo, non il codice.
 - **Percorso principale — unione**:
   1. L'utente inserisce il codice e conferma.
-  2. Se il codice è disponibile, KinList crea o riattiva l'appartenenza e consuma il codice nello stesso esito indivisibile.
+  2. Se il codice è disponibile, KinHub crea o riattiva l'appartenenza e consuma il codice nello stesso esito indivisibile.
   3. L'utente entra direttamente nel servizio.
 - **Alternativa — revoca**: qualunque membro può richiedere e confermare la revoca di un invito attivo, che diventa immediatamente inutilizzabile.
 - **Errori e recupero**: spazi, trattini e maiuscole vengono normalizzati. Codice inesistente, scaduto, revocato o già usato produce lo stesso messaggio generico; due usi contemporanei consentono un solo successo. La barriera iniziale per singola istanza limita dopo 5 tentativi in 5 minuti per identità o 20 in 5 minuti per origine di rete attendibile e indica quando riprovare. Nessun errore lascia uno stato parziale.
@@ -281,7 +281,7 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
   4. Rimuove immediatamente l'accesso ai dati della famiglia.
   5. Riporta l'utente all'onboarding.
 - **Alternativa**: annullando la conferma non cambia nulla.
-- **Caso ultimo membro**: se non restano membri attivi, KinList rende inattivi la famiglia e tutti i dati KinList collegati.
+- **Caso ultimo membro**: se non restano membri attivi, KinHub rende inattivi la famiglia e tutti i dati KinList collegati.
 - **Errori e recupero**: un errore non produce un'uscita parziale e mantiene l'utente nello stato effettivo; un accesso successivo a dati non più consentiti mostra accesso negato senza contenuti.
 - **Risultato osservabile**: l'ex membro deve creare o unirsi a una famiglia; potrà riattivare una propria appartenenza storica soltanto con un nuovo codice valido.
 
@@ -316,9 +316,9 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 
 | ID | Descrizione verificabile | Attore | Valore/risultato | Origine | Flussi |
 |---|---|---|---|---|---|
-| FR-001 | KinList deve riconoscere l'utente mediante la coppia obbligatoria issuer e identificativo oggetto del token validato, senza usare nome o email come fallback identificativo. | Utente | Accesso con identità stabile e non ambigua. | Decisione approvata | FLOW-001 |
-| FR-002 | Al primo accesso KinList deve creare un solo profilo applicativo collegato all'identità e riutilizzarlo agli accessi successivi. | Utente | Identità applicativa stabile e non duplicata. | Decisione approvata | FLOW-001 |
-| FR-003 | KinList deve consentire ogni azione soltanto quando appartenenza attiva e visibilità dei dati la permettono. | Utente | Azioni circoscritte al perimetro consentito. | Scope confermato | FLOW-001, FLOW-002, FLOW-006, FLOW-007, FLOW-010–FLOW-013 |
+| FR-001 | KinHub deve riconoscere l'utente mediante la coppia obbligatoria issuer e identificativo oggetto del token validato, senza usare nome o email come fallback identificativo. | Utente | Accesso con identità stabile e non ambigua. | Decisione approvata | FLOW-001 |
+| FR-002 | Al primo accesso KinHub deve creare un solo profilo applicativo collegato all'identità e riutilizzarlo agli accessi successivi. | Utente | Identità applicativa stabile e non duplicata. | Decisione approvata | FLOW-001 |
+| FR-003 | KinHub deve autorizzare il contesto famiglia e ogni KinService deve applicare anche le proprie regole di visibilità dei dati. | Utente | Azioni circoscritte al perimetro consentito. | Scope confermato | FLOW-001, FLOW-002, FLOW-006, FLOW-007, FLOW-010–FLOW-013 |
 | FR-004 | Un membro deve vedere gli item Shared della propria famiglia e gli eventuali item Personal di cui è autore, mai dati non consentiti. | Membro | Isolamento e visibilità corretti. | Scope confermato | FLOW-002, FLOW-006 |
 | FR-005 | Tutti i membri della stessa famiglia devono poter modificare e completare gli item Shared, indipendentemente dall'autore. | Membro | Collaborazione familiare senza ruoli. | Scope confermato | FLOW-006, FLOW-007, FLOW-013 |
 | FR-006 | Ogni riga deve identificare l'autore della creazione con un avatar circolare contenente le iniziali. | Membro | Provenienza comprensibile. | Richiesta approvata | FLOW-002 |
@@ -347,7 +347,7 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 | FR-029 | Senza connettività KinList deve mostrare soltanto la shell pubblica, senza dati personali, impedire operazioni remote e registrazione e spiegarne brevemente il motivo. | Membro | Nessun falso successo o dato personale persistito offline. | Decisione approvata | FLOW-001–FLOW-004, FLOW-009–FLOW-013 |
 | FR-030 | Il responsabile del servizio deve poter conoscere esiti, errori, conteggi e durate aggregate delle operazioni senza contenuti personali. | Responsabile del servizio | Verificabilità operativa rispettosa della privacy. | Decisione approvata | FLOW-004, FLOW-008, FLOW-014 |
 | FR-031 | Ogni utente deve avere al massimo una famiglia attiva e non deve poter creare o selezionare una seconda famiglia. | Utente | Perimetro familiare univoco. | Scope confermato | FLOW-001, FLOW-009, FLOW-011 |
-| FR-032 | Dopo il login, un utente associato deve entrare direttamente in KinList; un utente non associato deve scegliere obbligatoriamente se creare una famiglia o unirsi con un codice. | Utente | Accesso senza passaggi inutili e onboarding non eludibile. | Scope confermato | FLOW-001 |
+| FR-032 | Dopo il login, KinHub deve risolvere il contesto famiglia condiviso: l'utente associato puo entrare nel KinService richiesto, mentre quello non associato deve scegliere obbligatoriamente se creare una famiglia o unirsi con un codice. | Utente | Accesso senza passaggi inutili e onboarding non eludibile. | Scope confermato | FLOW-001 |
 | FR-033 | La creazione deve richiedere il nome della famiglia e aggiungere soltanto il creatore come membro iniziale. | Utente senza famiglia | Famiglia minima senza inviti impliciti. | Scope confermato | FLOW-009 |
 | FR-034 | Un ingranaggio flottante, fisso in basso a destra e dentro la safe area, deve aprire la pagina Impostazioni generali esistente senza coprire controlli o contenuti. | Membro | Accesso discreto e sempre riconoscibile. | Scope confermato | FLOW-010 |
 | FR-035 | Le Impostazioni generali devono aggiungere la voce Famiglia senza rimuovere lingua, tema, tutorial o PWA. | Membro | Estensione coerente delle impostazioni esistenti. | Scope confermato | FLOW-010 |
@@ -411,7 +411,7 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 | BR-033 | Il membro usa Seleziona tutti con un filtro attivo. | Sono selezionati soltanto gli item della pagina filtrata corrente, fino a 5000. | Item di altre pagine o nascosti dal filtro non sono inclusi. |
 | BR-034 | Il membro usa Annulla N entro cinque secondi. | Tutti gli item del bulk tornano attivi insieme oppure nessuno viene ripristinato. | Non esiste recupero per singolo item del bulk. |
 | BR-035 | Viene creato un nuovo item in questa versione. | La visibilità è Shared e l'autore originario viene mantenuto. | Personal è predisposto ma non selezionabile o convertibile dalla UI. |
-| BR-036 | Un utente tenta di accedere a famiglia o item non consentiti. | KinList nega l'accesso senza mostrare nome, membri, item, categorie, timeline o altri dettagli. | L'accesso negato non è rappresentato come stato vuoto. |
+| BR-036 | Un utente tenta di accedere a famiglia o item non consentiti. | KinHub nega l'accesso alla famiglia e KinList nega quello ai propri item senza mostrare nome, membri, item, categorie, timeline o altri dettagli. | L'accesso negato non è rappresentato come stato vuoto. |
 | BR-037 | KinList mostra una collezione. | Applica perimetro, filtro e ordine stabile prima di mostrare una pagina non superiore al limite approvato, con navigazione precedente/successiva. | Non carica implicitamente l'intera collezione. |
 | BR-038 | Un cursore viene usato con filtro, direzione o stato non più compatibili. | KinList rifiuta il cursore senza restituire dati e offre di ripartire dalla prima pagina. | Il contenuto del cursore non viene mostrato o interpretato dal client. |
 | BR-039 | L'elaborazione vocale non riceve alcuna risposta per un guasto transitorio. | Può essere eseguito un solo tentativo automatico aggiuntivo entro il tempo residuo. | Una risposta ricevuta ma invalida non viene elaborata nuovamente. |
@@ -422,13 +422,13 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 
 | Informazione | Chi la fornisce | Chi può vederla | Regole di validità |
 |---|---|---|---|
-| Identità esterna | Sistema di identità | KinList; utente per i dati del proprio profilo quando previsto | Coppia univoca issuer e identificativo oggetto; entrambi obbligatori; nessun fallback su nome o email. |
-| Profilo utente | KinList al primo accesso | Utente interessato e membri solo nella misura richiesta dalla UI | Stabile; può essere attivo o inattivo; nessuna UI di eliminazione account. |
-| Famiglia | Creatore per il nome; KinList per stato e date | Membri attivi della famiglia | Nome obbligatorio; stato attivo o inattivo; un utente ha al massimo una famiglia attiva. |
+| Identità esterna | Sistema di identità | KinHub; utente per i dati del proprio profilo quando previsto | Coppia univoca issuer e identificativo oggetto; entrambi obbligatori; nessun fallback su nome o email. |
+| Profilo utente | KinHub al primo accesso | Utente interessato e membri solo nella misura richiesta dalla UI | Stabile; può essere attivo o inattivo; nessuna UI di eliminazione account. |
+| Famiglia | Creatore per il nome; KinHub per stato e date | Membri attivi della famiglia | Nome obbligatorio; stato attivo o inattivo; un utente ha al massimo una famiglia attiva. |
 | Appartenenza | Creazione, codice o uscita | Utente interessato e membri nella lista membri | Attiva o inattiva; può essere riattivata da un nuovo codice valido; conserva la storia necessaria. |
 | Membro visibile | Profilo e appartenenza | Membri attivi della stessa famiglia | Solo nome e iniziali; fallback `Membro`/`Member` e `?`; collezione paginata. |
-| Invito | Membro che lo genera e KinList | Membri attivi della famiglia per i metadati | 12 caratteri Crockford Base32, formato visivo a gruppi di quattro, monouso, revocabile, sette giorni; massimo cinque attivi; segreto visibile soltanto alla creazione. |
-| Metadati invito | KinList | Membri attivi della famiglia | Creatore, creazione, scadenza e stato attivo; mai il valore segreto. |
+| Invito | Membro che lo genera e KinHub | Membri attivi della famiglia per i metadati | 12 caratteri Crockford Base32, formato visivo a gruppi di quattro, monouso, revocabile, sette giorni; massimo cinque attivi; segreto visibile soltanto alla creazione. |
+| Metadati invito | KinHub | Membri attivi della famiglia | Creatore, creazione, scadenza e stato attivo; mai il valore segreto. |
 | Item | Interpretazione della voce, poi membro in modifica | Secondo visibilità Personal o Shared | Nome valido; stato attivo o completato; autore originario stabile; nuovi item sempre Shared. |
 | Visibilità item | KinList alla creazione | Membri che possono vedere l'item | Personal solo autore; Shared famiglia; nessuna modifica dalla UI in questa versione. |
 | Categoria | KinList durante la generazione o membro nel drawer | Membri attivi della famiglia, nei limiti degli item visibili | Nome non vuoto; catalogo per famiglia paginato; riuso delle equivalenti. |

@@ -4,20 +4,20 @@ using DA.KinHub.Functions.Configuration;
 
 namespace DA.KinHub.Functions.Observability;
 
-public sealed class KinListTelemetry : IDisposable
+public sealed class KinHubTelemetry : IDisposable
 {
     private readonly Meter meter;
     private readonly Counter<long> outcomeCounter;
     private readonly Counter<long> signalCounter;
     private readonly Histogram<double> durationHistogram;
-    private readonly ActivitySource activitySource = new("KinHub.KinList");
+    private readonly ActivitySource activitySource = new("KinHub");
 
-    public KinListTelemetry(BuildInfoProvider buildInfoProvider)
+    public KinHubTelemetry(BuildInfoProvider buildInfoProvider)
     {
-        meter = new Meter("KinHub.KinList", buildInfoProvider.Get().Version);
-        outcomeCounter = meter.CreateCounter<long>("kinlist.outcomes");
-        signalCounter = meter.CreateCounter<long>("kinlist.signals");
-        durationHistogram = meter.CreateHistogram<double>("kinlist.duration.ms");
+        meter = new Meter("KinHub", buildInfoProvider.Get().Version);
+        outcomeCounter = meter.CreateCounter<long>("kinhub.outcomes");
+        signalCounter = meter.CreateCounter<long>("kinhub.signals");
+        durationHistogram = meter.CreateHistogram<double>("kinhub.duration.ms");
     }
 
     public OperationScope Begin(string operation) => new(operation, activitySource, outcomeCounter, durationHistogram);
