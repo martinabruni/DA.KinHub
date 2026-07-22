@@ -119,23 +119,23 @@
     {
       "id": "kinhub-implementation",
       "name": "KinHub feature implementation workflow",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "area": "implementation",
       "description": "Esecuzione autonoma end-to-end delle feature, checkpoint riprendibili e consegna tramite pull request.",
       "path": "skills/implementation/SKILL.md",
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "1cb084d392241fa6202af0bd3cebbb79a49801373c1c08bc3854f096009eff6c"
+          "checksum": "9c3ca5e7308209b1078c40593813e4d3b8e880fa991ddeec30e30a99738f7dcb"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",
-          "checksum": "41252fba03d809855c71ff1abfcfb83e1ee45f519369a4d8b3823959252da2e6"
+          "checksum": "8ee651b93d2d45a5ef460e4a252e8cf4a6b8c22715c951c9e95a799e707eb4bb"
         }
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "3ab8d69d1529ba71555e472ba3eef47d56905893c7b5f42d8714ac8cfa24fd4d"
+      "checksum": "f7d76fac05aa4b1154a725084ef0868cfad5c77063e3e5876a46a73e547b45e5"
     },
     {
       "id": "kinhub-release",

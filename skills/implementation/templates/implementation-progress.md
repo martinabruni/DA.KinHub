@@ -23,6 +23,12 @@
 |---|---|---|
 | `<comando esatto>` | `pass | fail | non eseguito` | <errore o risultato> |
 
+## Pull request e GitHub Actions
+
+- Pull request: `<URL o non ancora aperta>`
+- SHA monitorato: `<sha o non ancora disponibile>`
+- Stato Actions: `<success | queued | in progress | failure e dettaglio>`
+
 ## Lavoro residuo
 
 - [ ] <prima attivita incompleta>

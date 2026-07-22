@@ -193,8 +193,10 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 - Un errore di compilazione, test, lint, validazione, packaging o documentazione non e un motivo per fermarsi: diagnosticalo, correggilo e ripeti la verifica.
 - Puoi interrompere il lavoro solo quando l'utilizzo del contesto raggiunge o supera il 35% oppure quando serve davvero human in the loop, per esempio una decisione di prodotto non deducibile, un'approvazione obbligatoria, credenziali o un'azione esterna riservata all'utente.
 - Prima di una di queste interruzioni aggiorna `implementation-progress.md` nella cartella della feature. Usa il formato della skill `implementation`, registra stato, decisioni, file modificati, verifiche con esito, lavoro residuo, blocco e prima azione di ripresa; non inserire secret o PII.
-- Alla ripresa leggi per primo `implementation-progress.md`, verifica lo stato reale del worktree e continua dalla prima azione incompleta. Rimuovi il file quando la feature e conclusa: non deve restare nella consegna finale.
+- Alla ripresa leggi per primo `implementation-progress.md`, verifica lo stato reale del worktree e continua dalla prima azione incompleta. Rimuovi il file solo quando la feature e conclusa e le GitHub Actions dell'ultimo commit sono verdi: non deve restare nella consegna finale.
 - Quando tutte le verifiche applicabili passano, controlla diff e stato Git, crea un commit con le sole modifiche della feature, esegui il push del branch e apri una pull request verso `main`.
+- Dopo ogni push monitora le GitHub Actions attivate dalla pull request sull'ultimo commit. Una action queued o in progress significa che il lavoro non e concluso; tutte le action devono terminare con esito `success` prima di fermarti.
+- Se una action fallisce, viene cancellata, va in timeout o richiede intervento, ispeziona log e annotazioni, correggi la causa, riesegui le verifiche applicabili, crea un nuovo commit, esegui il push e monitora il nuovo run. Ripeti finche tutte le action dell'ultimo commit sono verdi.
 - Non eseguire mai il merge di una pull request. Se commit, push o apertura della PR richiedono credenziali o autorizzazioni umane, trattali come human in the loop e salva prima il checkpoint.
 
 ## Sicurezza
