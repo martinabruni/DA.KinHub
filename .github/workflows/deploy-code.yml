@@ -118,7 +118,7 @@ jobs:
             --dbname postgres \
             --username "${{ steps.postgres.outputs.admin_name }}" \
             --set ON_ERROR_STOP=1 <<SQL
-          DO $$
+          DO \$kinhub\$
           BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_RUNTIME_USERNAME }}') THEN
               PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_RUNTIME_USERNAME }}', '${{ steps.postgres.outputs.function_principal_id }}', 'service', false, false);
@@ -127,7 +127,7 @@ jobs:
               PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_MIGRATION_USERNAME }}', '${{ steps.postgres.outputs.admin_object_id }}', 'service', true, false);
             END IF;
           END
-          $$;
+          \$kinhub\$;
           SQL
 
       - name: Apply database migrations
