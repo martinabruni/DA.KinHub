@@ -107,8 +107,6 @@ module functionApp './modules/function-app-flex.bicep' = {
     storageAccountName: storage.outputs.name
     storageAccountId: storage.outputs.id
     storageBlobEndpoint: storage.outputs.blobEndpoint
-    storageQueueEndpoint: storage.outputs.queueEndpoint
-    storageTableEndpoint: storage.outputs.tableEndpoint
     deploymentContainerName: storage.outputs.deploymentContainerName
     applicationContainerName: storage.outputs.applicationContainerName
     applicationInsightsName: observability.outputs.applicationInsightsName

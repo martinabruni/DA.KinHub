@@ -14,8 +14,6 @@ param alwaysReadyInstanceCount int = 0
 param storageAccountName string
 param storageAccountId string
 param storageBlobEndpoint string
-param storageQueueEndpoint string
-param storageTableEndpoint string
 param deploymentContainerName string
 param applicationContainerName string
 param applicationInsightsName string
@@ -84,12 +82,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         supportCredentials: false
       }
       appSettings: [
-        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'AzureWebJobsStorage__accountName', value: storageAccountName }
         { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
-        { name: 'AzureWebJobsStorage__blobServiceUri', value: storageBlobEndpoint }
-        { name: 'AzureWebJobsStorage__queueServiceUri', value: storageQueueEndpoint }
-        { name: 'AzureWebJobsStorage__tableServiceUri', value: storageTableEndpoint }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: applicationInsightsConnectionString }
         { name: 'APPLICATIONINSIGHTS_AUTHENTICATION_STRING', value: 'Authorization=AAD' }
         { name: 'KinHub__AppName', value: 'KinHub' }

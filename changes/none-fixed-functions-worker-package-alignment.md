@@ -6,7 +6,7 @@ issue: none
 ---
 
 ## it
-Allineate le librerie Azure Functions Worker e gRPC alla versione richiesta dall'integrazione OpenTelemetry, evitando errori runtime e risposte `503` della Function App.
+Allineate le librerie Azure Functions Worker e gRPC alla versione richiesta dall'integrazione OpenTelemetry, rimossa una configurazione runtime non supportata e resa univoca la configurazione dello storage host con managed identity su Flex Consumption.
 
 ## en
-Aligned the Azure Functions Worker and gRPC libraries with the version required by the OpenTelemetry integration, preventing runtime errors and Function App `503` responses.
+Aligned the Azure Functions Worker and gRPC libraries with the version required by the OpenTelemetry integration, removed an unsupported runtime setting, and made the managed-identity host storage configuration unambiguous on Flex Consumption.
