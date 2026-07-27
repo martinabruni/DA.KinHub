@@ -3,7 +3,7 @@ param planName string
 param location string
 param tags object = {}
 param runtimeName string = 'dotnet-isolated'
-param runtimeVersion string = '10'
+param runtimeVersion string = '10.0'
 @allowed([512, 2048, 4096])
 param instanceMemoryMB int = 2048
 @minValue(1)

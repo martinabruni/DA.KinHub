@@ -8,7 +8,7 @@ param location string = resourceGroup().location
 param namingPrefix string = 'kinhub'
 @allowed(['dotnet-isolated'])
 param runtimeName string = 'dotnet-isolated'
-param runtimeVersion string = '10'
+param runtimeVersion string = '10.0'
 @allowed([512, 2048, 4096])
 param instanceMemoryMB int = 2048
 @minValue(1)
