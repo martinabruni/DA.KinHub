@@ -1,7 +1,7 @@
 ---
 id: kinhub-implementation
 name: KinHub repository implementation workflow
-version: 0.3.0
+version: 0.4.0
 area: implementation
 description: Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.
 references: AGENTS.md, skills/implementation/templates/implementation-progress.md
@@ -35,6 +35,20 @@ Il checkpoint contiene: richiesta o feature di riferimento, data UTC, branch, co
 
 Se un test fallisce, correggi codice o test e rilancialo: non creare un checkpoint solo per il fallimento. Se una GitHub Action della PR diventa rossa, leggi il log, correggi la causa, verifica localmente, crea un nuovo commit e push, quindi attendi il run relativo al nuovo SHA. Se l'utilizzo del contesto raggiunge il 35%, aggiorna il checkpoint con il comando fallito, l'errore utile e la prossima correzione concreta, quindi interrompi.
 
+## Guardrail anti-regressione
+
+Prima di implementare o correggere una modifica applica sempre questi controlli, emersi dai fix reali del repository:
+
+- Non inventare valori Azure o .NET: runtime Flex, SKU, versioni provider, deployment name, model version, flag CLI e parametri devono essere verificati nella CLI corrente o nella documentazione ufficiale.
+- Quando tocchi versioni o runtime, aggiorna nello stesso change tutti i consumer accoppiati: package .NET, Bicep/bicepparam, workflow, file generati e documentazione operativa.
+- Per ogni rename di env var, app setting, parametro Bicep, secret, namespace o artifact name, esegui grep repository-wide e aggiorna codice, script, workflow, README, prompt e documentazione che lo consumano.
+- Le modifiche ai workflow devono essere verificate contro i contratti reali del repository: path esistenti, artifact name, vars/secrets, permessi `GITHUB_TOKEN`, workflow riusabili, output e sintassi esatta dei comandi `az` tramite `--help`.
+- Su Azure Functions Flex usa `functionAppConfig` come fonte primaria per runtime, deployment storage, scala e concorrenza; non duplicare la stessa configurazione con app setting legacy se la piattaforma non li richiede.
+- Le connessioni identity-based dello storage host Functions devono restare non ambigue: usa `accountName` oppure gli URI espliciti richiesti, mai entrambi; allinea anche i ruoli blob/queue/table realmente necessari.
+- I bundle EF e l'automazione migration devono partire dal design-time factory/progetto autorevole. Se tocchi migration runner, Dockerfile, startup project o quoting SQL/KQL nei workflow, riesegui packaging e validazione end-to-end.
+- Se modifichi una fonte che genera output versionati, rigenera e valida subito i file derivati invece di correggerli manualmente.
+- Le integrazioni cloud opzionali devono degradare in modo esplicito quando mancano setting richiesti; non introdurre bootstrap crash in locale o in dev per exporter/servizi opzionali.
+
 ## Dipendenze
 
 Dipende dal contesto autorevole della richiesta, dalla Definition of Done del repository, dalle skill tecniche pertinenti, da Git, dal remote GitHub e da `gh` autenticato.
@@ -45,13 +59,15 @@ Gli unici arresti ammessi sono utilizzo del contesto almeno al 35% e human in th
 
 ## Test richiesti
 
-Esegui tutte le verifiche richieste dalla modifica e da `AGENTS.md`. Prima della consegna verifica almeno i validatori dei tool interessati e lo stato Git; build, test, lint, packaging e validazioni applicabili devono passare. Dopo il push monitora i check della PR fino a esito terminale e accetta solo `success` per tutte le GitHub Actions attivate sull'ultimo commit.
+Esegui tutte le verifiche richieste dalla modifica e da `AGENTS.md`. Prima della consegna verifica almeno i validatori dei tool interessati e lo stato Git; build, test, lint, packaging e validazioni applicabili devono passare. Se tocchi workflow, runtime, observability, deploy o migration, verifica anche lo stato live risultante quando il repository e il contesto Azure lo consentono, includendo almeno runtime effettivo, smoke test health/version e ingestione telemetrica attesa. Dopo il push monitora i check della PR fino a esito terminale e accetta solo `success` per tutte le GitHub Actions attivate sull'ultimo commit.
 
 ## Checklist di aggiornamento
 
 Leggi gli artefatti e l'eventuale checkpoint; verifica di lavorare su `dev`; implementa la modifica richiesta; aggiorna codice, test, documentazione, traduzioni, guide, skill e fragment applicabili; ripeti le verifiche fino al successo; controlla diff e stato; crea commit e push su `dev`; apri una PR da `dev` verso `main`; monitora le Actions dell'ultimo SHA; per ogni esito non verde correggi, verifica, committa e pusha di nuovo; rimuovi il checkpoint solo quando tutti i check sono verdi; non eseguire il merge.
 
 ## Changelog
+
+0.4.0: aggiungo guardrail anti-regressione per versioni/runtime Azure, workflow, rename configurativi, Flex Consumption, storage identity-based, EF bundle, artefatti generati e verifiche live post-deploy.
 
 0.3.0: estendo la skill a qualsiasi modifica del repository, non solo a nuove feature, definisco la posizione del checkpoint fuori backlog e rendo obbligatori commit, push, PR e monitoraggio Actions per fix, workflow e aggiornamenti documentali versionati.
 

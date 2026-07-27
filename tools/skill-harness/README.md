@@ -15,6 +15,8 @@ npm run skills:watch
 
 La skill `implementation` e obbligatoria per le richieste di implementazione feature. Definisce gli unici arresti ammessi, il checkpoint `implementation-progress.md` nella cartella della feature e la consegna tramite commit e push su `dev`, quindi pull request con branch sorgente `dev` e destinazione `main`. Tutte le GitHub Actions attivate dalla PR devono essere verdi sull'ultimo commit; i run rossi richiedono correzione e nuovo push. Il merge resta vietato.
 
+La stessa skill impone guardrail anti-regressione derivati dai fix reali del repository: verifica preventiva di versioni/runtime Azure supportati, grep repository-wide per rename configurativi, controllo dei contratti effettivi dei workflow, uso corretto di `functionAppConfig` su Flex Consumption, connessioni storage identity-based non ambigue, rigenerazione degli artefatti derivati e verifiche live post-deploy quando si toccano deploy o observability.
+
 Una skill puo dichiarare documenti passivi repository-relative nel frontmatter:
 
 ```yaml
