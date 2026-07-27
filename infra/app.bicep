@@ -43,6 +43,8 @@ var storageName = take(replace('${namingPrefix}${environmentName}${token}', '-',
 var keyVaultName = take('${namingPrefix}-${environmentName}-${token}', 24)
 var postgresName = take('${baseName}-pg', 63)
 var postgresRuntimeUsername = 'kinhub_app'
+var effectiveEntraBackendAudience = empty(trim(entraBackendAudience)) || contains(entraBackendAudience, '<') ? 'api://kinhub-local' : entraBackendAudience
+var effectiveEntraApiScope = empty(trim(entraApiScope)) || contains(entraApiScope, '<') ? 'access_as_user' : entraApiScope
 
 module storage './modules/storage.bicep' = {
   name: 'storage'
@@ -105,15 +107,13 @@ module functionApp './modules/function-app-flex.bicep' = {
     storageAccountName: storage.outputs.name
     storageAccountId: storage.outputs.id
     storageBlobEndpoint: storage.outputs.blobEndpoint
-    storageQueueEndpoint: storage.outputs.queueEndpoint
-    storageTableEndpoint: storage.outputs.tableEndpoint
     deploymentContainerName: storage.outputs.deploymentContainerName
     applicationContainerName: storage.outputs.applicationContainerName
     applicationInsightsName: observability.outputs.applicationInsightsName
     applicationInsightsConnectionString: observability.outputs.applicationInsightsConnectionString
     entraTenantId: entraTenantId
-    entraBackendAudience: entraBackendAudience
-    entraApiScope: entraApiScope
+    entraBackendAudience: effectiveEntraBackendAudience
+    entraApiScope: effectiveEntraApiScope
     environmentName: environmentName
     postgresHost: postgres.outputs.fqdn
     postgresDatabaseName: postgres.outputs.databaseName

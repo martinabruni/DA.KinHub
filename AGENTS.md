@@ -168,7 +168,7 @@ npm run skills:build
 npm run skills:watch
 ```
 
-Per ogni richiesta di implementazione di una feature esegui anche `npm run skills:read -- implementation` prima di modificare il codice.
+Per ogni richiesta che richiede modifiche al repository, inclusi fix, refactor, aggiornamenti workflow, documentazione versionata e nuove feature, esegui anche `npm run skills:read -- implementation` prima di modificare il codice.
 
 Il frontmatter di una skill puo dichiarare `references` come elenco separato da virgole di documenti Markdown/JSON repository-relative. L'harness verifica formato, esistenza, confine nel repository e checksum e li include nel registry; le reference sono passive e non vengono eseguite.
 
@@ -189,14 +189,14 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 4. Registra il servizio in `skills/backend/catalog.json` e aggiorna `SKILL.md`.
 5. Rigenera registry, aggiungi fragment e verifica coerenza di questo file.
 
-## Esecuzione autonoma delle feature
+## Esecuzione autonoma di modifiche, fix e feature
 
-- Dopo l'avvio dell'implementazione non fermarti finche la Definition of Done applicabile non e verificata, la documentazione non e aggiornata e build, test, lint e validatori applicabili non passano.
+- Dopo l'avvio di una modifica al repository non fermarti finche la Definition of Done applicabile non e verificata, la documentazione non e aggiornata e build, test, lint e validatori applicabili non passano.
 - Un errore di compilazione, test, lint, validazione, packaging o documentazione non e un motivo per fermarsi: diagnosticalo, correggilo e ripeti la verifica.
 - Puoi interrompere il lavoro solo quando l'utilizzo del contesto raggiunge o supera il 35% oppure quando serve davvero human in the loop, per esempio una decisione di prodotto non deducibile, un'approvazione obbligatoria, credenziali o un'azione esterna riservata all'utente.
-- Prima di una di queste interruzioni aggiorna `implementation-progress.md` nella cartella della feature. Usa il formato della skill `implementation`, registra stato, decisioni, file modificati, verifiche con esito, lavoro residuo, blocco e prima azione di ripresa; non inserire secret o PII.
-- Alla ripresa leggi per primo `implementation-progress.md`, verifica lo stato reale del worktree e continua dalla prima azione incompleta. Rimuovi il file solo quando la feature e conclusa e le GitHub Actions dell'ultimo commit sono verdi: non deve restare nella consegna finale.
-- Ogni pull request deve avere `dev` come branch sorgente e `main` come branch destinazione. Quando tutte le verifiche applicabili passano, controlla diff e stato Git, crea un commit con le sole modifiche della feature su `dev`, esegui il push di `dev` e apri la pull request verso `main`.
+- Prima di una di queste interruzioni aggiorna `implementation-progress.md` nella cartella della feature se il lavoro appartiene a una feature approvata; altrimenti salvalo nella cartella piu vicina che rappresenta il lavoro corrente oppure nella root del repository se non esiste un contenitore migliore. Usa il formato della skill `implementation`, registra stato, decisioni, file modificati, verifiche con esito, lavoro residuo, blocco e prima azione di ripresa; non inserire secret o PII.
+- Alla ripresa leggi per primo `implementation-progress.md`, verifica lo stato reale del worktree e continua dalla prima azione incompleta. Rimuovi il file solo quando la modifica e conclusa e le GitHub Actions dell'ultimo commit sono verdi: non deve restare nella consegna finale.
+- Ogni pull request deve avere `dev` come branch sorgente e `main` come branch destinazione. Quando tutte le verifiche applicabili passano, controlla diff e stato Git, crea un commit con le sole modifiche della richiesta su `dev`, esegui il push di `dev` e apri la pull request verso `main`.
 - Dopo ogni push monitora le GitHub Actions attivate dalla pull request sull'ultimo commit. Una action queued o in progress significa che il lavoro non e concluso; tutte le action devono terminare con esito `success` prima di fermarti.
 - Se una action fallisce, viene cancellata, va in timeout o richiede intervento, ispeziona log e annotazioni, correggi la causa, riesegui le verifiche applicabili, crea un nuovo commit, esegui il push e monitora il nuovo run. Ripeti finche tutte le action dell'ultimo commit sono verdi.
 - Non eseguire mai il merge di una pull request. Se commit, push o apertura della PR richiedono credenziali o autorizzazioni umane, trattali come human in the loop e salva prima il checkpoint.

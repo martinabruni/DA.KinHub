@@ -1,0 +1,301 @@
+openapi: 3.0.3
+info:
+  title: KinHub API
+  version: "1.0"
+  description: OpenAPI document for importing KinHub endpoints into Postman.
+servers:
+  - url: https://kinhub-dev-lauj4ewc-func.azurewebsites.net
+    description: Azure dev Function App
+  - url: http://localhost:7071
+    description: Local Azure Functions runtime
+tags:
+  - name: Health
+  - name: Metadata
+  - name: KinHub
+paths:
+  /health/live:
+    get:
+      tags:
+        - Health
+      summary: Liveness
+      operationId: healthLive
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthLiveResponse"
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness
+      operationId: healthReady
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReadyResponse"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReadyResponse"
+  /api/version:
+    get:
+      tags:
+        - Metadata
+      summary: Build metadata
+      operationId: getVersion
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildInfo"
+  /api/status:
+    get:
+      tags:
+        - Metadata
+      summary: Application status
+      operationId: getStatus
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+  /api/openapi.json:
+    get:
+      tags:
+        - Metadata
+      summary: OpenAPI document
+      operationId: getOpenApiJson
+      responses:
+        "200":
+          description: Document
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/kinhub/bootstrap:
+    get:
+      tags:
+        - KinHub
+      summary: Resolve the KinHub post-login state
+      operationId: getKinHubBootstrap
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Bootstrap resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KinHubBootstrapResult"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: Service unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/kinhub/family-context:
+    get:
+      tags:
+        - KinHub
+      summary: Validate the Family policy for a familyId
+      operationId: getKinHubFamilyContext
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          description: Family identifier to validate against the Family policy.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Access granted
+        "400":
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "503":
+          description: Service unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ProblemDetails:
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+        traceId:
+          type: string
+        correlationId:
+          type: string
+    HealthLiveResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: KinHub
+    HealthReadyCheck:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          example: healthy
+    HealthReadyResponse:
+      type: object
+      required:
+        - status
+        - checks
+      properties:
+        status:
+          type: string
+          example: healthy
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthReadyCheck"
+    BuildInfo:
+      type: object
+      required:
+        - appName
+        - version
+        - commitSha
+        - buildDate
+        - environment
+        - apiVersion
+      properties:
+        appName:
+          type: string
+          example: KinHub
+        version:
+          type: string
+          example: 1.0.0
+        commitSha:
+          type: string
+          example: 91b8864
+        buildDate:
+          type: string
+          example: 2026-07-22T18:00:00Z
+        environment:
+          type: string
+          example: Development
+        apiVersion:
+          type: string
+          example: "1.0"
+    StatusResponse:
+      type: object
+      required:
+        - status
+        - appName
+        - version
+        - environment
+        - timestamp
+      properties:
+        status:
+          type: string
+          example: operational
+        appName:
+          type: string
+          example: KinHub
+        version:
+          type: string
+          example: 1.0.0
+        environment:
+          type: string
+          example: Development
+        timestamp:
+          type: string
+          format: date-time
+    KinHubBootstrapResult:
+      type: object
+      required:
+        - state
+      properties:
+        state:
+          type: string
+          enum:
+            - family
+            - onboarding
+        familyId:
+          type: string
+          format: uuid
+          nullable: true

@@ -45,9 +45,15 @@ jobs:
         id: postgres_admin
         shell: bash
         run: |
-          principal=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query '{displayName:displayName,id:id}' --output json)
-          echo "name=$(jq -r '.displayName' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
-          echo "object_id=$(jq -r '.id' <<< \"$principal\")" >> "$GITHUB_OUTPUT"
+          principal_name=$(az account show --query user.name --output tsv)
+          access_token=$(az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv)
+          principal_object_id=$(node -e "const token=process.argv[1].split('.')[1]; const normalized=token.replace(/-/g,'+').replace(/_/g,'/'); const padded=normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '='); const payload=JSON.parse(Buffer.from(padded, 'base64').toString('utf8')); process.stdout.write(payload.oid ?? '');" "$access_token")
+
+          test -n "$principal_name"
+          test -n "$principal_object_id"
+
+          echo "name=$principal_name" >> "$GITHUB_OUTPUT"
+          echo "object_id=$principal_object_id" >> "$GITHUB_OUTPUT"
 
       - name: Validate infrastructure
         shell: bash
@@ -57,11 +63,11 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file infra/app.bicep \
             --parameters infra/main.dev.bicepparam \
-             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-                          postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
-                          entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
-                          entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                          entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
+                           postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
+                           entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                           entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
                           postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
                           postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
                           postgresEntraAdministratorPrincipalType="ServicePrincipal" \
@@ -76,11 +82,11 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --template-file infra/app.bicep \
             --parameters infra/main.dev.bicepparam \
-             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME }}" \
-                          postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
-                          entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
-                          entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                          entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
+             --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
+                           postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
+                           entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
+                           entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
                           postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
                           postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
                           postgresEntraAdministratorPrincipalType="ServicePrincipal" \
@@ -104,7 +110,7 @@ jobs:
         run: |
           dotnet tool restore
           mkdir -p artifacts/migrations
-          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --self-contained false --force --output artifacts/migrations/kinhub-migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install --yes postgresql-client
@@ -117,8 +123,8 @@ jobs:
           rule_name="gha-${GITHUB_RUN_ID}"
           az postgres flexible-server firewall-rule create \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ steps.infra.outputs.postgres_server_name }}" \
-            --rule-name "$rule_name" \
+            --server-name "${{ steps.infra.outputs.postgres_server_name }}" \
+            --name "$rule_name" \
             --start-ip-address "$runner_ip" \
             --end-ip-address "$runner_ip" \
             --only-show-errors --output none
@@ -137,7 +143,7 @@ jobs:
             --dbname postgres \
             --username "$POSTGRES_ADMIN_USERNAME" \
             --set ON_ERROR_STOP=1 <<SQL
-          DO $$
+          DO \$kinhub\$
           BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_RUNTIME_USERNAME }}') THEN
               PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_RUNTIME_USERNAME }}', '${{ steps.infra.outputs.function_principal_id }}', 'service', false, false);
@@ -146,7 +152,7 @@ jobs:
               PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_MIGRATION_USERNAME }}', '$POSTGRES_ADMIN_OBJECT_ID', 'service', true, false);
             END IF;
           END
-          $$;
+          \$kinhub\$;
           SQL
 
       - name: Apply database migrations
@@ -181,8 +187,8 @@ jobs:
         run: |
           az postgres flexible-server firewall-rule delete \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ steps.infra.outputs.postgres_server_name }}" \
-            --rule-name "${{ steps.postgres_firewall.outputs.rule_name }}" \
+            --server-name "${{ steps.infra.outputs.postgres_server_name }}" \
+            --name "${{ steps.postgres_firewall.outputs.rule_name }}" \
             --yes --only-show-errors
 
       - name: Package backend
@@ -227,7 +233,7 @@ jobs:
       - name: Deploy Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN || secrets.CORE_AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: upload
           app_location: src/frontend/dist
           skip_app_build: true
