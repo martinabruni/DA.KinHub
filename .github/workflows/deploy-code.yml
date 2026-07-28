@@ -74,6 +74,10 @@ jobs:
         id: postgres
         shell: bash
         run: |
+          function_app_name=$(az functionapp list \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query "[0].name" \
+            --output tsv)
           server_name=$(az postgres flexible-server list \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --query "[0].name" \
@@ -88,9 +92,11 @@ jobs:
             --server-name "$server_name" \
             --query "[?name!='postgres' && name!='azure_maintenance' && name!='azure_sys'].name | [0]" \
             --output tsv)
+          test -n "$function_app_name"
           test -n "$server_name"
           test -n "$host"
           test -n "$database"
+          echo "function_app_name=$function_app_name" >> "$GITHUB_OUTPUT"
           echo "server_name=$server_name" >> "$GITHUB_OUTPUT"
           echo "host=$host" >> "$GITHUB_OUTPUT"
           echo "database=$database" >> "$GITHUB_OUTPUT"
@@ -155,14 +161,14 @@ jobs:
       - name: Deploy Function App with One Deploy
         uses: Azure/functions-action@v1
         with:
-          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}
+          app-name: ${{ steps.postgres.outputs.function_app_name }}
           package: ${{ steps.package.outputs.path }}
           sku: flexconsumption
           remote-build: false
 
       - name: Build frontend
         env:
-          VITE_API_BASE_URL: https://${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}.azurewebsites.net
+          VITE_API_BASE_URL: https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net
           VITE_ENTRA_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
           VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
@@ -181,8 +187,8 @@ jobs:
 
       - name: Smoke test API
         run: |
-          curl --fail --retry 8 --retry-delay 10 "https://${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}.azurewebsites.net/health/live"
-          curl --fail --retry 8 --retry-delay 10 "https://${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}.azurewebsites.net/api/version"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net/health/live"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net/api/version"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -195,5 +201,5 @@ jobs:
       - name: Deployment summary
         run: |
           echo "## KinHub code deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Function App: ${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Function App: ${{ steps.postgres.outputs.function_app_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact: $(basename '${{ steps.package.outputs.path }}')" >> "$GITHUB_STEP_SUMMARY"
