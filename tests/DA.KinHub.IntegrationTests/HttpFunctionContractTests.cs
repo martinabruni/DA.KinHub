@@ -42,9 +42,9 @@ public sealed class HttpFunctionContractTests
             Options.Create(new EntraOptions
             {
                 Enabled = true,
-                Instance = "https://login.microsoftonline.com",
-                TenantId = "contoso.onmicrosoft.com",
-                Audience = "api://kinhub-test",
+                Instance = "https://contoso.ciamlogin.com",
+                TenantId = "11111111-1111-1111-1111-111111111111",
+                Audience = "22222222-2222-2222-2222-222222222222",
                 Scope = "access_as_user"
             }));
 

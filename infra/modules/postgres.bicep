@@ -2,7 +2,7 @@ param name string
 param databaseName string = 'kinhub'
 param location string
 param tags object = {}
-param entraTenantId string
+param azureTenantId string
 param entraAdministratorPrincipalName string
 param entraAdministratorObjectId string
 @allowed([
@@ -42,7 +42,7 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     authConfig: {
       activeDirectoryAuth: 'Enabled'
       passwordAuth: 'Disabled'
-      tenantId: entraTenantId
+      tenantId: azureTenantId
     }
   }
 }
@@ -53,7 +53,7 @@ resource entraAdministrator 'Microsoft.DBforPostgreSQL/flexibleServers/administr
   properties: {
     principalName: entraAdministratorPrincipalName
     principalType: entraAdministratorPrincipalType
-    tenantId: entraTenantId
+    tenantId: azureTenantId
   }
 }
 

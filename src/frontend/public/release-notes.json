@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "203b158",
-  "buildDate": "2026-07-28T13:29:03.258Z",
+  "commit": "e9b0d3f",
+  "buildDate": "2026-07-28T14:59:27.093Z",
   "environment": "Development",
   "entries": [
     {
@@ -193,6 +193,17 @@
       }
     },
     {
+      "id": "none-fixed-external-id-token-validation",
+      "type": "fixed",
+      "area": "security",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "La configurazione di Microsoft Entra External ID ora separa il tenant clienti dal tenant Azure e valida correttamente autorita CIAM, audience GUID e nome dello scope dei token API.",
+        "en": "Microsoft Entra External ID configuration now separates the customer tenant from the Azure tenant and correctly validates the CIAM authority, GUID audience, and API token scope name."
+      }
+    },
+    {
       "id": "none-fixed-flex-function-and-keyvault-deployments",
       "type": "fixed",
       "area": "infra",
@@ -278,6 +289,17 @@
       "descriptions": {
         "it": "Corretti i workflow di deploy per usare gli argomenti Azure CLI corretti nella gestione della firewall rule di PostgreSQL Flexible Server, distinguendo `--server-name` dal nome della regola.",
         "en": "Fixed the deployment workflows to use the correct Azure CLI arguments when managing the PostgreSQL Flexible Server firewall rule, separating `--server-name` from the firewall rule name."
+      }
+    },
+    {
+      "id": "none-fixed-postgres-firewall-rule-workflow-arm-call",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il provisioning temporaneo delle firewall rule PostgreSQL nei workflow di deploy sostituendo il comando `az postgres flexible-server firewall-rule` con chiamate ARM via `az rest`, e reso affidabile il code deploy ricavando dinamicamente Function App, server, host e database direttamente dalle risorse Azure invece di dipendere da app setting o nomi statici.",
+        "en": "Fixed temporary PostgreSQL firewall rule provisioning in the deployment workflows by replacing `az postgres flexible-server firewall-rule` with ARM calls through `az rest`, and made code deployments reliable by dynamically resolving the Function App, server, host, and database directly from Azure resources instead of depending on app settings or static names."
       }
     }
   ]

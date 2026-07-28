@@ -37,6 +37,16 @@ public sealed class EntraOptionsValidator : IValidateOptions<EntraOptions>
             return ValidateOptionsResult.Fail("Entra:Instance must be an absolute HTTPS URI when authentication is enabled.");
         }
 
+        if (!Guid.TryParse(options.TenantId, out _) || !Guid.TryParse(options.Audience, out _))
+        {
+            return ValidateOptionsResult.Fail("Entra:TenantId and Entra:Audience must be application GUIDs when authentication is enabled.");
+        }
+
+        if (options.Scope.Contains('/') || options.Scope.Contains(' '))
+        {
+            return ValidateOptionsResult.Fail("Entra:Scope must contain the scope name from the scp claim, not its full URI.");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }

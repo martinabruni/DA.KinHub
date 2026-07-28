@@ -65,9 +65,10 @@ jobs:
             --parameters infra/main.dev.bicepparam \
              --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
                            postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-                           entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           azureTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           entraInstance="${{ vars.ENTRA_INSTANCE }}" \
+                           entraTenantId="${{ secrets.ENTRA_TENANT_ID }}" \
                            entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                           entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
                           postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
                           postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
                           postgresEntraAdministratorPrincipalType="ServicePrincipal" \
@@ -84,9 +85,10 @@ jobs:
             --parameters infra/main.dev.bicepparam \
              --parameters postgresAdminUsername="${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}" \
                            postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}" \
-                           entraTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           azureTenantId="${{ secrets.AZURE_TENANT_ID }}" \
+                           entraInstance="${{ vars.ENTRA_INSTANCE }}" \
+                           entraTenantId="${{ secrets.ENTRA_TENANT_ID }}" \
                            entraBackendAudience="${{ secrets.ENTRA_BACKEND_AUDIENCE }}" \
-                           entraApiScope="${{ secrets.ENTRA_API_SCOPE }}" \
                           postgresEntraAdministratorName="${{ steps.postgres_admin.outputs.name }}" \
                           postgresEntraAdministratorObjectId="${{ steps.postgres_admin.outputs.object_id }}" \
                           postgresEntraAdministratorPrincipalType="ServicePrincipal" \
@@ -226,10 +228,10 @@ jobs:
       - name: Build frontend and release metadata
         env:
           VITE_API_BASE_URL: https://${{ steps.infra.outputs.function_hostname }}
-          VITE_ENTRA_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          VITE_ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID }}
           VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
           VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
-          VITE_ENTRA_AUTHORITY: ${{ vars.ENTRA_AUTHORITY || format('https://login.microsoftonline.com/{0}', secrets.AZURE_TENANT_ID) }}
+          VITE_ENTRA_AUTHORITY: ${{ vars.ENTRA_INSTANCE }}
           VITE_ENTRA_REDIRECT_URI: https://${{ steps.infra.outputs.static_web_app_hostname }}
         run: npm run --prefix src/frontend build
 

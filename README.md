@@ -224,8 +224,9 @@ Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il toke
 | `AZURE_STATIC_WEB_APPS_API_TOKEN` | deploy frontend | generato da Static Web Apps |
 | `POSTGRES_ADMIN_USERNAME` | bootstrap del server PostgreSQL Flexible Server | scelto manualmente; usato solo in provisioning infrastrutturale |
 | `POSTGRES_ADMIN_PASSWORD` | bootstrap del server PostgreSQL Flexible Server | generata e conservata come secret; non usata dal runtime applicativo |
+| `ENTRA_TENANT_ID` | tenant clienti External ID, distinto dal tenant Azure | app registration External ID |
 | `ENTRA_FRONTEND_CLIENT_ID` | build SPA | app registration frontend |
-| `ENTRA_BACKEND_AUDIENCE` | API audience | app registration API |
+| `ENTRA_BACKEND_AUDIENCE` | Application (client) ID GUID dell'API, uguale al claim `aud` v2 | app registration API |
 | `ENTRA_API_SCOPE` | scope completo | app registration API |
 | `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` | fallback opzionale | non usato dal percorso OIDC principale |
 
@@ -241,6 +242,7 @@ Per ambienti GitHub distinti (`dev`, `prod`) configura secret e protection rule 
 | `AZURE_STATIC_WEB_APP_NAME` | output Bicep, informativo |
 | `AZURE_STATIC_WEB_APP_URL` | `https://<BICEP_OUTPUT_HOSTNAME>`, output Bicep copiato dopo provisioning |
 | `BUILD_ENVIRONMENT` | `Development` |
+| `ENTRA_INSTANCE` | `https://<tenant-subdomain>.ciamlogin.com/` | tenant clienti External ID |
 
 Non creare Variables per memoria, scala, concorrenza o always-ready: appartengono a `main.dev.bicepparam`.
 
@@ -253,6 +255,7 @@ gh secret set AZURE_SUBSCRIPTION_ID --body "<VALUE>"
 gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_USERNAME --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_PASSWORD --body "<VALUE>"
+gh secret set ENTRA_TENANT_ID --body "<VALUE>"
 gh secret set ENTRA_FRONTEND_CLIENT_ID --body "<VALUE>"
 gh secret set ENTRA_BACKEND_AUDIENCE --body "<VALUE>"
 gh secret set ENTRA_API_SCOPE --body "<VALUE>"
@@ -263,6 +266,7 @@ gh variable set AZURE_FUNCTIONAPP_NAME --body "<BICEP_OUTPUT>"
 gh variable set AZURE_STATIC_WEB_APP_NAME --body "<BICEP_OUTPUT>"
 gh variable set AZURE_STATIC_WEB_APP_URL --body "https://<BICEP_OUTPUT_HOSTNAME>"
 gh variable set BUILD_ENVIRONMENT --body "Development"
+gh variable set ENTRA_INSTANCE --body "https://<TENANT_SUBDOMAIN>.ciamlogin.com/"
 ```
 
 ## Costi, cold start e troubleshooting

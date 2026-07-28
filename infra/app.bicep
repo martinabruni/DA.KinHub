@@ -17,9 +17,11 @@ param maximumInstanceCount int = 20
 @minValue(0)
 param alwaysReadyInstanceCount int = 0
 param deploymentBlobContainerName string = 'function-packages'
+param azureTenantId string
+param entraInstance string
 param entraTenantId string
 param entraBackendAudience string
-param entraApiScope string
+param entraApiScopeName string = 'access_as_user'
 param postgresEntraAdministratorName string
 param postgresEntraAdministratorObjectId string
 @allowed(['User', 'Group', 'ServicePrincipal'])
@@ -43,8 +45,7 @@ var storageName = take(replace('${namingPrefix}${environmentName}${token}', '-',
 var keyVaultName = take('${namingPrefix}-${environmentName}-${token}', 24)
 var postgresName = take('${baseName}-pg', 63)
 var postgresRuntimeUsername = 'kinhub_app'
-var effectiveEntraBackendAudience = empty(trim(entraBackendAudience)) || contains(entraBackendAudience, '<') ? 'api://kinhub-local' : entraBackendAudience
-var effectiveEntraApiScope = empty(trim(entraApiScope)) || contains(entraApiScope, '<') ? 'access_as_user' : entraApiScope
+var effectiveEntraBackendAudience = empty(trim(entraBackendAudience)) || contains(entraBackendAudience, '<') ? 'kinhub-local' : entraBackendAudience
 
 module storage './modules/storage.bicep' = {
   name: 'storage'
@@ -73,7 +74,7 @@ module postgres './modules/postgres.bicep' = {
     databaseName: 'kinhub'
     location: location
     tags: tags
-    entraTenantId: entraTenantId
+    azureTenantId: azureTenantId
     entraAdministratorPrincipalName: postgresEntraAdministratorName
     entraAdministratorObjectId: postgresEntraAdministratorObjectId
     entraAdministratorPrincipalType: postgresEntraAdministratorPrincipalType
@@ -111,9 +112,10 @@ module functionApp './modules/function-app-flex.bicep' = {
     applicationContainerName: storage.outputs.applicationContainerName
     applicationInsightsName: observability.outputs.applicationInsightsName
     applicationInsightsConnectionString: observability.outputs.applicationInsightsConnectionString
+    entraInstance: entraInstance
     entraTenantId: entraTenantId
     entraBackendAudience: effectiveEntraBackendAudience
-    entraApiScope: effectiveEntraApiScope
+    entraApiScopeName: entraApiScopeName
     environmentName: environmentName
     postgresHost: postgres.outputs.fqdn
     postgresDatabaseName: postgres.outputs.databaseName
