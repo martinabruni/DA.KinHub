@@ -74,21 +74,26 @@ jobs:
         id: postgres
         shell: bash
         run: |
-          host=$(az functionapp config appsettings list \
+          server_name=$(az postgres flexible-server list \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" \
-            --query "[?name=='Database__Host'].value | [0]" \
+            --query "[0].name" \
             --output tsv)
-          database=$(az functionapp config appsettings list \
+          host=$(az postgres flexible-server show \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" \
-            --query "[?name=='Database__DatabaseName'].value | [0]" \
+            --name "$server_name" \
+            --query "fullyQualifiedDomainName" \
             --output tsv)
+          database=$(az postgres flexible-server db list \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server-name "$server_name" \
+            --query "[?name!='postgres'].name | [0]" \
+            --output tsv)
+          test -n "$server_name"
           test -n "$host"
           test -n "$database"
+          echo "server_name=$server_name" >> "$GITHUB_OUTPUT"
           echo "host=$host" >> "$GITHUB_OUTPUT"
           echo "database=$database" >> "$GITHUB_OUTPUT"
-          echo "server_name=$(cut -d'.' -f1 <<< "$host")" >> "$GITHUB_OUTPUT"
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install --yes postgresql-client
