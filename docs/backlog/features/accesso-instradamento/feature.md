@@ -1,3 +1,7 @@
+---
+status: Completed
+---
+
 # FEAT-001 - Entrare nel percorso corretto dopo il login
 
 - **Codice**: `accesso-instradamento`

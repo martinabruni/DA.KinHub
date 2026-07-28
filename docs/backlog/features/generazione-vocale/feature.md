@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-007 - Aggiungere un gruppo tramite la voce
 
 - **Codice**: `generazione-vocale`

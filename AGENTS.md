@@ -81,12 +81,14 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 ### Azure Functions Isolated e Flex Consumption
 
 - Usa `Microsoft.NET.Sdk`, `TargetFramework=net10.0`, `AzureFunctionsVersion=v4`, `OutputType=Exe` e `ConfigureFunctionsWebApplication()`.
-- `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated` è obbligatorio.
+- Tratta `dotnet-isolated` come runtime autorevole del progetto; su Flex Consumption non reintrodurre l'app setting legacy `FUNCTIONS_WORKER_RUNTIME` se `functionAppConfig.runtime` copre gia la configurazione richiesta dalla piattaforma.
 - Mantieni `host.json` versionato e con `routePrefix` vuoto per i contratti attuali.
 - Ogni piano `FC1/FlexConsumption` ospita una sola Function App.
-- Runtime, deployment storage, memoria, scala e always-ready appartengono a `functionAppConfig`, non a setting legacy.
+- Runtime, deployment storage, memoria, scala e always-ready appartengono a `functionAppConfig`, non a setting legacy. Usa il formato runtime esatto richiesto dall'API Azure in uso, non abbreviazioni intuitive.
 - Default progetto: 2.048 MB, massimo 20 istanze, 0 always-ready, concorrenza HTTP della piattaforma.
 - Storage host e deployment sono identity-based. Non ripristinare shared key per aggirare ritardi RBAC.
+- Le connessioni identity-based dello storage host devono avere una sola fonte di verita: usa `accountName` oppure gli URI espliciti richiesti, ma non entrambi insieme.
+- Quando la Function App usa managed identity verso lo storage host, assegna i ruoli dati minimi realmente richiesti dal runtime usato, inclusi blob/queue/table quando necessari alla configurazione effettiva.
 - Il pacchetto One Deploy è uno ZIP con `host.json` e assembly Function nella root del contenuto.
 - Flex non supporta deployment slot; non creare workflow di slot/swap.
 
@@ -96,6 +98,8 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - `Database:ApplyMigrationsOnStartup` è false per default ed è consentito solo in Development.
 - Il fallback locale usa PostgreSQL advisory lock, timeout, log e fallimento esplicito.
 - Ambienti condivisi usano migration bundle/passaggio CI prima del deploy codice.
+- I bundle EF e l'automazione migration partono dal factory/progetto di design-time autorevole; non cambiare startup project, immagine runtime o dipendenze Docker senza rilanciare build bundle e packaging end-to-end.
+- Script SQL, blocchi PL/pgSQL, query KQL e heredoc usati nei workflow devono essere verificati per quoting, delimitatori ed espansioni della shell prima del push.
 - Ogni migration include procedura di verifica e rollback in `docs/operations/database-migrations.md`.
 
 ## Regole frontend
@@ -172,6 +176,12 @@ Per ogni richiesta che richiede modifiche al repository, inclusi fix, refactor, 
 
 Il frontmatter di una skill puo dichiarare `references` come elenco separato da virgole di documenti Markdown/JSON repository-relative. L'harness verifica formato, esistenza, confine nel repository e checksum e li include nel registry; le reference sono passive e non vengono eseguite.
 
+- Prima di toccare versioni, runtime, SKU Azure, nomi di deployment modello, env var, app setting, parametri Bicep o workflow, mappa tutti i consumatori accoppiati e aggiorna nello stesso change codice, IaC, pipeline, documentazione e artefatti generati.
+- Non inventare stringhe di versione o formato per Azure, .NET, provider o modelli: verifica i valori supportati e il formato richiesto dall'API o dalla CLI correnti prima di scriverli. Se una versione cambia, allinea anche package accoppiati, workflow SDK/runtime e file generati.
+- Ogni rename di env var, app setting, secret, parametro, namespace o artifact name richiede grep repository-wide e aggiornamento di tutti i consumer, inclusi script, prompt, README e workflow.
+- Ogni modifica ai workflow deve verificare contratti reali del repository: path, nomi artifact, vars/secrets, output, permessi `GITHUB_TOKEN`, workflow riusabili e sintassi esatta dei flag `az` tramite `--help` o documentazione ufficiale.
+- Quando modifichi una fonte autorevole che genera output versionati, rigenera e valida subito gli artefatti derivati; non correggere a mano file generati salvo indicazione esplicita del repository.
+
 ### Promuovere un componente UI
 
 1. Implementalo in `src/frontend/src/components` o `components/ui`.
@@ -191,6 +201,8 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 
 ## Esecuzione autonoma di modifiche, fix e feature
 
+- Ogni `docs/backlog/features/*/feature.md` usa un frontmatter YAML con il solo campo di avanzamento `status`. I valori esatti sono `Open`, `In progress`, `In review` e `Completed`; `Readiness` resta un concetto distinto.
+- Le sole transizioni ammesse sono `Open -> In progress`, `In progress -> In review`, `In review -> Open` e `In review -> Completed`. Un agente non contrassegna mai autonomamente una feature come `Completed`: esegue quella transizione soltanto dopo un comando esplicito della responsabile umana.
 - Dopo l'avvio di una modifica al repository non fermarti finche la Definition of Done applicabile non e verificata, la documentazione non e aggiornata e build, test, lint e validatori applicabili non passano.
 - Un errore di compilazione, test, lint, validazione, packaging o documentazione non e un motivo per fermarsi: diagnosticalo, correggilo e ripeti la verifica.
 - Puoi interrompere il lavoro solo quando l'utilizzo del contesto raggiunge o supera il 35% oppure quando serve davvero human in the loop, per esempio una decisione di prodotto non deducibile, un'approvazione obbligatoria, credenziali o un'azione esterna riservata all'utente.
@@ -225,6 +237,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 - `deploy-infrastructure.yml`: tag `infra-*`, deploy Bicep, principal PostgreSQL Entra, migration bundle con token identity-based, One Deploy, Static Web Apps e smoke test.
 - `deploy-code.yml`: push `main`, solo operazioni applicative; non modifica memoria/scala/concorrenza.
 - Parametri Flex restano in Bicep/bicepparam; GitHub Variable contiene solo il nome Function App necessario al deploy.
+- Le modifiche a workflow, packaging, deploy o observability non sono concluse finche non verifichi anche lo stato live risultante: runtime effettivo ARM, `health/live`, `api/version` e ingestione telemetrica attesa quando applicabile.
 - Non stampare secret o output sensibili nei log.
 
 ## Comandi principali

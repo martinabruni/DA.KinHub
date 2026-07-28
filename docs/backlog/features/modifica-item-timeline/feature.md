@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-009 - Correggere un item e consultarne la storia
 
 - **Codice**: `modifica-item-timeline`

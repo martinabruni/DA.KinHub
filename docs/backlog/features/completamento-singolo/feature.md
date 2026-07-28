@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-010 - Completare un item e annullare
 
 - **Codice**: `completamento-singolo`

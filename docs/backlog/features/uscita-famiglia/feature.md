@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-006 - Lasciare la famiglia in sicurezza
 
 - **Codice**: `uscita-famiglia`

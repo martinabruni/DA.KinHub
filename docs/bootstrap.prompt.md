@@ -95,6 +95,10 @@ Stack obbligatorio:
 7. `AGENTS.md` nella root è la fonte di istruzioni per agenti e contributor e deve contenere le regole di questo prompt.
 8. Le modifiche di codice in produzione non devono essere eseguite come codice arbitrario caricato dinamicamente. Lo skill harness serve a rendere aggiornabili e rileggibili a runtime di sviluppo le **conoscenze operative e i cataloghi di componenti/servizi riutilizzabili**, mentre il codice di produzione continua a passare da build, test e deploy versionati.
 9. Usa convenzioni pulite e pragmatiche, senza sovraingegnerizzare.
+10. Non inventare stringhe di versione, runtime, SKU, model version, flag CLI o parametri provider: prima verifica i valori supportati e il formato richiesto dalla piattaforma o dalla CLI correnti.
+11. Ogni cambio di versioni, runtime, env var, app setting, parametro Bicep, secret, namespace o artifact name deve aggiornare nello stesso change tutti i consumer repository-wide: codice, script, workflow, README, prompt, documentazione e file generati.
+12. Ogni modifica ai workflow deve essere verificata contro i contratti reali del repository: path, artifact, vars/secrets, permessi `GITHUB_TOKEN`, output, workflow riusabili e sintassi esatta dei comandi Azure.
+13. Quando modifichi una fonte autorevole che genera output versionati, rigenera subito gli artefatti derivati e non correggerli a mano salvo esplicita scelta architetturale.
 
 ---
 
@@ -270,6 +274,7 @@ Crea in `tools/skill-harness/` un piccolo tool funzionante, documentato e testab
 - esponga un comando `watch` per rileggere e rigenerare il registry quando i file cambiano in sviluppo;
 - segnali riferimenti non validi o duplicati;
 - non esegua codice arbitrario contenuto nelle skill;
+- produca output deterministici e stabili tra Windows/Linux, inclusi checksum coerenti a parita di contenuto;
 - possa essere richiamato da script npm, dotnet tool locale o comando equivalente;
 - venga eseguito in CI in modalità `validate`.
 
@@ -585,7 +590,7 @@ La Function App deve contenere e configurare:
 - `Program.cs` come entry point;
 - `host.json` versionato;
 - `local.settings.json.example` o documentazione equivalente, senza versionare `local.settings.json` reale;
-- `FUNCTIONS_WORKER_RUNTIME=dotnet-isolated` negli ambienti Azure/locali appropriati;
+- `dotnet-isolated` come runtime autorevole del progetto; usa l'app setting legacy `FUNCTIONS_WORKER_RUNTIME` solo dove il percorso di esecuzione o tooling lo richiede davvero, evitando duplicazioni non supportate su Flex Consumption quando `functionAppConfig.runtime` e gia sufficiente;
 - integrazione ASP.NET Core per HTTP trigger, quando utile e supportata;
 - endpoint REST;
 - dependency injection;
@@ -600,7 +605,7 @@ La Function App deve contenere e configurare:
 - Problem Details;
 - CORS configurabile;
 - logging strutturato;
-- Application Insights;
+- Application Insights tramite Azure Monitor/OpenTelemetry, senza mantenere in parallelo una seconda pipeline classica permanente;
 - correlation ID;
 - avvio migration;
 - configurazione ambienti;
@@ -626,6 +631,8 @@ GET /api/status
 - API version.
 
 L’avvio della Function App deve restare leggero: non eseguire scansioni, migrazioni o inizializzazioni che possano rendere il cold start fragile o superare i limiti del runtime.
+
+Per configurazioni cloud opzionali come exporter o integrazioni osservabili, l'avvio locale/dev deve degradare in modo esplicito quando manca uno setting richiesto, senza introdurre crash di bootstrap evitabili.
 
 ---
 
@@ -795,12 +802,12 @@ Dentro `infra/` crea file modulari e parametrizzabili per una Azure Function App
 `infra/app.bicep` deve creare almeno:
 
 - Azure Functions Flex Consumption plan dedicato alla singola Function App, con SKU `FC1` e tier `FlexConsumption`;
-- Azure Function App Linux con runtime `dotnet-isolated` e versione runtime coerente con .NET 10;
+- Azure Function App Linux con runtime `dotnet-isolated` e versione runtime coerente con .NET 10 nel formato esatto richiesto dall'API Azure scelta;
 - `functionAppConfig` per runtime, deployment, scala e concorrenza;
 - Azure Storage Account richiesto da Functions;
 - blob container privato dedicato al pacchetto di deployment One Deploy;
 - autenticazione al deployment storage tramite managed identity, evitando shared key quando possibile;
-- configurazione `AzureWebJobsStorage` tramite identity-based connection quando supportata;
+- configurazione `AzureWebJobsStorage` tramite identity-based connection quando supportata, con una sola fonte di verita: `accountName` oppure gli URI espliciti richiesti, non entrambe;
 - Azure Database for PostgreSQL Flexible Server;
 - database applicativo;
 - Application Insights;
@@ -809,6 +816,7 @@ Dentro `infra/` crea file modulari e parametrizzabili per una Azure Function App
 - Azure Static Web Apps, con location fissata a `westeurope` direttamente nel Bicep e non esposta come parametro o record di configurazione separato;
 - managed identity user-assigned o system-assigned, motivando la scelta;
 - RBAC least privilege verso Storage, Key Vault, Application Insights e altre risorse;
+- ruoli dati minimi realmente necessari per lo storage host Functions, inclusi blob/queue/table quando richiesti dal runtime o dalla configurazione identity-based adottata;
 - app settings e Key Vault references;
 - CORS/allowed origins;
 - HTTPS only e TLS minimo;
@@ -839,6 +847,8 @@ La location della Static Web App non deve essere parametrizzata: impostala in mo
 Per questo repository considera best practice pragmatiche da progetto personale, non enterprise: semplicità operativa, costi bassi, system-assigned managed identity come scelta predefinita salvo necessità concrete, niente VNet di default, niente always-ready, niente tuning aggressivo della concorrenza finché non emerge un bisogno misurato.
 
 Tieni conto che ogni Flex Consumption plan ospita una sola Function App. Non usare proprietà o app setting deprecati per Flex Consumption quando la stessa configurazione è disponibile in `functionAppConfig`.
+
+Quando cambi runtime o parametri piattaforma, aggiorna nello stesso change i consumer accoppiati: project file, package compatibili, Bicep/bicepparam, workflow, documentazione operativa e artefatti generati.
 
 ### 18.3 Deployment storage
 
@@ -877,6 +887,7 @@ Gli script devono:
 - verificare che `host.json` e gli assembly siano nella root del contenuto pubblicato;
 - creare un archivio `.zip` pronto per Azure Functions;
 - generare checksum SHA-256 e manifest dei metadati;
+- validare che il formato dell'artefatto, i percorsi e i metadati coincidano con quanto atteso dai workflow e da One Deploy;
 - produrre l’artefatto in una cartella ignorata da Git;
 - non includere `local.settings.json`, file `.env`, test output o secret;
 - fallire esplicitamente se il pacchetto non è valido.
@@ -937,6 +948,8 @@ Passaggi:
 15. output e summary GitHub;
 16. nessun secret stampato.
 
+Il workflow deve inoltre verificare i flag `az` usati contro la CLI reale, mantenere simmetrici i passi create/delete temporanei e allineare nello stesso change nuovi input, vars/secrets, output, path e artifact name richiesti dal deploy.
+
 ### 20.3 Deploy solo codice su `main`
 
 Trigger push su `main`.
@@ -959,6 +972,8 @@ Passaggi:
 14. smoke check di health/version;
 15. upload del pacchetto backend e checksum come GitHub Actions artifact;
 16. summary.
+
+Se una modifica tocca workflow, runtime, observability, packaging o migration, considera il lavoro concluso solo dopo aver verificato anche lo stato live risultante: runtime effettivo della Function App, `health/live`, `api/version` e ingestione telemetrica attesa quando applicabile.
 
 L’infrastruttura completa si modifica solo tramite il workflow tag; `main` pubblica codice backend/frontend e applica esclusivamente le operazioni applicative previste.
 
@@ -1046,6 +1061,8 @@ Predisponi:
 - nessun `.env` o `local.settings.json` reale versionato.
 
 Evita app setting legacy o deprecati per Flex Consumption quando la configurazione è gestita da `functionAppConfig` in Bicep.
+
+Per stringhe di connessione, parametri provider e nomi setting usa esclusivamente i nomi canonici documentati dal provider in uso; non introdurre sinonimi o placeholder che cambiano semantica tra codice, IaC e workflow.
 
 ---
 
@@ -1186,8 +1203,9 @@ Prima di concludere:
 10. valida skill;
 11. valida change fragments;
 12. valida Bicep;
-13. esegui un avvio locale con Azure Functions Core Tools e smoke test degli endpoint, se l’ambiente lo consente;
-14. segnala con precisione ciò che non è stato possibile eseguire.
+13. se tocchi workflow, deploy, runtime, observability o migration, verifica anche gli artefatti generati e le configurazioni effettive risultanti;
+14. esegui un avvio locale con Azure Functions Core Tools e smoke test degli endpoint, se l’ambiente lo consente;
+15. segnala con precisione ciò che non è stato possibile eseguire.
 
 Non dichiarare riuscite verifiche non realmente eseguite.
 

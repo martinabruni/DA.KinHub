@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-013 - Eliminare in sicurezza i dati inattivi
 
 - **Codice**: `cleanup-dati-inattivi`

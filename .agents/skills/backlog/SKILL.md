@@ -1,7 +1,6 @@
 ---
 name: backlog
 description: Scomporre un'analisi funzionale e un documento di architettura approvati in un backlog ordinato di feature autonome e sviluppabili, con tracciabilità dei requisiti, dipendenze esplicite nella feature dipendente, prerequisiti, criteri di accettazione, ordine di esecuzione e parallelismi sicuri. Usare quando occorre passare dagli artefatti di brainstorming alla pianificazione esecutiva senza implementare codice, ampliare lo scope o inventare decisioni mancanti.
-disable-model-invocation: true
 ---
 
 # Backlog
@@ -117,6 +116,24 @@ Produrre:
 - un `feature.md` separato per ogni feature autonoma;
 - codici `kebab-case` stabili e ID sequenziali `FEAT-001`, `FEAT-002`, ...
 
+Inizializzare ogni `feature.md` con il frontmatter YAML seguente:
+
+```yaml
+---
+status: Open
+---
+```
+
+Trattare `status` come avanzamento della feature e `Readiness` come valutazione distinta della sua definizione. Usare esclusivamente questa macchina a stati:
+
+```text
+Open -> In progress -> In review -> Completed
+                         |
+                         +------------> Open
+```
+
+Consentire soltanto `Open -> In progress`, `In progress -> In review`, `In review -> Open` e `In review -> Completed`. Non impostare mai `Completed` autonomamente: eseguire quella transizione solo dopo un comando esplicito della responsabile umana. Non interpretare approvazioni implicite, verifiche verdi, merge, rilascio o assenza di commenti come autorizzazione al completamento.
+
 Scrivere abbastanza dettaglio da rendere ogni feature eseguibile, ma non prescrivere classi, nomi di metodi o file nuovi quando l'architettura non li impone. Citare gli identificatori e i percorsi delle fonti invece di duplicarne lunghi brani.
 
 ## Consegnare
@@ -145,4 +162,6 @@ Controllare che:
 - gate e ipotesi non siano presentati come decisioni già prese;
 - criteri di accettazione e test coprano casi principali, errori, autorizzazione e vincoli pertinenti;
 - gli obblighi di repository applicabili siano inclusi nella Definition of Done;
+- ogni `feature.md` abbia un solo frontmatter `status`, inizializzato a `Open`, e usi esclusivamente gli stati e le transizioni consentiti;
+- nessuna feature sia stata contrassegnata `Completed` senza un comando esplicito della responsabile umana;
 - indice, schede e matrice di tracciabilità siano coerenti.

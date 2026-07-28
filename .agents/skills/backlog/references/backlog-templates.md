@@ -89,6 +89,10 @@ Motivare il percorso in base alle dipendenze, non a stime inventate.
 ## Scheda `features/<feature-code>/feature.md`
 
 ````md
+---
+status: Open
+---
+
 # FEAT-001 — <titolo orientato al risultato>
 
 - **Codice**: `<feature-code>`
@@ -204,3 +208,6 @@ Includere criteri per percorso principale, errori, permessi, concorrenza e casi 
 - Non usare `TBD` senza un gate, un responsabile della decisione o una prova di chiusura.
 - Non assegnare story point, date o persone se non richiesto.
 - Non duplicare interi requisiti: citare gli ID e descrivere soltanto il contributo della feature.
+- Usare `status` soltanto per l'avanzamento e `Readiness` soltanto per la qualità della definizione o la presenza di gate.
+- Consentire soltanto `Open -> In progress`, `In progress -> In review`, `In review -> Open` e `In review -> Completed`.
+- Impostare `Completed` esclusivamente dopo un comando esplicito della responsabile umana; verifiche verdi, merge, rilascio o assenza di commenti non costituiscono autorizzazione.

@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-002 - Creare la propria famiglia
 
 - **Codice**: `creazione-famiglia`
