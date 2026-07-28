@@ -30,11 +30,11 @@ internal sealed class ApplicationUserRepository(KinHubDbContext dbContext) : IAp
             var applicationUser = ApplicationUser.Create(externalIdentity, createdAt);
             var results = await dbContext.ApplicationUsers
                 .FromSqlInterpolated($"""
-                    INSERT INTO shared.application_users (id, external_issuer, external_object_id, created_at, inactive_at)
+                    INSERT INTO shared.application_users ("Id", external_issuer, external_object_id, created_at, inactive_at)
                     VALUES ({applicationUser.Id}, {externalIdentity.Issuer}, {externalIdentity.ObjectId}, {createdAt}, {null})
                     ON CONFLICT (external_issuer, external_object_id)
                     DO UPDATE SET external_issuer = EXCLUDED.external_issuer
-                    RETURNING id, external_issuer, external_object_id, created_at, inactive_at
+                    RETURNING "Id", external_issuer, external_object_id, created_at, inactive_at
                     """)
                 .ToListAsync(cancellationToken);
 
