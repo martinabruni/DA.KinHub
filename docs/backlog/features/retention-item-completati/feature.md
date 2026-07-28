@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-012 - Eliminare gli item completati oltre retention
 
 - **Codice**: `retention-item-completati`

@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-004 - Consultare le impostazioni della famiglia
 
 - **Codice**: `impostazioni-famiglia`

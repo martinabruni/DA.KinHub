@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-008 - Filtrare la lista per categoria
 
 - **Codice**: `filtro-categoria`

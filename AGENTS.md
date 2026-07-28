@@ -201,6 +201,8 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 
 ## Esecuzione autonoma di modifiche, fix e feature
 
+- Ogni `docs/backlog/features/*/feature.md` usa un frontmatter YAML con il solo campo di avanzamento `status`. I valori esatti sono `Open`, `In progress`, `In review` e `Completed`; `Readiness` resta un concetto distinto.
+- Le sole transizioni ammesse sono `Open -> In progress`, `In progress -> In review`, `In review -> Open` e `In review -> Completed`. Un agente non contrassegna mai autonomamente una feature come `Completed`: esegue quella transizione soltanto dopo un comando esplicito della responsabile umana.
 - Dopo l'avvio di una modifica al repository non fermarti finche la Definition of Done applicabile non e verificata, la documentazione non e aggiornata e build, test, lint e validatori applicabili non passano.
 - Un errore di compilazione, test, lint, validazione, packaging o documentazione non e un motivo per fermarsi: diagnosticalo, correggilo e ripeti la verifica.
 - Puoi interrompere il lavoro solo quando l'utilizzo del contesto raggiunge o supera il 35% oppure quando serve davvero human in the loop, per esempio una decisione di prodotto non deducibile, un'approvazione obbligatoria, credenziali o un'azione esterna riservata all'utente.

@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-003 - Consultare la lista condivisa paginata
 
 - **Codice**: `lista-condivisa-paginata`

@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-011 - Completare una selezione come unico gruppo
 
 - **Codice**: `completamento-multiplo`

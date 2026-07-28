@@ -1,3 +1,7 @@
+---
+status: Open
+---
+
 # FEAT-005 - Invitare e unirsi con un codice
 
 - **Codice**: `inviti-e-join`
