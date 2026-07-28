@@ -86,7 +86,7 @@ jobs:
           database=$(az postgres flexible-server db list \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --server-name "$server_name" \
-            --query "[?name!='postgres'].name | [0]" \
+            --query "[?name!='postgres' && name!='azure_maintenance' && name!='azure_sys'].name | [0]" \
             --output tsv)
           test -n "$server_name"
           test -n "$host"
