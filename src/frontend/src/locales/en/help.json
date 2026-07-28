@@ -8,12 +8,12 @@
     "limits": "Specialized services will be added in later versions."
   },
   "kinlist": {
-    "summary": "Uses the KinHub post-login bootstrap and shows the correct path to an active family or onboarding.",
-    "purpose": "Consumes KinHub's authoritative family membership check before showing KinList.",
-    "actions": "Wait for the check, review the offline state, or prepare to create or join a family in later features.",
+    "summary": "Uses the KinHub post-login bootstrap and lets the user create the first family without leaving /kinlist.",
+    "purpose": "Consumes KinHub's authoritative family membership check and atomically saves the family plus the creator membership.",
+    "actions": "Wait for the check, create a family with just its name, return to the initial choice, or retry after a recoverable error.",
     "prerequisites": "You need to sign in with a valid API token and have a live network connection for the online bootstrap.",
-    "fields": "The page distinguishes loading, onboarding, expired session, denied access, technical failure, and the offline shell without personal data.",
-    "limits": "This feature does not yet activate family creation, join, or the shared list; offline keeps only the public shell available."
+    "fields": "The page distinguishes loading, onboarding, expired session, denied access, technical failure, the offline shell, and a form with only the 1-100 character family name field.",
+    "limits": "Join by code and the shared list arrive in later features; offline keeps only the public shell and the entered name is not stored in the browser."
   },
   "about": {
     "summary": "Check the version and build metadata.",

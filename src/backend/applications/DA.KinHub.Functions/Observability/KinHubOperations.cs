@@ -4,5 +4,6 @@ public static class KinHubOperations
 {
     public const string ApiAccess = "kinhub.api_access";
     public const string Bootstrap = "kinhub.bootstrap";
+    public const string FamilyCreation = "kinhub.family_creation";
     public const string FamilyAuthorization = "kinhub.family_authorization";
 }

@@ -88,6 +88,46 @@ public sealed class KinHubTelemetryTests
         Assert.Equal("identity", measurement.ErrorCategory);
     }
 
+    [Fact]
+    public void FamilyCreationSignalsStayLowCardinality()
+    {
+        var longMeasurements = new List<(string Instrument, long Value, string? Operation, string? Outcome, string? ErrorCategory)>();
+        using var meterListener = new MeterListener();
+        meterListener.InstrumentPublished = (instrument, listener) =>
+        {
+            if (instrument.Meter.Name == "KinHub")
+            {
+                listener.EnableMeasurementEvents(instrument);
+            }
+        };
+        meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
+            longMeasurements.Add((
+                instrument.Name,
+                value,
+                TagValue(tags, "operation"),
+                TagValue(tags, "outcome"),
+                TagValue(tags, "errorCategory"))));
+        meterListener.Start();
+
+        using var telemetry = new KinHubTelemetry(new BuildInfoProvider(Options.Create(new RuntimeOptions { AppName = "KinHub", ApiVersion = "1.0", Environment = "Test" })));
+        telemetry.RecordSignal(KinHubOperations.FamilyCreation, "attempt");
+        telemetry.RecordSignal(KinHubOperations.FamilyCreation, "concurrent_conflict", "concurrency");
+        telemetry.RecordSignal(KinHubOperations.FamilyCreation, "postgresql_unavailable", "dependency");
+
+        Assert.Contains(longMeasurements, measurement => measurement.Instrument == "kinhub.signals"
+            && measurement.Operation == KinHubOperations.FamilyCreation
+            && measurement.Outcome == "attempt"
+            && measurement.ErrorCategory is null);
+        Assert.Contains(longMeasurements, measurement => measurement.Instrument == "kinhub.signals"
+            && measurement.Operation == KinHubOperations.FamilyCreation
+            && measurement.Outcome == "concurrent_conflict"
+            && measurement.ErrorCategory == "concurrency");
+        Assert.Contains(longMeasurements, measurement => measurement.Instrument == "kinhub.signals"
+            && measurement.Operation == KinHubOperations.FamilyCreation
+            && measurement.Outcome == "postgresql_unavailable"
+            && measurement.ErrorCategory == "dependency");
+    }
+
     private static string? TagValue(ReadOnlySpan<KeyValuePair<string, object?>> tags, string key)
     {
         foreach (var tag in tags)

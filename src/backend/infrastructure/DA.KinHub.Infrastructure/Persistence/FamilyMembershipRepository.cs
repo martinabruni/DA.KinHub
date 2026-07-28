@@ -12,6 +12,11 @@ internal sealed class FamilyMembershipRepository(KinHubDbContext dbContext) : IF
         try
         {
             return await dbContext.FamilyMemberships
+                .Join(
+                    dbContext.Families.Where(family => family.InactiveAt == null),
+                    membership => membership.FamilyId,
+                    family => family.Id,
+                    (membership, _) => membership)
                 .Where(membership => membership.ApplicationUserId == applicationUserId && membership.InactiveAt == null)
                 .OrderBy(membership => membership.CreatedAt)
                 .Select(membership => (Guid?)membership.FamilyId)
@@ -27,11 +32,14 @@ internal sealed class FamilyMembershipRepository(KinHubDbContext dbContext) : IF
     {
         try
         {
-            return await dbContext.FamilyMemberships.AnyAsync(
-                membership => membership.ApplicationUserId == applicationUserId
-                    && membership.FamilyId == familyId
-                    && membership.InactiveAt == null,
-                cancellationToken);
+            return await (from membership in dbContext.FamilyMemberships
+                          join family in dbContext.Families on membership.FamilyId equals family.Id
+                          where membership.ApplicationUserId == applicationUserId
+                              && membership.FamilyId == familyId
+                              && membership.InactiveAt == null
+                              && family.InactiveAt == null
+                          select membership.Id)
+                .AnyAsync(cancellationToken);
         }
         catch (Exception exception) when (IsRepositoryUnavailable(exception))
         {

@@ -26,3 +26,15 @@ public interface IFamilyAccessService
 {
     Task<FamilyAccessOutcome> CheckAccessAsync(ExternalIdentity externalIdentity, Guid familyId, CancellationToken cancellationToken);
 }
+
+public sealed record FamilyCreationResult(Guid FamilyId, bool Created, bool ReconciledConflict)
+{
+    public static FamilyCreationResult CreatedFamily(Guid familyId) => new(familyId, true, false);
+
+    public static FamilyCreationResult ExistingFamily(Guid familyId, bool reconciledConflict) => new(familyId, false, reconciledConflict);
+}
+
+public interface IFamilyCreationService
+{
+    Task<FamilyCreationResult> CreateFamilyAsync(ExternalIdentity externalIdentity, string? name, CancellationToken cancellationToken);
+}

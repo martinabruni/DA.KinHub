@@ -74,21 +74,32 @@ jobs:
         id: postgres
         shell: bash
         run: |
-          app_settings=$(az functionapp config appsettings list \
+          function_app_name=$(az functionapp list \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" \
-            --output json)
-          echo "host=$(jq -r '.[] | select(.name == \"Database__Host\") | .value' <<< \"$app_settings\")" >> "$GITHUB_OUTPUT"
-          echo "database=$(jq -r '.[] | select(.name == \"Database__DatabaseName\") | .value' <<< \"$app_settings\")" >> "$GITHUB_OUTPUT"
-          echo "server_name=$(jq -r '.[] | select(.name == \"Database__Host\") | .value' <<< \"$app_settings\" | cut -d'.' -f1)" >> "$GITHUB_OUTPUT"
-          echo "function_principal_id=$(az functionapp identity show --resource-group \"${{ vars.AZURE_RESOURCE_GROUP }}\" --name \"${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}\" --query principalId --output tsv)" >> "$GITHUB_OUTPUT"
-          principal_name=$(az account show --query user.name --output tsv)
-          access_token=$(az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv)
-          principal_object_id=$(node -e "const token=process.argv[1].split('.')[1]; const normalized=token.replace(/-/g,'+').replace(/_/g,'/'); const padded=normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '='); const payload=JSON.parse(Buffer.from(padded, 'base64').toString('utf8')); process.stdout.write(payload.oid ?? '');" "$access_token")
-          test -n "$principal_name"
-          test -n "$principal_object_id"
-          echo "admin_name=$principal_name" >> "$GITHUB_OUTPUT"
-          echo "admin_object_id=$principal_object_id" >> "$GITHUB_OUTPUT"
+            --query "[0].name" \
+            --output tsv)
+          server_name=$(az postgres flexible-server list \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query "[0].name" \
+            --output tsv)
+          host=$(az postgres flexible-server show \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "$server_name" \
+            --query "fullyQualifiedDomainName" \
+            --output tsv)
+          database=$(az postgres flexible-server db list \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server-name "$server_name" \
+            --query "[?name!='postgres' && name!='azure_maintenance' && name!='azure_sys'].name | [0]" \
+            --output tsv)
+          test -n "$function_app_name"
+          test -n "$server_name"
+          test -n "$host"
+          test -n "$database"
+          echo "function_app_name=$function_app_name" >> "$GITHUB_OUTPUT"
+          echo "server_name=$server_name" >> "$GITHUB_OUTPUT"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "database=$database" >> "$GITHUB_OUTPUT"
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install --yes postgresql-client
@@ -97,38 +108,17 @@ jobs:
         id: postgres_firewall
         shell: bash
         run: |
-          runner_ip=$(curl --silent https://ifconfig.me)
+          subscription_id=$(az account show --query id --output tsv)
+          runner_ip=$(curl --fail --silent --show-error https://api.ipify.org)
           rule_name="gha-${GITHUB_RUN_ID}"
-          az postgres flexible-server firewall-rule create \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server-name "${{ steps.postgres.outputs.server_name }}" \
-            --name "$rule_name" \
-            --start-ip-address "$runner_ip" \
-            --end-ip-address "$runner_ip" \
-            --only-show-errors --output none
+          rule_url="https://management.azure.com/subscriptions/${subscription_id}/resourceGroups/${{ vars.AZURE_RESOURCE_GROUP }}/providers/Microsoft.DBforPostgreSQL/flexibleServers/${{ steps.postgres.outputs.server_name }}/firewallRules/${rule_name}?api-version=2024-08-01"
+          az rest \
+            --method put \
+            --url "$rule_url" \
+            --body "{\"properties\":{\"startIpAddress\":\"${runner_ip}\",\"endIpAddress\":\"${runner_ip}\"}}" \
+            --only-show-errors \
+            --output none
           echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
-
-      - name: Provision database principals
-        shell: bash
-        run: |
-          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
-          export PGPASSWORD="$token"
-          psql \
-            --host "${{ steps.postgres.outputs.host }}" \
-            --dbname postgres \
-            --username "${{ steps.postgres.outputs.admin_name }}" \
-            --set ON_ERROR_STOP=1 <<SQL
-          DO \$kinhub\$
-          BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_RUNTIME_USERNAME }}') THEN
-              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_RUNTIME_USERNAME }}', '${{ steps.postgres.outputs.function_principal_id }}', 'service', false, false);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_MIGRATION_USERNAME }}') THEN
-              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_MIGRATION_USERNAME }}', '${{ steps.postgres.outputs.admin_object_id }}', 'service', true, false);
-            END IF;
-          END
-          \$kinhub\$;
-          SQL
 
       - name: Apply database migrations
         shell: bash
@@ -160,23 +150,25 @@ jobs:
         if: always() && steps.postgres_firewall.outputs.rule_name != ''
         shell: bash
         run: |
-          az postgres flexible-server firewall-rule delete \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server-name "${{ steps.postgres.outputs.server_name }}" \
-            --name "${{ steps.postgres_firewall.outputs.rule_name }}" \
-            --yes --only-show-errors
+          subscription_id=$(az account show --query id --output tsv)
+          rule_url="https://management.azure.com/subscriptions/${subscription_id}/resourceGroups/${{ vars.AZURE_RESOURCE_GROUP }}/providers/Microsoft.DBforPostgreSQL/flexibleServers/${{ steps.postgres.outputs.server_name }}/firewallRules/${{ steps.postgres_firewall.outputs.rule_name }}?api-version=2024-08-01"
+          az rest \
+            --method delete \
+            --url "$rule_url" \
+            --only-show-errors \
+            --output none
 
       - name: Deploy Function App with One Deploy
         uses: Azure/functions-action@v1
         with:
-          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}
+          app-name: ${{ steps.postgres.outputs.function_app_name }}
           package: ${{ steps.package.outputs.path }}
           sku: flexconsumption
           remote-build: false
 
       - name: Build frontend
         env:
-          VITE_API_BASE_URL: https://${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}.azurewebsites.net
+          VITE_API_BASE_URL: https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net
           VITE_ENTRA_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
           VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
@@ -195,8 +187,8 @@ jobs:
 
       - name: Smoke test API
         run: |
-          curl --fail --retry 8 --retry-delay 10 "https://${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}.azurewebsites.net/health/live"
-          curl --fail --retry 8 --retry-delay 10 "https://${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}.azurewebsites.net/api/version"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net/health/live"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net/api/version"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -209,5 +201,5 @@ jobs:
       - name: Deployment summary
         run: |
           echo "## KinHub code deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Function App: ${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Function App: ${{ steps.postgres.outputs.function_app_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact: $(basename '${{ steps.package.outputs.path }}')" >> "$GITHUB_STEP_SUMMARY"

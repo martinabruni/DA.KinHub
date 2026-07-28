@@ -15,7 +15,14 @@
     "onboarding": "To use KinHub services, create a family or join with a code.",
     "onboardingPending": "Create and join actions will be enabled by their dedicated features, but the post-login routing path is already enforced.",
     "ready": "KinHub has verified an active family membership.",
-    "readyDetail": "The shared list will arrive in later features without reusing stale data or personal cache from the current bootstrap."
+    "readyDetail": "The shared list will arrive in later features without reusing stale data or personal cache from the current bootstrap.",
+    "create": {
+      "label": "Family name",
+      "helper": "Enter a name from 1 to 100 characters. KinHub compresses repeated spaces while preserving casing and valid characters.",
+      "pending": "Creating family…",
+      "validationError": "Enter a valid family name from 1 to 100 characters.",
+      "retryableError": "The family was not created. Try again without losing the entered name."
+    }
   },
   "about": {
     "title": "Version",

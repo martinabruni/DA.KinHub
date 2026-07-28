@@ -18,6 +18,7 @@ public static class ApiRoutes
     public static class KinHub
     {
         public const string Bootstrap = "api/kinhub/bootstrap";
+        public const string Families = "api/kinhub/families";
         public const string FamilyContext = "api/kinhub/family-context";
     }
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { KinListAccessGate } from "./KinListAccessGate";
 import { KinHubFamilyProvider, useKinHubFamily } from "./KinHubFamilyContext";
@@ -6,7 +6,16 @@ import { KinHubFamilyProvider, useKinHubFamily } from "./KinHubFamilyContext";
 let online = true;
 let account: { homeAccountId: string } | null = null;
 let bootstrapHandler: (signal?: AbortSignal) => Promise<{ state: "family"; familyId: string } | { state: "onboarding" }> = () => Promise.resolve({ state: "onboarding" });
+let createFamilyHandler: (name: string, signal?: AbortSignal) => Promise<{ state: "family"; familyId: string }> = () => Promise.resolve({ state: "family", familyId: "family-created" });
+let createFamilyCallCount = 0;
 const msalInstance = { name: "msal" };
+const apiMocks = vi.hoisted(() => ({
+  ApiResponseError: class extends Error {
+    constructor(public readonly problem: { status: number; detail: string; code?: string }, public readonly correlationId?: string) {
+      super(problem.detail);
+    }
+  }
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key })
@@ -28,19 +37,19 @@ vi.mock("./ConnectivityProvider", () => ({
 vi.mock("../lib/api", () => {
   class ApiError extends Error {}
   class ApiNetworkError extends ApiError {}
-  class ApiResponseError extends ApiError {
-    constructor(public readonly problem: { status: number; detail: string }, public readonly correlationId?: string) {
-      super(problem.detail);
-    }
-  }
 
   return {
     ApiError,
     ApiNetworkError,
-    ApiResponseError,
+    ApiResponseError: apiMocks.ApiResponseError,
     KinHubApiClient: class {
       getKinHubBootstrap(signal?: AbortSignal) {
         return bootstrapHandler(signal);
+      }
+
+      createFamily(body: { name: string }, signal?: AbortSignal) {
+        createFamilyCallCount += 1;
+        return createFamilyHandler(body.name, signal);
       }
     }
   };
@@ -65,6 +74,8 @@ describe("KinListAccessGate", () => {
     online = true;
     account = null;
     bootstrapHandler = () => Promise.resolve({ state: "onboarding" });
+    createFamilyHandler = () => Promise.resolve({ state: "family", familyId: "family-created" });
+    createFamilyCallCount = 0;
   });
 
   it("stores the family context only in memory after an authorized bootstrap", async () => {
@@ -116,5 +127,59 @@ describe("KinListAccessGate", () => {
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent(""));
     expect(screen.getByText("kinlist.offline")).toBeInTheDocument();
+  });
+
+  it("opens the create form and stores the created family context in memory", async () => {
+    account = { homeAccountId: "account-a" };
+
+    renderGate();
+
+    await screen.findByText("kinlist.onboarding");
+    fireEvent.click(screen.getByText("actions.createFamily"));
+    const input = screen.getByLabelText("kinlist.create.label");
+    fireEvent.change(input, { target: { value: "Famiglia Bruni" } });
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent("family-created"));
+    expect(screen.getByText("kinlist.ready")).toBeInTheDocument();
+  });
+
+  it("preserves the entered name after a validation error", async () => {
+    account = { homeAccountId: "account-a" };
+    createFamilyHandler = () => Promise.reject(new apiMocks.ApiResponseError({ status: 400, detail: "Denied", code: "family.nameInvalid" }));
+
+    renderGate();
+
+    await screen.findByText("kinlist.onboarding");
+    fireEvent.click(screen.getByText("actions.createFamily"));
+    const input = screen.getByLabelText("kinlist.create.label");
+    fireEvent.change(input, { target: { value: "  " } });
+    fireEvent.submit(input.closest("form")!);
+
+    await screen.findByText("kinlist.create.validationError");
+    expect(input).toHaveValue("  ");
+  });
+
+  it("prevents a double submit before the rerender", async () => {
+    account = { homeAccountId: "account-a" };
+    let resolveCreate: (value: { state: "family"; familyId: string }) => void = () => undefined;
+    createFamilyHandler = () => new Promise((resolve) => {
+      resolveCreate = resolve;
+    });
+
+    renderGate();
+
+    await screen.findByText("kinlist.onboarding");
+    fireEvent.click(screen.getByText("actions.createFamily"));
+    const input = screen.getByLabelText("kinlist.create.label");
+    fireEvent.change(input, { target: { value: "Famiglia Bruni" } });
+    const form = input.closest("form");
+    fireEvent.submit(form!);
+    fireEvent.submit(form!);
+
+    expect(createFamilyCallCount).toBe(1);
+
+    resolveCreate({ state: "family", familyId: "family-created" });
+    await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent("family-created"));
   });
 });

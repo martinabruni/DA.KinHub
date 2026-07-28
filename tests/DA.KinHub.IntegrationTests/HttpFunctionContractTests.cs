@@ -25,8 +25,8 @@ public sealed class HttpFunctionContractTests
             var descriptor = metadataProvider.Get(Definition(function.EntryPoint));
             Assert.True(descriptor.IsHttp);
 
-            var hasAllowAnonymous = function.Method.IsDefined(typeof(AllowAnonymousAttribute), inherit: true);
-            var hasFamilyAccess = function.Method.IsDefined(typeof(RequiresFamilyAccessAttribute), inherit: true);
+            var hasAllowAnonymous = function.ReflectionMethod.IsDefined(typeof(AllowAnonymousAttribute), inherit: true);
+            var hasFamilyAccess = function.ReflectionMethod.IsDefined(typeof(RequiresFamilyAccessAttribute), inherit: true);
 
             Assert.Equal(hasAllowAnonymous, descriptor.AllowAnonymous);
             Assert.Equal(hasFamilyAccess, descriptor.RequiresFamilyAccess);
@@ -55,7 +55,8 @@ public sealed class HttpFunctionContractTests
         {
             var route = $"/{function.Route}";
             Assert.True(paths.TryGetProperty(route, out var pathItem), $"Route '{route}' is missing from OpenAPI.");
-            Assert.True(pathItem.TryGetProperty("get", out var operation), $"Route '{route}' is missing the GET operation.");
+            var operationProperty = Assert.Single(pathItem.EnumerateObject());
+            var operation = operationProperty.Value;
 
             var hasSecurity = operation.TryGetProperty("security", out _);
             if (function.AllowAnonymous)
@@ -108,6 +109,7 @@ public sealed class HttpFunctionContractTests
                 candidate.Method,
                 $"{candidate.Method.DeclaringType!.FullName}.{candidate.Method.Name}",
                 candidate.Trigger!.Route ?? string.Empty,
+                (candidate.Trigger.Methods ?? ["get"]).Single().ToLowerInvariant(),
                 candidate.Method.IsDefined(typeof(AllowAnonymousAttribute), inherit: true),
                 candidate.Method.IsDefined(typeof(RequiresFamilyAccessAttribute), inherit: true)))
             .OrderBy(candidate => candidate.Route)
@@ -116,7 +118,7 @@ public sealed class HttpFunctionContractTests
 
     private static FunctionDefinition Definition(string entryPoint) => new StubFunctionDefinition(entryPoint);
 
-    private sealed record HttpFunctionMetadata(MethodInfo Method, string EntryPoint, string Route, bool AllowAnonymous, bool RequiresFamilyAccess);
+    private sealed record HttpFunctionMetadata(MethodInfo ReflectionMethod, string EntryPoint, string Route, string Method, bool AllowAnonymous, bool RequiresFamilyAccess);
 
     private sealed class StubFunctionDefinition(string entryPoint) : FunctionDefinition
     {

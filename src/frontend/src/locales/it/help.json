@@ -8,12 +8,12 @@
     "limits": "I servizi specialistici verranno aggiunti in versioni successive."
   },
   "kinlist": {
-    "summary": "Usa il bootstrap KinHub post-login e mostra il percorso corretto verso famiglia attiva oppure onboarding.",
-    "purpose": "Consuma il controllo autorevole KinHub della membership familiare prima di mostrare KinList.",
-    "actions": "Attendere la verifica, rileggere lo stato offline, oppure prepararsi a creare o unirsi a una famiglia nelle feature successive.",
+    "summary": "Usa il bootstrap KinHub post-login e consente di creare la prima famiglia senza uscire da /kinlist.",
+    "purpose": "Consuma il controllo autorevole KinHub della membership familiare e salva in modo atomico famiglia e membership del creatore.",
+    "actions": "Attendere la verifica, creare una famiglia con il solo nome, tornare alla scelta iniziale oppure riprovare dopo un errore recuperabile.",
     "prerequisites": "È necessario accedere con un token API valido e una connessione attiva per il bootstrap online.",
-    "fields": "La pagina distingue caricamento, onboarding, sessione scaduta, accesso negato, errore tecnico e shell offline senza dati personali.",
-    "limits": "In questa feature non sono ancora attive creazione famiglia, join e lista condivisa; offline resta disponibile solo la shell pubblica."
+    "fields": "La pagina distingue caricamento, onboarding, sessione scaduta, accesso negato, errore tecnico, shell offline e form con il solo campo nome famiglia da 1 a 100 caratteri.",
+    "limits": "Join con codice e lista condivisa arrivano in feature successive; offline resta disponibile solo la shell pubblica e il nome inserito non viene salvato nel browser."
   },
   "about": {
     "summary": "Controlla versione e metadati della build.",

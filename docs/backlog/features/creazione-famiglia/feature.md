@@ -1,5 +1,5 @@
 ---
-status: Open
+status: In progress
 ---
 
 # FEAT-002 - Creare la propria famiglia

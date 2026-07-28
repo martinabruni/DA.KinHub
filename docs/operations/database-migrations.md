@@ -26,3 +26,25 @@ Per FEAT-001 verificare inoltre:
 - indice univoco `(external_issuer, external_object_id)` presente;
 - indice univoco parziale per una sola membership attiva presente;
 - readiness applicativa valida dopo la migration.
+
+Per FEAT-002 verificare inoltre prima del deploy:
+
+- assenza di righe legacy in `shared.families` con `SELECT COUNT(*) FROM shared.families;` e stop immediato se il risultato non è `0`;
+- presenza della migration FEAT-001 in `__EFMigrationsHistory`;
+- grant runtime e migration ancora validi sullo schema `shared`.
+
+Dopo la migration FEAT-002 verificare:
+
+- colonne `name` e `created_by_application_user_id` in `shared.families`;
+- foreign key `FK_families_application_users_created_by_application_user_id` presente;
+- indice parziale `IX_family_memberships_single_active_user` ancora presente;
+- nessuna famiglia orfana con:
+
+```sql
+SELECT f."Id"
+FROM shared.families f
+LEFT JOIN shared.family_memberships fm ON fm.family_id = f."Id" AND fm.inactive_at IS NULL
+WHERE fm."Id" IS NULL;
+```
+
+Il rollback operativo di FEAT-002 usa il `Down` solo prima di creare la prima famiglia nel nuovo modello. Dopo scritture reali preferire una migration correttiva compatibile con i dati e verificare backup o PITR prima di ogni inversione.

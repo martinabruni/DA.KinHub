@@ -119,15 +119,16 @@ jobs:
         id: postgres_firewall
         shell: bash
         run: |
-          runner_ip=$(curl --silent https://ifconfig.me)
+          subscription_id=$(az account show --query id --output tsv)
+          runner_ip=$(curl --fail --silent --show-error https://api.ipify.org)
           rule_name="gha-${GITHUB_RUN_ID}"
-          az postgres flexible-server firewall-rule create \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server-name "${{ steps.infra.outputs.postgres_server_name }}" \
-            --name "$rule_name" \
-            --start-ip-address "$runner_ip" \
-            --end-ip-address "$runner_ip" \
-            --only-show-errors --output none
+          rule_url="https://management.azure.com/subscriptions/${subscription_id}/resourceGroups/${{ vars.AZURE_RESOURCE_GROUP }}/providers/Microsoft.DBforPostgreSQL/flexibleServers/${{ steps.infra.outputs.postgres_server_name }}/firewallRules/${rule_name}?api-version=2024-08-01"
+          az rest \
+            --method put \
+            --url "$rule_url" \
+            --body "{\"properties\":{\"startIpAddress\":\"${runner_ip}\",\"endIpAddress\":\"${runner_ip}\"}}" \
+            --only-show-errors \
+            --output none
           echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
 
       - name: Provision database principals
@@ -185,11 +186,13 @@ jobs:
         if: always() && steps.postgres_firewall.outputs.rule_name != ''
         shell: bash
         run: |
-          az postgres flexible-server firewall-rule delete \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server-name "${{ steps.infra.outputs.postgres_server_name }}" \
-            --name "${{ steps.postgres_firewall.outputs.rule_name }}" \
-            --yes --only-show-errors
+          subscription_id=$(az account show --query id --output tsv)
+          rule_url="https://management.azure.com/subscriptions/${subscription_id}/resourceGroups/${{ vars.AZURE_RESOURCE_GROUP }}/providers/Microsoft.DBforPostgreSQL/flexibleServers/${{ steps.infra.outputs.postgres_server_name }}/firewallRules/${{ steps.postgres_firewall.outputs.rule_name }}?api-version=2024-08-01"
+          az rest \
+            --method delete \
+            --url "$rule_url" \
+            --only-show-errors \
+            --output none
 
       - name: Package backend
         id: package

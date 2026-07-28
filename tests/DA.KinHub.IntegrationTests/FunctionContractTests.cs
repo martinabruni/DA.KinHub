@@ -47,10 +47,26 @@ public sealed class FunctionContractTests
 
         var openApiResult = Assert.IsType<OkObjectResult>(functions.OpenApi(Request("/api/openapi.json")));
         var openApi = JsonSerializer.Serialize(openApiResult.Value);
+        using var openApiDocument = JsonDocument.Parse(openApi);
         Assert.Contains("https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/authorize", openApi, StringComparison.Ordinal);
         Assert.DoesNotContain("https://https://", openApi, StringComparison.Ordinal);
         Assert.Contains("/api/kinhub/bootstrap", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/families", openApi, StringComparison.Ordinal);
         Assert.Contains("/api/kinhub/family-context", openApi, StringComparison.Ordinal);
+
+        var familyOperation = openApiDocument.RootElement
+            .GetProperty("paths")
+            .GetProperty("/api/kinhub/families")
+            .GetProperty("post");
+        Assert.True(familyOperation.TryGetProperty("requestBody", out var requestBody));
+        Assert.True(requestBody.GetProperty("required").GetBoolean());
+        var nameProperty = requestBody
+            .GetProperty("content")
+            .GetProperty("application/json")
+            .GetProperty("schema")
+            .GetProperty("properties")
+            .GetProperty("name");
+        Assert.Equal(100, nameProperty.GetProperty("maxLength").GetInt32());
     }
 
     [Fact]
@@ -105,6 +121,7 @@ public sealed class FunctionContractTests
         using var scope = provider.CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinHubBootstrapService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyCreationService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Infrastructure.Persistence.KinHubDbContext>());
@@ -208,12 +225,15 @@ public sealed class FunctionContractTests
         var provider = new FunctionAccessMetadataProvider();
 
         var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubBootstrapFunctions.Bootstrap"));
+        var createFamily = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubFamilyCreationFunctions.CreateFamily"));
         var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubFamilyFunctions.FamilyContext"));
         var version = provider.Get(Definition("DA.KinHub.Functions.Functions.MetadataFunctions.Version"));
 
         Assert.True(bootstrap.IsHttp);
         Assert.False(bootstrap.AllowAnonymous);
         Assert.False(bootstrap.RequiresFamilyAccess);
+        Assert.False(createFamily.AllowAnonymous);
+        Assert.False(createFamily.RequiresFamilyAccess);
         Assert.True(family.RequiresFamilyAccess);
         Assert.True(version.AllowAnonymous);
     }
