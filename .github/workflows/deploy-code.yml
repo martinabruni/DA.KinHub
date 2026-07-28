@@ -74,21 +74,21 @@ jobs:
         id: postgres
         shell: bash
         run: |
-          app_settings=$(az functionapp config appsettings list \
+          host=$(az functionapp config appsettings list \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --name "${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" \
-            --output json)
-          echo "host=$(jq -r '.[] | select(.name == \"Database__Host\") | .value' <<< \"$app_settings\")" >> "$GITHUB_OUTPUT"
-          echo "database=$(jq -r '.[] | select(.name == \"Database__DatabaseName\") | .value' <<< \"$app_settings\")" >> "$GITHUB_OUTPUT"
-          echo "server_name=$(jq -r '.[] | select(.name == \"Database__Host\") | .value' <<< \"$app_settings\" | cut -d'.' -f1)" >> "$GITHUB_OUTPUT"
-          echo "function_principal_id=$(az functionapp identity show --resource-group \"${{ vars.AZURE_RESOURCE_GROUP }}\" --name \"${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}\" --query principalId --output tsv)" >> "$GITHUB_OUTPUT"
-          principal_name=$(az account show --query user.name --output tsv)
-          access_token=$(az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv)
-          principal_object_id=$(node -e "const token=process.argv[1].split('.')[1]; const normalized=token.replace(/-/g,'+').replace(/_/g,'/'); const padded=normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '='); const payload=JSON.parse(Buffer.from(padded, 'base64').toString('utf8')); process.stdout.write(payload.oid ?? '');" "$access_token")
-          test -n "$principal_name"
-          test -n "$principal_object_id"
-          echo "admin_name=$principal_name" >> "$GITHUB_OUTPUT"
-          echo "admin_object_id=$principal_object_id" >> "$GITHUB_OUTPUT"
+            --query "[?name=='Database__Host'].value | [0]" \
+            --output tsv)
+          database=$(az functionapp config appsettings list \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_FUNCTIONAPP_NAME || vars.FUNCTION_APP_NAME }}" \
+            --query "[?name=='Database__DatabaseName'].value | [0]" \
+            --output tsv)
+          test -n "$host"
+          test -n "$database"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "database=$database" >> "$GITHUB_OUTPUT"
+          echo "server_name=$(cut -d'.' -f1 <<< "$host")" >> "$GITHUB_OUTPUT"
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install --yes postgresql-client
@@ -108,28 +108,6 @@ jobs:
             --only-show-errors \
             --output none
           echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
-
-      - name: Provision database principals
-        shell: bash
-        run: |
-          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
-          export PGPASSWORD="$token"
-          psql \
-            --host "${{ steps.postgres.outputs.host }}" \
-            --dbname postgres \
-            --username "${{ steps.postgres.outputs.admin_name }}" \
-            --set ON_ERROR_STOP=1 <<SQL
-          DO \$kinhub\$
-          BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_RUNTIME_USERNAME }}') THEN
-              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_RUNTIME_USERNAME }}', '${{ steps.postgres.outputs.function_principal_id }}', 'service', false, false);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${{ env.POSTGRES_MIGRATION_USERNAME }}') THEN
-              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('${{ env.POSTGRES_MIGRATION_USERNAME }}', '${{ steps.postgres.outputs.admin_object_id }}', 'service', true, false);
-            END IF;
-          END
-          \$kinhub\$;
-          SQL
 
       - name: Apply database migrations
         shell: bash
