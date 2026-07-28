@@ -18,9 +18,10 @@ param deploymentContainerName string
 param applicationContainerName string
 param applicationInsightsName string
 param applicationInsightsConnectionString string
+param entraInstance string
 param entraTenantId string
 param entraBackendAudience string
-param entraApiScope string
+param entraApiScopeName string
 param environmentName string
 param postgresHost string
 param postgresDatabaseName string
@@ -90,10 +91,10 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'KinHub__Environment', value: environmentName }
         { name: 'KinHub__ApiVersion', value: '1.0' }
         { name: 'Entra__Enabled', value: 'true' }
-        { name: 'Entra__Instance', value: environment().authentication.loginEndpoint }
+        { name: 'Entra__Instance', value: entraInstance }
         { name: 'Entra__TenantId', value: entraTenantId }
         { name: 'Entra__Audience', value: entraBackendAudience }
-        { name: 'Entra__Scope', value: entraApiScope }
+        { name: 'Entra__Scope', value: entraApiScopeName }
         { name: 'Database__Mode', value: 'ManagedIdentity' }
         { name: 'Database__Host', value: postgresHost }
         { name: 'Database__Port', value: '5432' }

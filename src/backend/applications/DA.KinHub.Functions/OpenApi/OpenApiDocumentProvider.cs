@@ -11,9 +11,7 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
     {
         var entra = entraOptions.Value;
         var authority = $"{entra.Instance.TrimEnd('/')}/{entra.TenantId}/oauth2/v2.0";
-        var apiScope = entra.Scope.StartsWith("api://", StringComparison.OrdinalIgnoreCase)
-            ? entra.Scope
-            : $"{entra.Audience.TrimEnd('/')}/{entra.Scope}";
+        var apiScope = $"api://{entra.Audience}/{entra.Scope}";
 
         var problemResponse = new Dictionary<string, object>
         {

@@ -30,9 +30,9 @@ public sealed class FunctionContractTests
         var openApiProvider = new OpenApiDocumentProvider(provider, Options.Create(new EntraOptions
         {
             Enabled = true,
-            Instance = "https://login.microsoftonline.com",
-            TenantId = "contoso.onmicrosoft.com",
-            Audience = "api://kinhub-test",
+            Instance = "https://contoso.ciamlogin.com",
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            Audience = "22222222-2222-2222-2222-222222222222",
             Scope = "access_as_user"
         }));
         var functions = new MetadataFunctions(provider, TimeProvider.System, openApiProvider);
@@ -48,7 +48,8 @@ public sealed class FunctionContractTests
         var openApiResult = Assert.IsType<OkObjectResult>(functions.OpenApi(Request("/api/openapi.json")));
         var openApi = JsonSerializer.Serialize(openApiResult.Value);
         using var openApiDocument = JsonDocument.Parse(openApi);
-        Assert.Contains("https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/authorize", openApi, StringComparison.Ordinal);
+        Assert.Contains("https://contoso.ciamlogin.com/11111111-1111-1111-1111-111111111111/oauth2/v2.0/authorize", openApi, StringComparison.Ordinal);
+        Assert.Contains("api://22222222-2222-2222-2222-222222222222/access_as_user", openApi, StringComparison.Ordinal);
         Assert.DoesNotContain("https://https://", openApi, StringComparison.Ordinal);
         Assert.Contains("/api/kinhub/bootstrap", openApi, StringComparison.Ordinal);
         Assert.Contains("/api/kinhub/families", openApi, StringComparison.Ordinal);
@@ -136,9 +137,9 @@ public sealed class FunctionContractTests
             [RuntimeOptions.SectionName + ":ApiVersion"] = "1.0",
             [RuntimeOptions.SectionName + ":Environment"] = "Test",
             [EntraOptions.SectionName + ":Enabled"] = "true",
-            [EntraOptions.SectionName + ":Instance"] = "https://login.microsoftonline.com",
-            [EntraOptions.SectionName + ":TenantId"] = "contoso.onmicrosoft.com",
-            [EntraOptions.SectionName + ":Audience"] = "api://kinhub-test",
+            [EntraOptions.SectionName + ":Instance"] = "https://contoso.ciamlogin.com",
+            [EntraOptions.SectionName + ":TenantId"] = "11111111-1111-1111-1111-111111111111",
+            [EntraOptions.SectionName + ":Audience"] = "22222222-2222-2222-2222-222222222222",
             [EntraOptions.SectionName + ":Scope"] = "access_as_user",
             ["Database:Mode"] = "ConnectionString",
             ["Database:ConnectionString"] = "Host=localhost;Database=kinhub;Username=kinhub;Password=kinhub",
@@ -183,8 +184,8 @@ public sealed class FunctionContractTests
         Assert.Contains(authorizationHandlers, handler => handler is FamilyAuthorizationHandler);
 
         var jwtOptions = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
-        Assert.Equal("https://login.microsoftonline.com/contoso.onmicrosoft.com/v2.0", jwtOptions.Authority);
-        Assert.Equal("api://kinhub-test", jwtOptions.Audience);
+        Assert.Equal("https://contoso.ciamlogin.com/11111111-1111-1111-1111-111111111111/v2.0", jwtOptions.Authority);
+        Assert.Equal("22222222-2222-2222-2222-222222222222", jwtOptions.Audience);
         Assert.NotNull(provider.GetRequiredService<KinHubAuthorizationMiddleware>());
     }
 
@@ -247,12 +248,38 @@ public sealed class FunctionContractTests
         {
             Enabled = true,
             Instance = "http://login.microsoftonline.com",
-            TenantId = "contoso.onmicrosoft.com",
-            Audience = "api://kinhub-test",
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            Audience = "22222222-2222-2222-2222-222222222222",
             Scope = "access_as_user"
         });
 
         Assert.True(result.Failed);
+    }
+
+    [Fact]
+    public void EntraValidatorRejectsFullScopeUriAndApplicationIdUriAudience()
+    {
+        var validator = new EntraOptionsValidator();
+
+        var invalidAudience = validator.Validate(null, new EntraOptions
+        {
+            Enabled = true,
+            Instance = "https://contoso.ciamlogin.com",
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            Audience = "api://22222222-2222-2222-2222-222222222222",
+            Scope = "access_as_user"
+        });
+        var invalidScope = validator.Validate(null, new EntraOptions
+        {
+            Enabled = true,
+            Instance = "https://contoso.ciamlogin.com",
+            TenantId = "11111111-1111-1111-1111-111111111111",
+            Audience = "22222222-2222-2222-2222-222222222222",
+            Scope = "api://22222222-2222-2222-2222-222222222222/access_as_user"
+        });
+
+        Assert.True(invalidAudience.Failed);
+        Assert.True(invalidScope.Failed);
     }
 
     private static HttpRequest Request(string path)

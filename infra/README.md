@@ -6,7 +6,7 @@ Il modulo Function deriva dal template HTTP C# Flex Consumption ufficiale Azure 
 
 ```bash
 az bicep build --file infra/app.bicep
-az deployment group validate --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters infra/main.dev.bicepparam --parameters postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' entraTenantId='<VALUE>' entraBackendAudience='<VALUE>' entraApiScope='<VALUE>'
+az deployment group validate --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters infra/main.dev.bicepparam --parameters postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' azureTenantId='<AZURE_TENANT_ID>' entraInstance='https://<TENANT_SUBDOMAIN>.ciamlogin.com/' entraTenantId='<ENTRA_TENANT_ID>' entraBackendAudience='<ENTRA_BACKEND_CLIENT_ID>'
 ```
 
 Non eseguire il deploy senza confermare subscription, policy, provider, quote e costi. `main.dev.bicepparam` contiene solo placeholder. Memoria, scala e always-ready si modificano qui, non in GitHub Variables.

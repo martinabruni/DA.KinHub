@@ -760,8 +760,9 @@ Usa placeholder chiari, ad esempio:
 
 ```text
 <ENTRA_TENANT_ID>
+<ENTRA_TENANT_SUBDOMAIN>
 <ENTRA_FRONTEND_CLIENT_ID>
-<ENTRA_BACKEND_CLIENT_ID_OR_AUDIENCE>
+<ENTRA_BACKEND_CLIENT_ID>
 <ENTRA_API_SCOPE>
 <ENTRA_REDIRECT_URI>
 ```
@@ -1006,8 +1007,10 @@ AZURE_LOCATION
 AZURE_FUNCTIONAPP_NAME
 AZURE_STATIC_WEB_APPS_API_TOKEN
 ENTRA_FRONTEND_CLIENT_ID
+ENTRA_TENANT_ID
 ENTRA_BACKEND_AUDIENCE
 ENTRA_API_SCOPE
+ENTRA_INSTANCE
 POSTGRES_ADMIN_USERNAME
 POSTGRES_ADMIN_PASSWORD
 ```
@@ -1022,11 +1025,13 @@ Fornisci comandi `gh secret set` e `gh variable set`, ad esempio:
 gh secret set AZURE_CLIENT_ID --body "<VALUE>"
 gh secret set AZURE_TENANT_ID --body "<VALUE>"
 gh secret set AZURE_SUBSCRIPTION_ID --body "<VALUE>"
+gh secret set ENTRA_TENANT_ID --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_PASSWORD --body "<VALUE>"
 
 gh variable set AZURE_RESOURCE_GROUP --body "<VALUE>"
 gh variable set AZURE_LOCATION --body "<VALUE>"
 gh variable set AZURE_FUNCTIONAPP_NAME --body "<VALUE>"
+gh variable set ENTRA_INSTANCE --body "https://<TENANT_SUBDOMAIN>.ciamlogin.com/"
 ```
 
 Non inserire valori reali.

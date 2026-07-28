@@ -9,9 +9,9 @@ import {
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID ?? "";
 const clientId = import.meta.env.VITE_ENTRA_FRONTEND_CLIENT_ID ?? "";
 const apiScope = import.meta.env.VITE_ENTRA_API_SCOPE ?? "";
-const authority = import.meta.env.VITE_ENTRA_AUTHORITY ?? (tenantId ? `https://login.microsoftonline.com/${tenantId}` : "");
+const authority = import.meta.env.VITE_ENTRA_AUTHORITY ?? "";
 const redirectUri = import.meta.env.VITE_ENTRA_REDIRECT_URI ?? window.location.origin;
-const configured = [tenantId, clientId, apiScope].every((value) => value && !value.startsWith("<"));
+const configured = [tenantId, clientId, apiScope, authority].every((value) => value && !value.startsWith("<"));
 
 const configuration: Configuration = {
   auth: {

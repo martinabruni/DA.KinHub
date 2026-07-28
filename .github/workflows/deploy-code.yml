@@ -169,10 +169,10 @@ jobs:
       - name: Build frontend
         env:
           VITE_API_BASE_URL: https://${{ steps.postgres.outputs.function_app_name }}.azurewebsites.net
-          VITE_ENTRA_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          VITE_ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID }}
           VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
           VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
-          VITE_ENTRA_AUTHORITY: ${{ vars.ENTRA_AUTHORITY || format('https://login.microsoftonline.com/{0}', secrets.AZURE_TENANT_ID) }}
+          VITE_ENTRA_AUTHORITY: ${{ vars.ENTRA_INSTANCE }}
           VITE_ENTRA_REDIRECT_URI: ${{ vars.AZURE_STATIC_WEB_APP_URL || vars.VITE_CORE_URL }}
         run: npm run --prefix src/frontend build
 
