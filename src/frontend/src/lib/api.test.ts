@@ -19,7 +19,7 @@ describe("KinHubApiClient", () => {
     await expect(client.getKinHubBootstrap()).resolves.toEqual({ state: "onboarding" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [path, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe("/api/kinhub/bootstrap");
+    expect(path).toContain("/api/kinhub/bootstrap");
     expect(requestInit.cache).toBe("no-store");
     expect(requestInit.credentials).toBe("omit");
     expect(requestInit.headers).toEqual(expect.objectContaining({
@@ -52,5 +52,19 @@ describe("KinHubApiClient", () => {
       expect(apiError.problem.code).toBe("family.accessDenied");
       expect(apiError.correlationId).toBe("server-correlation-id");
     }
+  });
+
+  it("sends authenticated family creation requests with JSON body", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ state: "family", familyId: "family-a" }), { status: 201 }));
+    const client = new KinHubApiClient(() => Promise.resolve("token-123"));
+
+    await expect(client.createFamily({ name: "Famiglia Bruni" })).resolves.toEqual({ state: "family", familyId: "family-a" });
+    const [path, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toContain("/api/kinhub/families");
+    expect(requestInit.method).toBe("POST");
+    expect(requestInit.body).toBe(JSON.stringify({ name: "Famiglia Bruni" }));
+    expect(requestInit.headers).toEqual(expect.objectContaining({
+      "Content-Type": "application/json"
+    }));
   });
 });

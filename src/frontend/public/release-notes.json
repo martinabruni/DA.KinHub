@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "369f833",
-  "buildDate": "2026-07-22T10:51:26.464Z",
+  "commit": "203b158",
+  "buildDate": "2026-07-28T13:29:03.258Z",
   "environment": "Development",
   "entries": [
     {
@@ -39,6 +39,17 @@
       }
     },
     {
+      "id": "none-added-family-creation",
+      "type": "added",
+      "area": "shared",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "KinHub ora permette di creare la prima famiglia da `/kinlist` con un solo nome, salvataggio atomico di famiglia e membership del creatore, endpoint dedicato e onboarding aggiornato.",
+        "en": "KinHub can now create the first family from `/kinlist` with a single name, atomic family plus creator membership persistence, a dedicated endpoint, and updated onboarding."
+      }
+    },
+    {
       "id": "none-added-kinlist-backlog",
       "type": "added",
       "area": "docs",
@@ -56,8 +67,19 @@
       "breaking": false,
       "issue": "none",
       "descriptions": {
-        "it": "Aggiornato l'harness con esecuzione autonoma delle feature fino alla Definition of Done, checkpoint riprendibili solo per soglia del contesto o human in the loop e consegna tramite pull request senza merge.",
-        "en": "Updated the harness with autonomous feature execution through the Definition of Done, resumable checkpoints only for the context threshold or human-in-the-loop needs, and pull request delivery without merging."
+        "it": "Aggiornato l'harness con esecuzione autonoma delle feature fino alla Definition of Done, checkpoint riprendibili solo per soglia del contesto o human in the loop e consegna tramite pull request senza merge. Le GitHub Actions della PR devono essere tutte verdi sull'ultimo commit; ogni run rosso richiede diagnosi, correzione e nuovo push.",
+        "en": "Updated the harness with autonomous feature execution through the Definition of Done, resumable checkpoints only for the context threshold or human-in-the-loop needs, and pull request delivery without merging. Every pull request GitHub Action must be green on the latest commit; each red run requires diagnosis, a fix, and another push."
+      }
+    },
+    {
+      "id": "none-changed-feature-lifecycle-frontmatter",
+      "type": "changed",
+      "area": "documentation",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Introdotto nelle schede del backlog il frontmatter di avanzamento con una macchina a stati esplicita e completamento riservato a un comando della responsabile umana.",
+        "en": "Added progress frontmatter to backlog feature documents, with an explicit state machine and completion reserved for a direct command from the human owner."
       }
     },
     {
@@ -83,6 +105,28 @@
       }
     },
     {
+      "id": "none-changed-implementation-harness-regression-guardrails",
+      "type": "changed",
+      "area": "tooling",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Rafforzato l'harness di implementazione e il prompt di bootstrap con guardrail anti-regressione derivati dai fix reali del repository: versioni/runtime Azure verificati, rename configurativi repository-wide, contratti workflow, Flex Consumption, storage identity-based, migration bundle, artefatti generati e verifiche live post-deploy.",
+        "en": "Strengthened the implementation harness and bootstrap prompt with anti-regression guardrails derived from the repository's real fixes: verified Azure versions/runtimes, repository-wide configuration renames, workflow contracts, Flex Consumption, identity-based storage, migration bundles, generated artifacts, and post-deploy live checks."
+      }
+    },
+    {
+      "id": "none-changed-implementation-harness-repository-wide",
+      "type": "changed",
+      "area": "tools",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Esteso l'harness di implementazione a tutte le modifiche versionate del repository, inclusi fix, workflow e documentazione, rendendo obbligatori commit, push, pull request e monitoraggio delle GitHub Actions anche fuori dal backlog feature.",
+        "en": "Extended the implementation harness to all versioned repository changes, including fixes, workflows, and documentation, making commit, push, pull request, and GitHub Actions monitoring mandatory even outside backlog features."
+      }
+    },
+    {
       "id": "none-changed-kinhub-access-routing",
       "type": "changed",
       "area": "backend",
@@ -105,6 +149,105 @@
       }
     },
     {
+      "id": "none-fixed-deploy-workflow-environment-fallbacks",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretti i workflow di deploy per usare fallback compatibili con i secret e le variable gia presenti nell'environment `dev` e per derivare l'object id del principal OIDC dal token ARM invece che da lookup Graph fragile.",
+        "en": "Fixed the deployment workflows to use fallbacks compatible with the secrets and variables already present in the `dev` environment, and to derive the OIDC principal object id from the ARM token instead of a fragile Graph lookup."
+      }
+    },
+    {
+      "id": "none-fixed-deploy-workflow-postgres-entra-admin",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il workflow `deploy-infrastructure.yml` per risolvere in modo affidabile nome e object id dell'amministratore Entra di PostgreSQL, evitando parametri vuoti che invalidavano il deployment Bicep.",
+        "en": "Fixed `deploy-infrastructure.yml` to resolve the PostgreSQL Entra administrator name and object id reliably, preventing empty parameters that invalidated the Bicep deployment."
+      }
+    },
+    {
+      "id": "none-fixed-ef-bundle-design-time-startup",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il bundle EF Core nei workflow di deploy usando la factory di design-time dell'Infrastructure invece di forzare la Function App come startup project.",
+        "en": "Fixed the EF Core bundle step in the deployment workflows by using the Infrastructure design-time factory instead of forcing the Function App as the startup project."
+      }
+    },
+    {
+      "id": "none-fixed-ef-migration-bundle-workflows",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il comando `dotnet ef migrations bundle` nei workflow di deploy rimuovendo l'argomento invalido `--self-contained false`, che interrompeva la generazione del bundle EF Core.",
+        "en": "Fixed the `dotnet ef migrations bundle` command in the deployment workflows by removing the invalid `--self-contained false` argument, which was breaking EF Core bundle generation."
+      }
+    },
+    {
+      "id": "none-fixed-flex-function-and-keyvault-deployments",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corrette le risorse Bicep per i deploy dev rimuovendo la app setting `FUNCTIONS_WORKER_RUNTIME` non valida per Azure Functions Flex Consumption e allineando il parametro del Key Vault alla purge protection gia abilitata.",
+        "en": "Fixed the Bicep resources for dev deployments by removing the `FUNCTIONS_WORKER_RUNTIME` app setting, which is invalid for Azure Functions Flex Consumption, and aligning the Key Vault parameter with purge protection already enabled."
+      }
+    },
+    {
+      "id": "none-fixed-flex-runtime-worker-allocation",
+      "type": "fixed",
+      "area": "infrastructure",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il runtime .NET 10 della Function App Flex per consentire l'allocazione dei worker ed evitare risposte 503 senza telemetria.",
+        "en": "Corrected the Flex Function App .NET 10 runtime so workers can be allocated, preventing 503 responses without telemetry."
+      }
+    },
+    {
+      "id": "none-fixed-functions-auth-middleware-di",
+      "type": "fixed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il middleware di autorizzazione della Function App per risolvere i servizi scoped per-invocazione invece che dal costruttore singleton, con test di regressione che valida l'avvio del container DI con il middleware registrato.",
+        "en": "Fixed the Function App authorization middleware to resolve scoped services per invocation instead of from the singleton constructor, with a regression test that validates DI container startup when the middleware is registered."
+      }
+    },
+    {
+      "id": "none-fixed-functions-azure-monitor-optional-connection-string",
+      "type": "fixed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretta la registrazione OpenTelemetry della Function App per non inizializzare l'exporter Azure Monitor quando `APPLICATIONINSIGHTS_CONNECTION_STRING` non e configurata, evitando il crash dell'host locale e coprendo il caso con un test di regressione.",
+        "en": "Fixed the Function App OpenTelemetry registration to avoid initializing the Azure Monitor exporter when `APPLICATIONINSIGHTS_CONNECTION_STRING` is not configured, preventing local host startup crashes and covering the case with a regression test."
+      }
+    },
+    {
+      "id": "none-fixed-functions-worker-package-alignment",
+      "type": "fixed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Allineate le librerie Azure Functions Worker e gRPC alla versione richiesta dall'integrazione OpenTelemetry, rimossa una configurazione runtime non supportata, resa univoca la configurazione dello storage host con managed identity su Flex Consumption e neutralizzati i placeholder applicativi che causavano crash di bootstrap quando mancavano override ambientali.",
+        "en": "Aligned the Azure Functions Worker and gRPC libraries with the version required by the OpenTelemetry integration, removed an unsupported runtime setting, made the managed-identity host storage configuration unambiguous on Flex Consumption, and neutralized application placeholders that caused bootstrap crashes when environment overrides were missing."
+      }
+    },
+    {
       "id": "none-fixed-kinhub-access-routing-finalization",
       "type": "fixed",
       "area": "backend",
@@ -124,6 +267,17 @@
       "descriptions": {
         "it": "Bootstrap, contesto famiglia, autorizzazione e telemetria condivisi usano ora nomenclatura e route KinHub; rimossi i contratti `/api/kinlist/bootstrap` e `/api/kinlist/family-context` attribuiti erroneamente al KinService.",
         "en": "Shared bootstrap, family context, authorization, and telemetry now use KinHub naming and routes; the incorrectly KinService-scoped `/api/kinlist/bootstrap` and `/api/kinlist/family-context` contracts were removed."
+      }
+    },
+    {
+      "id": "none-fixed-postgres-firewall-cli-arguments",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretti i workflow di deploy per usare gli argomenti Azure CLI corretti nella gestione della firewall rule di PostgreSQL Flexible Server, distinguendo `--server-name` dal nome della regola.",
+        "en": "Fixed the deployment workflows to use the correct Azure CLI arguments when managing the PostgreSQL Flexible Server firewall rule, separating `--server-name` from the firewall rule name."
       }
     }
   ]

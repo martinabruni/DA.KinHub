@@ -52,6 +52,7 @@ public static class DependencyInjection
             });
         });
         services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
+        services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMembershipRepository, FamilyMembershipRepository>();
         services.AddHealthChecks().AddDbContextCheck<KinHubDbContext>("postgresql", tags: [InfrastructureHealthChecks.ReadyTag]);
         services.AddHostedService<DatabaseMigrationHostedService>();

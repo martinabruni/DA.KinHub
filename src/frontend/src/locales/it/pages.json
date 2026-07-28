@@ -15,7 +15,14 @@
     "onboarding": "Per usare i servizi KinHub devi creare una famiglia oppure unirti con un codice.",
     "onboardingPending": "Le azioni di creazione e join verranno attivate dalle prossime feature dedicate, ma il percorso post-login è già instradato correttamente.",
     "ready": "KinHub ha verificato una membership familiare attiva.",
-    "readyDetail": "La lista condivisa arriverà nelle feature successive senza riutilizzare dati residui o cache personali dal bootstrap corrente."
+    "readyDetail": "La lista condivisa arriverà nelle feature successive senza riutilizzare dati residui o cache personali dal bootstrap corrente.",
+    "create": {
+      "label": "Nome della famiglia",
+      "helper": "Inserisci un nome da 1 a 100 caratteri. KinHub riduce gli spazi multipli ma conserva maiuscole e caratteri validi.",
+      "pending": "Creazione in corso…",
+      "validationError": "Inserisci un nome famiglia valido da 1 a 100 caratteri.",
+      "retryableError": "La famiglia non è stata creata. Riprova senza perdere il nome inserito."
+    }
   },
   "about": {
     "title": "Versione",

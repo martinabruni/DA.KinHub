@@ -10,6 +10,15 @@ export type KinHubBootstrap =
   | { state: "family"; familyId: string }
   | { state: "onboarding" };
 
+export interface CreateFamilyRequest {
+  name: string;
+}
+
+export interface KinHubFamilyState {
+  state: "family";
+  familyId: string;
+}
+
 export class ApiError extends Error {}
 
 export class ApiResponseError extends ApiError {
@@ -29,6 +38,17 @@ export class KinHubApiClient {
 
   async getKinHubBootstrap(signal?: AbortSignal): Promise<KinHubBootstrap> {
     return this.request<KinHubBootstrap>("/api/kinhub/bootstrap", { signal });
+  }
+
+  async createFamily(body: CreateFamilyRequest, signal?: AbortSignal): Promise<KinHubFamilyState> {
+    return this.request<KinHubFamilyState>("/api/kinhub/families", {
+      method: "POST",
+      body: JSON.stringify(body),
+      signal,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {

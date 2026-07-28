@@ -51,6 +51,40 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                             ["503"] = problemResponse
                         })
                 },
+                [$"/{ApiRoutes.KinHub.Families}"] = new
+                {
+                    post = ProtectedOperation(
+                        "Create the first family for the signed-in user",
+                        new Dictionary<string, object>
+                        {
+                            ["201"] = new { description = "Family created" },
+                            ["200"] = new { description = "Existing family returned" },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        },
+                        new
+                        {
+                            required = true,
+                            content = new Dictionary<string, object>
+                            {
+                                ["application/json"] = new
+                                {
+                                    schema = new
+                                    {
+                                        type = "object",
+                                        required = new[] { "name" },
+                                        properties = new Dictionary<string, object>
+                                        {
+                                            ["name"] = new { type = "string", maxLength = 100 }
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                },
                 [$"/{ApiRoutes.KinHub.FamilyContext}"] = new
                 {
                     get = FamilyOperation(
@@ -113,13 +147,23 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
         x_cacheControl = ApiResults.NoStoreCacheControl
     };
 
-    private static object ProtectedOperation(string summary, Dictionary<string, object> responses) => new
+    private static object ProtectedOperation(string summary, Dictionary<string, object> responses, object? requestBody = null)
     {
-        summary,
-        responses,
-        security = new object[] { new Dictionary<string, object> { [SecurityConstants.BearerScheme] = Array.Empty<string>() } },
-        x_cacheControl = ApiResults.NoStorePrivateCacheControl
-    };
+        var operation = new Dictionary<string, object>
+        {
+            ["summary"] = summary,
+            ["responses"] = responses,
+            ["security"] = new object[] { new Dictionary<string, object> { [SecurityConstants.BearerScheme] = Array.Empty<string>() } },
+            ["x_cacheControl"] = ApiResults.NoStorePrivateCacheControl
+        };
+
+        if (requestBody is not null)
+        {
+            operation["requestBody"] = requestBody;
+        }
+
+        return operation;
+    }
 
     private static object FamilyOperation(string summary, Dictionary<string, object> responses) => new
     {
