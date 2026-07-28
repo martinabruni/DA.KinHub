@@ -27,7 +27,7 @@ vi.mock("@azure/msal-react", () => ({
 
 vi.mock("../lib/auth", () => ({
   acquireApiAccessToken: () => Promise.resolve("token-123"),
-  getActiveAccount: () => account
+  getActiveAccount: () => account ? { ...account } : null
 }));
 
 vi.mock("./ConnectivityProvider", () => ({

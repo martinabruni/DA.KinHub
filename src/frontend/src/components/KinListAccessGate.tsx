@@ -29,13 +29,17 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
   const [submitting, setSubmitting] = useState(false);
   const account = getActiveAccount(instance);
   const accountKey = account?.homeAccountId ?? "";
+  const hasAccount = accountKey.length > 0;
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const submitLockRef = useRef(false);
   const createControllerRef = useRef<AbortController | null>(null);
   const client = useMemo(
-    () => new KinHubApiClient(() => acquireApiAccessToken(instance, account)),
-    [account, instance]
+    () => new KinHubApiClient(() => {
+      const resolvedAccount = getActiveAccount(instance);
+      return acquireApiAccessToken(instance, resolvedAccount?.homeAccountId === accountKey ? resolvedAccount : null);
+    }),
+    [accountKey, instance]
   );
 
   useEffect(() => {
@@ -56,7 +60,7 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
     submitLockRef.current = false;
     setSubmitting(false);
 
-    if (!account) {
+    if (!hasAccount) {
       setFamilyId(null);
       setCreateMode(false);
       setFamilyName("");
@@ -128,7 +132,7 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
       });
 
     return () => controller.abort();
-  }, [account, accountKey, client, online, reloadToken, setFamilyId]);
+  }, [accountKey, client, hasAccount, online, reloadToken, setFamilyId]);
 
   function openCreateMode() {
     setCreateMode(true);
@@ -149,7 +153,7 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
 
   async function handleCreateSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitLockRef.current || !account || !online) {
+    if (submitLockRef.current || !hasAccount || !online) {
       return;
     }
 
