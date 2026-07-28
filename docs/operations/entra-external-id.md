@@ -19,7 +19,9 @@ Creare due app registration nel tenant External ID.
 
 Il tenant clienti External ID e distinto dal tenant Azure usato da OIDC e PostgreSQL. Configura `ENTRA_TENANT_ID` con il Directory (tenant) ID del tenant External ID e `ENTRA_INSTANCE`/`VITE_ENTRA_AUTHORITY` con `https://<tenant-subdomain>.ciamlogin.com/`. Il backend confronta il claim `scp` con il solo nome `access_as_user`; lo scope completo `api://<API_CLIENT_ID>/access_as_user` resta il valore richiesto dal frontend e da Postman.
 
-Per Postman usa Authorization Code con PKCE, callback `https://oauth.pstmn.io/v1/callback`, authorization URL `https://<tenant-subdomain>.ciamlogin.com/<ENTRA_TENANT_ID>/oauth2/v2.0/authorize` e token URL equivalente con suffisso `/token`. Registra la callback come redirect URI SPA sulla app registration frontend.
+Per Postman crea una app registration separata `KinHub Postman`: non riusare `KinHub Web` e non aggiungere secret alla SPA. Associa il nuovo client allo stesso user flow, registra `https://oauth.pstmn.io/v1/callback` come redirect URI di tipo **Web**, aggiungi il permesso delegato `access_as_user`, concedi admin consent e crea un client secret limitato all'ambiente di sviluppo. Conserva il secret nel Postman Vault o in una variabile sensibile e non inserirlo nel repository o nei log.
+
+In Postman usa Authorization Code con PKCE, authorization URL `https://<tenant-subdomain>.ciamlogin.com/<ENTRA_TENANT_ID>/oauth2/v2.0/authorize`, token URL equivalente con suffisso `/token`, Client ID di `KinHub Postman`, il relativo client secret e lo scope completo `api://<API_CLIENT_ID>/access_as_user`. Imposta **Client Authentication** su `Send client credentials in body`. Registrare la callback come SPA provoca `AADSTS9002327`, perche Postman riscatta il codice dal proprio backend e non tramite una richiesta CORS dal browser.
 
 Il frontend usa popup con selezione account e mantiene i token soltanto in memoria. Il backend convalida issuer, audience, firma, scadenza e scope tramite JWT bearer con `MapInboundClaims=false`.
 

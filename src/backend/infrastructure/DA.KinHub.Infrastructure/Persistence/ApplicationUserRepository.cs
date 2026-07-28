@@ -28,7 +28,7 @@ internal sealed class ApplicationUserRepository(KinHubDbContext dbContext) : IAp
         try
         {
             var applicationUser = ApplicationUser.Create(externalIdentity, createdAt);
-            return await dbContext.ApplicationUsers
+            var results = await dbContext.ApplicationUsers
                 .FromSqlInterpolated($"""
                     INSERT INTO shared.application_users (id, external_issuer, external_object_id, created_at, inactive_at)
                     VALUES ({applicationUser.Id}, {externalIdentity.Issuer}, {externalIdentity.ObjectId}, {createdAt}, {null})
@@ -36,7 +36,9 @@ internal sealed class ApplicationUserRepository(KinHubDbContext dbContext) : IAp
                     DO UPDATE SET external_issuer = EXCLUDED.external_issuer
                     RETURNING id, external_issuer, external_object_id, created_at, inactive_at
                     """)
-                .SingleAsync(cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            return results.Single();
         }
         catch (Exception exception) when (IsRepositoryUnavailable(exception))
         {
