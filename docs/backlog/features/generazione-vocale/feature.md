@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `generazione-vocale`
 - **Tipo**: `product`
 - **Readiness**: `blocked`
-- **Wave**: 4
+- **Wave**: 5
 - **Risultato**: un membro registra fino a 60 secondi e ottiene una sola volta un gruppo ordinato di item Shared e categorie nella lingua parlata.
 
 ## Contesto autonomo
@@ -50,6 +50,7 @@ Questa è la slice centrale `Parla -> Ottieni la lista`. La PWA informa sull'uso
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-003 - Consultare la lista condivisa paginata | hard | Il gruppo deve usare modello item, visibilità, ordine e refresh lista | Schema item/gruppo/categorie, predicato e contratto lista | Inizio dopo FEAT-003 e chiusura GATE-001 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Microfono, popup consenso e stati di elaborazione devono riusare barre e feedback condivisi | KinList action bar, dialog/snackbar/state pattern e regole i18n condivise | Inizio dopo integrazione FEAT-014 |
 | FEAT-009 - Correggere un item e consultarne la storia | contract | La creazione deve emettere un evento timeline compatibile | CP-003 con tipi evento/versione congelati | Può procedere in parallelo dopo checkpoint |
 
 ### Gate e assunzioni
@@ -80,7 +81,7 @@ Dopo GATE-001, con FEAT-005/008/009 usando CP-002/CP-003. Coordinare API client 
 - **Dominio/business**: validazione candidati, gruppo/ordine, categorie, idempotenza e transazione.
 - **Persistenza/migration**: registrazioni/comandi, gruppo/item/categorie/timeline e vincoli `RecordingId`.
 - **API/integrazioni**: Function audio/recupero, adapter Foundry e managed identity.
-- **Frontend/UX**: MediaRecorder, popup, macchina stati, lista, connettività e update coordination.
+- **Frontend/UX**: MediaRecorder, popup, macchina stati, lista, connettività e update coordination costruiti sui componenti/barre del design system.
 - **Infrastruttura/configurazione**: config/RBAC Foundry esistente, timeout e `staticwebapp.config.json`; nessuna nuova risorsa.
 - **Documentazione/operazioni**: guida voce/consenso, provider contract/runbook, troubleshooting e change fragment.
 
@@ -176,6 +177,7 @@ Dopo GATE-001, con FEAT-005/008/009 usando CP-002/CP-003. Coordinare API client 
 
 - GATE-001 chiuso; TECH-004/007/008 verificati e AC-036-AC-045 passati.
 - FEAT-003 integrata e CP-002/CP-003 congelati.
+- Microfono, popup e feedback usano componenti FEAT-014 senza reintrodurre controlli flottanti o stati legacy.
 - Nessun payload sensibile persiste o entra nei log; redazione e cleanup buffer sono testati.
 - Config/RBAC non contiene secret; help/guide/consenso `it`/`en`, accessibilità, telemetria e fragment completi.
 - Build/test/publish/package, frontend validator e Bicep applicabili eseguiti.

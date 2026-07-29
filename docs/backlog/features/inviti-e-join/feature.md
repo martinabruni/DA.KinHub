@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `inviti-e-join`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 4
+- **Wave**: 5
 - **Risultato**: un membro genera o revoca un invito e un utente senza famiglia lo consuma una sola volta per diventare membro.
 
 ## Contesto autonomo
@@ -47,6 +47,7 @@ Gli inviti sono credenziali temporanee manuali, non messaggi. Tutti i membri han
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-004 - Consultare le impostazioni della famiglia | hard | Generazione/revoca e metadati vivono nella pagina Family; join riusa onboarding | Route Family, proiezione inviti, onboarding e contratti pagina | Inizio dopo FEAT-004 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Join e superfici one-time devono riusare form, dialog e state pattern condivisi | Primitive form/overlay/feedback e regole i18n del design system | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -71,7 +72,7 @@ Con FEAT-007/008/009 dopo CP-002. Coordinare onboarding, pagina Family, API clie
 - **Dominio/business**: invito, validità, normalizzazione, limiti, join/riattivazione e revoca.
 - **Persistenza/migration**: schema shared, HMAC versionato, vincoli consumo/membership e transazioni concorrenti.
 - **API/integrazioni**: generate/revoke con `Family`; join con `ApiAccess`; rate limit e `Retry-After`.
-- **Frontend/UX**: Family e onboarding, conferma revoca, superficie one-time e i18n.
+- **Frontend/UX**: Family e onboarding, conferma revoca, superficie one-time e i18n costruiti sui componenti del design system.
 - **Infrastruttura/configurazione**: chiave HMAC nel sistema sicuro esistente; origine proxy attendibile configurata; nessuna nuova risorsa.
 - **Documentazione/operazioni**: guida inviti, rotazione chiave, troubleshooting rate limit e change fragment.
 
@@ -152,6 +153,7 @@ Con FEAT-007/008/009 dopo CP-002. Coordinare onboarding, pagina Family, API clie
 ## Definition of Done
 
 - AC-023-AC-030 verificati, FEAT-004 integrata e CP-002 rispettato.
+- Join, conferme e superfici invito usano componenti FEAT-014 senza nuovi pattern duplicati di dialog/form/snackbar.
 - Rotazione HMAC e origine attendibile sono documentate e testate senza secret nel repository.
 - Migration/rollback, telemetria, help/guide `it`/`en`, accessibilità e change fragment completi.
 - Comandi applicabili di `AGENTS.md` eseguiti e riportati.

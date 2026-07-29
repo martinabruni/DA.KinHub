@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `filtro-categoria`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 4
+- **Wave**: 5
 - **Risultato**: un membro restringe la lista a una categoria alla volta, prima della paginazione, e può tornare facilmente alla vista completa.
 
 ## Contesto autonomo
@@ -44,6 +44,7 @@ Il filtro modifica solo la vista e deve usare lo stesso predicato famiglia/visib
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-003 - Consultare la lista condivisa paginata | hard | Estende query, pagina e stati della lista | Contratto pagina/cursori, visibility e ordine | Inizio dopo FEAT-003 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Il carosello categorie deve riusare chip, pagination e stati condivisi | Primitive chip/carousel/state e regole di riuso frontend | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -67,7 +68,7 @@ Con FEAT-005/007/009 dopo CP-002, con ownership coordinata della query lista e d
 - **Dominio/business**: query catalogo e filtro categoria scoped.
 - **Persistenza/migration**: indici associazioni/ordine e keyset.
 - **API/integrazioni**: parametri filtro/cursore con `Family`.
-- **Frontend/UX**: pagina lista, carosello, stato filtro vuoto e paginazione.
+- **Frontend/UX**: pagina lista, carosello, stato filtro vuoto e paginazione costruiti sul design system condiviso.
 - **Infrastruttura/configurazione**: Nessuna.
 - **Documentazione/operazioni**: help/guida lista e change fragment.
 
@@ -120,6 +121,7 @@ Con FEAT-005/007/009 dopo CP-002, con ownership coordinata della query lista e d
 ## Definition of Done
 
 - AC-046-AC-049 verificati, FEAT-003 integrata e CP-002 rispettato.
+- Il filtro usa solo chip/carousel/state component FEAT-014 e non introduce una seconda UI di selezione categorie.
 - TECH-003 chiuso per catalogo/filtro; indici e query verificati.
 - i18n, accessibilità, temi, help/guida, telemetria e fragment aggiornati.
 - Comandi applicabili di `AGENTS.md` eseguiti.

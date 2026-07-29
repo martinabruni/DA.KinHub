@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `cleanup-dati-inattivi`
 - **Tipo**: `operational`
 - **Readiness**: `blocked`
-- **Wave**: 7
+- **Wave**: 8
 - **Risultato**: il run giornaliero elimina in modo limitato solo utenti, membership, famiglie e dati collegati inattivi da almeno 30 periodi di 24 ore e privi di legami attivi.
 
 ## Contesto autonomo

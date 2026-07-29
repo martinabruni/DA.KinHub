@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `modifica-item-timeline`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 4
+- **Wave**: 5
 - **Risultato**: un membro apre un drawer, corregge nome/categorie con salvataggio esplicito e consulta una timeline paginata coerente.
 
 ## Contesto autonomo
@@ -46,6 +46,7 @@ Tutti i membri possono modificare gli Shared. Il drawer da destra mostra metadat
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-003 - Consultare la lista condivisa paginata | hard | Dettaglio usa item, visibility, ordine, pagina e versione | Modello item e scope server | Inizio dopo FEAT-003 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Drawer, form e timeline devono riusare overlay, field e row component condivisi | Primitive drawer/form/state e regole di wrapper specifici del design system | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -70,7 +71,7 @@ Con FEAT-005/007/008 dopo CP-002. Pubblicare CP-003 prima che FEAT-007/010 imple
 - **Dominio/business**: nome/categoria, no-op, evento e conflitto.
 - **Persistenza/migration**: timeline append-only, associazioni, token versione e query paged.
 - **API/integrazioni**: detail/update con `Family`, Problem Details conflitto e cursori.
-- **Frontend/UX**: drawer Radix/shadcn coerente, form, pagine, focus, i18n.
+- **Frontend/UX**: drawer, form, pagine, focus e i18n costruiti sui componenti overlay/form del design system condiviso.
 - **Infrastruttura/configurazione**: Nessuna.
 - **Documentazione/operazioni**: guida modifica/timeline e change fragment.
 
@@ -137,6 +138,7 @@ Con FEAT-005/007/008 dopo CP-002. Pubblicare CP-003 prima che FEAT-007/010 imple
 ## Definition of Done
 
 - AC-050-AC-055 verificati, FEAT-003 integrata e CP-003 congelato.
+- Drawer, form e timeline usano componenti FEAT-014 e non mantengono overlay o field legacy paralleli.
 - TECH-003 chiuso per categorie/timeline e migration/rollback documentati.
 - Drawer, i18n, accessibilità, temi, help/guida, telemetria e fragment completi.
 - Comandi applicabili di `AGENTS.md` eseguiti.

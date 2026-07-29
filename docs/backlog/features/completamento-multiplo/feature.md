@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `completamento-multiplo`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 6
+- **Wave**: 7
 - **Risultato**: un membro completa fino a 5000 item della pagina filtrata come un solo esito atomico e può annullare l'intero gruppo entro cinque secondi.
 
 ## Contesto autonomo
@@ -46,6 +46,7 @@ La modalità Seleziona è esplicita e disponibile solo con item attivi visibili.
 |---|---|---|---|---|
 | FEAT-008 - Filtrare la lista per categoria | hard | Definisce esattamente la pagina filtrata di Seleziona tutti | Filtro/pagina e reset coerente | Inizio dopo FEAT-008 |
 | FEAT-010 - Completare un item e annullare | hard | Riusa transizioni, timeline, idempotenza e finestra undo | Stato/eventi/comandi completion | Inizio dopo FEAT-010 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Selezione, checkbox e feedback bulk devono riusare componenti condivisi | Checkbox, toolbar contestuale, snackbar e state pattern del design system | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -72,7 +73,7 @@ Con FEAT-012 dopo CP-004, ma una sola feature possiede migration/repository item
 - **Dominio/business**: command group, validation completa e undo atomico.
 - **Persistenza/migration**: command record, chunk 1000, singola transazione e timeline.
 - **API/integrazioni**: endpoint complete/undo bulk con `Family`, ID/versioni e limite.
-- **Frontend/UX**: lista/filtro, checkbox, conteggio, focus, unico snackbar e stati vuoti.
+- **Frontend/UX**: lista/filtro, checkbox, conteggio, focus, unico snackbar e stati vuoti costruiti sul design system condiviso.
 - **Infrastruttura/configurazione**: opzioni write max validate; nessuna risorsa.
 - **Documentazione/operazioni**: guida bulk, verifica performance e change fragment.
 
@@ -139,6 +140,7 @@ Con FEAT-012 dopo CP-004, ma una sola feature possiede migration/repository item
 ## Definition of Done
 
 - AC-061-AC-066 e TECH-005 verificati; FEAT-008/010 integrate e CP-004 congelato.
+- Bulk selection e feedback usano componenti FEAT-014 senza introdurre un secondo set di checkbox/snackbar/list toolbar.
 - Test reale dimostra rollback totale a 5000 e nessun leak Personal/cross-family.
 - Migration/rollback, UI, i18n, accessibilità, help/guida, telemetria e fragment completi.
 - Comandi applicabili di `AGENTS.md` eseguiti.

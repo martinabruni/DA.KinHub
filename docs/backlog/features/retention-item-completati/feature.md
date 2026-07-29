@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `retention-item-completati`
 - **Tipo**: `operational`
 - **Readiness**: `blocked`
-- **Wave**: 6
+- **Wave**: 7
 - **Risultato**: ogni giorno KinList elimina in modo limitato solo gli item ancora completati da almeno 30 periodi di 24 ore, con esito retention verificabile.
 
 ## Contesto autonomo
