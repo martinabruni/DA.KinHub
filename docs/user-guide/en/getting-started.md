@@ -7,7 +7,7 @@ description: Navigate KinHub, customize the experience, and understand how the p
 
 ## Navigation
 
-The top menu opens Home, KinList, Release notes, Version, and Settings. On smaller screens the icons keep the same destinations.
+The floating navigation bar stays fixed at the bottom and opens Home, Release notes, Version, and Settings. When a page registers contextual actions, you can swipe between the global bar and the page bar without losing position or focus.
 
 ## Language and theme
 

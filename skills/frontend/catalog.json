@@ -3,6 +3,10 @@
   "items": [
     { "id": "page-scaffold", "name": "PageScaffold", "source": "src/frontend/src/components/PageScaffold.tsx", "purpose": "Titolo e help obbligatori per ogni pagina" },
     { "id": "page-help-accordion", "name": "PageHelpAccordion", "source": "src/frontend/src/components/PageHelpAccordion.tsx", "purpose": "Help localizzato shadcn/Radix" },
-    { "id": "theme-provider", "name": "ThemeProvider", "source": "src/frontend/src/components/ThemeProvider.tsx", "purpose": "Tema light/dark/system persistente" }
+    { "id": "theme-provider", "name": "ThemeProvider", "source": "src/frontend/src/components/ThemeProvider.tsx", "purpose": "Tema light/dark/system persistente" },
+    { "id": "ui-core", "name": "Shared UI core", "source": "src/frontend/src/components/ui/core.tsx", "purpose": "Button, link action, field, tabs e card ufficiali" },
+    { "id": "ui-feedback", "name": "Shared UI feedback", "source": "src/frontend/src/components/ui/feedback.tsx", "purpose": "StatePanel, dialog, drawer, tooltip e snackbar ufficiali" },
+    { "id": "floating-bars", "name": "FloatingBars", "source": "src/frontend/src/components/FloatingBars.tsx", "purpose": "Floating navigation globale e contestuale posseduta dalla shell" },
+    { "id": "kin-patterns", "name": "KinPatterns", "source": "src/frontend/src/components/KinPatterns.tsx", "purpose": "Wrapper sottili KinHub e KinList sopra le primitive condivise" }
   ]
 }

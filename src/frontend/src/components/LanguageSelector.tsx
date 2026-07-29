@@ -1,14 +1,11 @@
 import { useTranslation } from "react-i18next";
+import { Select } from "./ui/controls";
 
 export function LanguageSelector() {
   const { t, i18n } = useTranslation("common");
   return (
-    <label className="control" data-tour="language">
-      <span>{t("language.label")}</span>
-      <select value={i18n.language} onChange={(event) => { void i18n.changeLanguage(event.target.value); }}>
-        <option value="it">{t("language.it")}</option>
-        <option value="en">{t("language.en")}</option>
-      </select>
-    </label>
+    <div data-tour="language">
+      <Select label={t("language.label")} value={i18n.language === "it" ? "it" : "en"} onValueChange={(value) => { void i18n.changeLanguage(value); }} options={[{ value: "it", label: t("language.it") }, { value: "en", label: t("language.en") }]} />
+    </div>
   );
 }

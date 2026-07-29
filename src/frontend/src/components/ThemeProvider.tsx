@@ -14,7 +14,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       document.documentElement.classList.toggle("dark", dark);
       document.documentElement.dataset.theme = theme;
       localStorage.setItem("kinhub.theme", theme);
-      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#17211d" : "#35594c");
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#1d1917" : "#fbf6ed");
     };
     apply();
     media.addEventListener("change", apply);

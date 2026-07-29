@@ -5,6 +5,10 @@ import { acquireApiAccessToken, getActiveAccount } from "../lib/auth";
 import { ApiError, ApiNetworkError, ApiResponseError, KinHubApiClient } from "../lib/api";
 import { useConnectivity } from "./ConnectivityProvider";
 import { useKinHubFamily } from "./KinHubFamilyContext";
+import { useShellBar } from "./ShellBarContext";
+import { Button } from "./ui/core";
+import { StatePanel } from "./ui/feedback";
+import { TextField } from "./ui/core";
 
 type GateState =
   | { status: "loading" }
@@ -20,6 +24,7 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
   const { instance } = useMsal();
   const { online } = useConnectivity();
   const { setFamilyId } = useKinHubFamily();
+  const { setContextualBar } = useShellBar();
   const [reloadToken, setReloadToken] = useState(0);
   const [state, setState] = useState<GateState>({ status: online ? "loading" : "offline" });
   const [createMode, setCreateMode] = useState(false);
@@ -47,6 +52,29 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
       inputRef.current?.focus();
     }
   }, [createMode]);
+
+  useEffect(() => {
+    if (state.status === "onboarding" && !createMode) {
+      setContextualBar(
+        <div className="kh-floating-bar kh-service-bar" aria-label={t("navigation.contextualBar", { ns: "common" })}>
+          <Button onClick={openCreateMode}>{t("actions.createFamily", { ns: "common" })}</Button>
+        </div>
+      );
+      return () => setContextualBar(null);
+    }
+
+    if (state.status === "error") {
+      setContextualBar(
+        <div className="kh-floating-bar kh-service-bar" aria-label={t("navigation.contextualBar", { ns: "common" })}>
+          <Button variant="secondary" onClick={() => setReloadToken((current) => current + 1)}>{t("actions.retry", { ns: "common" })}</Button>
+        </div>
+      );
+      return () => setContextualBar(null);
+    }
+
+    setContextualBar(null);
+    return undefined;
+  }, [createMode, setContextualBar, state.status, t]);
 
   useEffect(() => {
     return () => {
@@ -220,68 +248,59 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
   }
 
   if (state.status === "loading") {
-    return <div className="state-card" data-kinlist-state="loading" role="status" aria-live="polite" aria-busy="true">{t("kinlist.loading", { ns: "pages" })}</div>;
+    return <StatePanel data-kinlist-state="loading" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.loading", { ns: "pages" })} role="status" live="polite" busy />;
   }
 
   if (state.status === "offline") {
-    return <div className="state-card" data-kinlist-state="offline" role="status">{t("kinlist.offline", { ns: "pages" })}</div>;
+    return <StatePanel data-kinlist-state="offline" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.offline", { ns: "pages" })} tone="warning" role="status" live="polite" />;
   }
 
   if (state.status === "sessionExpired") {
-    return <div className="state-card" data-kinlist-state="sessionExpired" role="alert">{t("kinlist.sessionExpired", { ns: "pages" })}</div>;
+    return <StatePanel data-kinlist-state="sessionExpired" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.sessionExpired", { ns: "pages" })} tone="warning" role="alert" live="assertive" />;
   }
 
   if (state.status === "forbidden") {
-    return <div className="state-card" data-kinlist-state="forbidden" role="alert">{t("kinlist.forbidden", { ns: "pages" })}</div>;
+    return <StatePanel data-kinlist-state="forbidden" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.forbidden", { ns: "pages" })} tone="danger" role="alert" live="assertive" />;
   }
 
   if (state.status === "error") {
     return (
-      <div className="state-card stack" data-kinlist-state="error" role="alert">
-        <p>{t("kinlist.error", { ns: "pages" })}</p>
-        <button type="button" className="button secondary" onClick={() => setReloadToken((current) => current + 1)}>{t("actions.retry", { ns: "common" })}</button>
-      </div>
+      <StatePanel data-kinlist-state="error" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.error", { ns: "pages" })} tone="danger" role="alert" live="assertive" action={<Button variant="secondary" onClick={() => setReloadToken((current) => current + 1)}>{t("actions.retry", { ns: "common" })}</Button>} />
     );
   }
 
   if (state.status === "onboarding") {
     return (
-      <div className="state-card stack" data-kinlist-state="onboarding" role="status">
-        <p>{t("kinlist.onboarding", { ns: "pages" })}</p>
+      <div className="kh-onboarding-panel" data-kinlist-state="onboarding">
+        <StatePanel title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.onboarding", { ns: "pages" })} role="status" live="polite" />
         {!createMode ? (
           <>
-            <div className="actions">
-              <button type="button" ref={createButtonRef} className="button" onClick={openCreateMode}>{t("actions.createFamily", { ns: "common" })}</button>
-              <button type="button" className="button secondary" disabled>{t("actions.joinFamily", { ns: "common" })}</button>
+            <div className="page-actions">
+              <Button ref={createButtonRef} onClick={openCreateMode}>{t("actions.createFamily", { ns: "common" })}</Button>
+              <Button variant="secondary" disabled>{t("actions.joinFamily", { ns: "common" })}</Button>
             </div>
-            <p className="muted-text">{t("kinlist.onboardingPending", { ns: "pages" })}</p>
+            <p className="lead lead--compact">{t("kinlist.onboardingPending", { ns: "pages" })}</p>
           </>
         ) : (
-          <form className="stack" onSubmit={(event) => { void handleCreateSubmit(event); }} aria-busy={submitting}>
-            <label className="kinlist-form-field" htmlFor="family-name-input">
-              <span>{t("kinlist.create.label", { ns: "pages" })}</span>
-              <input
-                ref={inputRef}
-                id="family-name-input"
-                name="name"
-                value={familyName}
-                onChange={(event) => {
-                  setFamilyName(event.target.value);
-                  setFieldError(null);
-                  setRequestError(null);
-                }}
-                aria-describedby="family-name-helper family-name-error"
-                aria-invalid={fieldError ? true : undefined}
-                disabled={submitting}
-              />
-            </label>
-            <p id="family-name-helper" className="muted-text">{t("kinlist.create.helper", { ns: "pages" })}</p>
-            <p id="family-name-error" className="error-message" role={fieldError || requestError ? "alert" : undefined}>
-              {fieldError ?? requestError ?? ""}
-            </p>
-            <div className="actions">
-              <button type="submit" className="button" disabled={submitting}>{submitting ? t("kinlist.create.pending", { ns: "pages" }) : t("actions.create", { ns: "common" })}</button>
-              <button type="button" className="button secondary" onClick={closeCreateMode} disabled={submitting}>{t("actions.back", { ns: "common" })}</button>
+          <form className="kh-onboarding-form" onSubmit={(event) => { void handleCreateSubmit(event); }} aria-busy={submitting}>
+            <TextField
+              ref={inputRef}
+              id="family-name-input"
+              name="name"
+              label={t("kinlist.create.label", { ns: "pages" })}
+              helper={t("kinlist.create.helper", { ns: "pages" })}
+              error={fieldError ?? requestError ?? undefined}
+              value={familyName}
+              onChange={(event) => {
+                setFamilyName(event.target.value);
+                setFieldError(null);
+                setRequestError(null);
+              }}
+              disabled={submitting}
+            />
+            <div className="page-actions">
+              <Button type="submit" disabled={submitting} loading={submitting}>{submitting ? t("kinlist.create.pending", { ns: "pages" }) : t("actions.create", { ns: "common" })}</Button>
+              <Button variant="secondary" onClick={closeCreateMode} disabled={submitting}>{t("actions.back", { ns: "common" })}</Button>
             </div>
           </form>
         )}
@@ -290,9 +309,6 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
   }
 
   return (
-    <div className="state-card stack" data-kinlist-state="ready" data-family-id={state.familyId}>
-      <p>{t("kinlist.ready", { ns: "pages" })}</p>
-      <p className="muted-text">{t("kinlist.readyDetail", { ns: "pages" })}</p>
-    </div>
+    <StatePanel data-kinlist-state="ready" data-family-id={state.familyId} title={t("kinlist.ready", { ns: "pages" })} description={t("kinlist.readyDetail", { ns: "pages" })} tone="success" />
   );
 }

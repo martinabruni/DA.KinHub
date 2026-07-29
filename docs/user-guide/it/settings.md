@@ -7,7 +7,7 @@ description: Gestire preferenze, tutorial e installazione PWA.
 
 ## Preferenze
 
-La lingua e il tema vengono salvati nel browser. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.
+La lingua e il tema vengono salvati nel browser. Puoi cambiarli sia dalla pagina Impostazioni sia dalla barra flottante condivisa. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.
 
 ## Tutorial
 

@@ -67,6 +67,8 @@ Leggi gli artefatti e l'eventuale checkpoint; verifica di lavorare su `dev`; imp
 
 ## Changelog
 
+0.4.1: ricordo di includere i validator frontend introdotti dal design system condiviso quando la modifica tocca shell, route, componenti o CSS del frontend.
+
 0.4.0: aggiungo guardrail anti-regressione per versioni/runtime Azure, workflow, rename configurativi, Flex Consumption, storage identity-based, EF bundle, artefatti generati e verifiche live post-deploy.
 
 0.3.0: estendo la skill a qualsiasi modifica del repository, non solo a nuove feature, definisco la posizione del checkpoint fuori backlog e rendo obbligatori commit, push, PR e monitoraggio Actions per fix, workflow e aggiornamenti documentali versionati.

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Dialog } from "./ui/feedback";
+import { Button } from "./ui/core";
 
 const tutorialVersion = 1;
 const storageKey = `kinhub.tutorial.${tutorialVersion}`;
@@ -21,8 +23,6 @@ export function Onboarding() {
   const { t } = useTranslation(["tutorial", "common"]);
   const [open, setOpen] = useState(() => localStorage.getItem(storageKey) !== "completed");
   const [index, setIndex] = useState(0);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const previousFocus = useRef<Element | null>(null);
   const step = steps[index];
 
   useEffect(() => {
@@ -30,13 +30,6 @@ export function Onboarding() {
     window.addEventListener("kinhub:tutorial-restart", restart);
     return () => window.removeEventListener("kinhub:tutorial-restart", restart);
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    previousFocus.current = document.activeElement;
-    headingRef.current?.focus();
-    return () => { (previousFocus.current as HTMLElement | null)?.focus?.(); };
-  }, [open]);
 
   useEffect(() => {
     document.querySelectorAll(".tour-target").forEach((element) => element.classList.remove("tour-target"));
@@ -56,20 +49,19 @@ export function Onboarding() {
   if (!open) return null;
 
   return (
-    <div className="tutorial-backdrop" role="presentation" onKeyDown={(event) => { if (event.key === "Escape") complete(); }}>
-      <section className="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) complete(); }} title={labels.title} closeLabel={t("actions.close", { ns: "common" })}>
+      <section className="tutorial-dialog-body">
         <p className="eyebrow">{t("progress", { ns: "tutorial", current: index + 1, total: steps.length })}</p>
-        <h2 id="tutorial-title" ref={headingRef} tabIndex={-1}>{labels.title}</h2>
         <p>{labels.body}</p>
         <div className="tutorial-actions">
-          <button type="button" className="button ghost" onClick={complete}>{t("actions.skip", { ns: "common" })}</button>
+          <Button variant="ghost" onClick={complete}>{t("actions.skip", { ns: "common" })}</Button>
           <span className="spacer" />
-          {index > 0 && <button type="button" className="button secondary" onClick={() => setIndex(index - 1)}>{t("actions.back", { ns: "common" })}</button>}
-          <button type="button" className="button" onClick={() => isLast ? complete() : setIndex(index + 1)}>
+          {index > 0 && <Button variant="secondary" onClick={() => setIndex(index - 1)}>{t("actions.back", { ns: "common" })}</Button>}
+          <Button onClick={() => isLast ? complete() : setIndex(index + 1)}>
             {t(isLast ? "actions.finish" : "actions.next", { ns: "common" })}
-          </button>
+          </Button>
         </div>
       </section>
-    </div>
+    </Dialog>
   );
 }

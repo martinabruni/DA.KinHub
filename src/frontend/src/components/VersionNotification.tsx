@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRegisterSW } from "virtual:pwa-register/react";
+import { Snackbar } from "./ui/feedback";
 
 interface ReleaseMetadata { version: string; }
 
@@ -34,11 +35,5 @@ export function VersionNotification() {
     if (needRefresh) await updateServiceWorker(true);
     else window.location.reload();
   };
-  return (
-    <div className="update-notice" role="status">
-      <span>{availableVersion ? t("versionUpdate.available", { version: availableVersion }) : t("versionUpdate.pwaAvailable")}</span>
-      <button type="button" className="button" onClick={() => { void refresh(); }}>{t("actions.refresh")}</button>
-      <button type="button" className="button ghost" onClick={() => setDismissed(true)}>{t("versionUpdate.dismiss")}</button>
-    </div>
-  );
+  return <Snackbar open message={availableVersion ? t("versionUpdate.available", { version: availableVersion }) : t("versionUpdate.pwaAvailable")} actionLabel={t("actions.refresh")} onAction={() => { void refresh(); }} onDismiss={() => setDismissed(true)} dismissLabel={t("versionUpdate.dismiss")} />;
 }

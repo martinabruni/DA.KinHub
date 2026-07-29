@@ -11,7 +11,7 @@
 | Template backlog | `.agents/skills/backlog/references/backlog-templates.md` | Struttura obbligatoria di indice e schede feature |
 | Backend esistente | `src/backend/`, `tests/` | Stato reale dei layer, composition root, EF Core, Problem Details e test; KinList non è ancora implementato |
 | Frontend esistente | `src/frontend/src/`, `src/frontend/public/staticwebapp.config.json`, `src/frontend/vite.config.ts` | Stato reale di routing, Settings, MSAL, API client, i18n, help e PWA |
-| Prototipo design system approvato | `src/frontend/src/pages/DesignSystemPage.tsx`, `src/frontend/src/components/ui/`, `src/frontend/src/components/FloatingBars.tsx`, `src/frontend/src/components/KinPatterns.tsx`, `src/frontend/src/styles.css` | Inventario dei componenti approvati, barre flottanti, token caldi e comportamento UI da integrare nelle pagine reali |
+| Design system condiviso integrato | `src/frontend/src/components/ui/`, `src/frontend/src/components/FloatingBars.tsx`, `src/frontend/src/components/KinPatterns.tsx`, `src/frontend/src/components/Layout.tsx`, `src/frontend/src/styles.css` | Primitive ufficiali, floating navigation, wrapper sottili e token finali riusati nelle pagine reali |
 | Infrastruttura esistente | `infra/`, `.github/workflows/`, `docs/operations/database-migrations.md` | Risorse condivise, deployment, migrazioni e differenze da colmare rispetto all'architettura approvata |
 
 I documenti in `docs/kinlist/research/` non sono stati usati come fonte di nuovi requisiti: analisi e architettura ne hanno già consolidato gli esiti approvati.

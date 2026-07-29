@@ -91,7 +91,7 @@
     {
       "id": "kinhub-frontend",
       "name": "KinHub frontend patterns",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "area": "frontend",
       "description": "Pattern UI React riutilizzabili, accessibili, localizzati e compatibili con temi e PWA.",
       "path": "skills/frontend/SKILL.md",
@@ -112,9 +112,29 @@
           "id": "theme-provider",
           "name": "ThemeProvider",
           "source": "src/frontend/src/components/ThemeProvider.tsx"
+        },
+        {
+          "id": "ui-core",
+          "name": "Shared UI core",
+          "source": "src/frontend/src/components/ui/core.tsx"
+        },
+        {
+          "id": "ui-feedback",
+          "name": "Shared UI feedback",
+          "source": "src/frontend/src/components/ui/feedback.tsx"
+        },
+        {
+          "id": "floating-bars",
+          "name": "FloatingBars",
+          "source": "src/frontend/src/components/FloatingBars.tsx"
+        },
+        {
+          "id": "kin-patterns",
+          "name": "KinPatterns",
+          "source": "src/frontend/src/components/KinPatterns.tsx"
         }
       ],
-      "checksum": "a995a0758c2b71c4c384204219823e79af00ae86ba2176be0be12344616da22b"
+      "checksum": "484df1accc0a6dc056078efc9626da0a0b76b92700a49be2b8da3386a142bd03"
     },
     {
       "id": "kinhub-implementation",
@@ -126,7 +146,7 @@
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "cdc613c8a8f9d22f91c814168b93a27f6990e9f70601926a14fb251eb2318f6a"
+          "checksum": "7efbb2d84de4272000f46d7236997582af6361f88378fad45ff8668e786e9a8f"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",
@@ -135,7 +155,7 @@
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "235adf6b87b8569a210b991f34225c633121c7f920a2ccad55994e43a04ac1c1"
+      "checksum": "a5bbd4e22fc875028bccc86a910bfa0539b9485dce79ff731258c2dab3b219c5"
     },
     {
       "id": "kinhub-release",

@@ -1,35 +1,93 @@
-import { BookOpen, Home, Info, ListChecks, Settings } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useMsal } from "@azure/msal-react";
+import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AuthControls } from "./AuthControls";
-import { LanguageSelector } from "./LanguageSelector";
+import { authConfig, getActiveAccount, loginForApiAccess, logoutCurrentAccount } from "../lib/auth";
+import { FloatingBarCarousel, FloatingBarPage, GlobalNavigationBar } from "./FloatingBars";
 import { Onboarding } from "./Onboarding";
-import { ThemeSelector } from "./ThemeSelector";
+import { routeDefinition } from "./PageHelpAccordion";
+import { ShellBarProvider, useShellBar } from "./ShellBarContext";
+import { useTheme } from "./ThemeProvider";
 import { VersionNotification } from "./VersionNotification";
 
-export function Layout() {
+function LayoutContent() {
   const { t } = useTranslation("common");
-  const links = [
-    { to: "/", key: "home", icon: Home, end: true },
-    { to: "/kinlist", key: "kinlist", icon: ListChecks },
-    { to: "/release-notes", key: "releaseNotes", icon: BookOpen },
-    { to: "/about", key: "about", icon: Info },
-    { to: "/settings", key: "settings", icon: Settings }
-  ];
+  const { instance } = useMsal();
+  const { i18n } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  const location = useLocation();
+  const { contextualBar } = useShellBar();
+  const account = getActiveAccount(instance);
+  const isDark = theme === "dark" || (theme === "system" && document.documentElement.classList.contains("dark"));
+  const globalPaths = {
+    home: routeDefinition("home").path,
+    releaseNotes: routeDefinition("releaseNotes").path,
+    about: routeDefinition("about").path,
+    settings: routeDefinition("settings").path
+  };
+
+  const handleThemeToggle = () => setTheme(isDark ? "light" : "dark");
+  const handleLogin = async () => {
+    if (!authConfig.configured) {
+      return;
+    }
+
+    await loginForApiAccess(instance);
+  };
+
+  const handleLogout = async () => {
+    if (!authConfig.configured) {
+      return;
+    }
+
+    await logoutCurrentAccount(instance);
+  };
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">{t("actions.skipToContent")}</a>
-      <header className="app-header">
-        <NavLink className="brand" to="/" aria-label={t("appName")}>K</NavLink>
-        <nav aria-label={t("appName")} data-tour="navigation">
-          {links.map(({ to, key, icon: Icon, end }) => <NavLink key={to} to={to} end={end} aria-label={t(`nav.${key}`)} className={({ isActive }) => isActive ? "active" : ""}><Icon size={18} aria-hidden="true" /><span>{t(`nav.${key}`)}</span></NavLink>)}
-        </nav>
-        <div className="header-controls"><LanguageSelector /><ThemeSelector /><AuthControls /></div>
-      </header>
       <main id="main-content" tabIndex={-1}><Outlet /></main>
+      <div className="app-floating-bars">
+        <FloatingBarCarousel defaultIndex={0} routeKey={location.pathname} label={t("appName")} pageLabel={(current, total) => t("navigation.pageLabel", { current, total })}>
+          <FloatingBarPage label={t("navigation.globalBar")}>
+            <GlobalNavigationBar
+              labels={{
+                navigation: t("appName"),
+                home: t("nav.home"),
+                information: t("nav.information"),
+                releaseNotes: t("nav.releaseNotes"),
+                version: t("nav.about"),
+                language: t("language.label"),
+                languageOptions: [
+                  { value: "it", label: t("language.it") },
+                  { value: "en", label: t("language.en") }
+                ],
+                theme: t("theme.label"),
+                settings: t("nav.settings"),
+                login: t("actions.login"),
+                logout: t("actions.logout"),
+                account: t("auth.account")
+              }}
+              paths={globalPaths}
+              theme={isDark ? "dark" : "light"}
+              authenticated={Boolean(account)}
+              accountName={account?.name}
+              currentLanguage={i18n.language === "it" ? "it" : "en"}
+              onLanguageChange={(language) => { void i18n.changeLanguage(language); }}
+              onThemeToggle={() => handleThemeToggle()}
+              onLogin={() => { void handleLogin(); }}
+              onLogout={() => { void handleLogout(); }}
+            />
+          </FloatingBarPage>
+          {contextualBar ? <FloatingBarPage label={t("navigation.contextualBar")}>{contextualBar}</FloatingBarPage> : null}
+        </FloatingBarCarousel>
+      </div>
       <footer>{t("footer", { version: __APP_VERSION__, environment: __BUILD_ENVIRONMENT__ })}</footer>
       <VersionNotification />
       <Onboarding />
     </div>
   );
+}
+
+export function Layout() {
+  return <ShellBarProvider><LayoutContent /></ShellBarProvider>;
 }

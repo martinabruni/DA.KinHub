@@ -1,6 +1,6 @@
-import { ArrowRight, GitBranch, ListChecks } from "lucide-react";
-import { Link } from "react-router-dom";
+import { GitBranch, ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { FeatureCard, KinServiceGrid } from "../components/KinPatterns";
 import { PageScaffold } from "../components/PageScaffold";
 
 export function HomePage() {
@@ -8,10 +8,10 @@ export function HomePage() {
   return (
     <PageScaffold routeId="home">
       <p className="lead">{t("home.subtitle", { ns: "pages" })}</p>
-      <div className="card-grid">
-        <Link className="feature-card" to="/kinlist"><ListChecks aria-hidden="true" /><p>{t("home.kinlistCard", { ns: "pages" })}</p><ArrowRight aria-hidden="true" /></Link>
-        <Link className="feature-card" to="/release-notes" data-tour="lifecycle"><GitBranch aria-hidden="true" /><p>{t("home.lifecycleCard", { ns: "pages" })}</p><ArrowRight aria-hidden="true" /></Link>
-      </div>
+      <KinServiceGrid>
+        <FeatureCard to="/kinlist" icon={ListChecks} title={t("nav.kinlist", { ns: "common" })} description={t("home.kinlistCard", { ns: "pages" })} />
+        <div data-tour="lifecycle"><FeatureCard to="/release-notes" icon={GitBranch} title={t("nav.releaseNotes", { ns: "common" })} description={t("home.lifecycleCard", { ns: "pages" })} tone="info" /></div>
+      </KinServiceGrid>
     </PageScaffold>
   );
 }

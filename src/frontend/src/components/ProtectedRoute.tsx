@@ -4,12 +4,14 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { authConfig, getActiveAccount, loginForApiAccess } from "../lib/auth";
 import { PageScaffold } from "./PageScaffold";
+import { StatePanel } from "./ui/feedback";
+import { Button } from "./ui/core";
 
 export function ProtectedRoute({ children, routeId }: { children: ReactNode; routeId: string }) {
   const { instance, inProgress } = useMsal();
   const { t } = useTranslation("common");
   if (!authConfig.configured) {
-    return <PageScaffold routeId={routeId}><div className="state-card">{t("auth.notConfigured")}</div></PageScaffold>;
+    return <PageScaffold routeId={routeId}><StatePanel title={t("states.error")} description={t("auth.notConfigured")} tone="warning" role="status" live="polite" /></PageScaffold>;
   }
 
   if (getActiveAccount(instance)) {
@@ -17,17 +19,12 @@ export function ProtectedRoute({ children, routeId }: { children: ReactNode; rou
   }
 
   if (inProgress !== InteractionStatus.None) {
-    return <PageScaffold routeId={routeId}><div className="state-card" role="status" aria-live="polite">{t("states.loading")}</div></PageScaffold>;
+    return <PageScaffold routeId={routeId}><StatePanel title={t("states.loading")} description={t("auth.required")} role="status" live="polite" busy /></PageScaffold>;
   }
 
   return (
     <PageScaffold routeId={routeId}>
-      <div className="state-card stack">
-        <p>{t("auth.required")}</p>
-        <button type="button" className="button" onClick={() => { void loginForApiAccess(instance); }}>
-          {t("actions.login")}
-        </button>
-      </div>
+      <StatePanel title={t("auth.required")} description={t("auth.signInDescription")} tone="info" action={<Button onClick={() => { void loginForApiAccess(instance); }}>{t("actions.login")}</Button>} />
     </PageScaffold>
   );
 }

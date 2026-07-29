@@ -48,6 +48,7 @@ jobs:
           npm run release:validate
           npm run --prefix src/frontend i18n:validate
           npm run --prefix src/frontend routes:validate
+          npm run --prefix src/frontend design-system:validate
 
       - name: Lint, typecheck and build frontend
         run: |
