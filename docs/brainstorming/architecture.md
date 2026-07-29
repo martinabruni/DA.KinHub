@@ -29,7 +29,7 @@ Le decisioni esplicitamente approvate nelle fonti sono:
 - timeline con evento `Riattivato` per l'undo;
 - coda di snackbar individuali per completamenti ravvicinati;
 - aggiornamento collaborativo con refresh manuale e concorrenza ottimistica;
-- nessun dato personale in cache, IndexedDB, altre persistenze browser o code; API autenticate network-only e sola shell pubblica offline;
+- nessun dato personale applicativo in cache, IndexedDB, altre persistenze browser o code; la sola eccezione è la cache MSAL di account/token in `sessionStorage` per la sessione della scheda; API autenticate network-only e sola shell pubblica offline;
 - browser primari Chrome desktop, Chrome Android, relative PWA installate ed Edge equivalente; Safari/iOS best effort secondario;
 - cancellazione collegata dei dati coerenti alla retention;
 - capacità uniformi per tutti i membri, senza ruoli o amministratori;
@@ -334,7 +334,7 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 - Eventuali segreti inevitabili restano nel sistema di configurazione sicuro già adottato da Kin Hub; mai nel repository o nel bundle.
 - Audio e output AI esistono soltanto in buffer/stream della richiesta; vengono rilasciati in ogni esito e non transitano in file, dischi temporanei, Blob o code.
 - Il testo informativo sulla voce vive nel frontend localizzato e anticipa la prima richiesta del permesso microfono; il consenso operativo coincide con la concessione del permesso browser, non con una persistenza separata di dati vocali.
-- Il service worker usa un'allowlist di asset pubblici versionati. API autenticate sono network-only; Cache API, IndexedDB e altre persistenze browser non archiviano token, audio, item, categorie o risposte personali.
+- Il service worker usa un'allowlist di asset pubblici versionati. API autenticate sono network-only; Cache API, IndexedDB e altre persistenze browser non archiviano audio, item, categorie o risposte personali. MSAL può conservare esclusivamente account e token in `sessionStorage` per la sessione della scheda; non li copia in `localStorage`, URL, log, metriche o trace.
 - Timeline applicativa e log tecnici sono separati: la prima serve all'utente, i secondi alla diagnosi.
 - Il codice invito in chiaro vive solo nella risposta di generazione e nello stato UI transitorio. Impronta/HMAC, chiave e codici non sono loggati né restituiti negli elenchi.
 - Il rate limit join è locale all'istanza: 5 tentativi/5 minuti per `(iss, oid)` e 20/5 minuti per origine attendibile. Gli header client non sono una fonte attendibile; non si introducono Redis o API Management.
@@ -533,7 +533,7 @@ Nota: tra gli eventi approvati rientra `Riattivato` per rappresentare l'undo acc
 
 - **Contesto**: installabilità PWA non equivale a pieno funzionamento offline.
 - **Overview**: cache degli asset versionati; azioni remote disabilitate chiaramente senza rete.
-- **Scelta**: precache allowlist dei soli asset pubblici; API autenticate network-only; nessuna coda audio, Cache API/IndexedDB con dati personali o lista offline.
+- **Scelta**: precache allowlist dei soli asset pubblici; API autenticate network-only; cache MSAL limitata a account/token in `sessionStorage`; nessuna coda audio, Cache API/IndexedDB con dati personali o lista offline.
 - **Motivazione**: mantiene avvio/installabilità senza introdurre persistenza sensibile e sincronizzazione complessa.
 - **Pro**: comportamento onesto, service worker semplice, minori rischi privacy.
 - **Contro**: la funzione principale non lavora offline.

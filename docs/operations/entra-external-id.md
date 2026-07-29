@@ -23,6 +23,17 @@ Per Postman crea una app registration separata `KinHub Postman`: non riusare `Ki
 
 In Postman usa Authorization Code con PKCE, authorization URL `https://<tenant-subdomain>.ciamlogin.com/<ENTRA_TENANT_ID>/oauth2/v2.0/authorize`, token URL equivalente con suffisso `/token`, Client ID di `KinHub Postman`, il relativo client secret e lo scope completo `api://<API_CLIENT_ID>/access_as_user`. Imposta **Client Authentication** su `Send client credentials in body`. Registrare la callback come SPA provoca `AADSTS9002327`, perche Postman riscatta il codice dal proprio backend e non tramite una richiesta CORS dal browser.
 
-Il frontend usa popup con selezione account e mantiene i token soltanto in memoria. Il backend convalida issuer, audience, firma, scadenza e scope tramite JWT bearer con `MapInboundClaims=false`.
+Il frontend usa popup con selezione account e configura la cache MSAL in `sessionStorage`, limitata all'origine e alla sessione della scheda, per ripristinare account e token dopo il refresh. `sessionStorage` non contiene `familyId`, membership, risposte API o altri dati personali applicativi: il bootstrap autorevole viene sempre eseguito nuovamente. Il backend convalida issuer, audience, firma, scadenza e scope tramite JWT bearer con `MapInboundClaims=false`.
 
 Per KinHub il bootstrap post-login richiede sempre i claim canonici `iss` e `oid`. Se uno dei due manca o `oid` non e un GUID valido, l'accesso fallisce chiuso con `401` e nessun profilo viene creato come fallback da nome o email.
+
+## Verifica refresh della scheda
+
+Eseguire il percorso con un account Entra di test su Chrome desktop, Chrome Android con PWA installata ed Edge:
+
+1. Accedere e attendere il completamento del bootstrap su `/kinlist`.
+2. Verificare che la UI non scriva `familyId`, membership o risposte API in `sessionStorage`, `localStorage`, Cache API o IndexedDB.
+3. Ricaricare la stessa scheda e verificare che non venga mostrato il login; MSAL deve rendere disponibile l'account e la PWA deve mostrare loading prima di un nuovo bootstrap.
+4. Verificare nella rete una nuova richiesta di bootstrap con acquisizione token silenziosa e nessun dato familiare precedente usato come fallback.
+5. Eseguire logout e verificare che la cache MSAL della sessione venga rimossa e che la UI non mostri più il contesto famiglia.
+6. Ripetere con sessione Entra scaduta o rete offline: il risultato deve essere rispettivamente nuovo accesso o stato offline, senza dati familiari residui.

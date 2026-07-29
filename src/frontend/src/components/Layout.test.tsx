@@ -7,7 +7,7 @@ import { useShellBar } from "./ShellBarContext";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, values?: Record<string, unknown>) => {
+    t: (key: string, values?: { current?: number; total?: number }) => {
       if (key === "navigation.pageLabel" && values) {
         return `Bar ${values.current} of ${values.total}`;
       }
@@ -66,10 +66,12 @@ describe("Layout", () => {
 
     expect(screen.getByText("Page body")).toBeInTheDocument();
     expect(document.querySelector(".app-floating-bars")).not.toBeNull();
-    const carousel = document.querySelector(".kh-floating-carousel") as HTMLElement | null;
+    const carousel = document.querySelector<HTMLElement>(".kh-floating-carousel");
     expect(carousel).not.toBeNull();
 
-    fireEvent.keyDown(carousel!, { key: "ArrowRight" });
+    if (carousel) {
+      fireEvent.keyDown(carousel, { key: "ArrowRight" });
+    }
 
     expect(screen.getByText("Contextual actions")).toBeInTheDocument();
   });
