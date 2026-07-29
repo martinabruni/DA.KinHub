@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `completamento-singolo`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 5
+- **Wave**: 6
 - **Risultato**: un membro completa un item con feedback immediato e può riattivarlo entro cinque secondi senza duplicati o riordino.
 
 ## Contesto autonomo
@@ -46,6 +46,7 @@ Il completamento singolo è una transizione persistita subito, non un'attesa cli
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-009 - Correggere un item e consultarne la storia | hard | Completion e undo scrivono timeline e usano versione concorrente | Tipi evento, modello versione e transazione item+timeline | Inizio dopo FEAT-009 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Riga lista e feedback temporanei devono riusare componenti condivisi | List row, snackbar e state pattern del design system | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -70,7 +71,7 @@ Con FEAT-006 dopo CP-003. Coordinare migration item/timeline e le superfici infe
 - **Dominio/business**: transizioni Active/Completed, finestra undo, idempotenza.
 - **Persistenza/migration**: `CompletedAt`, command records, versione e timeline transazionale.
 - **API/integrazioni**: complete/undo con `Family`, version/command ID e Problem Details.
-- **Frontend/UX**: riga lista, coda snackbar accessibile, focus e riconciliazione.
+- **Frontend/UX**: riga lista, coda snackbar accessibile, focus e riconciliazione costruiti sul design system condiviso.
 - **Infrastruttura/configurazione**: opzione undo validata; nessuna risorsa.
 - **Documentazione/operazioni**: guida completamento, metriche e change fragment.
 
@@ -130,6 +131,7 @@ Con FEAT-006 dopo CP-003. Coordinare migration item/timeline e le superfici infe
 ## Definition of Done
 
 - AC-056-AC-060 verificati, FEAT-009 integrata e CP-003 pubblicato.
+- Riga item e snackbar undo usano componenti FEAT-014 senza code/feedback paralleli ad hoc.
 - Migration/rollback, clock e margine tecnico documentati; nessun segreto/contenuto nei log.
 - UI, i18n, accessibilità, temi, guida/help, telemetria e fragment completi.
 - Comandi applicabili di `AGENTS.md` eseguiti.

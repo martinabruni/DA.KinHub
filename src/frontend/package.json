@@ -15,12 +15,19 @@
     "lint": "eslint src vite.config.ts",
     "typecheck": "tsc --noEmit",
     "i18n:validate": "node scripts/validate-i18n.mjs",
-    "routes:validate": "node scripts/validate-routes.mjs"
+    "routes:validate": "node scripts/validate-routes.mjs",
+    "design-system:validate": "node scripts/validate-design-system.mjs"
   },
   "dependencies": {
     "@azure/msal-browser": "^4.25.0",
     "@azure/msal-react": "^3.0.21",
     "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-checkbox": "^1.3.11",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-popover": "^1.1.23",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-switch": "^1.3.7",
+    "@radix-ui/react-tooltip": "^1.2.16",
     "i18next": "^25.5.2",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",

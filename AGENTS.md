@@ -112,6 +112,8 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Il client API è tipizzato, acquisisce token via MSAL e non include secret.
 - Mantieni CSP, routing fallback Static Web Apps ed error boundary.
 - Usa componenti `src/components/ui` in stile shadcn; prima di crearne uno nuovo verifica la skill frontend.
+- Le primitive ufficiali e i pattern condivisi vivono in `src/frontend/src/components/ui`, `FloatingBars.tsx` e `KinPatterns.tsx`; non reintrodurre route demo prodotto, classi legacy parallele o librerie UI alternative fuori dai touchpoint approvati.
+- Ogni modifica a shell, route, componenti o CSS frontend esegue anche `npm run design-system:validate` oltre a test, lint, typecheck, i18n e route validation.
 
 ## i18n
 

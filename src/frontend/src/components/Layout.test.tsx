@@ -1,0 +1,76 @@
+import { render, screen, fireEvent } from "@testing-library/react";
+import { useEffect } from "react";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+import { Layout } from "./Layout";
+import { useShellBar } from "./ShellBarContext";
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, unknown>) => {
+      if (key === "navigation.pageLabel" && values) {
+        return `Bar ${values.current} of ${values.total}`;
+      }
+
+      return key;
+    },
+    i18n: { language: "it", changeLanguage: () => Promise.resolve() }
+  })
+}));
+
+vi.mock("@azure/msal-react", () => ({
+  useMsal: () => ({ instance: { name: "msal" } })
+}));
+
+vi.mock("../lib/auth", () => ({
+  authConfig: { configured: false },
+  getActiveAccount: () => null,
+  loginForApiAccess: () => Promise.resolve(),
+  logoutCurrentAccount: () => Promise.resolve()
+}));
+
+vi.mock("./ThemeProvider", () => ({
+  useTheme: () => ({ theme: "light", setTheme: () => undefined })
+}));
+
+vi.mock("./VersionNotification", () => ({
+  VersionNotification: () => <div>Version notification</div>
+}));
+
+vi.mock("./Onboarding", () => ({
+  Onboarding: () => <div>Onboarding</div>
+}));
+
+function ContextualPage() {
+  const { setContextualBar } = useShellBar();
+
+  useEffect(() => {
+    setContextualBar(<div>Contextual actions</div>);
+    return () => setContextualBar(null);
+  }, [setContextualBar]);
+
+  return <div>Page body</div>;
+}
+
+describe("Layout", () => {
+  it("keeps the floating shell mounted and exposes contextual bars through the shared contract", () => {
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: <Layout />,
+        children: [{ index: true, element: <ContextualPage /> }]
+      }
+    ]);
+
+    render(<RouterProvider router={router} />);
+
+    expect(screen.getByText("Page body")).toBeInTheDocument();
+    expect(document.querySelector(".app-floating-bars")).not.toBeNull();
+    const carousel = document.querySelector(".kh-floating-carousel") as HTMLElement | null;
+    expect(carousel).not.toBeNull();
+
+    fireEvent.keyDown(carousel!, { key: "ArrowRight" });
+
+    expect(screen.getByText("Contextual actions")).toBeInTheDocument();
+  });
+});

@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `lista-condivisa-paginata`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 3
+- **Wave**: 4
 - **Risultato**: un membro vede una pagina ordinata di soli item attivi consentiti, con autore e stati vuoto/errore/accesso negato distinti.
 
 ## Contesto autonomo
@@ -47,6 +47,7 @@ Questa slice introduce il modello persistente minimo della lista e il contratto 
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-002 - Creare la propria famiglia | hard | La lista richiede una famiglia attiva ottenibile nel prodotto | Famiglia, membership e contesto autorizzato | Inizio dopo integrazione FEAT-002 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | La prima UI reale di lista deve riusare shell, card, stati e navigazione condivisi | Floating bars, state panels, row/card primitives e regole di riuso frontend | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -74,7 +75,7 @@ Con FEAT-004 dopo CP-001. Coordinare `KinHubDbContext`, migration e client API; 
 - **Dominio/business**: layer KinList nei root `domains`/`business` per stati, visibility, ordine e pagina.
 - **Persistenza/migration**: schema `kinlist` nel `KinHubDbContext`, vincoli/indici e repository mirati keyset.
 - **API/integrazioni**: Function lista con `Family`, `familyId` query e contratti pagina/Problem Details.
-- **Frontend/UX**: nuova route/pagina KinList in `App.tsx`, `route-registry.json`, API client, lista responsive e refresh.
+- **Frontend/UX**: route/pagina KinList in `App.tsx`, `route-registry.json`, API client, lista responsive e refresh costruiti sul design system condiviso.
 - **Infrastruttura/configurazione**: opzioni lettura validate; nessuna nuova risorsa.
 - **Documentazione/operazioni**: guida KinList `it`/`en`, help, migration runbook e change fragment.
 
@@ -148,6 +149,7 @@ Con FEAT-004 dopo CP-001. Coordinare `KinHubDbContext`, migration e client API; 
 ## Definition of Done
 
 - Tutti i criteri di accettazione sono verificati; FEAT-002 è integrata e CP-001/CP-002 sono pubblicati.
+- Lista, shell e stati usano solo componenti FEAT-014 senza mantenere card/stati/list row legacy equivalenti.
 - TECH-003 è chiuso per la lista e il predicato visibilità è riusabile senza generic repository.
 - Migration contiene verifica/rollback e non espone `Get All`.
 - Route, `PageScaffold`, help/guide `it`/`en`, accessibilità, temi, telemetria e change fragment sono completi.

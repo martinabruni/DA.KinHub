@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `uscita-famiglia`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 5
+- **Wave**: 6
 - **Risultato**: un membro conferma l'uscita, perde subito accesso e torna all'onboarding senza lasciare inviti o stati parziali.
 
 ## Contesto autonomo
@@ -44,6 +44,7 @@ L'uscita rende inattiva la membership e revoca gli inviti creati dal membro. Se 
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-005 - Invitare e unirsi con un codice | hard | Leave deve revocare inviti del membro e preservare la riattivazione storica | Schema inviti/membership e join di riattivazione | Inizio dopo FEAT-005 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Conferma e redirect devono riusare overlay, feedback e navigazione condivisi | Dialog/drawer/state pattern e floating navigation condivisi | Inizio dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -67,7 +68,7 @@ Con FEAT-010. Coordinare migration item/shared e non eseguire migration concorre
 - **Dominio/business**: leave, conteggio membri attivi, transizioni soft delete e revoca.
 - **Persistenza/migration**: shared/kinlist, `InactiveAt`, filtri e transazione multi-entità.
 - **API/integrazioni**: endpoint `Family`, idempotenza e Problem Details.
-- **Frontend/UX**: azione Family, dialog conferma, invalidazione stato e redirect onboarding.
+- **Frontend/UX**: azione Family, dialog conferma, invalidazione stato e redirect onboarding basati sul design system condiviso.
 - **Infrastruttura/configurazione**: Nessuna.
 - **Documentazione/operazioni**: guida conseguenze/riattivazione, migration e change fragment.
 
@@ -127,6 +128,7 @@ Con FEAT-010. Coordinare migration item/shared e non eseguire migration concorre
 ## Definition of Done
 
 - AC-031-AC-035 verificati e FEAT-005 integrata.
+- Il leave usa solo componenti FEAT-014 per conferma, feedback e redirect, senza dialog legacy paralleli.
 - Migration/rollback e filtri soft delete coperti da test negativi.
 - UI, traduzioni, help/guida, telemetria e change fragment aggiornati.
 - Comandi applicabili di `AGENTS.md` eseguiti e riportati.

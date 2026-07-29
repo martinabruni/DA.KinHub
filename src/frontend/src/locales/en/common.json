@@ -5,6 +5,7 @@
     "kinlist": "KinList",
     "releaseNotes": "Release notes",
     "about": "Version",
+    "information": "Information",
     "settings": "Settings"
   },
   "actions": {
@@ -36,9 +37,16 @@
     "system": "System"
   },
   "auth": {
+    "account": "Account",
     "notConfigured": "Entra authentication is not configured: local development mode.",
     "required": "Sign in to continue.",
+    "signInDescription": "Use Entra sign-in to reach your protected family content.",
     "error": "Sign-in failed. Please try again."
+  },
+  "navigation": {
+    "globalBar": "KinHub main navigation",
+    "contextualBar": "Page contextual actions",
+    "pageLabel": "Bar {{current}} of {{total}}"
   },
   "states": {
     "loading": "Loading…",

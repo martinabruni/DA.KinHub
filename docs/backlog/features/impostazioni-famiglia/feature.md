@@ -7,7 +7,7 @@ status: Open
 - **Codice**: `impostazioni-famiglia`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 3
+- **Wave**: 4
 - **Risultato**: un membro raggiunge una pagina Famiglia ricostruibile che mostra nome, membri e inviti attivi senza alterare le preferenze esistenti.
 
 ## Contesto autonomo
@@ -46,6 +46,7 @@ KinHub possiede già `SettingsPage` con lingua, tema, tutorial e PWA. La feature
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-002 - Creare la propria famiglia | hard | Serve una famiglia reale e membership attiva | Schema shared e contesto famiglia | Inizio dopo FEAT-002 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Settings, Family e ingranaggio devono nascere sul contratto UI condiviso e sostituire la navigazione legacy | Floating navigation, surfaces, list rows e regole di riuso/harness | Inizio dopo FEAT-014 |
 | FEAT-003 - Consultare la lista condivisa paginata | contract | Ingranaggio e lista condividono layout/safe area e convenzione pagina/cursori | CP-001/CP-002 congelati, area inferiore e contratto pagina | Può procedere nella stessa wave con ownership file coordinata |
 
 ### Gate e assunzioni
@@ -75,7 +76,7 @@ Con FEAT-003 dopo CP-001. Non modificare senza coordinamento `App.tsx`, `Setting
 - **Dominio/business**: query famiglia/membri/inviti e proiezioni minime nei layer esistenti.
 - **Persistenza/migration**: repository shared paginati e indici; nessun caricamento integrale.
 - **API/integrazioni**: endpoint Family protetti e contratti pagina.
-- **Frontend/UX**: `SettingsPage.tsx`, `App.tsx`, `route-registry.json`, `PageScaffold`, stili safe area e risorse `it`/`en`.
+- **Frontend/UX**: `SettingsPage.tsx`, `App.tsx`, `route-registry.json`, `PageScaffold`, componenti del design system per barra flottante/safe area e risorse `it`/`en`.
 - **Infrastruttura/configurazione**: fallback SPA esistente da verificare, nessuna nuova risorsa.
 - **Documentazione/operazioni**: guide Family/Settings bilingui, help e change fragment.
 
@@ -135,6 +136,7 @@ Con FEAT-003 dopo CP-001. Non modificare senza coordinamento `App.tsx`, `Setting
 ## Definition of Done
 
 - Tutti i criteri sono verificati; FEAT-002 integrata e checkpoint rispettati.
+- Settings e Family usano solo componenti FEAT-014 e non mantengono navigazione o card legacy parallele.
 - TECH-003/TECH-008 hanno evidenza per le superfici interessate.
 - Route registry, `PageScaffold`, help e guide `it`/`en`, Settings e change fragment sono completi.
 - Test dimostrano assenza del segreto invito e dei dati stale.

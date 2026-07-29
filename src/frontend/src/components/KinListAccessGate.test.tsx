@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { KinListAccessGate } from "./KinListAccessGate";
 import { KinHubFamilyProvider, useKinHubFamily } from "./KinHubFamilyContext";
+import { ShellBarProvider } from "./ShellBarContext";
 
 let online = true;
 let account: { homeAccountId: string } | null = null;
@@ -27,7 +28,7 @@ vi.mock("@azure/msal-react", () => ({
 
 vi.mock("../lib/auth", () => ({
   acquireApiAccessToken: () => Promise.resolve("token-123"),
-  getActiveAccount: () => account
+  getActiveAccount: () => account ? { ...account } : null
 }));
 
 vi.mock("./ConnectivityProvider", () => ({
@@ -62,10 +63,12 @@ function Probe() {
 
 function renderGate() {
   return render(
-    <KinHubFamilyProvider>
-      <KinListAccessGate />
-      <Probe />
-    </KinHubFamilyProvider>
+    <ShellBarProvider>
+      <KinHubFamilyProvider>
+        <KinListAccessGate />
+        <Probe />
+      </KinHubFamilyProvider>
+    </ShellBarProvider>
   );
 }
 
@@ -99,10 +102,12 @@ describe("KinListAccessGate", () => {
     account = { homeAccountId: "account-b" };
     bootstrapHandler = () => Promise.resolve({ state: "onboarding" });
     view.rerender(
-      <KinHubFamilyProvider>
-        <KinListAccessGate />
-        <Probe />
-      </KinHubFamilyProvider>
+      <ShellBarProvider>
+        <KinHubFamilyProvider>
+          <KinListAccessGate />
+          <Probe />
+        </KinHubFamilyProvider>
+      </ShellBarProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent(""));
@@ -119,10 +124,12 @@ describe("KinListAccessGate", () => {
 
     online = false;
     view.rerender(
-      <KinHubFamilyProvider>
-        <KinListAccessGate />
-        <Probe />
-      </KinHubFamilyProvider>
+      <ShellBarProvider>
+        <KinHubFamilyProvider>
+          <KinListAccessGate />
+          <Probe />
+        </KinHubFamilyProvider>
+      </ShellBarProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent(""));
@@ -136,7 +143,7 @@ describe("KinListAccessGate", () => {
 
     await screen.findByText("kinlist.onboarding");
     fireEvent.click(screen.getByText("actions.createFamily"));
-    const input = screen.getByLabelText("kinlist.create.label");
+    const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "Famiglia Bruni" } });
     fireEvent.submit(input.closest("form")!);
 
@@ -152,7 +159,7 @@ describe("KinListAccessGate", () => {
 
     await screen.findByText("kinlist.onboarding");
     fireEvent.click(screen.getByText("actions.createFamily"));
-    const input = screen.getByLabelText("kinlist.create.label");
+    const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "  " } });
     fireEvent.submit(input.closest("form")!);
 
@@ -171,7 +178,7 @@ describe("KinListAccessGate", () => {
 
     await screen.findByText("kinlist.onboarding");
     fireEvent.click(screen.getByText("actions.createFamily"));
-    const input = screen.getByLabelText("kinlist.create.label");
+    const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "Famiglia Bruni" } });
     const form = input.closest("form");
     fireEvent.submit(form!);

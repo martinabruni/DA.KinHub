@@ -7,7 +7,7 @@ description: Manage preferences, tutorial state, and PWA installation.
 
 ## Preferences
 
-Language and theme are saved in the browser. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.
+Language and theme are saved in the browser. You can change them both from Settings and from the shared floating bar. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.
 
 ## Tutorial
 

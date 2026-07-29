@@ -11,6 +11,7 @@
 | Template backlog | `.agents/skills/backlog/references/backlog-templates.md` | Struttura obbligatoria di indice e schede feature |
 | Backend esistente | `src/backend/`, `tests/` | Stato reale dei layer, composition root, EF Core, Problem Details e test; KinList non è ancora implementato |
 | Frontend esistente | `src/frontend/src/`, `src/frontend/public/staticwebapp.config.json`, `src/frontend/vite.config.ts` | Stato reale di routing, Settings, MSAL, API client, i18n, help e PWA |
+| Design system condiviso integrato | `src/frontend/src/components/ui/`, `src/frontend/src/components/FloatingBars.tsx`, `src/frontend/src/components/KinPatterns.tsx`, `src/frontend/src/components/Layout.tsx`, `src/frontend/src/styles.css` | Primitive ufficiali, floating navigation, wrapper sottili e token finali riusati nelle pagine reali |
 | Infrastruttura esistente | `infra/`, `.github/workflows/`, `docs/operations/database-migrations.md` | Risorse condivise, deployment, migrazioni e differenze da colmare rispetto all'architettura approvata |
 
 I documenti in `docs/kinlist/research/` non sono stati usati come fonte di nuovi requisiti: analisi e architettura ne hanno già consolidato gli esiti approvati.
@@ -26,6 +27,7 @@ I documenti in `docs/kinlist/research/` non sono stati usati come fonte di nuovi
 - Drawer, modifica esplicita, categorie e timeline con concorrenza ottimistica.
 - Completamento singolo e bulk atomico con undo entro cinque secondi.
 - PWA installabile e mobile-first, sola shell pubblica offline, temi e localizzazione `it`/`en`.
+- Design system condiviso KinHub, con sostituzione totale della UI legacy nelle pagine correnti, componenti generici/customizzabili, wrapper specifici quando utili e riuso obbligatorio nelle feature successive.
 - Retention degli item completati e cleanup dei dati inattivi come esiti distinti del timer giornaliero.
 - Sicurezza, privacy, accessibilità, osservabilità, documentazione e test applicati nelle feature che toccano le relative superfici.
 
@@ -40,6 +42,7 @@ I documenti in `docs/kinlist/research/` non sono stati usati come fonte di nuovi
 - Anteprima/riproduzione audio, conferma trascrizione, storage audio, code o pipeline asincrona.
 - Dati personali offline, accodamento operazioni, realtime, analytics di prodotto o gamification.
 - Nuove risorse Azure, microservizi, Function App dedicata, CQRS, mediator o event bus.
+- Convivenza permanente tra componenti/stili legacy e design system, duplicazione di componenti, stringhe visibili fuori da i18n o boilerplate UI parallelo.
 
 ## Requisiti e decisioni approvati
 
@@ -95,30 +98,32 @@ Nessuna decisione funzionale condivisa è aperta. Le selezioni tecniche non anco
 
 ## Strategia di scomposizione
 
-Le feature sono vertical slice orientate a un risultato utente o operativo e includono i layer necessari. FEAT-001 crea la capacità stabile di identità, autorizzazione e instradamento usata dalle altre slice; FEAT-003 stabilisce il modello lista e il contratto di paginazione riusato. Retention e cleanup restano feature distinte perché hanno cutoff, dati ed esiti diversi, mentre FEAT-013 integra il secondo caso nel timer introdotto da FEAT-012.
+Le feature sono vertical slice orientate a un risultato utente o operativo e includono i layer necessari. FEAT-001 crea la capacità stabile di identità, autorizzazione e instradamento usata dalle altre slice; FEAT-014 aggiunge la fondazione UI condivisa di KinHub e congela catalogo componenti, token, convenzioni i18n e regole di riuso prima delle slice che estendono l'esperienza utente; FEAT-003 stabilisce poi il modello lista e il contratto di paginazione riusato. Retention e cleanup restano feature distinte perché hanno cutoff, dati ed esiti diversi, mentre FEAT-013 integra il secondo caso nel timer introdotto da FEAT-012.
 
 ## Ordine di esecuzione
 
 | Wave | Feature | Tipo | Risultato | Dipendenze hard | Parallelismo |
 |---|---|---|---|---|---|
 | 1 | FEAT-001 - Entrare nel percorso corretto dopo il login | enabler | Profilo unico, stato onboarding/famiglia e shell offline sicura | Nessuna | Unica fondazione iniziale |
-| 2 | FEAT-002 - Creare la propria famiglia | product | Famiglia e membership del creatore atomiche | FEAT-001 | Nessuno nella wave |
-| 3 | FEAT-003 - Consultare la lista condivisa paginata | product | Lista attiva, visibile, ordinata e limitata | FEAT-002 | Con FEAT-004 dopo CP-001; migration coordinate |
-| 3 | FEAT-004 - Consultare le impostazioni della famiglia | product | Ingranaggio, Settings e pagina membri/inviti | FEAT-002 | Con FEAT-003 dopo CP-001; route/i18n separati |
-| 4 | FEAT-005 - Invitare e unirsi con un codice | product | Ciclo completo invito/join/revoca | FEAT-004 | Con FEAT-007/008/009 dopo CP-002 |
-| 4 | FEAT-007 - Aggiungere un gruppo tramite la voce | product | Registrazione e generazione atomica | FEAT-003 | Bloccata da GATE-001; con FEAT-005/008/009 dopo CP-002/003 |
-| 4 | FEAT-008 - Filtrare la lista per categoria | product | Filtro singolo prima della paginazione | FEAT-003 | Con FEAT-005/007/009 dopo CP-002 |
-| 4 | FEAT-009 - Correggere un item e consultarne la storia | product | Drawer, modifica, categorie e timeline | FEAT-003 | Con FEAT-005/007/008 dopo CP-002/003 |
-| 5 | FEAT-006 - Lasciare la famiglia in sicurezza | product | Revoca accesso e lifecycle ultimo membro | FEAT-005 | Con FEAT-010; evitare migration concorrenti |
-| 5 | FEAT-010 - Completare un item e annullare | product | Completamento idempotente e undo singolo | FEAT-009 | Con FEAT-006 dopo CP-003 |
-| 6 | FEAT-011 - Completare una selezione come unico gruppo | product | Bulk e undo atomici fino a 5000 | FEAT-008, FEAT-010 | Con FEAT-012 dopo CP-004; migration serializzate |
-| 6 | FEAT-012 - Eliminare gli item completati oltre retention | operational | Retention giornaliera limitata e osservabile | FEAT-010 | Bloccata da GATE-002; con FEAT-011 dopo CP-004 |
-| 7 | FEAT-013 - Eliminare in sicurezza i dati inattivi | operational | Cleanup lifecycle separato dalla retention | FEAT-006, FEAT-012 | Nessuno sul timer/migration durante l'integrazione |
+| 2 | FEAT-014 - Usare un design system condiviso in tutta KinHub | enabler | Pagine correnti e contratto UI condiviso senza componenti legacy | FEAT-001 | Nessuno nella wave; congela il contratto frontend |
+| 3 | FEAT-002 - Creare la propria famiglia | product | Famiglia e membership del creatore atomiche | FEAT-001, FEAT-014 | Nessuno nella wave |
+| 4 | FEAT-003 - Consultare la lista condivisa paginata | product | Lista attiva, visibile, ordinata e limitata | FEAT-002, FEAT-014 | Con FEAT-004 dopo CP-001; migration coordinate |
+| 4 | FEAT-004 - Consultare le impostazioni della famiglia | product | Ingranaggio, Settings e pagina membri/inviti | FEAT-002, FEAT-014 | Con FEAT-003 dopo CP-001; route/i18n separati |
+| 5 | FEAT-005 - Invitare e unirsi con un codice | product | Ciclo completo invito/join/revoca | FEAT-004, FEAT-014 | Con FEAT-007/008/009 dopo CP-002 |
+| 5 | FEAT-007 - Aggiungere un gruppo tramite la voce | product | Registrazione e generazione atomica | FEAT-003, FEAT-014 | Bloccata da GATE-001; con FEAT-005/008/009 dopo CP-002/003 |
+| 5 | FEAT-008 - Filtrare la lista per categoria | product | Filtro singolo prima della paginazione | FEAT-003, FEAT-014 | Con FEAT-005/007/009 dopo CP-002 |
+| 5 | FEAT-009 - Correggere un item e consultarne la storia | product | Drawer, modifica, categorie e timeline | FEAT-003, FEAT-014 | Con FEAT-005/007/008 dopo CP-002/003 |
+| 6 | FEAT-006 - Lasciare la famiglia in sicurezza | product | Revoca accesso e lifecycle ultimo membro | FEAT-005, FEAT-014 | Con FEAT-010; evitare migration concorrenti |
+| 6 | FEAT-010 - Completare un item e annullare | product | Completamento idempotente e undo singolo | FEAT-009, FEAT-014 | Con FEAT-006 dopo CP-003 |
+| 7 | FEAT-011 - Completare una selezione come unico gruppo | product | Bulk e undo atomici fino a 5000 | FEAT-008, FEAT-010, FEAT-014 | Con FEAT-012 dopo CP-004; migration serializzate |
+| 7 | FEAT-012 - Eliminare gli item completati oltre retention | operational | Retention giornaliera limitata e osservabile | FEAT-010 | Bloccata da GATE-002; con FEAT-011 dopo CP-004 |
+| 8 | FEAT-013 - Eliminare in sicurezza i dati inattivi | operational | Cleanup lifecycle separato dalla retention | FEAT-006, FEAT-012 | Nessuno sul timer/migration durante l'integrazione |
 
 ### Checkpoint per lavoro parallelo
 
 | Checkpoint | Feature coinvolte | Contratto da congelare | Possibili conflitti |
 |---|---|---|---|
+| CP-DS1 | FEAT-014, FEAT-002-FEAT-011 | Catalogo componenti, token, regole i18n e wrapper specifici consentiti del design system | `src/frontend/src/components/ui`, `Layout.tsx`, `styles.css`, `route-registry.json`, `skills/frontend/*`, `AGENTS.md` |
 | CP-001 | FEAT-003, FEAT-004 | Identità interna, membership, policy `Family`, forma `familyId`, schema shared e strategia migration | `Program.cs`, DI, `KinHubDbContext`, migration, API client |
 | CP-002 | FEAT-005, FEAT-007, FEAT-008, FEAT-009 | Contratto pagina/cursori, codici Problem Details, predicato visibilità e convenzioni API tipizzate | `src/frontend/src/lib/api.ts`, DbContext, opzioni, traduzioni condivise |
 | CP-003 | FEAT-007, FEAT-009, FEAT-010 | Stato item, owner/visibility, versione concorrente, ordine, tipi timeline e idempotency key | Entità/configurazioni item, timeline, riga lista e refresh |
@@ -129,7 +134,18 @@ Le feature sono vertical slice orientate a un risultato utente o operativo e inc
 
 ```mermaid
 flowchart LR
-    F001["FEAT-001 - Accesso e instradamento"] --> F002["FEAT-002 - Creazione famiglia"]
+    F001["FEAT-001 - Accesso e instradamento"] --> F014["FEAT-014 - Design system condiviso"]
+    F001 --> F002["FEAT-002 - Creazione famiglia"]
+    F014 --> F002
+    F014 --> F003["FEAT-003 - Lista paginata"]
+    F014 --> F004["FEAT-004 - Impostazioni famiglia"]
+    F014 --> F005["FEAT-005 - Inviti e join"]
+    F014 --> F006["FEAT-006 - Uscita famiglia"]
+    F014 --> F007["FEAT-007 - Voce e generazione"]
+    F014 --> F008["FEAT-008 - Filtro categoria"]
+    F014 --> F009["FEAT-009 - Drawer e timeline"]
+    F014 --> F010["FEAT-010 - Completamento singolo"]
+    F014 --> F011["FEAT-011 - Bulk completion"]
     F002 --> F003["FEAT-003 - Lista paginata"]
     F002 --> F004["FEAT-004 - Impostazioni famiglia"]
     F004 --> F005["FEAT-005 - Inviti e join"]
@@ -151,27 +167,28 @@ Le frecce continue sono dipendenze `hard`; le tratteggiate indicano coordinament
 
 ### Percorso critico
 
-`FEAT-001 -> FEAT-002 -> FEAT-003 -> FEAT-009 -> FEAT-010 -> FEAT-012 -> FEAT-013`
+`FEAT-001 -> FEAT-014 -> FEAT-002 -> FEAT-003 -> FEAT-009 -> FEAT-010 -> FEAT-012 -> FEAT-013`
 
-È il cammino hard più lungo fino alla chiusura del lifecycle: stabilisce accesso e famiglia, modello item/timeline, completamento, retention e infine cleanup. GATE-002 blocca gli ultimi due nodi; GATE-001 blocca FEAT-007 ma non il resto del grafo.
+È il cammino hard più lungo fino alla chiusura del lifecycle: stabilisce accesso, contratto UI condiviso, famiglia, modello item/timeline, completamento, retention e infine cleanup. GATE-002 blocca gli ultimi due nodi; GATE-001 blocca FEAT-007 ma non il resto del grafo.
 
 ## Catalogo feature
 
 | ID | Codice | Titolo | Readiness | Wave | File |
 |---|---|---|---|---|---|
 | FEAT-001 | `accesso-instradamento` | Entrare nel percorso corretto dopo il login | ready | 1 | `features/accesso-instradamento/feature.md` |
-| FEAT-002 | `creazione-famiglia` | Creare la propria famiglia | ready | 2 | `features/creazione-famiglia/feature.md` |
-| FEAT-003 | `lista-condivisa-paginata` | Consultare la lista condivisa paginata | ready | 3 | `features/lista-condivisa-paginata/feature.md` |
-| FEAT-004 | `impostazioni-famiglia` | Consultare le impostazioni della famiglia | ready | 3 | `features/impostazioni-famiglia/feature.md` |
-| FEAT-005 | `inviti-e-join` | Invitare e unirsi con un codice | ready | 4 | `features/inviti-e-join/feature.md` |
-| FEAT-006 | `uscita-famiglia` | Lasciare la famiglia in sicurezza | ready | 5 | `features/uscita-famiglia/feature.md` |
-| FEAT-007 | `generazione-vocale` | Aggiungere un gruppo tramite la voce | blocked | 4 | `features/generazione-vocale/feature.md` |
-| FEAT-008 | `filtro-categoria` | Filtrare la lista per categoria | ready | 4 | `features/filtro-categoria/feature.md` |
-| FEAT-009 | `modifica-item-timeline` | Correggere un item e consultarne la storia | ready | 4 | `features/modifica-item-timeline/feature.md` |
-| FEAT-010 | `completamento-singolo` | Completare un item e annullare | ready | 5 | `features/completamento-singolo/feature.md` |
-| FEAT-011 | `completamento-multiplo` | Completare una selezione come unico gruppo | ready | 6 | `features/completamento-multiplo/feature.md` |
-| FEAT-012 | `retention-item-completati` | Eliminare gli item completati oltre retention | blocked | 6 | `features/retention-item-completati/feature.md` |
-| FEAT-013 | `cleanup-dati-inattivi` | Eliminare in sicurezza i dati inattivi | blocked | 7 | `features/cleanup-dati-inattivi/feature.md` |
+| FEAT-014 | `design-system-condiviso` | Usare un design system condiviso in tutta KinHub | ready | 2 | `features/design-system-condiviso/feature.md` |
+| FEAT-002 | `creazione-famiglia` | Creare la propria famiglia | ready | 3 | `features/creazione-famiglia/feature.md` |
+| FEAT-003 | `lista-condivisa-paginata` | Consultare la lista condivisa paginata | ready | 4 | `features/lista-condivisa-paginata/feature.md` |
+| FEAT-004 | `impostazioni-famiglia` | Consultare le impostazioni della famiglia | ready | 4 | `features/impostazioni-famiglia/feature.md` |
+| FEAT-005 | `inviti-e-join` | Invitare e unirsi con un codice | ready | 5 | `features/inviti-e-join/feature.md` |
+| FEAT-006 | `uscita-famiglia` | Lasciare la famiglia in sicurezza | ready | 6 | `features/uscita-famiglia/feature.md` |
+| FEAT-007 | `generazione-vocale` | Aggiungere un gruppo tramite la voce | blocked | 5 | `features/generazione-vocale/feature.md` |
+| FEAT-008 | `filtro-categoria` | Filtrare la lista per categoria | ready | 5 | `features/filtro-categoria/feature.md` |
+| FEAT-009 | `modifica-item-timeline` | Correggere un item e consultarne la storia | ready | 5 | `features/modifica-item-timeline/feature.md` |
+| FEAT-010 | `completamento-singolo` | Completare un item e annullare | ready | 6 | `features/completamento-singolo/feature.md` |
+| FEAT-011 | `completamento-multiplo` | Completare una selezione come unico gruppo | ready | 7 | `features/completamento-multiplo/feature.md` |
+| FEAT-012 | `retention-item-completati` | Eliminare gli item completati oltre retention | blocked | 7 | `features/retention-item-completati/feature.md` |
+| FEAT-013 | `cleanup-dati-inattivi` | Eliminare in sicurezza i dati inattivi | blocked | 8 | `features/cleanup-dati-inattivi/feature.md` |
 
 FEAT-001 ha applicato la correzione architetturale descritta in `features/accesso-instradamento/cr.md`; il piano originario e conservato in `feature.plan.md` e quello correttivo in `cr.plan.md`. Le feature dipendenti non devono copiare pattern endpoint locali e seguono invece `docs/architecture/http-functions.md`.
 
@@ -180,6 +197,7 @@ FEAT-001 ha applicato la correzione architetturale descritta in `features/access
 | Requisito o vincolo | Feature primaria | Feature di supporto | Criteri che lo verificano |
 |---|---|---|---|
 | FR-001, FR-002, FR-032 | FEAT-001 | FEAT-002, FEAT-005 | AC-001-AC-004 |
+| Vincolo design system condiviso, rimozione totale della UI legacy e harness/frontend obbligati al riuso | FEAT-014 | FEAT-002-FEAT-011 | AC-078-AC-083 |
 | FR-003 | FEAT-001 | FEAT-002-FEAT-013 | AC-003, AC-005 e criteri autorizzativi di ogni feature |
 | FR-004-FR-006 | FEAT-003 | FEAT-007-FEAT-011 | AC-011-AC-014 |
 | FR-007-FR-014 | FEAT-007 | FEAT-003 | AC-036-AC-042 |

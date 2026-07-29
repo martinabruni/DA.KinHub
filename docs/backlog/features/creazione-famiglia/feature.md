@@ -7,7 +7,7 @@ status: In progress
 - **Codice**: `creazione-famiglia`
 - **Tipo**: `product`
 - **Readiness**: `ready`
-- **Wave**: 2
+- **Wave**: 3
 - **Risultato**: un utente in onboarding crea una sola famiglia con il proprio profilo come unico membro iniziale ed entra in KinList.
 
 ## Contesto autonomo
@@ -45,6 +45,7 @@ L'utente autenticato senza membership attiva deve poter uscire dall'onboarding t
 | Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
 |---|---|---|---|---|
 | FEAT-001 - Entrare nel percorso corretto dopo il login | hard | Serve profilo interno, stato onboarding e contratto `ApiAccess` | User ID interno, membership model, bootstrap e error mapping | Inizio solo dopo integrazione FEAT-001 |
+| FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Il form di onboarding non deve conservare controlli legacy o pattern duplicati | Primitive form/state, token, layout onboarding e regole i18n condivise | Inizio solo dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
 
@@ -67,7 +68,7 @@ Nessuno nella wave: la feature consolida lo schema famiglia/membership usato da 
 - **Dominio/business**: layer `domains`/`business` per nome, invarianti e caso d'uso atomico.
 - **Persistenza/migration**: `KinHubDbContext`, configurazioni shared, indice univoco parziale e migration/rollback.
 - **API/integrazioni**: Function protetta da `ApiAccess`, Problem Details stabile e correlation ID.
-- **Frontend/UX**: onboarding introdotto da FEAT-001, stato form, i18n `it`/`en`, focus e responsive.
+- **Frontend/UX**: onboarding introdotto da FEAT-001 costruito con componenti form/state del design system, i18n `it`/`en`, focus e responsive.
 - **Infrastruttura/configurazione**: Nessuna nuova risorsa.
 - **Documentazione/operazioni**: help/guida onboarding e change fragment.
 
@@ -120,6 +121,7 @@ Nessuno nella wave: la feature consolida lo schema famiglia/membership usato da 
 ## Definition of Done
 
 - Tutti i criteri di accettazione sono verificati e FEAT-001 è integrata.
+- L'onboarding usa solo componenti/pattern FEAT-014 e non conserva form o classi legacy equivalenti.
 - Migration e rollback coprono famiglia, membership e vincolo di unicità.
 - Testi, help/guida, accessibilità, telemetria e change fragment sono aggiornati.
 - I comandi applicabili di `AGENTS.md` sono eseguiti e riportati.

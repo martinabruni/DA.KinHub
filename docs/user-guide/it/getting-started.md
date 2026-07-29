@@ -7,7 +7,7 @@ description: Orientarsi in KinHub, personalizzare l'esperienza e capire come evo
 
 ## Navigazione
 
-Il menu superiore porta a Home, KinList, Note di rilascio, Versione e Impostazioni. Su schermi piccoli le icone mantengono le stesse destinazioni.
+La barra di navigazione flottante resta fissata in basso e porta a Home, Note di rilascio, Versione e Impostazioni. Quando una pagina registra azioni contestuali, puoi scorrere lateralmente tra la barra globale e quella della pagina senza perdere posizione o focus.
 
 ## Lingua e tema
 
