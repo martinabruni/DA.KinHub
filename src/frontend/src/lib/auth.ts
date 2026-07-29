@@ -20,11 +20,11 @@ const configuration: Configuration = {
     redirectUri,
     postLogoutRedirectUri: window.location.origin
   },
-  cache: { cacheLocation: "memoryStorage" },
+  cache: { cacheLocation: "sessionStorage" },
   system: { allowPlatformBroker: false }
 };
 
-export const authConfig = { configured, apiScope, redirectUri };
+export const authConfig = { configured, apiScope, redirectUri, cacheLocation: configuration.cache?.cacheLocation };
 export const msalInstance = new PublicClientApplication(configuration);
 
 export function getActiveAccount(instance: IPublicClientApplication) {

@@ -16,7 +16,7 @@ Implementare il collegamento idempotente `(iss, oid)` verso il profilo interno, 
 - Risposte autenticate: `Cache-Control: no-store, private`.
 - Route frontend canonica: `/kinlist`.
 - Le superfici dimostrative `/projects` vengono rimosse dal routing e dagli endpoint pubblici; tabella e migration esistenti non vengono riscritte o eliminate.
-- Token, `familyId` e dati familiari restano solo in memoria; MSAL passa da `localStorage` a `memoryStorage`.
+- `familyId` e dati familiari restano solo in memoria; la cache MSAL di account/token usa `sessionStorage`, limitata alla sessione della scheda e distinta dalla persistenza applicativa vietata.
 
 ## 1. Chiudere i gate tecnici
 

@@ -74,6 +74,7 @@ function renderGate() {
 
 describe("KinListAccessGate", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     online = true;
     account = null;
     bootstrapHandler = () => Promise.resolve({ state: "onboarding" });
@@ -81,7 +82,7 @@ describe("KinListAccessGate", () => {
     createFamilyCallCount = 0;
   });
 
-  it("stores the family context only in memory after an authorized bootstrap", async () => {
+  it("rebuilds the family context from bootstrap for an account restored by MSAL", async () => {
     account = { homeAccountId: "account-a" };
     bootstrapHandler = () => Promise.resolve({ state: "family", familyId: "family-a" });
 
@@ -89,6 +90,21 @@ describe("KinListAccessGate", () => {
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent("family-a"));
     expect(screen.getByText("kinlist.ready")).toBeInTheDocument();
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it.each([
+    [401, "kinlist.sessionExpired"],
+    [403, "kinlist.forbidden"]
+  ] as const)("clears the family context for bootstrap status %s", async (status, message) => {
+    account = { homeAccountId: "account-a" };
+    bootstrapHandler = () => Promise.reject(new apiMocks.ApiResponseError({ status, detail: "Denied" }));
+
+    renderGate();
+
+    await screen.findByText(message);
+    expect(screen.getByTestId("family-id")).toHaveTextContent("");
+    expect(sessionStorage.length).toBe(0);
   });
 
   it("clears the family context when the account changes and bootstrap resolves to onboarding", async () => {
