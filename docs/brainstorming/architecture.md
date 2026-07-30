@@ -1,4 +1,4 @@
-# Architettura — KinList
+# Architettura — KinHub e KinList
 
 ## 1. Scopo e contesto
 
@@ -53,8 +53,12 @@ Lo scope successivamente confermato integra inoltre:
 - predisposizione del soft delete per utente, membership e famiglia, senza endpoint o UI di cancellazione account, e cleanup fisico dei dati inattivi da almeno 30 giorni;
 - selezione multipla esplicita, selezione di tutti i soli item visibili dopo il filtro, completamento atomico e un unico `Annulla N` entro cinque secondi;
 - `Visibility` con valori `Personal` e `Shared`, owner stabile e predicato server uniforme; tutte le creazioni correnti restano `Shared`, senza selettore o conversione.
+- catalogo persistito dei KinService nello schema condiviso, inizialmente con KinList, e localizzazioni di nome e descrizione in italiano e inglese;
+- disponibilità dedicata famiglia-servizio, con KinList attivo automaticamente per famiglie nuove ed esistenti;
+- Home dinamica: login senza sessione, onboarding senza famiglia e soli servizi attivi per famiglia; Release Notes resta fuori dalla Home;
+- controllo server-side di sessione, membership attiva e disponibilità del servizio anche per accessi diretti alle route KinService.
 
-Le regole funzionali restano descritte in `functional-analysis.md`; questo documento ne traduce l'impatto tecnico. I requisiti `FR-001`–`FR-055` e le decisioni `DEC-001`–`DEC-035` sono i riferimenti autorevoli, insieme ai vincoli di `AGENTS.md`.
+Le regole funzionali restano descritte in `functional-analysis.md`; questo documento ne traduce l'impatto tecnico. I requisiti `FR-001`–`FR-064` e le decisioni `DEC-001`–`DEC-040` sono i riferimenti autorevoli, insieme ai vincoli di `AGENTS.md`.
 
 ## 2. Principi
 
@@ -77,13 +81,15 @@ Le regole funzionali restano descritte in `functional-analysis.md`; questo docum
 
 ```mermaid
 flowchart LR
-    U["Utente autenticato / membro"] --> PWA["KinHub PWA<br/>onboarding, KinService, Settings e Family"]
+    U["Visitatore o membro"] --> PWA["KinHub PWA<br/>Home, onboarding, KinService, Settings e Family"]
     PWA -->|"MSAL / OIDC"| EXT["Microsoft Entra External ID"]
     PWA -->|"HTTPS + access token"| API["KinHub Function App<br/>moduli shared e KinService"]
     API --> AUTH["ApiAccess / policy Family<br/>handler scoped asincrono"]
     API --> FAM["Casi d'uso Family<br/>create, invite, join, leave"]
+    API --> CAT["Catalogo KinService<br/>disponibilità e localizzazioni"]
     API --> APP["Casi d'uso KinList<br/>single e bulk"]
     FAM --> DBP
+    CAT --> DBP
     APP --> DBP["Porte di persistenza"]
     DBP --> PG["PostgreSQL condiviso<br/>schema shared + schema kinlist"]
     APP --> AI["Porta voice-to-structure"]
@@ -108,19 +114,21 @@ flowchart LR
 - `familyId` è un input di query string validato, non un claim né un valore dedotto dal client; l'identità utente arriva esclusivamente dai claim verificati.
 - La coppia `(iss, oid)` è l'identità esterna canonica; claim mancanti falliscono chiusi e non sono sostituiti da dati di profilo.
 - Repository di collezione espongono soltanto query paginabili; filtri e visibilità precedono paginazione e proiezione.
+- Il catalogo condiviso decide quali servizi la Home può mostrare; ogni KinService ripete lato server il controllo della propria disponibilità familiare.
 - Non vengono introdotti CQRS, mediator, event bus, microservizi o nuove risorse Azure.
 
 ## 4. Componenti e responsabilità
 
 | Componente | Responsabilità | Input/output | Dipendenze autorizzate | Non gli compete | Requisiti |
 |---|---|---|---|---|---|
-| KinHub PWA | UI, routing, onboarding, famiglia, impostazioni, temi, i18n e shell dei KinService; KinList aggiunge audio in memoria, pagine/cursori, lista, bulk, drawer e filtro | Gesti/audio → richieste; pagine/esiti → stato visibile | Browser API, MSAL, client API tipizzato, route registry e UI esistente | Fidarsi del token, decidere permessi, chiamare AI, persistere audio/dati personali o interpretare cursori | FR-001, FR-006–FR-011, FR-017–FR-025, FR-027–FR-029, FR-031–FR-055 |
-| Endpoint Functions | Confine HTTP, validazione sintattica, autenticazione token, mapping di errori, correlazione | HTTP → comandi/query; risultati → HTTP/Problem Details | Application layer, autenticazione configurata, telemetria | Regole di dominio, SQL, prompt AI | FR-001–FR-005, FR-012–FR-033, FR-036–FR-054 |
+| KinHub PWA | UI, routing, Home catalogo, onboarding, famiglia, impostazioni, temi, i18n e shell dei KinService; KinList aggiunge audio in memoria, pagine/cursori, lista, bulk, drawer e filtro | Gesti/audio → richieste; pagine/esiti → stato visibile | Browser API, MSAL, client API tipizzato, route registry e UI esistente | Fidarsi del token, decidere permessi, chiamare AI, persistere audio/dati personali o interpretare cursori | FR-001, FR-006–FR-011, FR-017–FR-025, FR-027–FR-029, FR-031–FR-064 |
+| Endpoint Functions | Confine HTTP, validazione sintattica, autenticazione token, mapping di errori, correlazione | HTTP → comandi/query; risultati → HTTP/Problem Details | Application layer, autenticazione configurata, telemetria | Regole di dominio, SQL, prompt AI | FR-001–FR-005, FR-012–FR-033, FR-036–FR-064 |
 | Identity & Access | Risoluzione `(iss, oid)`, profilo, onboarding, policy `ApiAccess`/`Family`, membership attiva e contesto utente | Claim verificati + `familyId` → esito e identità applicativa | Handler scoped, servizio/repository async shared | Fallback su email/nome, user ID dal client, SQL nell'handler o sostituzione dello scope nei casi d'uso | FR-001–FR-005, FR-031, FR-032, FR-047 |
 | Family Application | Creazione atomica, lettura famiglia/membri, inviti, join, leave e lifecycle soft delete | Comandi/query autenticati → contesto famiglia o Problem Details | Dominio, repository shared, orologio, generatore crittografico, unità transazionale | Email/notifiche, rimozione altri membri, ruoli aggiuntivi, cancellazione account | FR-031–FR-043, FR-054 |
+| Service Catalog Application | Elencare i servizi attivi per famiglia e verificare la disponibilità di un KinService | Identità/famiglia/lingua → catalogo o esito accesso | Dominio shared, repository catalogo | UI amministrativa, SQL o regole KinList | FR-056–FR-064 |
 | KinList Application | Casi d'uso per lista, registrazione, modifica, categorie, completamento singolo/bulk, undo e retention | Comandi/query validati e scoped → risultati applicativi | Dominio, porte di persistenza, provider AI, orologio, identità corrente | Dettagli dell'host Azure o della UI | FR-004–FR-026, FR-042–FR-053 |
 | KinList Domain | Entità, value object, regole di stato, ordine, appartenenza e invarianti | Stato + intenzione → nuovo stato/eventi applicativi | Solo codice di dominio | I/O, logging, SDK, serializzazione HTTP | FR-004, FR-005, FR-012–FR-026, FR-042–FR-048 |
-| Persistence Adapter | Query keyset scoped senza `Get All`, chunk bulk nella stessa transazione, soft delete, inviti, concorrenza e idempotenza | Operazioni applicative ↔ pagine/transazioni PostgreSQL | EF Core/Npgsql, PostgreSQL, managed identity | Decisioni UX, interpretazione AI o successo parziale tra chunk | FR-002–FR-005, FR-013–FR-026, FR-031–FR-051 |
+| Persistence Adapter | Query keyset scoped senza `Get All`, chunk bulk nella stessa transazione, soft delete, inviti, catalogo, concorrenza e idempotenza | Operazioni applicative ↔ pagine/transazioni PostgreSQL | EF Core/Npgsql, PostgreSQL, managed identity | Decisioni UX, interpretazione AI o successo parziale tra chunk | FR-002–FR-005, FR-013–FR-026, FR-031–FR-064 |
 | Voice Pipeline | Coordinare budget 90/75 secondi, schema strict versionato, retry ristretto, validazione semantica e rilascio buffer | Audio in memoria → massimo 1000 item/categorie candidati + lingua | Porta provider AI, contratto versionato, cancellation e orologio | Autorizzare, persistere audio/output grezzo o salvare dati non validati | FR-012–FR-014, FR-052, FR-053 |
 | Multimodal AI Provider | Adattare Azure AI Foundry e isolare deployment per ambiente, versione pinned e Structured Output | Stream audio → output strutturato/stato | SDK/provider approvato e managed identity | Attribuire autore, timestamp, famiglia, RecordingId o fare fallback a chiavi | FR-012–FR-014, FR-052, FR-053 |
 | Maintenance Timer | Alle 00:00 UTC tentare retention e cleanup come casi d'uso distinti, con pagine e chunk limitati | Schedule → due esiti e conteggi separati | Application layer, telemetria | SQL diretto, `RunOnStartup` o cancellazione fuori dalle regole | FR-026, FR-030, FR-042, FR-043, FR-049, FR-050 |
@@ -160,7 +168,7 @@ tests/
 - Il frontend è organizzato per feature; componenti condivisi contengono soltanto comportamento già comune.
 - Contratti di rete sono versionabili e centralizzati. Non si condivide direttamente il modello di persistenza con la UI.
 - L'handler `Family` è scoped perché dipende dal contesto richiesta e da I/O asincrono; riceve un servizio/repository mirato e propaga `CancellationToken`.
-- Le entità shared rappresentano user, family, membership e invite; KinList mantiene item e dati collegati. I repository restano contratti di dominio, non generic repository.
+- Le entità shared rappresentano user, family, membership, invite, KinService, localizzazione e disponibilità familiare; KinList mantiene item e dati collegati. I repository restano contratti di dominio, non generic repository.
 
 ### Duplicazione, astrazioni e stringhe
 
@@ -182,10 +190,19 @@ tests/
 4. Un servizio applicativo richiede `iss` e `oid` dal token validato e cerca la coppia nello schema condiviso; claim mancanti falliscono chiusi senza fallback su nome o email.
 5. Se assente, crea in modo idempotente il profilo applicativo; con `ApiAccess` legge l'unica membership attiva.
 6. Se la membership esiste, restituisce il contesto famiglia; altrimenti restituisce lo stato onboarding e la PWA mostra soltanto `Crea famiglia` e `Unisciti con un codice`.
-7. `Crea famiglia` riceve il nome, ricontrolla in transazione che non esista alcuna membership attiva e crea famiglia più membership del creatore in un unico commit. Il creatore è l'unico membro iniziale e resta metadato stabile, non un nuovo ruolo privilegiato.
+7. `Crea famiglia` riceve il nome, ricontrolla in transazione che non esista alcuna membership attiva e crea famiglia, membership del creatore e disponibilità dei KinService preconfigurati attivi in un unico commit. Il creatore è l'unico membro iniziale e resta metadato stabile, non un nuovo ruolo privilegiato.
 8. Retry e richieste concorrenti non producono una seconda famiglia; il vincolo dati realizza una sola famiglia attiva per user.
 
-### 6.1-bis Informativa iniziale sulla voce e permesso microfono
+### 6.1-bis Catalogo servizi e accesso diretto
+
+1. La Home non richiede il catalogo senza una sessione: mostra soltanto l'azione login.
+2. Con sessione valida, il bootstrap esistente risolve la famiglia attiva; l'assenza di famiglia mostra l'onboarding e non effettua una lettura del catalogo familiare.
+3. Con una famiglia attiva, il client richiede catalogo e localizzazioni per lingua con `familyId` in query; l'endpoint applica la policy `Family` e il caso d'uso limita la query alla stessa famiglia.
+4. Il risultato contiene solo chiave servizio, route, nome e descrizione localizzati dei servizi attivi. Il fallback della localizzazione è inglese; il client non riceve dati amministrativi o servizi inattivi.
+5. Ogni route KinService ripete la verifica di disponibilità nel backend prima di rendere il servizio o eseguire azioni, così un URL diretto non aggira la Home.
+6. La migration inserisce KinList e le localizzazioni `it`/`en`, quindi assegna KinList a tutte le famiglie esistenti. La creazione famiglia inserisce le disponibilità dei servizi preconfigurati attivi nella medesima transazione.
+
+### 6.1-ter Informativa iniziale sulla voce e permesso microfono
 
 1. All'apertura dell'app, la PWA verifica se il permesso microfono non è ancora stato deciso dal browser.
 2. In questo solo caso mostra un popup chiaro che spiega che la voce viene usata soltanto per generare tramite IA una lista.
@@ -341,7 +358,7 @@ Gli endpoint usano un formato coerente basato su Problem Details. Il client mapp
 
 ### PostgreSQL condiviso
 
-- Schema comune per profili, famiglie, appartenenze, inviti e autorizzazioni condivise, con timestamp/stato di soft delete e vincoli per una sola membership attiva per user.
+- Schema comune per profili, famiglie, appartenenze, inviti, catalogo KinService, localizzazioni e disponibilità familiari, con timestamp/stato di soft delete e vincoli per una sola membership attiva per user.
 - Schema `kinlist` per item, categorie, associazioni, registrazioni, comandi idempotenti e timeline.
 - Ruolo database della Function App con privilegi minimi sugli schemi necessari.
 - Il provisioning dell'utente database associato alla managed identity avviene in pipeline con identità amministrativa controllata, non a ogni avvio dell'applicazione.
@@ -650,6 +667,45 @@ La soglia lifecycle parte da `InactiveAt`. Non sostituisce ADR-008: la retention
 - **Problemi futuri prevenuti/semplificati**: payload incontrollati, salti/duplicati da offset e divergenza tra limiti delle diverse query.
 - **Requisiti**: FR-015–FR-018, FR-020–FR-022, FR-036, FR-049–FR-051, NFR-013.
 
+### ADR-018 — Catalogo KinService persistito e localizzato
+
+- **Contesto**: KinList non deve restare hardcoded nella Home e i servizi devono essere amministrabili in futuro, con dati localizzati nel database.
+- **Overview**: il catalogo condiviso conserva identità tecnica, route, stato generale e localizzazioni dei servizi.
+- **Scelta**: introdurre nello schema `shared` KinService e localizzazioni, con KinList e testi `it`/`en` preconfigurati tramite migration.
+- **Motivazione**: crea una fonte unica di verità senza introdurre ora una UI amministrativa.
+- **Pro**: Home dinamica, traduzioni governabili, aggiunta futura di servizi e lingue senza card hardcoded.
+- **Contro**: seed e vincoli di dati sono necessari anche per KinList.
+- **Limiti**: l'amministrazione del catalogo non è parte di questa versione.
+- **Alternative scartate**: catalogo frontend statico, perché non soddisfa la richiesta di dati amministrabili e localizzati nel database.
+- **Problemi futuri prevenuti/semplificati**: contenuti duplicati, route divergenti e aggiunta non governata di un servizio.
+- **Requisiti**: FR-056, FR-057, FR-061.
+
+### ADR-019 — Disponibilità KinService separata per famiglia
+
+- **Contesto**: ogni famiglia deve poter avere servizi diversi in futuro.
+- **Overview**: una relazione dedicata collega famiglia e servizio con stato di attivazione.
+- **Scelta**: introdurre una disponibilità unica per coppia famiglia-servizio; la migration assegna KinList alle famiglie esistenti e la creazione famiglia assegna i servizi preconfigurati attivi.
+- **Motivazione**: il catalogo descrive il servizio, mentre la relazione descrive la disponibilità per una famiglia.
+- **Pro**: isolamento corretto, transizione invisibile e attivazione futura senza cambiare il modello.
+- **Contro**: migration e creazione famiglia richiedono scritture aggiuntive atomiche.
+- **Limiti**: nessun membro può ancora cambiare lo stato di un servizio.
+- **Alternative scartate**: flag globale sul servizio, perché non esprime differenze fra famiglie.
+- **Problemi futuri prevenuti/semplificati**: servizi disponibili in modo incoerente e backfill manuali dopo la prima attivazione.
+- **Requisiti**: FR-058, FR-059, FR-060.
+
+### ADR-020 — Disponibilità del KinService verificata lato server
+
+- **Contesto**: nascondere una card Home non impedisce l'accesso tramite un URL noto.
+- **Overview**: la Home filtra il catalogo e la route del servizio applica nuovamente sessione, membership e disponibilità.
+- **Scelta**: usare la policy `Family` per il perimetro famiglia e un controllo applicativo del servizio richiesto prima dell'accesso diretto.
+- **Motivazione**: UI e URL diretto devono avere lo stesso esito, senza affidare l'autorizzazione al client.
+- **Pro**: nessun bypass, regola uniforme per i KinService futuri e riuso della policy esistente.
+- **Contro**: una lettura aggiuntiva nell'ingresso al servizio.
+- **Limiti**: ogni KinService mantiene anche le proprie regole specifiche su dati e operazioni.
+- **Alternative scartate**: filtro solo frontend, perché aggirabile.
+- **Problemi futuri prevenuti/semplificati**: accesso a servizi disattivati e divergenza fra Home e route dirette.
+- **Requisiti**: FR-062–FR-064.
+
 ## 13. Evoluzioni future non implementate
 
 | Evoluzione possibile | Segnale concreto per rivalutarla | Non incluso ora perché |
@@ -665,6 +721,7 @@ La soglia lifecycle parte da `InactiveAt`. Non sostituisce ADR-008: la retention
 | Creazione o conversione `Personal`/`Shared` | Sono approvati flusso UX, effetti su collaborazione/timeline e migrazione | Ora tutte le creazioni sono `Shared` e non esistono selector/conversione |
 | Rate limit globale/distribuito degli inviti | Telemetria dimostra abuso o scale-out rende insufficiente la barriera per istanza | Redis/API Management/WAF non sono giustificati nello scope iniziale |
 | Eliminazione account self-service | Prodotto, privacy e identity lifecycle approvano endpoint, conferme ed effetti | È predisposto soltanto il soft delete user; nessun endpoint/UI è richiesto |
+| Amministrazione del catalogo o attivazione servizi per famiglia | Esistono almeno due KinService o un requisito prodotto richiede di modificare disponibilità e testi | I dati la rendono possibile, ma ora non esistono ruoli, UI o API amministrative |
 | Ricerca, cache o motore eventi | Query/volume/consistenza dimostrano un problema non risolvibile con PostgreSQL | Nessun requisito attuale |
 
 ## 14. Rischi e mitigazioni
@@ -689,6 +746,9 @@ La soglia lifecycle parte da `InactiveAt`. Non sostituisce ADR-008: la retention
 | Cold start/capacità della Function App condivisa | Media/Media | Telemetria per fase, query efficienti, nessuna inizializzazione pesante; separazione solo con evidenza |
 | Contesa o migrazioni sul DB condiviso | Media/Alta | Schemi/ownership chiari, migrazioni versionate, test e deploy coordinato |
 | Managed identity PostgreSQL configurata male | Media/Alta | Bootstrap in pipeline, privilegi minimi, test pre-deploy e niente fallback silenzioso a password |
+| Famiglie esistenti senza KinList dopo la migration | Bassa/Alta | Seed idempotente della disponibilità nella migration e test di integrazione su famiglie preesistenti |
+| Card nascosta ma KinService raggiungibile | Bassa/Alta | Policy Family, controllo applicativo della disponibilità e test su URL diretto |
+| Localizzazione catalogo incompleta | Media/Media | Seed italiano/inglese, vincoli e fallback tecnico inglese |
 | Undo non accessibile in cinque secondi | Alta/Media | Snackbar accessibile, focus coerente, validazione server della finestra e test tastiera/screen reader |
 | Aggiornamenti concorrenti tra familiari | Media/Media | Token di versione, conflitto esplicito e refresh manuale chiaro |
 | Retention incompleta o cancellazione eccessiva | Bassa/Alta | Query condizionata, lotti, dry-run/test, metriche, alert e cancellazione collegata verificata |
@@ -714,6 +774,9 @@ Le decisioni condivise riusano gli identificatori autorevoli dell'analisi funzio
 | DEC-033 | Coordinamento giornaliero di retention e cleanup. |
 | DEC-034 | Rilevamento automatico e mantenimento della lingua parlata. |
 | DEC-035 | Informativa iniziale e consenso operativo per la voce. |
+| DEC-036, DEC-037 | Catalogo KinService persistito e localizzazioni database `it`/`en`. |
+| DEC-038 | Disponibilità famiglia-servizio e attivazione automatica KinList per famiglie nuove/esistenti. |
+| DEC-039, DEC-040 | Home dinamica e protezione server-side dell'accesso ai KinService. |
 
 Non restano decisioni aperte condivise con l'analisi funzionale. Prima dei contratti esecutivi vanno comunque definiti modello/versione/regione concreti, formato/protezione/durata cursori, ordine totale di ogni collezione, timeout host e soglie operative di alert. Queste scelte non autorizzano nuove funzionalità o risorse.
 
@@ -737,11 +800,12 @@ Non è disponibile nelle fonti autorizzate la «carta delle risorse» citata nel
 | FR-047, FR-048 | KinList Domain/Application, Persistence, Endpoint | ADR-014 | test no-leak lista/dettaglio/categorie/aggregati/comandi/bulk |
 | FR-044–FR-046 | PWA, Endpoint, KinList Application, Persistence | ADR-015, ADR-017 | pagina fino a 5000, chunk 1000, rollback, concorrenza e undo atomico |
 | FR-034–FR-036 | PWA, route/help/i18n | ADR-009, ADR-010, ADR-016, ADR-017 | `/settings/family`, pagine membri, focus/history, route/docs e parità `it`/`en` |
+| FR-056–FR-064 | PWA Home, Service Catalog Application, Persistence, Endpoint, Identity & Access | ADR-018–ADR-020 | seed/migration, isolamento famiglia, fallback lingua, stati Home e URL diretto |
 
 Ogni componente serve almeno un requisito o un vincolo approvato. L'integrazione AI resta isolata dietro una porta applicativa, ma la scelta iniziale approvata è un modello multimodale Azure AI Foundry con validazione JSON lato backend.
 
 ## 17. Criterio di approvazione
 
-L'impostazione tecnica iniziale è coerente e proporzionata allo scope confermato: PWA React integrata nelle Impostazioni esistenti, backend .NET modulare nella Function App condivisa, policy `Family` e controlli applicativi scoped, PostgreSQL transazionale con soft delete/cleanup, External ID, managed identity, telemetria redatta e nessuna nuova risorsa o infrastruttura distribuita.
+L'impostazione tecnica iniziale è coerente e proporzionata allo scope confermato: PWA React con Home dinamica, catalogo servizi condiviso, backend .NET modulare nella Function App condivisa, policy `Family` e controlli applicativi scoped, PostgreSQL transazionale con soft delete/cleanup, External ID, managed identity, telemetria redatta e nessuna nuova risorsa o infrastruttura distribuita.
 
 Il documento descrive l'architettura dello scope congelato senza introdurre feature: PWA con sola shell offline, popup iniziale informativo sulla voce, backend modulare, PostgreSQL paginato/transazionale, AI sincrona limitata, manutenzione giornaliera e risorse KinHub condivise. Il backlog può essere creato usando le decisioni funzionali chiuse e le selezioni tecniche elencate in sezione 15; nessuna di esse autorizza microservizi, CQRS, mediator, event bus, nuove risorse Azure, delete-account, ruoli, rimozione membri o UI Personal.

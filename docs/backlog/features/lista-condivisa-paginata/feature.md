@@ -48,6 +48,7 @@ Questa slice introduce il modello persistente minimo della lista e il contratto 
 |---|---|---|---|---|
 | FEAT-002 - Creare la propria famiglia | hard | La lista richiede una famiglia attiva ottenibile nel prodotto | Famiglia, membership e contesto autorizzato | Inizio dopo integrazione FEAT-002 |
 | FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | La prima UI reale di lista deve riusare shell, card, stati e navigazione condivisi | Floating bars, state panels, row/card primitives e regole di riuso frontend | Inizio dopo integrazione FEAT-014 |
+| FEAT-015 - Raggiungere i servizi attivi della famiglia | contract | La route KinList deve rispettare il catalogo e il guard KinService senza duplicare controlli | Contratto catalogo/accesso diretto, `familyId` e confine del gate KinList congelati in CP-001 | Può procedere dopo CP-001; coordinare Home, client API, migration shared e gate KinList |
 
 ### Gate e assunzioni
 
@@ -58,7 +59,7 @@ Questa slice introduce il modello persistente minimo della lista e il contratto 
 
 ### Parallelismo consentito
 
-Con FEAT-004 dopo CP-001. Coordinare `KinHubDbContext`, migration e client API; assegnare ownership distinta a schema `kinlist` e schema shared.
+Con FEAT-004 e FEAT-015 dopo CP-001. Coordinare `KinHubDbContext`, migration, client API e gate KinList; assegnare ownership distinta a schema `kinlist` e schema shared.
 
 ## Contratto di consegna
 
