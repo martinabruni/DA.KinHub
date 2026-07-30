@@ -13,7 +13,7 @@
     "forbidden": "L'accesso alla famiglia richiesta non è consentito.",
     "error": "Non è stato possibile verificare lo stato familiare. Riprova.",
     "onboarding": "Per usare i servizi KinHub devi creare una famiglia oppure unirti con un codice.",
-    "onboardingPending": "Le azioni di creazione e join verranno attivate dalle prossime feature dedicate, ma il percorso post-login è già instradato correttamente.",
+    "onboardingPending": "Puoi gia creare la prima famiglia da qui. L'unione con codice arrivera nelle prossime feature dedicate.",
     "ready": "KinHub ha verificato una membership familiare attiva.",
     "readyDetail": "La lista condivisa arriverà nelle feature successive senza riutilizzare dati residui o cache personali dal bootstrap corrente.",
     "create": {

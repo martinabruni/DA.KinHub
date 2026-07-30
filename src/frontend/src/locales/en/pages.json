@@ -13,7 +13,7 @@
     "forbidden": "Access to the requested family is not allowed.",
     "error": "The family status could not be checked. Please try again.",
     "onboarding": "To use KinHub services, create a family or join with a code.",
-    "onboardingPending": "Create and join actions will be enabled by their dedicated features, but the post-login routing path is already enforced.",
+    "onboardingPending": "You can already create your first family here. Joining with a code will arrive in later dedicated features.",
     "ready": "KinHub has verified an active family membership.",
     "readyDetail": "The shared list will arrive in later features without reusing stale data or personal cache from the current bootstrap.",
     "create": {
