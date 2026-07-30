@@ -211,11 +211,12 @@ Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, loc
 ## CI/CD
 
 - `pr-quality.yml`: qualità completa, package e Bicep; nessun deploy.
-- `deploy.yml`: push path-based su `main`; rifiuta SHA superati da input distribuibili, usa full-stack senza baseline e poi sceglie lo scope dal diff rispetto all'ultimo deploy riuscito, coalescendo i pending senza perdere modifiche, con dispatch manuale `auto` da `main`.
-- `deploy-infrastructure.yml`: workflow riusabile full-stack; Bicep, principal PostgreSQL Entra, migration bundle e grant precedono il deploy applicativo condiviso.
-- `deploy-code.yml`: workflow riusabile applicativo; build/test/validatori, One Deploy e Static Web Apps, senza Bicep o migration.
+- `deploy.yml`: push path-based su `main` limitato a `infra/**`, `src/backend/**` e `src/frontend/**`; rileva gli scope modificati e mantiene il dispatch manuale.
+- `deploy-infrastructure.yml`: solo validazione e provisioning Bicep.
+- `deploy-backend.yml`: build/test backend, principal e grant PostgreSQL, migration bundle, One Deploy e smoke test API.
+- `deploy-frontend.yml`: test/build frontend, deploy Static Web Apps e smoke test SPA.
 
-Modifiche a `infra/`, alle migration EF o al workflow infrastrutturale selezionano il percorso full-stack. Per commit misti questo percorso prevale e non parte un secondo deploy applicativo; modifiche esclusivamente applicative non ridistribuiscono l'infrastruttura.
+Ogni workflow parte solo per modifiche nella propria cartella. Se un commit tocca piu scope, il provisioning termina prima dei deploy backend/frontend; le migration appartengono sempre al backend e vengono applicate prima del relativo codice.
 
 Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il token dedicato del servizio. Il publish profile Function è solo fallback opzionale e non è usato dal percorso primario.
 
@@ -290,6 +291,6 @@ Flex scala a zero e non usa always-ready in dev. PostgreSQL Burstable è il cost
 - Creare/configurare app registration External ID e consenso.
 - Creare federated credential GitHub OIDC e assegnare ruoli minimi.
 - Valorizzare secret/variable per environment.
-- Per un ambiente nuovo, eseguire prima il provisioning Bicep validato, recuperare il token SWA e configurare secret/variable; poi eseguire `deploy.yml` manualmente con scope `infrastructure`.
-- Copiare gli output Function/SWA nelle Variables richieste; i merge successivi su `main` saranno classificati dai path.
+- Per un ambiente nuovo, eseguire prima `deploy.yml` manualmente con scope `infrastructure`, recuperare il token SWA e configurare secret/variable; poi eseguire separatamente gli scope `backend` e `frontend`.
+- Copiare gli output Function/SWA nelle Variables richieste; i merge successivi su `main` attiveranno soltanto gli scope le cui cartelle sono cambiate.
 - Sostituire icone PWA placeholder e verificare installazione sui browser target.

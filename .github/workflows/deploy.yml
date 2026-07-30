@@ -1,168 +1,125 @@
-name: Deploy changed application scope
+name: Deploy changed scopes
 
 on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/deploy.yml"
-      - ".github/workflows/deploy-code.yml"
-      - ".github/workflows/deploy-infrastructure.yml"
       - "infra/**"
       - "src/backend/**"
       - "src/frontend/**"
-      - "scripts/**"
-      - "docs/user-guide/**"
-      - "changes/**"
-      - "tools/docs-sync/**"
-      - "tools/release-notes/**"
-      - "Directory.Build.props"
-      - "KinHub.slnx"
-      - "VERSION"
   workflow_dispatch:
     inputs:
       deployment_scope:
         description: Scope to deploy
         required: true
-        default: auto
+        default: all
         type: choice
         options:
-          - auto
-          - application
+          - all
           - infrastructure
+          - backend
+          - frontend
 
 permissions:
-  actions: read
   contents: read
   id-token: write
 
-concurrency:
-  group: deploy-dev
-  cancel-in-progress: false
-
 jobs:
-  classify:
-    name: Select deployment scope
+  changes:
+    name: Detect changed scopes
     runs-on: ubuntu-latest
     outputs:
-      deployment_scope: ${{ steps.scope.outputs.deployment_scope }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Classify changed paths
-        id: scope
+      - name: Detect deployable paths
+        id: changes
         shell: bash
         env:
-          CURRENT_SHA: ${{ github.sha }}
-          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
           MANUAL_SCOPE: ${{ inputs.deployment_scope }}
         run: |
-          classify_range() {
-            local base_sha="$1"
-            local head_sha="$2"
-            local scope=none
-
-            while IFS= read -r changed_path; do
-              case "$changed_path" in
-                infra/*|.github/workflows/deploy.yml|.github/workflows/deploy-infrastructure.yml|src/backend/infrastructure/DA.KinHub.Infrastructure/Persistence/Migrations/*)
-                  echo infrastructure
-                  return
-                  ;;
-                .github/workflows/deploy-code.yml|src/backend/*|src/frontend/*|scripts/*|docs/user-guide/*|changes/*|tools/docs-sync/*|tools/release-notes/*|Directory.Build.props|KinHub.slnx|VERSION)
-                  scope=application
-                  ;;
-              esac
-            done < <(git diff --no-renames --name-only "$base_sha" "$head_sha")
-
-            echo "$scope"
-          }
-
-          if [[ "$GITHUB_RUN_ATTEMPT" != "1" ]]; then
-            echo "Do not rerun an old deployment: start a new workflow_dispatch run to preserve ordering." >&2
-            exit 1
-          fi
+          infrastructure=false
+          backend=false
+          frontend=false
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
               echo "Manual deployments must run from main." >&2
               exit 1
             fi
-          fi
 
-          main_head=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/branches/main" \
-            --jq '.commit.sha')
-          if [[ "$CURRENT_SHA" != "$main_head" ]]; then
-            if ! git cat-file -e "${main_head}^{commit}" 2>/dev/null; then
-              git fetch --no-tags origin "$main_head"
-            fi
-            if ! git merge-base --is-ancestor "$CURRENT_SHA" "$main_head"; then
-              echo "Rejected deployment for a commit outside the current main history." >&2
-              exit 1
-            fi
-
-            superseding_scope=$(classify_range "$CURRENT_SHA" "$main_head")
-            if [[ "$superseding_scope" != "none" ]]; then
-              echo "Rejected superseded deployment for $CURRENT_SHA; newer deployable changes exist at $main_head." >&2
-              exit 1
+            case "$MANUAL_SCOPE" in
+              all)
+                infrastructure=true
+                backend=true
+                frontend=true
+                ;;
+              infrastructure|backend|frontend)
+                printf -v "$MANUAL_SCOPE" '%s' true
+                ;;
+            esac
+          else
+            base_sha="$BEFORE_SHA"
+            if [[ "$base_sha" =~ ^0+$ ]]; then
+              base_sha=$(git hash-object -t tree /dev/null)
             fi
 
-            echo "Current main differs only in non-deployable paths; continuing deployment for $CURRENT_SHA." >> "$GITHUB_STEP_SUMMARY"
+            while IFS= read -r changed_path; do
+              case "$changed_path" in
+                infra/*) infrastructure=true ;;
+                src/backend/*) backend=true ;;
+                src/frontend/*) frontend=true ;;
+              esac
+            done < <(git diff --no-renames --name-only "$base_sha" "$GITHUB_SHA")
           fi
 
-          comparison_base=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?branch=main&status=success&per_page=1" \
-            --jq '.workflow_runs[0].head_sha // ""')
+          echo "infrastructure=$infrastructure" >> "$GITHUB_OUTPUT"
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "Infrastructure: $infrastructure" >> "$GITHUB_STEP_SUMMARY"
+          echo "Backend: $backend" >> "$GITHUB_STEP_SUMMARY"
+          echo "Frontend: $frontend" >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ -z "$comparison_base" ]]; then
-            echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
-            echo "No successful deployment baseline exists; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          if [[ "$comparison_base" =~ ^0+$ ]]; then
-            comparison_base=$(git hash-object -t tree /dev/null)
-          elif ! git cat-file -e "${comparison_base}^{commit}" 2>/dev/null; then
-            if ! git fetch --no-tags origin "$comparison_base"; then
-              echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
-              echo "The comparison base is unavailable; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-          fi
-
-          if git cat-file -e "${comparison_base}^{commit}" 2>/dev/null && \
-             ! git merge-base --is-ancestor "$comparison_base" "$CURRENT_SHA"; then
-            echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
-            echo "The last successful deployment is not an ancestor; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          deployment_scope=$(classify_range "$comparison_base" "$CURRENT_SHA")
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ "$MANUAL_SCOPE" == "infrastructure" ]]; then
-              deployment_scope=infrastructure
-            elif [[ "$MANUAL_SCOPE" == "application" && "$deployment_scope" == "infrastructure" ]]; then
-              echo "Application scope was promoted to infrastructure because the accumulated diff contains infrastructure or migrations." >> "$GITHUB_STEP_SUMMARY"
-            elif [[ "$MANUAL_SCOPE" == "application" ]]; then
-              deployment_scope=application
-            fi
-          fi
-
-          echo "deployment_scope=$deployment_scope" >> "$GITHUB_OUTPUT"
-          echo "Comparison base: $comparison_base" >> "$GITHUB_STEP_SUMMARY"
-          echo "Selected deployment scope: $deployment_scope" >> "$GITHUB_STEP_SUMMARY"
-
-  deploy-application:
-    name: Deploy application
-    if: needs.classify.outputs.deployment_scope == 'application'
-    needs: classify
-    uses: ./.github/workflows/deploy-code.yml
+  infrastructure:
+    name: Provision Azure infrastructure
+    if: needs.changes.outputs.infrastructure == 'true'
+    needs: changes
+    uses: ./.github/workflows/deploy-infrastructure.yml
     secrets: inherit
 
-  deploy-infrastructure:
-    name: Deploy infrastructure and application
-    if: needs.classify.outputs.deployment_scope == 'infrastructure'
-    needs: classify
-    uses: ./.github/workflows/deploy-infrastructure.yml
+  backend:
+    name: Migrate and deploy backend
+    if: >-
+      always() &&
+      needs.changes.outputs.backend == 'true' &&
+      (needs.infrastructure.result == 'success' || needs.infrastructure.result == 'skipped')
+    needs: [changes, infrastructure]
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      function_app_name: ${{ needs.infrastructure.outputs.function_app_name }}
+      function_app_hostname: ${{ needs.infrastructure.outputs.function_app_hostname }}
+      function_principal_id: ${{ needs.infrastructure.outputs.function_principal_id }}
+      postgres_server_name: ${{ needs.infrastructure.outputs.postgres_server_name }}
+      postgres_hostname: ${{ needs.infrastructure.outputs.postgres_hostname }}
+      postgres_database_name: ${{ needs.infrastructure.outputs.postgres_database_name }}
+    secrets: inherit
+
+  frontend:
+    name: Build and deploy frontend
+    if: >-
+      always() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.infrastructure.result == 'success' || needs.infrastructure.result == 'skipped')
+    needs: [changes, infrastructure]
+    uses: ./.github/workflows/deploy-frontend.yml
+    with:
+      function_app_hostname: ${{ needs.infrastructure.outputs.function_app_hostname }}
+      static_web_app_name: ${{ needs.infrastructure.outputs.static_web_app_name }}
+      static_web_app_hostname: ${{ needs.infrastructure.outputs.static_web_app_hostname }}
     secrets: inherit

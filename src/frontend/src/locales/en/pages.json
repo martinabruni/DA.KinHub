@@ -48,7 +48,7 @@
       "forbiddenTitle": "List access is not allowed",
       "forbiddenDescription": "KinList immediately cleared items and cursors to protect the family context.",
       "paginationLabel": "List navigation",
-      "paginationStatus": "Showing {{count}} items on a page of {{pageSize}}"
+      "paginationStatus": "{{count}} of {{pageSize}}"
     },
     "create": {
       "label": "Family name",

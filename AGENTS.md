@@ -97,7 +97,7 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Non assumere singleton o applicare migration lunghe durante il cold start.
 - `Database:ApplyMigrationsOnStartup` è false per default ed è consentito solo in Development.
 - Il fallback locale usa PostgreSQL advisory lock, timeout, log e fallimento esplicito.
-- Ambienti condivisi usano migration bundle nel percorso full-stack prima del deploy codice; una modifica alle migration deve attivare quel percorso anche senza modifiche Bicep.
+- Ambienti condivisi applicano il migration bundle nel workflow backend prima di One Deploy; ogni modifica sotto `src/backend/**`, incluse le migration, attiva questo percorso senza rieseguire Bicep.
 - I bundle EF e l'automazione migration partono dal factory/progetto di design-time autorevole; non cambiare startup project, immagine runtime o dipendenze Docker senza rilanciare build bundle e packaging end-to-end.
 - Script SQL, blocchi PL/pgSQL, query KQL e heredoc usati nei workflow devono essere verificati per quoting, delimitatori ed espansioni della shell prima del push.
 - Ogni migration include procedura di verifica e rollback in `docs/operations/database-migrations.md`.
@@ -181,7 +181,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 - Non inventare stringhe di versione o formato per Azure, .NET, provider o modelli: verifica i valori supportati e il formato richiesto dall'API o dalla CLI correnti prima di scriverli. Se una versione cambia, allinea anche package accoppiati, workflow SDK/runtime e file generati.
 - Ogni rename di env var, app setting, secret, parametro, namespace o artifact name richiede grep repository-wide e aggiornamento di tutti i consumer, inclusi script, prompt, README e workflow.
 - Ogni modifica ai workflow deve verificare contratti reali del repository: path, nomi artifact, vars/secrets, output, permessi `GITHUB_TOKEN`, workflow riusabili e sintassi esatta dei flag `az` tramite `--help` o documentazione ufficiale.
-- Il deploy su push a `main` e orchestrato da un solo workflow path-based: modifiche applicative eseguono soltanto il deploy applicativo; modifiche a `infra/`, alle migration o al workflow infrastrutturale eseguono Bicep, principal/grant, migration e infine lo stesso deploy applicativo riusabile. Nei commit misti prevale sempre il percorso infrastrutturale; ogni run classifica il diff dall'ultimo deploy riuscito, rifiuta gli SHA superati da modifiche distribuibili piu recenti, usa full-stack finche non esiste un baseline riuscito e promuove i dispatch applicativi quando necessario, cosi la concurrency puo coalescere i pending senza perdere una migration o un'infrastruttura fallita.
+- Il deploy su push a `main` e orchestrato da un solo workflow con trigger limitato a `infra/**`, `src/backend/**` e `src/frontend/**`. Ogni scope richiama un workflow riusabile distinto: Infrastructure esegue solo Bicep, Backend applica migration e grant prima di One Deploy, Frontend pubblica solo Static Web Apps. Nei commit misti Infrastructure precede gli scope applicativi selezionati; uno scope non modificato non viene distribuito.
 - Quando modifichi una fonte autorevole che genera output versionati, rigenera e valida subito gli artefatti derivati; non correggere a mano file generati salvo indicazione esplicita del repository.
 
 ### Promuovere un componente UI
@@ -237,9 +237,10 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 ## CI/CD
 
 - `pr-quality.yml`: restore/build/test/publish/package, frontend, tool e Bicep; nessun deploy.
-- `deploy.yml`: push path-based su `main`, classificazione univoca dello scope dall'ultimo deploy riuscito e coalescenza sicura dei pending; mantiene anche il dispatch manuale esplicito.
-- `deploy-infrastructure.yml`: workflow riusabile per Bicep, principal PostgreSQL Entra, migration bundle con token identity-based e grant, seguito dal deploy applicativo condiviso.
-- `deploy-code.yml`: workflow riusabile per One Deploy, Static Web Apps e smoke test; non applica migration e non modifica memoria/scala/concorrenza.
+- `deploy.yml`: orchestratore su `main` con i soli path `infra/**`, `src/backend/**` e `src/frontend/**`; nei commit misti ordina provisioning e deploy applicativi e mantiene il dispatch manuale esplicito.
+- `deploy-infrastructure.yml`: workflow riusabile di solo provisioning Bicep; non applica migration e non distribuisce codice.
+- `deploy-backend.yml`: workflow riusabile per build/test backend, principal e grant PostgreSQL, migration bundle identity-based, One Deploy e smoke test API.
+- `deploy-frontend.yml`: workflow riusabile per test/build frontend, Static Web Apps e smoke test della SPA.
 - Parametri Flex restano in Bicep/bicepparam; GitHub Variable contiene solo il nome Function App necessario al deploy.
 - Le modifiche a workflow, packaging, deploy o observability non sono concluse finche non verifichi anche lo stato live risultante: runtime effettivo ARM, `health/live`, `api/version` e ingestione telemetrica attesa quando applicabile.
 - Non stampare secret o output sensibili nei log.

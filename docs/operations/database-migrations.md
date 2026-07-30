@@ -10,7 +10,7 @@ Per ambienti condivisi genera un bundle:
 dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
 ```
 
-In Azure una modifica sotto `Persistence/Migrations` seleziona automaticamente il percorso full-stack anche senza modifiche Bicep. Il bundle viene eseguito una volta, dopo infrastruttura e principal ma prima del deploy applicativo, con una connection string costruita al volo da host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
+In Azure ogni modifica sotto `src/backend/**`, incluse `Persistence/Migrations`, attiva il workflow backend senza rieseguire Bicep. Il bundle viene eseguito una volta dopo la creazione/verifica dei principal e prima di One Deploy, con una connection string costruita al volo da host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
 
 Prima della migration in ambienti condivisi verifica anche:
 

@@ -48,7 +48,7 @@
       "forbiddenTitle": "L'accesso alla lista non e consentito",
       "forbiddenDescription": "KinList ha rimosso subito elementi e cursori per proteggere il contesto famiglia.",
       "paginationLabel": "Navigazione della lista",
-      "paginationStatus": "{{count}} elementi mostrati su una pagina da {{pageSize}}"
+      "paginationStatus": "{{count}} di {{pageSize}}"
     },
     "create": {
       "label": "Nome della famiglia",
