@@ -76,6 +76,8 @@ Nessuno nella wave. La feature congela catalogo componenti, token, convenzioni i
 - **Infrastruttura/configurazione**: Nessuna nuova risorsa; solo eventuali asset/configurazioni frontend strettamente necessari alla UI.
 - **Documentazione/operazioni**: `skills/frontend/SKILL.md`, `skills/frontend/catalog.json`, eventuali esempi skill, `skills/implementation/*`, guide/help bilingui, change fragment e `AGENTS.md` se le regole di riuso cambiano.
 
+La proposta di modifica successiva su help e navigazione informativa è descritta in `cr-help-navigation.md`.
+
 ### Errori, sicurezza e osservabilità
 
 - Nessuna regressione su stati di errore, `403`, sessione scaduta, offline, loading o empty: devono essere renderizzati tramite componenti condivisi senza mostrare dati stale.

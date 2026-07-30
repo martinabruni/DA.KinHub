@@ -22,7 +22,8 @@ function LayoutContent() {
     home: routeDefinition("home").path,
     releaseNotes: routeDefinition("releaseNotes").path,
     about: routeDefinition("about").path,
-    settings: routeDefinition("settings").path
+    settings: routeDefinition("settings").path,
+    userGuide: routeDefinition("docs").path.replace(":slug", "getting-started")
   };
 
   const handleThemeToggle = () => setTheme(isDark ? "light" : "dark");
@@ -56,6 +57,7 @@ function LayoutContent() {
                 information: t("nav.information"),
                 releaseNotes: t("nav.releaseNotes"),
                 version: t("nav.about"),
+                userGuide: t("nav.userGuide"),
                 language: t("language.label"),
                 languageOptions: [
                   { value: "it", label: t("language.it") },

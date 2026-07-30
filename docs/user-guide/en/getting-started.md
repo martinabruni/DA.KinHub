@@ -7,15 +7,15 @@ description: Navigate KinHub, customize the experience, and understand how the p
 
 ## Navigation
 
-The floating navigation bar stays fixed at the bottom and opens Home, Release notes, Version, and Settings. When a page registers contextual actions, you can swipe between the global bar and the page bar without losing position or focus.
+The floating navigation bar stays fixed at the bottom and opens Home and Settings. The Information menu groups Release notes, Version, and the User guide. When a page registers contextual actions, you can swipe between the global bar and the page bar without losing position or focus.
 
 ## Language and theme
 
 Choose Italian or English and a light, dark, or system theme. Preferences stay on this device and are applied before rendering to avoid a wrong-theme flash.
 
-## Contextual help
+## User guide
 
-Immediately below every page title is a panel that is closed by default. Open it for purpose, actions, prerequisites, fields, and limits, or follow the full-guide link.
+Open the Information menu in the floating bar to reach the User guide, Release notes, and the Version page directly. The guides remain bilingual and are updated together with the app's visible flows.
 
 ## Tutorial and lifecycle
 

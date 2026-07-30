@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "fc5ab42",
-  "buildDate": "2026-07-29T16:04:09.989Z",
+  "commit": "407d212",
+  "buildDate": "2026-07-30T08:51:32.219Z",
   "environment": "Development",
   "entries": [
     {
@@ -102,6 +102,17 @@
       "descriptions": {
         "it": "Implementata la pipeline HTTP condivisa della Function App con correlation ID, Problem Details centralizzati, autorizzazione default-deny, route/OpenAPI condivise e telemetria worker basata su Azure Monitor OpenTelemetry.",
         "en": "Implemented the shared Function App HTTP pipeline with correlation ID, centralized Problem Details, default-deny authorization, shared routes/OpenAPI, and Azure Monitor OpenTelemetry-based worker telemetry."
+      }
+    },
+    {
+      "id": "none-changed-help-navigation-user-guide",
+      "type": "changed",
+      "area": "frontend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Sposto l'help contestuale fuori dalle pagine, aggiorno il manuale utente e aggiungo nel menu Informazioni il link diretto alla guida introduttiva.",
+        "en": "Move contextual help out of the pages, update the user guide, and add a direct entry-point link to the getting-started guide in the Information menu."
       }
     },
     {
@@ -322,6 +333,28 @@
       "descriptions": {
         "it": "Corretto il provisioning temporaneo delle firewall rule PostgreSQL nei workflow di deploy sostituendo il comando `az postgres flexible-server firewall-rule` con chiamate ARM via `az rest`, e reso affidabile il code deploy ricavando dinamicamente Function App, server, host e database direttamente dalle risorse Azure invece di dipendere da app setting o nomi statici.",
         "en": "Fixed temporary PostgreSQL firewall rule provisioning in the deployment workflows by replacing `az postgres flexible-server firewall-rule` with ARM calls through `az rest`, and made code deployments reliable by dynamically resolving the Function App, server, host, and database directly from Azure resources instead of depending on app settings or static names."
+      }
+    },
+    {
+      "id": "none-fixed-release-notes-responsive",
+      "type": "fixed",
+      "area": "frontend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Rendo la pagina delle note di rilascio responsive sui dispositivi mobili e rimuovo la superficie card duplicata mantenendo una sola card per voce.",
+        "en": "Make the release notes page responsive on mobile and remove the duplicated card surface, keeping one card per entry."
+      }
+    },
+    {
+      "id": "none-fixed-telemetry-test-concurrency",
+      "type": "fixed",
+      "area": "backend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Risolto il test di telemetria che poteva fallire in modo intermittente durante l'esecuzione parallela dei test di integrazione.",
+        "en": "Fixed the telemetry test that could intermittently fail while integration tests ran in parallel."
       }
     }
   ]

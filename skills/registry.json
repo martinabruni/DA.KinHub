@@ -146,7 +146,7 @@
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "7efbb2d84de4272000f46d7236997582af6361f88378fad45ff8668e786e9a8f"
+          "checksum": "278e590001f4e25cecb9125244a25193f9500acc907d8641556ce309cb9a68de"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",

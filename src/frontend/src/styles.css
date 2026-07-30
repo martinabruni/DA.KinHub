@@ -98,8 +98,11 @@ input { min-height: 2.7rem; padding: .55rem .7rem; border: 1px solid var(--borde
 .metadata div { display: grid; grid-template-columns: 1fr 1.5fr; padding: .85rem 0; border-bottom: 1px solid var(--border); }
 .metadata dt { color: var(--muted); }
 .metadata dd { margin: 0; font-weight: 650; word-break: break-word; }
-.release-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
-.release-list li { padding: 1.1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.release-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; min-width: 0; }
+.release-heading span { min-width: 0; color: var(--muted); overflow-wrap: anywhere; }
+.release-list li { min-width: 0; }
+.release-list .kh-card { min-width: 0; }
+.release-list strong, .release-list p { overflow-wrap: anywhere; }
 .kh-settings-card, .kh-onboarding-form, .kh-onboarding-panel { display: grid; gap: 1rem; align-content: start; }
 .kh-settings-card h2, .kh-settings-card p, .kh-onboarding-panel p { margin: 0; }
 .markdown { max-width: 50rem; line-height: 1.7; }
