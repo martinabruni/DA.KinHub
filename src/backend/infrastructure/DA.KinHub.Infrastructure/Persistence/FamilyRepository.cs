@@ -1,6 +1,7 @@
 using System.Data.Common;
 using DA.KinHub.Domain.Common;
 using DA.KinHub.Domain.Families;
+using DA.KinHub.Domain.KinServices;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -36,8 +37,18 @@ internal sealed class FamilyRepository(KinHubDbContext dbContext) : IFamilyRepos
                         return;
                     }
 
+                    var preconfiguredServices = await dbContext.KinServices
+                        .Where(service => service.IsActive && service.IsPreconfigured)
+                        .OrderBy(service => service.Route)
+                        .ToListAsync(ct);
+
                     dbContext.Families.Add(family);
                     dbContext.FamilyMemberships.Add(membership);
+                    foreach (var service in preconfiguredServices)
+                    {
+                        dbContext.FamilyKinServiceAvailabilities.Add(FamilyKinServiceAvailability.Create(family.Id, service.Id, isActive: true, family.CreatedAt));
+                    }
+
                     await dbContext.SaveChangesAsync(ct);
                     await transaction.CommitAsync(ct);
                     result = new FamilyCreationPersistenceResult.Created(family.Id);

@@ -19,6 +19,17 @@ export interface KinHubFamilyState {
   familyId: string;
 }
 
+export interface KinHubServiceCatalogItem {
+  key: string;
+  route: string;
+  name: string;
+  description: string;
+}
+
+export interface KinHubServiceCatalogResult {
+  services: KinHubServiceCatalogItem[];
+}
+
 export class ApiError extends Error {}
 
 export class ApiResponseError extends ApiError {
@@ -51,7 +62,15 @@ export class KinHubApiClient {
     });
   }
 
-  private async request<T>(path: string, init: RequestInit): Promise<T> {
+  async getFamilyServices(familyId: string, language: string, signal?: AbortSignal): Promise<KinHubServiceCatalogResult> {
+    return this.request<KinHubServiceCatalogResult>(`/api/kinhub/services?${new URLSearchParams({ familyId, language }).toString()}`, { signal });
+  }
+
+  async checkServiceAccess(serviceKey: string, familyId: string, signal?: AbortSignal): Promise<void> {
+    await this.request<void>(`/api/kinhub/services/${encodeURIComponent(serviceKey)}/access?${new URLSearchParams({ familyId }).toString()}`, { signal, expectNoContent: true });
+  }
+
+  private async request<T>(path: string, init: RequestInit & { expectNoContent?: boolean }): Promise<T> {
     if (!navigator.onLine) {
       throw new ApiNetworkError("The browser is offline.");
     }
@@ -88,6 +107,10 @@ export class KinHubApiClient {
 
     if (!response.ok) {
       throw new ApiResponseError(await readProblem(response), response.headers.get("X-Correlation-ID") ?? correlationId);
+    }
+
+    if (init.expectNoContent || response.status === 204) {
+      return undefined as T;
     }
 
     return response.json() as Promise<T>;

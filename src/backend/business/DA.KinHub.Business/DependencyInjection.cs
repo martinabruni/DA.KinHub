@@ -9,5 +9,7 @@ public static class DependencyInjection
         .AddSingleton(TimeProvider.System)
         .AddScoped<IKinHubBootstrapService, KinHubBootstrapService>()
         .AddScoped<IFamilyCreationService, FamilyCreationService>()
-        .AddScoped<IFamilyAccessService, FamilyAccessService>();
+        .AddScoped<IFamilyAccessService, FamilyAccessService>()
+        .AddScoped<IKinHubServiceCatalogService, KinHubServiceCatalogService>()
+        .AddScoped<IKinHubServiceAccessService, KinHubServiceAccessService>();
 }

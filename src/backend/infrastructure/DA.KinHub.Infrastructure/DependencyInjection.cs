@@ -1,6 +1,7 @@
 using DA.KinHub.Domain.Families;
 using DA.KinHub.Domain.Documents;
 using DA.KinHub.Domain.Identity;
+using DA.KinHub.Domain.KinServices;
 using DA.KinHub.Infrastructure.Persistence;
 using DA.KinHub.Infrastructure.Storage;
 using Azure.Core;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
         services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMembershipRepository, FamilyMembershipRepository>();
+        services.AddScoped<IKinServiceRepository, KinServiceRepository>();
         services.AddHealthChecks().AddDbContextCheck<KinHubDbContext>("postgresql", tags: [InfrastructureHealthChecks.ReadyTag]);
         services.AddHostedService<DatabaseMigrationHostedService>();
         return services;

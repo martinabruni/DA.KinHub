@@ -8,6 +8,7 @@ let online = true;
 let account: { homeAccountId: string } | null = null;
 let bootstrapHandler: (signal?: AbortSignal) => Promise<{ state: "family"; familyId: string } | { state: "onboarding" }> = () => Promise.resolve({ state: "onboarding" });
 let createFamilyHandler: (name: string, signal?: AbortSignal) => Promise<{ state: "family"; familyId: string }> = () => Promise.resolve({ state: "family", familyId: "family-created" });
+let serviceAccessHandler: (serviceKey: string, familyId: string, signal?: AbortSignal) => Promise<void> = () => Promise.resolve();
 let createFamilyCallCount = 0;
 const msalInstance = { name: "msal" };
 const apiMocks = vi.hoisted(() => ({
@@ -23,7 +24,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@azure/msal-react", () => ({
-  useMsal: () => ({ instance: msalInstance })
+  useMsal: () => ({ instance: msalInstance, inProgress: "none" })
 }));
 
 vi.mock("../lib/auth", () => ({
@@ -52,6 +53,10 @@ vi.mock("../lib/api", () => {
         createFamilyCallCount += 1;
         return createFamilyHandler(body.name, signal);
       }
+
+      checkServiceAccess(serviceKey: string, familyId: string, signal?: AbortSignal) {
+        return serviceAccessHandler(serviceKey, familyId, signal);
+      }
     }
   };
 });
@@ -79,6 +84,7 @@ describe("KinListAccessGate", () => {
     account = null;
     bootstrapHandler = () => Promise.resolve({ state: "onboarding" });
     createFamilyHandler = () => Promise.resolve({ state: "family", familyId: "family-created" });
+    serviceAccessHandler = () => Promise.resolve();
     createFamilyCallCount = 0;
   });
 

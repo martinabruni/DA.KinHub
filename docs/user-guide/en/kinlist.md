@@ -7,7 +7,7 @@ description: Correct post-login routing, required onboarding, and a safe offline
 
 ## What happens after sign-in
 
-KinHub always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the PWA routes you into KinList. If the family is missing or the membership is no longer active, you stay on `/kinlist` and only see KinHub onboarding.
+KinHub always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the `/kinlist` route also performs a dedicated server-side availability check for the `kinlist` service on the authorized family. If the family is missing or the membership is no longer active, you stay on `/kinlist` and only see KinHub onboarding.
 
 ## Creating the first family
 
@@ -17,7 +17,7 @@ If the request is retried or races with another one, KinHub still returns the sa
 
 ## What is not shown
 
-When there is no active membership, KinHub does not show members, list data, or any other shared information. Denied access also stays distinct from an empty state.
+When there is no active membership, KinHub does not show members, list data, or any other shared information. Denied access also stays distinct from an empty state and does not reveal whether the service is unknown, inactive, or simply unavailable to the family.
 
 ## Offline and privacy
 
@@ -25,4 +25,4 @@ Only the public PWA shell stays available offline. KinList does not keep persona
 
 ## Current feature scope
 
-This slice connects KinList to KinHub's shared bootstrap and enables atomic first-family creation. Join by code and the shared list arrive in later features.
+This slice connects KinList to KinHub's shared bootstrap, enables atomic first-family creation, and uses the new persisted family-service catalog. Join by code and the shared list arrive in later features.

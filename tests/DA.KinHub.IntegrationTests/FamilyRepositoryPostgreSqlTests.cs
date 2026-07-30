@@ -60,6 +60,9 @@ public sealed class FamilyRepositoryPostgreSqlTests
               AND tablename = 'family_memberships'
               AND indexname = 'IX_family_memberships_single_active_user';
             """));
+
+        Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.kin_services WHERE key = 'kinlist' AND route = '/kinlist' AND is_active AND is_preconfigured;"));
+        Assert.Equal(2L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.kin_service_localizations WHERE kin_service_id = (SELECT \"Id\" FROM shared.kin_services WHERE key = 'kinlist');"));
     }
 
     [SkippableFact]
@@ -105,6 +108,7 @@ public sealed class FamilyRepositoryPostgreSqlTests
         Assert.Equal("Famiglia Bruni", persistedName);
         Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.families;"));
         Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.family_memberships;"));
+        Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.family_kin_service_availabilities;"));
         Assert.Equal(0L, orphanCount);
     }
 
@@ -137,12 +141,39 @@ public sealed class FamilyRepositoryPostgreSqlTests
         Assert.Single(results.Select(result => result.FamilyId).Distinct());
         Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.families;"));
         Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.family_memberships;"));
+        Assert.Equal(1L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.family_kin_service_availabilities;"));
         Assert.Equal(0L, await harness.ExecuteScalarAsync<long>(
             """
             SELECT COUNT(*)
             FROM shared.families f
             LEFT JOIN shared.family_memberships fm ON fm.family_id = f."Id" AND fm.inactive_at IS NULL
             WHERE fm."Id" IS NULL;
+            """));
+    }
+
+    [SkippableFact]
+    public async Task MigrateBackfillsKinListAvailabilityForExistingActiveFamiliesWithoutDuplicates()
+    {
+        await using var harness = await PostgreSqlIntegrationTestHarness.CreateAsync();
+
+        await harness.MigrateAsync("20260728131039_AddFamilyNameAndCreator");
+        var firstUser = await harness.SeedUserAsync();
+        var secondUser = await harness.SeedUserAsync();
+        await harness.SeedFamilyWithMembershipAsync(firstUser.Id, "Famiglia Uno");
+        await harness.SeedFamilyWithMembershipAsync(secondUser.Id, "Famiglia Due");
+
+        await harness.MigrateAsync();
+
+        Assert.Equal(2L, await harness.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM shared.family_kin_service_availabilities;"));
+        Assert.Equal(0L, await harness.ExecuteScalarAsync<long>(
+            """
+            SELECT COUNT(*)
+            FROM (
+                SELECT family_id, kin_service_id, COUNT(*)
+                FROM shared.family_kin_service_availabilities
+                GROUP BY family_id, kin_service_id
+                HAVING COUNT(*) > 1
+            ) duplicates;
             """));
     }
 
@@ -226,6 +257,18 @@ public sealed class FamilyRepositoryPostgreSqlTests
             dbContext.ApplicationUsers.Add(user);
             await dbContext.SaveChangesAsync();
             return user;
+        }
+
+        public async Task SeedFamilyWithMembershipAsync(Guid applicationUserId, string familyName)
+        {
+            using var scope = serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<KinHubDbContext>();
+            var now = DateTimeOffset.UtcNow;
+            var family = Family.Create(FamilyName.Create(familyName), applicationUserId, now);
+            var membership = FamilyMembership.Create(applicationUserId, family.Id, now);
+            dbContext.Families.Add(family);
+            dbContext.FamilyMemberships.Add(membership);
+            await dbContext.SaveChangesAsync();
         }
 
         public async Task<FamilyCreationPersistenceResult> CreateFamilyAsync(Guid applicationUserId, string familyName)

@@ -54,6 +54,8 @@ public sealed class FunctionContractTests
         Assert.Contains("/api/kinhub/bootstrap", openApi, StringComparison.Ordinal);
         Assert.Contains("/api/kinhub/families", openApi, StringComparison.Ordinal);
         Assert.Contains("/api/kinhub/family-context", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/services", openApi, StringComparison.Ordinal);
+        Assert.Contains("/api/kinhub/services/{serviceKey}/access", openApi, StringComparison.Ordinal);
 
         var familyOperation = openApiDocument.RootElement
             .GetProperty("paths")
@@ -124,6 +126,8 @@ public sealed class FunctionContractTests
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinHubBootstrapService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyCreationService>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IFamilyAccessService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinHubServiceCatalogService>());
+        Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Business.Identity.IKinHubServiceAccessService>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDocumentStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<DA.KinHub.Infrastructure.Persistence.KinHubDbContext>());
     }
@@ -228,6 +232,8 @@ public sealed class FunctionContractTests
         var bootstrap = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubBootstrapFunctions.Bootstrap"));
         var createFamily = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubFamilyCreationFunctions.CreateFamily"));
         var family = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubFamilyFunctions.FamilyContext"));
+        var services = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubServicesFunctions.GetCatalog"));
+        var serviceAccess = provider.Get(Definition("DA.KinHub.Functions.Functions.KinHubServicesFunctions.CheckAccess"));
         var version = provider.Get(Definition("DA.KinHub.Functions.Functions.MetadataFunctions.Version"));
 
         Assert.True(bootstrap.IsHttp);
@@ -236,6 +242,8 @@ public sealed class FunctionContractTests
         Assert.False(createFamily.AllowAnonymous);
         Assert.False(createFamily.RequiresFamilyAccess);
         Assert.True(family.RequiresFamilyAccess);
+        Assert.True(services.RequiresFamilyAccess);
+        Assert.True(serviceAccess.RequiresFamilyAccess);
         Assert.True(version.AllowAnonymous);
     }
 

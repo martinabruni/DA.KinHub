@@ -4,4 +4,5 @@ public static class BusinessErrorCodes
 {
     public const string FamilyNameInvalid = "family.nameInvalid";
     public const string PostgreSqlUnavailable = "dependency.postgresqlUnavailable";
+    public const string ServiceAccessDenied = "service.accessDenied";
 }
