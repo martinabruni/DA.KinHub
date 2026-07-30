@@ -1,9 +1,19 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useEffect } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { Layout } from "./Layout";
 import { useShellBar } from "./ShellBarContext";
+
+beforeAll(() => {
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+});
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -74,5 +84,23 @@ describe("Layout", () => {
     }
 
     expect(screen.getByText("Contextual actions")).toBeInTheDocument();
+  });
+
+  it("adds the user guide link to the information menu", () => {
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: <Layout />,
+        children: [{ index: true, element: <div>Page body</div> }]
+      }
+    ]);
+
+    render(<RouterProvider router={router} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "nav.information" }));
+
+    expect(screen.getByRole("link", { name: "nav.releaseNotes" })).toHaveAttribute("href", "/release-notes");
+    expect(screen.getByRole("link", { name: "nav.about" })).toHaveAttribute("href", "/about");
+    expect(screen.getByRole("link", { name: "nav.userGuide" })).toHaveAttribute("href", "/docs/getting-started");
   });
 });

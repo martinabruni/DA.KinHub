@@ -192,6 +192,8 @@ Le frecce continue sono dipendenze `hard`; le tratteggiate indicano coordinament
 
 FEAT-001 ha applicato la correzione architetturale descritta in `features/accesso-instradamento/cr.md`; il piano originario è conservato in `feature.plan.md` e quello correttivo in `cr.plan.md`. La CR `features/accesso-instradamento/cr-login-refresh.md` sostituisce il solo vincolo `memoryStorage` con `sessionStorage` per mantenere la sessione MSAL nel refresh della stessa scheda, senza persistere dati familiari. Le feature dipendenti non devono copiare pattern endpoint locali e seguono invece `docs/architecture/http-functions.md`.
 
+FEAT-014 include la CR implementata `features/design-system-condiviso/cr-help-navigation.md`, che nasconde le accordion contestuali e rende il manuale utente direttamente raggiungibile dal menu Informazioni.
+
 ## Matrice di tracciabilità
 
 | Requisito o vincolo | Feature primaria | Feature di supporto | Criteri che lo verificano |

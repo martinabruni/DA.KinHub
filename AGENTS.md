@@ -124,16 +124,15 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Le interpolation sono renderizzate come testo React; non usare HTML non sanitizzato.
 - In sviluppo segnala chiavi mancanti.
 
-## Documentazione in-app e accordion obbligatorio
+## Documentazione in-app e guida utente
 
 Ogni route, inclusi 404, documentazione ed error boundary, deve avere:
 
 1. titolo localizzato;
-2. `PageHelpAccordion` subito dopo il titolo;
-3. help italiano e inglese con scopo, azioni, prerequisiti, campi e limiti;
-4. slug di guida esistente in entrambe le lingue.
+2. help italiano e inglese con scopo, azioni, prerequisiti, campi e limiti come contenuto repository, anche se non mostrato inline nella pagina;
+3. slug di guida esistente in entrambe le lingue.
 
-L'accordion usa shadcn/ui/Radix, è accessibile, responsive, compatibile con temi e chiuso per default. Il testo sta nei file i18n, non nelle pagine. `tools/docs-sync` mantiene Markdown come unica fonte e genera JSON consumabile dal frontend. Esegui `npm run docs:validate`, `npm run docs:sync` e `npm run routes:validate`.
+Le route possono mostrare l'help inline oppure demandarlo alla guida utente globale, ma il contenuto bilingue deve restare mantenuto nel repository e coerente con route registry, temi, accessibilità e mobile. Quando una modifica cambia UX, navigazione, contenuti visibili, flussi o capability raggiungibili dall'utente, aggiorna anche il manuale utente in `docs/user-guide/it` e `docs/user-guide/en` oltre ai contenuti help correlati. `tools/docs-sync` mantiene Markdown come unica fonte e genera JSON consumabile dal frontend. Esegui `npm run docs:validate`, `npm run docs:sync` e `npm run routes:validate`.
 
 ## Tutorial
 
@@ -148,7 +147,7 @@ L'accordion usa shadcn/ui/Radix, è accessibile, responsive, compatibile con tem
 
 - Temi `light`, `dark`, `system` tramite CSS variables; persistenza `kinhub.theme`.
 - Lo script in `index.html` applica il tema prima di React per evitare flash.
-- Verifica contrasto, accordion, dialog, badge, toast/notifiche e tutorial in entrambi i temi.
+- Verifica contrasto, help/guida, dialog, badge, toast/notifiche e tutorial in entrambi i temi.
 - Manifest: `KinHub`, icona placeholder documentata, installabilità desktop/mobile e fallback navigazione.
 - Caching prudente: network-first per metadata versione, niente caching API autenticata.
 - La notifica versione controlla avvio/focus/intervallo, coordina service worker e impedisce loop di refresh.

@@ -61,8 +61,8 @@ export function ThemeToggle({ theme, onToggle, label }: { theme: "light" | "dark
   return <IconButton label={label} tone="warning" onClick={onToggle} data-tour="theme">{theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}</IconButton>;
 }
 
-export function InformationMenu({ label, releaseNotesLabel, versionLabel, releaseNotesPath, versionPath }: { label: string; releaseNotesLabel: string; versionLabel: string; releaseNotesPath: string; versionPath: string }) {
-  return <BarPopover label={label} trigger={<IconButton label={label} tone="info"><Info aria-hidden="true" /></IconButton>}><div className="kh-menu-list"><Link to={releaseNotesPath}>{releaseNotesLabel}</Link><Link to={versionPath}>{versionLabel}</Link></div></BarPopover>;
+export function InformationMenu({ label, releaseNotesLabel, versionLabel, userGuideLabel, releaseNotesPath, versionPath, userGuidePath }: { label: string; releaseNotesLabel: string; versionLabel: string; userGuideLabel: string; releaseNotesPath: string; versionPath: string; userGuidePath: string }) {
+  return <BarPopover label={label} trigger={<IconButton label={label} tone="info"><Info aria-hidden="true" /></IconButton>}><div className="kh-menu-list"><Link to={releaseNotesPath}>{releaseNotesLabel}</Link><Link to={versionPath}>{versionLabel}</Link><Link to={userGuidePath}>{userGuideLabel}</Link></div></BarPopover>;
 }
 
 export function UserMenu({ authenticated, name, loginLabel, logoutLabel, accountLabel, onLogin, onLogout }: { authenticated: boolean; name?: string; loginLabel: string; logoutLabel: string; accountLabel: string; onLogin: () => void; onLogout: () => void }) {
@@ -73,10 +73,10 @@ export function UserMenu({ authenticated, name, loginLabel, logoutLabel, account
   return <BarPopover label={accountLabel} trigger={<IconButton label={accountLabel} tone="accent"><UserRound aria-hidden="true" /></IconButton>}><div className="kh-menu-list">{name ? <strong>{name}</strong> : null}<button type="button" onClick={onLogout}><LogOut aria-hidden="true" />{logoutLabel}</button></div></BarPopover>;
 }
 
-export function GlobalNavigationBar({ labels, paths, theme, authenticated, accountName, currentLanguage, onLanguageChange, onThemeToggle, onLogin, onLogout }: { labels: { navigation: string; home: string; information: string; releaseNotes: string; version: string; language: string; languageOptions: Array<{ value: string; label: string }>; theme: string; settings: string; login: string; logout: string; account: string }; paths: { home: string; releaseNotes: string; about: string; settings: string }; theme: "light" | "dark"; authenticated: boolean; accountName?: string; currentLanguage: string; onLanguageChange: (value: string) => void; onThemeToggle: () => void; onLogin: () => void; onLogout: () => void }) {
+export function GlobalNavigationBar({ labels, paths, theme, authenticated, accountName, currentLanguage, onLanguageChange, onThemeToggle, onLogin, onLogout }: { labels: { navigation: string; home: string; information: string; releaseNotes: string; version: string; userGuide: string; language: string; languageOptions: Array<{ value: string; label: string }>; theme: string; settings: string; login: string; logout: string; account: string }; paths: { home: string; releaseNotes: string; about: string; settings: string; userGuide: string }; theme: "light" | "dark"; authenticated: boolean; accountName?: string; currentLanguage: string; onLanguageChange: (value: string) => void; onThemeToggle: () => void; onLogin: () => void; onLogout: () => void }) {
   return <nav className="kh-floating-bar" aria-label={labels.navigation} data-tour="navigation">
     <NavLink className={({ isActive }) => cn("kh-floating-link", isActive && "is-active")} to={paths.home} end aria-label={labels.home}><Home aria-hidden="true" /></NavLink>
-    <InformationMenu label={labels.information} releaseNotesLabel={labels.releaseNotes} versionLabel={labels.version} releaseNotesPath={paths.releaseNotes} versionPath={paths.about} />
+    <InformationMenu label={labels.information} releaseNotesLabel={labels.releaseNotes} versionLabel={labels.version} userGuideLabel={labels.userGuide} releaseNotesPath={paths.releaseNotes} versionPath={paths.about} userGuidePath={paths.userGuide} />
     <LanguageMenu label={labels.language} currentLanguage={currentLanguage} options={labels.languageOptions} onSelect={onLanguageChange} />
     <ThemeToggle theme={theme} onToggle={onThemeToggle} label={labels.theme} />
     <NavLink className={({ isActive }) => cn("kh-floating-link", isActive && "is-active")} to={paths.settings} aria-label={labels.settings}><Settings aria-hidden="true" /></NavLink>
