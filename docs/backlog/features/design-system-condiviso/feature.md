@@ -1,5 +1,5 @@
 ---
-status: In review
+status: Completed
 ---
 
 # FEAT-014 - Usare un design system condiviso in tutta KinHub
