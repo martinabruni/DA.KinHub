@@ -12,6 +12,7 @@ tags:
   - name: Health
   - name: Metadata
   - name: KinHub
+  - name: KinList
 paths:
   /health/live:
     get:
@@ -172,7 +173,174 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/ProblemDetails"
+  /api/kinhub/families:
+    post:
+      tags:
+        - KinHub
+      summary: Create the first family for the signed-in user
+      operationId: createKinHubFamily
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+      responses:
+        "201":
+          description: Family created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KinHubBootstrapResult"
+        "200":
+          description: Existing family returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KinHubBootstrapResult"
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/services:
+    get:
+      tags:
+        - KinHub
+      summary: List the KinServices available for the authorized family
+      operationId: getKinHubServiceCatalog
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - it
+              - en
+      responses:
+        "200":
+          description: Family service catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KinHubServiceCatalogResult"
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/services/{serviceKey}/access:
+    get:
+      tags:
+        - KinHub
+      summary: Check whether the authorized family can access a KinService
+      operationId: checkKinHubServiceAccess
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: serviceKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Access granted
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinlist/items:
+    get:
+      tags:
+        - KinList
+      summary: Read a keyset page of active KinList items visible to the authorized family
+      operationId: getKinListItems
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Active KinList items page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveItemsPage"
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
 components:
+  responses:
+    ProblemDetails:
+      description: Problem Details
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
   securitySchemes:
     bearerAuth:
       type: http
@@ -298,4 +466,99 @@ components:
         familyId:
           type: string
           format: uuid
+          nullable: true
+    KinHubServiceCatalogItem:
+      type: object
+      required:
+        - key
+        - route
+        - name
+        - description
+      properties:
+        key:
+          type: string
+        route:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+    KinHubServiceCatalogResult:
+      type: object
+      required:
+        - services
+      properties:
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/KinHubServiceCatalogItem"
+    ActiveItemsPageAuthor:
+      type: object
+      required:
+        - displayName
+      properties:
+        displayName:
+          type: string
+          nullable: true
+    ActiveItemsPageCategory:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    ActiveItemsPageItem:
+      type: object
+      required:
+        - id
+        - name
+        - categories
+        - remainingCategoryCount
+        - author
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveItemsPageCategory"
+        remainingCategoryCount:
+          type: integer
+          format: int32
+        author:
+          $ref: "#/components/schemas/ActiveItemsPageAuthor"
+        version:
+          type: string
+    ActiveItemsPage:
+      type: object
+      required:
+        - items
+        - effectivePageSize
+        - maxPageSize
+        - previousCursor
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveItemsPageItem"
+        effectivePageSize:
+          type: integer
+          format: int32
+        maxPageSize:
+          type: integer
+          format: int32
+        previousCursor:
+          type: string
+          nullable: true
+        nextCursor:
+          type: string
           nullable: true

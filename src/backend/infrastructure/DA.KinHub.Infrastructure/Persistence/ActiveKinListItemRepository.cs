@@ -27,13 +27,12 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
                                 && registrationGroup.InactiveAt == null
                                 && (item.Visibility == ItemVisibility.Shared
                                     || (item.Visibility == ItemVisibility.Personal && item.OwnerApplicationUserId == applicationUserId))
-                            select new ItemProjection(
-                                item.Id,
-                                item.Name.Value,
-                                item.PositionInGroup,
-                                item.Revision,
-                                registrationGroup.CreatedAt,
-                                registrationGroup.Id);
+                             select new
+                             {
+                                 Item = item,
+                                 GroupCreatedAt = registrationGroup.CreatedAt,
+                                 GroupId = registrationGroup.Id
+                             };
 
             if (anchor is not null)
             {
@@ -41,28 +40,37 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
                     ? baseQuery.Where(item =>
                         item.GroupCreatedAt < anchor.GroupCreatedAt
                         || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId.CompareTo(anchor.GroupId) < 0)
-                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.PositionInGroup > anchor.PositionInGroup)
-                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.PositionInGroup == anchor.PositionInGroup && item.Id.CompareTo(anchor.ItemId) > 0))
+                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.Item.PositionInGroup > anchor.PositionInGroup)
+                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.Item.PositionInGroup == anchor.PositionInGroup && item.Item.Id.CompareTo(anchor.ItemId) > 0))
                     : baseQuery.Where(item =>
                         item.GroupCreatedAt > anchor.GroupCreatedAt
                         || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId.CompareTo(anchor.GroupId) > 0)
-                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.PositionInGroup < anchor.PositionInGroup)
-                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.PositionInGroup == anchor.PositionInGroup && item.Id.CompareTo(anchor.ItemId) < 0));
+                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.Item.PositionInGroup < anchor.PositionInGroup)
+                        || (item.GroupCreatedAt == anchor.GroupCreatedAt && item.GroupId == anchor.GroupId && item.Item.PositionInGroup == anchor.PositionInGroup && item.Item.Id.CompareTo(anchor.ItemId) < 0));
             }
 
             var orderedQuery = direction == ActiveItemsCursorDirection.Next
                 ? baseQuery
                     .OrderByDescending(item => item.GroupCreatedAt)
                     .ThenByDescending(item => item.GroupId)
-                    .ThenBy(item => item.PositionInGroup)
-                    .ThenBy(item => item.Id)
+                    .ThenBy(item => item.Item.PositionInGroup)
+                    .ThenBy(item => item.Item.Id)
                 : baseQuery
                     .OrderBy(item => item.GroupCreatedAt)
                     .ThenBy(item => item.GroupId)
-                    .ThenByDescending(item => item.PositionInGroup)
-                    .ThenByDescending(item => item.Id);
+                    .ThenByDescending(item => item.Item.PositionInGroup)
+                    .ThenByDescending(item => item.Item.Id);
 
-            var projections = await orderedQuery.Take(effectivePageSize + 1).ToListAsync(cancellationToken);
+            var projectionRows = await orderedQuery.Take(effectivePageSize + 1).ToListAsync(cancellationToken);
+            var projections = projectionRows
+                .Select(row => new ItemProjection(
+                    row.Item.Id,
+                    row.Item.Name,
+                    row.Item.PositionInGroup,
+                    row.Item.Revision,
+                    row.GroupCreatedAt,
+                    row.GroupId))
+                .ToList();
             var hasMore = projections.Count > effectivePageSize;
             if (hasMore)
             {
@@ -100,7 +108,7 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
                     categoriesByItem.TryGetValue(item.Id, out var categoryPage);
                     return new ActiveKinListItemEntry(
                         item.Id,
-                        item.Name,
+                        item.Name.Value,
                         new ActiveItemsPageAnchor(item.GroupCreatedAt, item.GroupId, item.PositionInGroup, item.Id),
                         categoryPage?.Categories ?? [],
                         categoryPage?.RemainingCategoryCount ?? 0,
@@ -121,7 +129,7 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
         or DbException
         or DbUpdateException { InnerException: DbException };
 
-    private sealed record ItemProjection(Guid Id, string Name, int PositionInGroup, long Revision, DateTimeOffset GroupCreatedAt, Guid GroupId);
+    private sealed record ItemProjection(Guid Id, KinListItemName Name, int PositionInGroup, long Revision, DateTimeOffset GroupCreatedAt, Guid GroupId);
 
     private sealed record CategoryProjection(Guid ItemId, Guid CategoryId, string Name);
 

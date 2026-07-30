@@ -1,0 +1,168 @@
+name: Deploy changed application scope
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/deploy-code.yml"
+      - ".github/workflows/deploy-infrastructure.yml"
+      - "infra/**"
+      - "src/backend/**"
+      - "src/frontend/**"
+      - "scripts/**"
+      - "docs/user-guide/**"
+      - "changes/**"
+      - "tools/docs-sync/**"
+      - "tools/release-notes/**"
+      - "Directory.Build.props"
+      - "KinHub.slnx"
+      - "VERSION"
+  workflow_dispatch:
+    inputs:
+      deployment_scope:
+        description: Scope to deploy
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - application
+          - infrastructure
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  classify:
+    name: Select deployment scope
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_scope: ${{ steps.scope.outputs.deployment_scope }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: scope
+        shell: bash
+        env:
+          CURRENT_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          MANUAL_SCOPE: ${{ inputs.deployment_scope }}
+        run: |
+          classify_range() {
+            local base_sha="$1"
+            local head_sha="$2"
+            local scope=none
+
+            while IFS= read -r changed_path; do
+              case "$changed_path" in
+                infra/*|.github/workflows/deploy.yml|.github/workflows/deploy-infrastructure.yml|src/backend/infrastructure/DA.KinHub.Infrastructure/Persistence/Migrations/*)
+                  echo infrastructure
+                  return
+                  ;;
+                .github/workflows/deploy-code.yml|src/backend/*|src/frontend/*|scripts/*|docs/user-guide/*|changes/*|tools/docs-sync/*|tools/release-notes/*|Directory.Build.props|KinHub.slnx|VERSION)
+                  scope=application
+                  ;;
+              esac
+            done < <(git diff --no-renames --name-only "$base_sha" "$head_sha")
+
+            echo "$scope"
+          }
+
+          if [[ "$GITHUB_RUN_ATTEMPT" != "1" ]]; then
+            echo "Do not rerun an old deployment: start a new workflow_dispatch run to preserve ordering." >&2
+            exit 1
+          fi
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+              echo "Manual deployments must run from main." >&2
+              exit 1
+            fi
+          fi
+
+          main_head=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/branches/main" \
+            --jq '.commit.sha')
+          if [[ "$CURRENT_SHA" != "$main_head" ]]; then
+            if ! git cat-file -e "${main_head}^{commit}" 2>/dev/null; then
+              git fetch --no-tags origin "$main_head"
+            fi
+            if ! git merge-base --is-ancestor "$CURRENT_SHA" "$main_head"; then
+              echo "Rejected deployment for a commit outside the current main history." >&2
+              exit 1
+            fi
+
+            superseding_scope=$(classify_range "$CURRENT_SHA" "$main_head")
+            if [[ "$superseding_scope" != "none" ]]; then
+              echo "Rejected superseded deployment for $CURRENT_SHA; newer deployable changes exist at $main_head." >&2
+              exit 1
+            fi
+
+            echo "Current main differs only in non-deployable paths; continuing deployment for $CURRENT_SHA." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          comparison_base=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?branch=main&status=success&per_page=1" \
+            --jq '.workflow_runs[0].head_sha // ""')
+
+          if [[ -z "$comparison_base" ]]; then
+            echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
+            echo "No successful deployment baseline exists; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ "$comparison_base" =~ ^0+$ ]]; then
+            comparison_base=$(git hash-object -t tree /dev/null)
+          elif ! git cat-file -e "${comparison_base}^{commit}" 2>/dev/null; then
+            if ! git fetch --no-tags origin "$comparison_base"; then
+              echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
+              echo "The comparison base is unavailable; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+
+          if git cat-file -e "${comparison_base}^{commit}" 2>/dev/null && \
+             ! git merge-base --is-ancestor "$comparison_base" "$CURRENT_SHA"; then
+            echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
+            echo "The last successful deployment is not an ancestor; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          deployment_scope=$(classify_range "$comparison_base" "$CURRENT_SHA")
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "$MANUAL_SCOPE" == "infrastructure" ]]; then
+              deployment_scope=infrastructure
+            elif [[ "$MANUAL_SCOPE" == "application" && "$deployment_scope" == "infrastructure" ]]; then
+              echo "Application scope was promoted to infrastructure because the accumulated diff contains infrastructure or migrations." >> "$GITHUB_STEP_SUMMARY"
+            elif [[ "$MANUAL_SCOPE" == "application" ]]; then
+              deployment_scope=application
+            fi
+          fi
+
+          echo "deployment_scope=$deployment_scope" >> "$GITHUB_OUTPUT"
+          echo "Comparison base: $comparison_base" >> "$GITHUB_STEP_SUMMARY"
+          echo "Selected deployment scope: $deployment_scope" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-application:
+    name: Deploy application
+    if: needs.classify.outputs.deployment_scope == 'application'
+    needs: classify
+    uses: ./.github/workflows/deploy-code.yml
+    secrets: inherit
+
+  deploy-infrastructure:
+    name: Deploy infrastructure and application
+    if: needs.classify.outputs.deployment_scope == 'infrastructure'
+    needs: classify
+    uses: ./.github/workflows/deploy-infrastructure.yml
+    secrets: inherit

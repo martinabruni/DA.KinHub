@@ -72,7 +72,7 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Il contesto verificato della richiesta puo vivere in una feature HTTP tipizzata nell'Application layer. Business e Domain non accedono a `HttpContext`, `IHttpContextAccessor`, `AsyncLocal` o current user ambientali; identita e `familyId` restano parametri espliciti dei casi d'uso e repository.
 - Problem Details nasce da una factory unica. Gli errori tecnici espongono dettagli pubblici fissi, loggano la causa internamente e non convertono una cancellazione attesa in `500`.
 - Le API protette e gli errori usano `Cache-Control: no-store, private`; health/status/version usano `no-store`; non disabilitare globalmente la cache di contenuti pubblici approvati.
-- Route e OpenAPI condividono una sola fonte e test di parita. Ogni endpoint documenta security, parametri, risposte e `application/problem+json` applicabili.
+- Route e OpenAPI condividono una sola fonte e test di parita. Ogni endpoint documenta security, parametri, risposte e `application/problem+json` applicabili. Quando aggiungi una HTTP Function aggiorna `openapi.yaml` nella stessa modifica; `npm run skills:validate` ne verifica la copertura delle route.
 - Options Entra, database, storage e integrazioni critiche usano validazione tipizzata `ValidateOnStart`, condizionata per ambiente senza bypass di sicurezza.
 - Log, metriche e trace custom usano OpenTelemetry e Azure Monitor con dimensioni a bassa cardinalita. Non mantenere in parallelo exporter classico e OpenTelemetry ne registrare token, claim completi, issuer, oid, familyId, nomi o payload.
 - I nuovi endpoint non devono copiare il pattern manuale esistente di FEAT-001; il debito corrente e tracciato in `docs/backlog/features/accesso-instradamento/cr.md` e `cr.plan.md`.
@@ -97,7 +97,7 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - Non assumere singleton o applicare migration lunghe durante il cold start.
 - `Database:ApplyMigrationsOnStartup` è false per default ed è consentito solo in Development.
 - Il fallback locale usa PostgreSQL advisory lock, timeout, log e fallimento esplicito.
-- Ambienti condivisi usano migration bundle/passaggio CI prima del deploy codice.
+- Ambienti condivisi usano migration bundle nel percorso full-stack prima del deploy codice; una modifica alle migration deve attivare quel percorso anche senza modifiche Bicep.
 - I bundle EF e l'automazione migration partono dal factory/progetto di design-time autorevole; non cambiare startup project, immagine runtime o dipendenze Docker senza rilanciare build bundle e packaging end-to-end.
 - Script SQL, blocchi PL/pgSQL, query KQL e heredoc usati nei workflow devono essere verificati per quoting, delimitatori ed espansioni della shell prima del push.
 - Ogni migration include procedura di verifica e rollback in `docs/operations/database-migrations.md`.
@@ -181,6 +181,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 - Non inventare stringhe di versione o formato per Azure, .NET, provider o modelli: verifica i valori supportati e il formato richiesto dall'API o dalla CLI correnti prima di scriverli. Se una versione cambia, allinea anche package accoppiati, workflow SDK/runtime e file generati.
 - Ogni rename di env var, app setting, secret, parametro, namespace o artifact name richiede grep repository-wide e aggiornamento di tutti i consumer, inclusi script, prompt, README e workflow.
 - Ogni modifica ai workflow deve verificare contratti reali del repository: path, nomi artifact, vars/secrets, output, permessi `GITHUB_TOKEN`, workflow riusabili e sintassi esatta dei flag `az` tramite `--help` o documentazione ufficiale.
+- Il deploy su push a `main` e orchestrato da un solo workflow path-based: modifiche applicative eseguono soltanto il deploy applicativo; modifiche a `infra/`, alle migration o al workflow infrastrutturale eseguono Bicep, principal/grant, migration e infine lo stesso deploy applicativo riusabile. Nei commit misti prevale sempre il percorso infrastrutturale; ogni run classifica il diff dall'ultimo deploy riuscito, rifiuta gli SHA superati da modifiche distribuibili piu recenti, usa full-stack finche non esiste un baseline riuscito e promuove i dispatch applicativi quando necessario, cosi la concurrency puo coalescere i pending senza perdere una migration o un'infrastruttura fallita.
 - Quando modifichi una fonte autorevole che genera output versionati, rigenera e valida subito gli artefatti derivati; non correggere a mano file generati salvo indicazione esplicita del repository.
 
 ### Promuovere un componente UI
@@ -236,8 +237,9 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 ## CI/CD
 
 - `pr-quality.yml`: restore/build/test/publish/package, frontend, tool e Bicep; nessun deploy.
-- `deploy-infrastructure.yml`: tag `infra-*`, deploy Bicep, principal PostgreSQL Entra, migration bundle con token identity-based, One Deploy, Static Web Apps e smoke test.
-- `deploy-code.yml`: push `main`, solo operazioni applicative; non modifica memoria/scala/concorrenza.
+- `deploy.yml`: push path-based su `main`, classificazione univoca dello scope dall'ultimo deploy riuscito e coalescenza sicura dei pending; mantiene anche il dispatch manuale esplicito.
+- `deploy-infrastructure.yml`: workflow riusabile per Bicep, principal PostgreSQL Entra, migration bundle con token identity-based e grant, seguito dal deploy applicativo condiviso.
+- `deploy-code.yml`: workflow riusabile per One Deploy, Static Web Apps e smoke test; non applica migration e non modifica memoria/scala/concorrenza.
 - Parametri Flex restano in Bicep/bicepparam; GitHub Variable contiene solo il nome Function App necessario al deploy.
 - Le modifiche a workflow, packaging, deploy o observability non sono concluse finche non verifichi anche lo stato live risultante: runtime effettivo ARM, `health/live`, `api/version` e ingestione telemetrica attesa quando applicabile.
 - Non stampare secret o output sensibili nei log.

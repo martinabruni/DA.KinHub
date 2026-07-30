@@ -919,18 +919,38 @@ Aggiungi un workflow PR che:
 - valida Bicep;
 - non esegue deploy.
 
-### 20.2 Deploy infrastruttura completo tramite tag
+### 20.2 Orchestrazione path-based su `main`
 
-Trigger esempio:
+Usa un solo workflow pubblico di orchestrazione con trigger su push a `main` e filtri `paths` limitati agli input che producono artefatti applicativi, migration o infrastruttura. Mantieni anche un `workflow_dispatch` con scelta esplicita dello scope.
+
+Trigger indicativo:
 
 ```yaml
 on:
   push:
-    tags:
-      - "infra-*"
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "src/backend/**"
+      - "src/frontend/**"
+      - ".github/workflows/deploy*.yml"
+      - "scripts/**"
+      - "docs/user-guide/**"
+      - "changes/**"
 ```
 
-Passaggi:
+Classifica tutti i file del push prima di distribuire:
+
+- se cambia `infra/`, il workflow infrastrutturale o una migration EF, esegui una sola pipeline full-stack;
+- in assenza di modifiche infrastrutturali, se cambia un input applicativo, esegui soltanto la pipeline applicativa;
+- per commit misti fai prevalere sempre il percorso full-stack, senza avviare in parallelo un secondo deploy applicativo;
+- serializza il run attivo con `concurrency` e `cancel-in-progress: false`; poiche GitHub mantiene un solo pending senza garantirne l'ordine, rifiuta uno SHA quando commit successivi contengono input distribuibili ma lascialo proseguire se cambiano soltanto path esclusi dal deploy. Usa il percorso full-stack finche non esiste un deploy riuscito e poi classifica dall'ultimo baseline riuscito, cosi incorpora migration o infrastruttura fallite o coalescenti.
+
+Non usare tag come trigger ordinario e non consentire il rerun di un vecchio deploy: per ripetere un rilascio crea un nuovo dispatch manuale da `main`, con scope `auto` per default. Un'eventuale richiesta manuale `application` deve essere promossa a full-stack quando il diff accumulato contiene infrastruttura o migration. I cambiamenti fuori dagli input distribuibili, per esempio sola documentazione tecnica o soli test, non devono avviare un deploy.
+
+### 20.3 Workflow riusabili e responsabilita
+
+Il percorso full-stack esegue:
 
 1. checkout;
 2. setup .NET 10, Node e Azure CLI;
@@ -949,13 +969,7 @@ Passaggi:
 15. output e summary GitHub;
 16. nessun secret stampato.
 
-Il workflow deve inoltre verificare i flag `az` usati contro la CLI reale, mantenere simmetrici i passi create/delete temporanei e allineare nello stesso change nuovi input, vars/secrets, output, path e artifact name richiesti dal deploy.
-
-### 20.3 Deploy solo codice su `main`
-
-Trigger push su `main`.
-
-Passaggi:
+Il percorso solo applicativo esegue:
 
 1. checkout;
 2. setup toolchain;
@@ -963,20 +977,21 @@ Passaggi:
 4. build backend;
 5. test backend;
 6. validazioni skill/i18n/docs/change fragments;
-7. applicazione controllata delle migration, se richiesta;
-8. `dotnet publish` e creazione pacchetto `.zip` versionato;
-9. login Azure tramite OIDC;
-10. deploy del pacchetto sull’Azure Function App Flex Consumption tramite One Deploy, senza alterare i parametri infrastrutturali della Function via variabili di repository;
-11. build frontend;
-12. generazione metadata e release notes;
-13. deploy Static Web Apps;
-14. smoke check di health/version;
-15. upload del pacchetto backend e checksum come GitHub Actions artifact;
-16. summary.
+7. `dotnet publish` e creazione pacchetto `.zip` versionato;
+8. login Azure tramite OIDC;
+9. deploy del pacchetto sull’Azure Function App Flex Consumption tramite One Deploy, senza alterare i parametri infrastrutturali della Function via variabili di repository;
+10. build frontend;
+11. generazione metadata e release notes;
+12. deploy Static Web Apps;
+13. smoke check di health/version;
+14. upload del pacchetto backend e checksum come GitHub Actions artifact;
+15. summary.
+
+Il workflow applicativo non esegue Bicep, provisioning database o migration. Il workflow infrastrutturale applica le migration prima del codice e richiama lo stesso workflow applicativo riusabile, invece di duplicarne i passi. Deve inoltre verificare i flag `az` usati contro la CLI reale, compilare il `.bicepparam` in JSON prima di aggiungere override sensibili richiesti dalla CLI, mantenere simmetrici i passi create/delete temporanei e allineare nello stesso change nuovi input, vars/secrets, output, path e artifact name richiesti dal deploy.
 
 Se una modifica tocca workflow, runtime, observability, packaging o migration, considera il lavoro concluso solo dopo aver verificato anche lo stato live risultante: runtime effettivo della Function App, `health/live`, `api/version` e ingestione telemetrica attesa quando applicabile.
 
-L’infrastruttura completa si modifica solo tramite il workflow tag; `main` pubblica codice backend/frontend e applica esclusivamente le operazioni applicative previste.
+Ogni merge su `main` distribuisce automaticamente solo lo scope derivato dai path modificati. Le migration appartengono al percorso full-stack per garantire principal, rete e grant prima del bundle e vengono sempre applicate prima del deploy del codice dipendente.
 
 I parametri della Function App relativi a memoria, scala e concorrenza devono restare definiti in Bicep e nei relativi file `.bicepparam`, non in GitHub Variables del repository. Nelle pipeline GitHub mantieni come variabile della Function soltanto il nome della Function App necessario al deploy del codice.
 

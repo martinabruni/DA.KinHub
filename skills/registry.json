@@ -139,14 +139,14 @@
     {
       "id": "kinhub-implementation",
       "name": "KinHub repository implementation workflow",
-      "version": "0.5.0",
+      "version": "0.7.0",
       "area": "implementation",
       "description": "Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.",
       "path": "skills/implementation/SKILL.md",
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "974a5de31d817bb2137fb6202d91423c52cd7d53dcf8316272197a8c9697ccd9"
+          "checksum": "6396104a4e81931ff82924dd735d0b74b69677943e5d8c5d8c47bbfd0d2e5c8b"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",
@@ -155,7 +155,7 @@
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "d736bcd78beebf6897ec9f41afcb4bf8c5091936ed326db13835188e3c6bf62e"
+      "checksum": "13e0467a9f3516d5b980557bd2f3f04d516fe259c58704ff5117e07bf4c72658"
     },
     {
       "id": "kinhub-release",

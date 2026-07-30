@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "d889f2d",
-  "buildDate": "2026-07-30T14:49:26.613Z",
+  "commit": "0e48e6a",
+  "buildDate": "2026-07-30T16:01:27.171Z",
   "environment": "Development",
   "entries": [
     {
@@ -201,6 +201,28 @@
       "descriptions": {
         "it": "La cache MSAL usa `sessionStorage` per mantenere la sessione della scheda durante il refresh. Il bootstrap famiglia resta obbligatorio e i dati applicativi continuano a vivere soltanto in memoria.",
         "en": "The MSAL cache uses `sessionStorage` to preserve the tab session across refreshes. The family bootstrap remains mandatory, and application data continues to live only in memory."
+      }
+    },
+    {
+      "id": "none-changed-openapi-harness",
+      "type": "changed",
+      "area": "tooling",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "L'harness ora verifica che ogni route di una HTTP Function sia documentata in `openapi.yaml`, rendendo obbligatorio aggiornare il contratto statico con ogni nuovo endpoint.",
+        "en": "The harness now verifies that every HTTP Function route is documented in `openapi.yaml`, requiring the static contract to be updated with every new endpoint."
+      }
+    },
+    {
+      "id": "none-changed-path-based-deployment-pipelines",
+      "type": "changed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "I merge su `main` distribuiscono automaticamente il solo scope modificato: il codice applicativo usa il deploy leggero, mentre infrastruttura e migration usano un percorso full-stack serializzato che applica il database prima del codice senza deploy duplicati.",
+        "en": "Merges to `main` now automatically deploy only the changed scope: application code uses the lightweight deployment, while infrastructure and migrations use a serialized full-stack path that updates the database before the code without duplicate deployments."
       }
     },
     {

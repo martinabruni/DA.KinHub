@@ -7,16 +7,16 @@ La slice KinHub FEAT-001 introduce lo schema `shared` con profili applicativi, f
 Per ambienti condivisi genera un bundle:
 
 ```bash
-dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --startup-project src/backend/applications/DA.KinHub.Functions --configuration Release --self-contained false --output artifacts/migrations/kinhub-migrations
+dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
 ```
 
-Esegui il bundle una volta prima del deploy applicativo. In Azure il bundle usa una connection string costruita al volo con host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
+In Azure una modifica sotto `Persistence/Migrations` seleziona automaticamente il percorso full-stack anche senza modifiche Bicep. Il bundle viene eseguito una volta, dopo infrastruttura e principal ma prima del deploy applicativo, con una connection string costruita al volo da host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
 
 Prima della migration in ambienti condivisi verifica anche:
 
 - Microsoft Entra administrator presente sul server PostgreSQL;
 - principal database `kinhub_migrator` e `kinhub_app` creati o riallineati;
-- grant runtime sullo schema `shared` applicati dopo il bundle;
+- grant runtime sugli schemi applicativi `shared` e `kinlist` applicati dopo il bundle;
 - eventuale firewall rule temporanea del runner rimossa a fine workflow.
 
 Per FEAT-001 verificare inoltre:
