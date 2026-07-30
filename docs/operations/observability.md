@@ -27,6 +27,8 @@ La Function App registra OpenTelemetry nel composition root con `UseFunctionsWor
 
 Non registrare token, password, connection string, claim completi, issuer, oid, familyId, nomi, codici invito, payload o dati funzionali non necessari.
 
+Per FEAT-003 l'operation della lista paginata e `kinlist.items_page`. Gli outcome ammessi restano finiti e le metriche custom registrano solo dimensioni a bassa cardinalita, come presenza cursore e disponibilita dei controlli di pagina. Non registrare mai cursori, item, categorie o identificativi familiari/utente.
+
 ## Logging
 
 Il correlation middleware apre uno scope con `CorrelationId`; il trace distribuito rimane in `Activity.TraceId`. Il middleware eccezioni logga la causa di `500` e `503`, mentre normali `400`, `401` e `403` non sono errori server.

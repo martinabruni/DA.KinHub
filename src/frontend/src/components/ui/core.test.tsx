@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import { Button, ButtonLink, Tabs, TextField } from "./core";
+import { Avatar, Button, ButtonLink, Pagination, Tabs, TextField } from "./core";
 
 describe("ui/core", () => {
   it("defaults button type to button", () => {
@@ -39,5 +39,18 @@ describe("ui/core", () => {
 
     expect(onValueChange).toHaveBeenCalledWith("second");
     expect(firstTab).toHaveAttribute("tabindex", "0");
+  });
+
+  it("renders avatar fallback when no display name is available", () => {
+    render(<Avatar name="Member" displayName={null} fallback="?" />);
+
+    expect(screen.getByLabelText("Member")).toHaveTextContent("?");
+  });
+
+  it("disables keyset pagination controls while busy", () => {
+    render(<Pagination hasPrevious hasNext={false} busy onPrevious={() => undefined} onNext={() => undefined} label="Pagination" previousLabel="Previous" nextLabel="Next" statusLabel="50 items" />);
+
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 });

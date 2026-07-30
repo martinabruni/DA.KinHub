@@ -53,8 +53,8 @@ public sealed class KinHubTelemetryTests
             operation.Complete("family");
         }
 
-        var longMeasurement = Assert.Single(Snapshot(longMeasurements, measurementsLock));
-        var doubleMeasurement = Assert.Single(Snapshot(doubleMeasurements, measurementsLock));
+        var longMeasurement = Assert.Single(Snapshot(longMeasurements, measurementsLock), measurement => measurement.Operation == KinHubOperations.Bootstrap);
+        var doubleMeasurement = Assert.Single(Snapshot(doubleMeasurements, measurementsLock), measurement => measurement.Operation == KinHubOperations.Bootstrap);
         Assert.Equal("kinhub.outcomes", longMeasurement.Instrument);
         Assert.Equal(KinHubOperations.Bootstrap, longMeasurement.Operation);
         Assert.Equal("family", longMeasurement.Outcome);
@@ -62,7 +62,7 @@ public sealed class KinHubTelemetryTests
         Assert.Equal(KinHubOperations.Bootstrap, doubleMeasurement.Operation);
         Assert.Equal("family", doubleMeasurement.Outcome);
 
-        var activity = Assert.Single(activities);
+        var activity = Assert.Single(activities, candidate => candidate.OperationName == KinHubOperations.Bootstrap);
         Assert.Equal(KinHubOperations.Bootstrap, activity.OperationName);
         Assert.Equal(ActivityStatusCode.Ok, activity.Status);
         Assert.Contains(activity.Tags, tag => tag.Key == "operation" && tag.Value == KinHubOperations.Bootstrap);

@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "6803776",
-  "buildDate": "2026-07-30T12:35:11.681Z",
+  "commit": "d889f2d",
+  "buildDate": "2026-07-30T14:49:26.613Z",
   "environment": "Development",
   "entries": [
     {
@@ -58,6 +58,17 @@
       "descriptions": {
         "it": "Introdotto il catalogo persistito dei servizi familiari con KinList preconfigurato, disponibilita assegnata alle famiglie esistenti e nuove, Home dinamica basata sui servizi autorizzati e controllo server-side dell'accesso diretto a `/kinlist`.",
         "en": "Added the persisted family service catalog with KinList preconfigured, availability assigned to existing and new families, a dynamic Home driven by authorized services, and a server-side access check for direct `/kinlist` navigation."
+      }
+    },
+    {
+      "id": "none-added-kinlist-active-items-page",
+      "type": "added",
+      "area": "frontend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "KinHub aggiunge la prima lista condivisa paginata di KinList con backend persistente minimo, cursori opachi, ordine stabile, categorie essenziali, autore e navigazione avanti/indietro senza cache locale dei dati.",
+        "en": "KinHub adds the first paginated shared KinList view with a minimal persisted backend, opaque cursors, stable ordering, essential categories, author details, and previous/next navigation without local data caching."
       }
     },
     {

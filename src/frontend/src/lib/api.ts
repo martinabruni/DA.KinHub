@@ -30,6 +30,32 @@ export interface KinHubServiceCatalogResult {
   services: KinHubServiceCatalogItem[];
 }
 
+export interface KinListItemCategory {
+  id: string;
+  name: string;
+}
+
+export interface KinListItemAuthor {
+  displayName: string | null;
+}
+
+export interface KinListItem {
+  id: string;
+  name: string;
+  categories: KinListItemCategory[];
+  remainingCategoryCount: number;
+  author: KinListItemAuthor;
+  version: string;
+}
+
+export interface KinListItemsPage {
+  items: KinListItem[];
+  effectivePageSize: number;
+  maxPageSize: number;
+  previousCursor: string | null;
+  nextCursor: string | null;
+}
+
 export class ApiError extends Error {}
 
 export class ApiResponseError extends ApiError {
@@ -68,6 +94,15 @@ export class KinHubApiClient {
 
   async checkServiceAccess(serviceKey: string, familyId: string, signal?: AbortSignal): Promise<void> {
     await this.request<void>(`/api/kinhub/services/${encodeURIComponent(serviceKey)}/access?${new URLSearchParams({ familyId }).toString()}`, { signal, expectNoContent: true });
+  }
+
+  async getKinListItems(familyId: string, pageSize: number, cursor?: string | null, signal?: AbortSignal): Promise<KinListItemsPage> {
+    const params = new URLSearchParams({ familyId, pageSize: String(pageSize) });
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+
+    return this.request<KinListItemsPage>(`/api/kinlist/items?${params.toString()}`, { signal });
   }
 
   private async request<T>(path: string, init: RequestInit & { expectNoContent?: boolean }): Promise<T> {

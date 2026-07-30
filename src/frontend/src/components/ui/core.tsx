@@ -72,9 +72,10 @@ export const Chip = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButto
   return <button ref={ref} type={props.type ?? "button"} className={cn("kh-chip", `kh-tone--${tone}`, selected && "is-selected", className)} aria-pressed={selected} {...props} />;
 });
 
-export function Avatar({ name, src, tone = "accent", size = "md" }: { name: string; src?: string; tone?: Tone; size?: "sm" | "md" | "lg" }) {
-  const initials = name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-  return <span className={cn("kh-avatar", `kh-avatar--${size}`, `kh-tone--${tone}`)} aria-label={name}>{src ? <img src={src} alt="" /> : initials}</span>;
+export function Avatar({ name, displayName, fallback = "?", src, tone = "accent", size = "md" }: { name: string; displayName?: string | null; fallback?: string; src?: string; tone?: Tone; size?: "sm" | "md" | "lg" }) {
+  const visualName = displayName?.trim() ?? "";
+  const initials = visualName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+  return <span className={cn("kh-avatar", `kh-avatar--${size}`, `kh-tone--${tone}`)} aria-label={name}>{src ? <img src={src} alt="" /> : initials || fallback}</span>;
 }
 
 export function StatusDot({ tone = "success", label }: { tone?: Tone; label: string }) {
@@ -147,6 +148,6 @@ export function Tabs({ items, value, onValueChange, label }: { items: Array<{ va
   })}</div>;
 }
 
-export function Pagination({ page, total, onChange, label, previousLabel, nextLabel, pageLabel }: { page: number; total: number; onChange: (page: number) => void; label: string; previousLabel: string; nextLabel: string; pageLabel: (page: number, total: number) => string }) {
-  return <nav className="kh-pagination" aria-label={label}><Button variant="ghost" disabled={page <= 1} aria-label={previousLabel} onClick={() => onChange(page - 1)}><ChevronLeft aria-hidden="true" />{previousLabel}</Button><span aria-live="polite" aria-atomic="true">{pageLabel(page, total)}</span><Button variant="ghost" disabled={page >= total} aria-label={nextLabel} onClick={() => onChange(page + 1)}>{nextLabel}<ChevronRight aria-hidden="true" /></Button></nav>;
+export function Pagination({ hasPrevious, hasNext, busy = false, onPrevious, onNext, label, previousLabel, nextLabel, statusLabel }: { hasPrevious: boolean; hasNext: boolean; busy?: boolean; onPrevious: () => void; onNext: () => void; label: string; previousLabel: string; nextLabel: string; statusLabel: string }) {
+  return <nav className="kh-pagination" aria-label={label}><Button variant="ghost" disabled={!hasPrevious || busy} aria-label={previousLabel} onClick={onPrevious}><ChevronLeft aria-hidden="true" />{previousLabel}</Button><span aria-live="polite" aria-atomic="true">{statusLabel}</span><Button variant="ghost" disabled={!hasNext || busy} aria-label={nextLabel} onClick={onNext}>{nextLabel}<ChevronRight aria-hidden="true" /></Button></nav>;
 }

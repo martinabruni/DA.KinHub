@@ -1,10 +1,10 @@
-# Analisi funzionale — KinList
+# Analisi funzionale — KinHub e KinList
 
 ## 1. Scopo del documento
 
 Questo documento definisce il comportamento approvato di KinList dal punto di vista degli utenti, dei membri di una famiglia e delle regole del prodotto.
 
-KinList permette ai membri della stessa famiglia di trasformare una registrazione vocale in una lista di item condivisi, correggere nomi e categorie, filtrare la lista e completare uno o più item. L'esperienza principale resta: **Parla → Ottieni la lista → Spunta**.
+KinHub permette ai membri della stessa famiglia di raggiungere i KinService disponibili per la propria famiglia. KinList è il primo servizio del catalogo e permette di trasformare una registrazione vocale in una lista di item condivisi, correggere nomi e categorie, filtrare la lista e completare uno o più item. L'esperienza principale di KinList resta: **Parla → Ottieni la lista → Spunta**.
 
 Il documento include inoltre l'onboarding familiare obbligatorio, la gestione essenziale della famiglia, gli inviti tramite codice, l'uscita dalla famiglia, la selezione multipla e il perimetro di visibilità predisposto per gli item. Consolida lo scope confermato e i documenti in `docs/kinlist/research/tasks/`, senza descrivere soluzioni implementative.
 
@@ -29,6 +29,10 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - **Inattivazione reversibile**: conservazione concettuale di utente, appartenenza o famiglia come inattivi, senza considerarli immediatamente eliminati in modo definitivo.
 - **Pagina**: porzione limitata e ordinata di una collezione; non implica che tutti i dati esistenti siano stati caricati.
 - **Cursore opaco**: riferimento restituito da KinList per raggiungere la pagina precedente o successiva senza esporre posizione o struttura interna dei dati.
+- **KinService**: servizio disponibile nell'hub, ad esempio KinList.
+- **Catalogo servizi**: elenco dei KinService che KinHub conosce e può rendere disponibili.
+- **Disponibilità familiare**: stato che indica se un KinService è attivo per una famiglia.
+- **Localizzazione del servizio**: nome e descrizione di un KinService nella lingua scelta dall'utente.
 
 ## 3. Attori
 
@@ -91,6 +95,10 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - Shell PWA disponibile offline senza lista o altri dati personali; operazioni remote e registrazione richiedono la rete e non vengono accodate.
 - Elaborazione vocale in una richiesta di massimo 90 secondi, con al più un tentativo automatico aggiuntivo dopo un guasto transitorio senza risposta e massimo 1000 item generati.
 - Manutenzione giornaliera alle 00:00 UTC per retention e pulizia degli inattivi, come due esiti distinti.
+- Catalogo persistito dei KinService, inizialmente contenente KinList, con nome e descrizione in italiano e inglese.
+- Disponibilità persistita per la coppia famiglia-servizio, con KinList attivo automaticamente per famiglie nuove ed esistenti.
+- Home che mostra i soli servizi attivi della famiglia corrente e non contiene card hardcoded per KinList o Release Notes.
+- Home pubblica con azione `Accedi`; Home di un utente autenticato senza famiglia con onboarding familiare; accesso diretto a ogni KinService protetto da autenticazione, membership attiva e disponibilità del servizio.
 
 ## 5. Out of scope
 
@@ -114,6 +122,7 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - Conservazione dell'audio in file locali o temporanei, cache, database browser, storage remoto o code.
 - Notifiche, promemoria, analytics di prodotto, gamification e aggiornamento realtime tra dispositivi.
 - Nuovi tipi di evento, funzionalità amministrative o altre capacità non richieste dallo scope confermato.
+- Interfaccia o API per amministrare il catalogo, attivare o disattivare servizi per una famiglia, oppure aggiungere KinService diversi da KinList.
 
 ## 6. Flussi utente
 
@@ -124,11 +133,11 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - **Percorso principale**:
   1. KinHub collega l'identità a un solo profilo applicativo, creandolo se necessario.
   2. Verifica se esiste un'appartenenza familiare attiva.
-  3. Se l'appartenenza esiste, apre direttamente KinList nella famiglia associata.
+   3. Se l'appartenenza esiste, apre la Home KinHub e carica i servizi attivi della famiglia associata.
   4. Se non esiste, mostra la scelta obbligatoria tra `Crea una famiglia` e `Unisciti con un codice`.
 - **Alternative**: un profilo già esistente viene riutilizzato; un'appartenenza storica inattiva non permette accesso diretto.
 - **Errori e recupero**: un errore di sessione richiede un nuovo accesso; un errore di verifica offre Riprova senza mostrare dati familiari.
-- **Risultato osservabile**: l'utente entra direttamente nel servizio oppure resta nell'onboarding, mai in una lista apparentemente vuota per mancanza di famiglia.
+- **Risultato osservabile**: l'utente autenticato con famiglia vede la Home con i servizi disponibili; chi non ha famiglia resta nell'onboarding senza una Home apparentemente vuota.
 
 ### FLOW-002 — Apertura della lista
 
@@ -312,6 +321,29 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - **Errori e recupero**: nessuna pulizia anticipata; un errore lascia gli elementi ancora inattivi per un controllo successivo.
 - **Risultato osservabile**: l'inattivazione è immediata per l'accesso, mentre l'eliminazione definitiva non avviene prima della soglia approvata.
 
+### FLOW-015 — Home e catalogo servizi familiari
+
+- **Trigger**: una persona apre o ricarica la Home `/`.
+- **Precondizioni**: nessuna per visualizzare la shell; sessione e famiglia attiva sono necessarie per vedere servizi.
+- **Percorso principale**:
+  1. Senza sessione KinHub mostra l'azione `Accedi` e nessun KinService familiare.
+  2. Dopo il login KinHub determina autorevolmente il contesto familiare.
+  3. Un utente autenticato senza famiglia vede l'onboarding e l'azione `Crea una famiglia`, non un secondo pulsante di login.
+  4. Un membro con famiglia attiva riceve i soli KinService attivi per la propria famiglia nella lingua scelta.
+  5. Il membro apre un servizio dalla sua card; KinList è il servizio iniziale disponibile.
+- **Alternative**: se non esistono servizi attivi, KinHub mostra uno stato vuoto localizzato senza amministrazione o servizi inventati.
+- **Errori e recupero**: caricamento, errore recuperabile, offline e accesso negato non mostrano servizi stale; il solo errore recuperabile offre `Riprova`.
+- **Risultato osservabile**: la Home è un catalogo familiare dinamico; Release Notes resta disponibile dalle superfici informative esistenti, ma non compare come card Home.
+
+### FLOW-016 — Accesso diretto a un KinService
+
+- **Trigger**: una persona seleziona una card servizio oppure apre direttamente la route nota del KinService.
+- **Precondizioni**: nessuna per tentare l'accesso.
+- **Percorso principale**: KinHub richiede sessione, determina la famiglia attiva e verifica che il servizio sia attivo per quella famiglia prima di renderlo.
+- **Alternative**: senza sessione chiede il login; senza famiglia presenta l'onboarding; con servizio non disponibile nega l'accesso senza dettagli del servizio o di altre famiglie.
+- **Errori e recupero**: sessione scaduta, offline, errore tecnico e accesso negato sono distinti e localizzati.
+- **Risultato osservabile**: digitare l'URL non aggira la disponibilità visualizzata nella Home.
+
 ## 7. Requisiti funzionali
 
 | ID | Descrizione verificabile | Attore | Valore/risultato | Origine | Flussi |
@@ -371,6 +403,15 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 | FR-053 | Audio e output grezzo devono esistere soltanto in memoria durante la richiesta ed essere rilasciati dopo successo, errore, annullamento o timeout. | Membro | Nessuna persistenza del contenuto vocale. | Decisione approvata | FLOW-003, FLOW-004 |
 | FR-054 | Il tentativo di unione deve applicare, per singola istanza del servizio, una barriera iniziale di 5 tentativi in 5 minuti per identità e 20 in 5 minuti per origine di rete attendibile, indicando quando riprovare. | Utente senza famiglia | Riduzione dei tentativi abusivi senza rivelare lo stato del codice. | Decisione approvata | FLOW-011 |
 | FR-055 | Quando all'apertura dell'app il permesso microfono non è ancora stato deciso, KinList deve mostrare un popup chiaro che spiega che la voce viene usata soltanto per generare tramite IA una lista e che la concessione del permesso microfono equivale al consenso per questo uso. | Membro | Consenso informato prima della prima registrazione, senza impedire l'uso delle altre funzioni. | Decisione approvata | FLOW-003 |
+| FR-056 | KinHub deve mantenere un catalogo di KinService, inizialmente contenente KinList. | Sistema | Base stabile per l'amministrazione futura dei servizi. | Richiesta espressa | FLOW-015 |
+| FR-057 | Ogni KinService deve avere nome e descrizione disponibili in italiano e inglese. | Membro | Catalogo comprensibile nella lingua scelta. | Decisione approvata | FLOW-015 |
+| FR-058 | KinHub deve mantenere la disponibilità di ciascun KinService per ogni famiglia. | Sistema | Attivazione indipendente per famiglia. | Richiesta espressa | FLOW-015, FLOW-016 |
+| FR-059 | KinList deve risultare attivo automaticamente per tutte le famiglie nuove ed esistenti. | Membro | Nessuna perdita di accesso nella transizione. | Decisione approvata | FLOW-009, FLOW-015 |
+| FR-060 | La Home deve mostrare esclusivamente i KinService attivi per la famiglia attiva del membro. | Membro | Home aderente alla disponibilità reale. | Richiesta espressa | FLOW-015 |
+| FR-061 | La Home non deve mostrare card hardcoded per KinList o Release Notes. | Membro | Un solo catalogo e minore inquinamento visivo. | Richiesta espressa | FLOW-015 |
+| FR-062 | Un visitatore deve ricevere nella Home un'azione per accedere, senza vedere KinService familiari. | Visitatore | Percorso di ingresso chiaro e sicuro. | Decisione approvata | FLOW-015 |
+| FR-063 | Un utente autenticato senza famiglia deve ricevere nella Home l'onboarding per crearne una, senza vedere KinService familiari. | Utente senza famiglia | Accesso guidato e non eludibile. | Decisione approvata | FLOW-015 |
+| FR-064 | KinHub deve negare l'accesso a un KinService a chi non è autenticato, non ha una famiglia attiva o non ha il servizio attivo per la propria famiglia. | Visitatore, utente, membro | Isolamento di funzionalità e dati. | Richiesta espressa | FLOW-016 |
 
 ## 8. Regole di business
 
@@ -417,6 +458,13 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 | BR-039 | L'elaborazione vocale non riceve alcuna risposta per un guasto transitorio. | Può essere eseguito un solo tentativo automatico aggiuntivo entro il tempo residuo. | Una risposta ricevuta ma invalida non viene elaborata nuovamente. |
 | BR-040 | Una richiesta vocale termina per qualsiasi esito. | Tracce del microfono, buffer audio e output grezzo vengono rilasciati. | Può restare il solo `RecordingId` necessario a recuperare un risultato già salvato. |
 | BR-041 | All'apertura dell'app il permesso microfono non è ancora stato deciso. | KinList mostra un popup informativo prima della prima registrazione; la chiusura del popup non abilita il microfono, mentre la successiva concessione del permesso vale come consenso all'uso della voce per generare la lista tramite IA. | L'utente può continuare a usare l'app senza registrare finché non concede il permesso. |
+| BR-042 | Un KinService è incluso nel catalogo. | Ha identità e route stabili, stato generale e una localizzazione per lingua supportata. | KinList è il solo servizio preconfigurato nello scope corrente. |
+| BR-043 | Una famiglia viene creata oppure esiste già al rilascio della capacità. | Riceve la disponibilità attiva di ogni KinService preconfigurato attivo; oggi KinList. | Per una stessa coppia famiglia-servizio esiste una sola disponibilità. |
+| BR-044 | La Home viene richiesta da un membro con famiglia attiva. | Mostra solo servizi attivi per quella famiglia nella lingua scelta, con fallback tecnico inglese se necessario. | Nessun servizio è mostrato prima della verifica autorevole della famiglia. |
+| BR-045 | La Home è aperta senza sessione oppure con sessione ma senza famiglia. | Senza sessione mostra `Accedi`; con sessione senza famiglia mostra onboarding e creazione famiglia. | I due stati non sono equivalenti e non espongono servizi familiari. |
+| BR-046 | Un KinService viene richiesto direttamente. | Sessione, membership attiva e disponibilità del servizio vengono verificate lato server prima di renderlo o eseguire azioni. | La sola assenza della card non è un controllo di accesso sufficiente. |
+| BR-047 | Un servizio non è attivo per una famiglia. | Non compare nella Home e l'accesso diretto è negato senza rivelare dati o disponibilità di altre famiglie. | L'esito non è rappresentato come catalogo vuoto. |
+| BR-048 | Release Notes viene resa raggiungibile. | Resta nelle superfici informative e nel meccanismo di aggiornamento esistenti. | Non è un KinService e non compare nella Home. |
 
 ## 9. Dati concettuali
 
@@ -438,10 +486,15 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 | Pagina e cursori | KinList | Utente della collezione autorizzato | Limite effettivo non oltre 5000; cursori opachi legati a ordine, filtro e direzione; nessun contenuto personale nel cursore. |
 | Stato di inattività | KinList | Utente interessato nella misura necessaria; responsabile del servizio in forma aggregata | Impedisce l'accesso ordinario; pulizia definitiva non prima di 30 giorni continuativi. |
 | Informazioni operative | KinList | Responsabile del servizio autorizzato | Solo aggregati e riferimenti non sensibili. |
+| KinService | KinHub al provisioning del catalogo | Membri con famiglia attiva, limitatamente ai servizi disponibili | Chiave e route stabili; KinList è preconfigurato; stato generale distinto dalla disponibilità familiare. |
+| Localizzazione KinService | KinHub al provisioning del catalogo | Membri che ricevono il servizio nel catalogo | Una localizzazione per lingua e servizio; nome e descrizione in italiano e inglese per KinList; fallback inglese tecnico. |
+| Disponibilità familiare del servizio | KinHub durante creazione famiglia o migrazione | Membri della famiglia tramite il catalogo | Una sola per coppia famiglia-servizio; stato attivo o inattivo; l'amministrazione dello stato non è ancora esposta. |
 
 ## 10. Stati ed esperienza utente
 
 - **Verifica dopo login**: nessun dato familiare appare finché KinList non ha determinato se aprire il servizio o l'onboarding.
+- **Home catalogo**: senza sessione mostra Accedi; con sessione senza famiglia mostra onboarding; con famiglia attiva carica i servizi senza card hardcoded o dati stale.
+- **Catalogo vuoto**: è distinto da errore e accesso negato; non propone comandi amministrativi non disponibili.
 - **Onboarding obbligatorio**: due azioni chiare, Crea una famiglia e Unisciti con un codice; si mostra soltanto il modulo scelto.
 - **Stato iniziale lista**: microfono centrale senza item attivi visibili; lista e microfono in basso in caso contrario.
 - **Caricamento**: indicatore locale e onesto; nessun dato di una famiglia precedente viene mostrato durante verifiche o cambi di stato.
@@ -502,6 +555,10 @@ Il documento include inoltre l'onboarding familiare obbligatorio, la gestione es
 - Un candidato alla pulizia viene riattivato prima della cancellazione: viene ricontrollato e non eliminato.
 - L'elaborazione restituisce un risultato invalido: nessun tentativo automatico aggiuntivo e nessun item creato.
 - L'elaborazione non riceve alcuna risposta per un guasto transitorio: è ammesso al massimo un tentativo automatico aggiuntivo nel tempo residuo.
+- Una famiglia già esistente riceve KinList nella migrazione e continua a raggiungerlo dalla Home.
+- La membership diventa inattiva tra il caricamento della Home e la selezione di un servizio: l'accesso al servizio è negato.
+- Un servizio inattivo viene richiesto tramite URL diretto: non espone contenuto e non viene reso accessibile.
+- La localizzazione richiesta manca: KinHub usa l'inglese tecnico senza mostrare chiavi interne.
 
 ## 12. Vincoli e requisiti non funzionali
 
@@ -572,6 +629,12 @@ Le ipotesi precedenti su famiglia unica, filtro singolo, catalogo categorie, com
 | DEC-034 | Lingua parlata | Rilevamento automatico e nomi/categorie nella lingua riconosciuta. |
 | DEC-035 | Informativa e consenso per la voce | Se all'apertura dell'app il permesso microfono non è ancora stato deciso, KinList mostra un popup chiaro che spiega che la voce viene usata solo per generare tramite IA una lista; la concessione del permesso microfono vale come consenso a questo uso. |
 
+| DEC-036 | Catalogo KinService | Catalogo persistito nello schema condiviso, inizialmente con KinList. |
+| DEC-037 | Localizzazione catalogo | Nome e descrizione dei servizi sono persistiti in italiano e inglese; inglese è fallback tecnico. |
+| DEC-038 | Disponibilità per famiglia | Relazione dedicata famiglia-servizio; KinList è attivo automaticamente per famiglie nuove ed esistenti. |
+| DEC-039 | Home KinHub | Home dinamica: senza sessione mostra Accedi, senza famiglia onboarding, con famiglia mostra i soli servizi attivi; nessuna card hardcoded KinList o Release Notes. |
+| DEC-040 | Protezione dei KinService | Autenticazione, membership attiva e disponibilità familiare sono obbligatorie anche nell'accesso diretto. |
+
 ### 14.2 Decisioni aperte
 
 Non restano decisioni aperte nel perimetro funzionale approvato.
@@ -594,9 +657,10 @@ Limite audio, semantica demandata al prompt dell'agente lista, formati audio sup
 | Visibilità Personal/Shared | FLOW-002, FLOW-004, FLOW-006, FLOW-007, FLOW-013 | FR-003–FR-005, FR-016, FR-047, FR-048 | BR-002, BR-003, BR-035, BR-036 | DEC-026, DEC-027 | Scope confermato; research `item-visibility-scope` |
 | Conservazione e inattività | FLOW-008, FLOW-012, FLOW-014 | FR-026, FR-030, FR-042, FR-043, FR-049, FR-050 | BR-013, BR-014, BR-022, BR-030, BR-031, BR-037 | DEC-012, DEC-023, DEC-024, DEC-028, DEC-033, ASM-007 | Scope confermato; research `completed-item-retention`, `inactive-data-cleanup` |
 | PWA, temi, lingua e qualità | Tutti | FR-027–FR-030, FR-034, FR-035, FR-053 | BR-014, BR-019, BR-021, BR-040 | DEC-002, DEC-010, DEC-011, DEC-018, DEC-029 | Regole KinHub; research `pwa-shell-connectivity`, `floating-settings-entry` |
+| Catalogo e accesso ai KinService | FLOW-001, FLOW-009, FLOW-015, FLOW-016 | FR-056–FR-064 | BR-042–BR-048 | DEC-036–DEC-040 | Richiesta espressa e decisioni approvate nel brainstorming |
 
 Tutti i requisiti derivano dallo scope confermato, dalle decisioni approvate o da migliorie qualitative necessarie a rendere verificabili accessibilità, privacy, stati ed errori. Nessuna possibilità descritta nella ricerca è stata promossa automaticamente a funzionalità.
 
 ## 16. Criterio di approvazione
 
-Il comportamento e i confini funzionali sono sufficientemente definiti per creare il backlog senza inventare nuove funzionalità: famiglia, identità, inviti, paginazione, voce, persistenza, manutenzione, visibilità e completamento multiplo hanno regole ed esiti espliciti. Le ipotesi residue e gli elementi out of scope non autorizzano ampliamenti del prodotto.
+Il comportamento e i confini funzionali sono sufficientemente definiti per creare il backlog senza inventare nuove funzionalità: famiglia, identità, catalogo servizi, inviti, paginazione, voce, persistenza, manutenzione, visibilità e completamento multiplo hanno regole ed esiti espliciti. Le ipotesi residue e gli elementi out of scope non autorizzano ampliamenti del prodotto.

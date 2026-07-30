@@ -8,12 +8,12 @@
     "limits": "Release Notes stays outside the catalog and no availability or localization is saved offline."
   },
   "kinlist": {
-    "summary": "Checks bootstrap, active family, and KinList availability before showing the protected /kinlist route content.",
-    "purpose": "Prevents the direct URL or the Home card from becoming proof of service authorization.",
-    "actions": "Wait for the check, create the first family if missing, retry after a recoverable error, or sign in again when the session expired.",
-    "prerequisites": "A valid API token and an active connection are required for both bootstrap and the server-side access check.",
-    "fields": "The page distinguishes loading, onboarding, expired session, denied access, technical failure, the offline shell, and a form with only the 1-100 character family name field.",
-    "limits": "KinList content is not mounted before the access check and no authorization is stored in the browser."
+    "summary": "Shows limited pages of active KinList items that are visible to the authorized family after bootstrap and service access checks.",
+    "purpose": "Keeps the family perimeter server-side and uses opaque cursors instead of page numbers or full reads.",
+    "actions": "Refresh, move backward or forward, read the author and essential categories, or return to the start when the cursor is no longer valid.",
+    "prerequisites": "A valid session, an authorized family, KinList service availability, and an active connection are required.",
+    "fields": "The page distinguishes initial loading, a real empty state, a valid page, refresh, navigation, invalid cursor, offline, expired session, denied access, and error while preserving the last valid page.",
+    "limits": "This slice does not include manual creation, microphone, filtering, drawer, selection, or completion, and it does not save items or cursors in browser storage."
   },
   "about": {
     "summary": "Check the version and build metadata.",

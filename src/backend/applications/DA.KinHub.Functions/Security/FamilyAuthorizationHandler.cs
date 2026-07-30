@@ -10,8 +10,10 @@ public sealed class FamilyAuthorizationHandler(IFamilyAccessService familyAccess
         FamilyAuthorizationRequirement requirement,
         FamilyAuthorizationResource resource)
     {
-        if (await familyAccessService.CheckAccessAsync(resource.ExternalIdentity, resource.FamilyId, resource.CancellationToken) == FamilyAccessOutcome.Granted)
+        var result = await familyAccessService.CheckAccessAsync(resource.ExternalIdentity, resource.FamilyId, resource.CancellationToken);
+        if (result.Outcome == FamilyAccessOutcome.Granted)
         {
+            resource.ApplicationUserId = result.ApplicationUserId;
             context.Succeed(requirement);
         }
     }

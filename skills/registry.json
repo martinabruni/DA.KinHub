@@ -17,7 +17,7 @@
         },
         {
           "path": "docs/architecture/http-functions.md",
-          "checksum": "0310d92b9bd6b6d5b08cd4e805e861f5b7b311eeea51cc3343d7f67594344c23"
+          "checksum": "76deadafc6822c5d0fd0536bd73fad10b0bd7b78172d8230ab06d671ea3bf7bd"
         }
       ],
       "catalog": null,
@@ -34,11 +34,11 @@
       "references": [
         {
           "path": "docs/architecture/http-functions.md",
-          "checksum": "0310d92b9bd6b6d5b08cd4e805e861f5b7b311eeea51cc3343d7f67594344c23"
+          "checksum": "76deadafc6822c5d0fd0536bd73fad10b0bd7b78172d8230ab06d671ea3bf7bd"
         },
         {
           "path": "docs/operations/observability.md",
-          "checksum": "a218cc70c28ab8b482f87056754a46190f68bcee191b0f3279b10c6e375a2e15"
+          "checksum": "dffc98a8e3a9fb8a863c502850201fe0be29e3901240e1bfbdee9ed7dcd85693"
         }
       ],
       "catalog": "skills/backend/catalog.json",

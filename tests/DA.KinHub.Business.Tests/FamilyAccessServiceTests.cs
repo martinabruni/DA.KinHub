@@ -15,7 +15,8 @@ public sealed class FamilyAccessServiceTests
 
         var result = await service.CheckAccessAsync(new ExternalIdentity("https://issuer", Guid.NewGuid()), Guid.NewGuid(), CancellationToken.None);
 
-        Assert.Equal(FamilyAccessOutcome.ProfileNotFound, result);
+        Assert.Equal(FamilyAccessOutcome.ProfileNotFound, result.Outcome);
+        Assert.Null(result.ApplicationUserId);
     }
 
     [Fact]
@@ -26,7 +27,8 @@ public sealed class FamilyAccessServiceTests
 
         var result = await service.CheckAccessAsync(user.ExternalIdentity, Guid.NewGuid(), CancellationToken.None);
 
-        Assert.Equal(FamilyAccessOutcome.MembershipInactiveOrMissing, result);
+        Assert.Equal(FamilyAccessOutcome.MembershipInactiveOrMissing, result.Outcome);
+        Assert.Null(result.ApplicationUserId);
     }
 
     [Fact]
@@ -38,7 +40,8 @@ public sealed class FamilyAccessServiceTests
 
         var result = await service.CheckAccessAsync(user.ExternalIdentity, Guid.NewGuid(), CancellationToken.None);
 
-        Assert.Equal(FamilyAccessOutcome.ProfileInactive, result);
+        Assert.Equal(FamilyAccessOutcome.ProfileInactive, result.Outcome);
+        Assert.Null(result.ApplicationUserId);
     }
 
     [Fact]

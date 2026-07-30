@@ -1,5 +1,5 @@
 ---
-status: In review
+status: Completed
 ---
 
 # FEAT-002 - Creare la propria famiglia
@@ -31,20 +31,20 @@ L'utente autenticato senza membership attiva deve poter uscire dall'onboarding t
 
 ## Tracciabilità
 
-| Tipo | Riferimenti | Contributo della feature |
-|---|---|---|
-| Flussi | FLOW-009 | Creazione famiglia completa |
-| Requisiti | FR-031, FR-033 | Famiglia unica e creatore unico membro |
-| Regole/decisioni | BR-024, BR-025; DEC-015, DEC-017 | Vincoli di creazione |
-| Architettura | ADR-002, ADR-003, ADR-011; sezione 6.1 | Transazione e indice membership attiva |
+| Tipo             | Riferimenti                            | Contributo della feature               |
+| ---------------- | -------------------------------------- | -------------------------------------- |
+| Flussi           | FLOW-009                               | Creazione famiglia completa            |
+| Requisiti        | FR-031, FR-033                         | Famiglia unica e creatore unico membro |
+| Regole/decisioni | BR-024, BR-025; DEC-015, DEC-017       | Vincoli di creazione                   |
+| Architettura     | ADR-002, ADR-003, ADR-011; sezione 6.1 | Transazione e indice membership attiva |
 
 ## Dipendenze
 
 ### Feature prerequisite
 
-| Feature | Tipo | Motivo | Output richiesto | Effetto sul parallelismo |
-|---|---|---|---|---|
-| FEAT-001 - Entrare nel percorso corretto dopo il login | hard | Serve profilo interno, stato onboarding e contratto `ApiAccess` | User ID interno, membership model, bootstrap e error mapping | Inizio solo dopo integrazione FEAT-001 |
+| Feature                                                     | Tipo | Motivo                                                                         | Output richiesto                                                       | Effetto sul parallelismo               |
+| ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | -------------------------------------- |
+| FEAT-001 - Entrare nel percorso corretto dopo il login      | hard | Serve profilo interno, stato onboarding e contratto `ApiAccess`                | User ID interno, membership model, bootstrap e error mapping           | Inizio solo dopo integrazione FEAT-001 |
 | FEAT-014 - Usare un design system condiviso in tutta KinHub | hard | Il form di onboarding non deve conservare controlli legacy o pattern duplicati | Primitive form/state, token, layout onboarding e regole i18n condivise | Inizio solo dopo integrazione FEAT-014 |
 
 ### Gate e assunzioni
@@ -110,13 +110,13 @@ Nessuno nella wave: la feature consolida lo schema famiglia/membership usato da 
 
 ## Strategia di verifica
 
-| Livello | Verifica | Evidenza attesa |
-|---|---|---|
-| Unitario | Nome e invarianti famiglia/membership | Test dominio |
-| Integrazione | Commit/rollback e creazione concorrente | Test PostgreSQL reale e contratto HTTP |
-| Frontend/component | Scelta, form, validazioni, focus e stati | Test componente/accessibilità |
-| End-to-end/manuale | Login senza famiglia -> crea -> KinList | Flusso completo senza duplicati |
-| Validator repository | Qualità backend/frontend, i18n, docs, route e release | Esiti registrati |
+| Livello              | Verifica                                              | Evidenza attesa                        |
+| -------------------- | ----------------------------------------------------- | -------------------------------------- |
+| Unitario             | Nome e invarianti famiglia/membership                 | Test dominio                           |
+| Integrazione         | Commit/rollback e creazione concorrente               | Test PostgreSQL reale e contratto HTTP |
+| Frontend/component   | Scelta, form, validazioni, focus e stati              | Test componente/accessibilità          |
+| End-to-end/manuale   | Login senza famiglia -> crea -> KinList               | Flusso completo senza duplicati        |
+| Validator repository | Qualità backend/frontend, i18n, docs, route e release | Esiti registrati                       |
 
 ## Definition of Done
 

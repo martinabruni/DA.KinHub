@@ -95,7 +95,7 @@ describe("KinListAccessGate", () => {
     renderGate();
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent("family-a"));
-    expect(screen.getByText("kinlist.ready")).toBeInTheDocument();
+    await screen.findByText("kinlist.ready");
     expect(sessionStorage.length).toBe(0);
   });
 
@@ -170,7 +170,7 @@ describe("KinListAccessGate", () => {
     fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => expect(screen.getByTestId("family-id")).toHaveTextContent("family-created"));
-    expect(screen.getByText("kinlist.ready")).toBeInTheDocument();
+    await screen.findByText("kinlist.ready");
   });
 
   it("preserves the entered name after a validation error", async () => {

@@ -20,6 +20,20 @@ export type KinHubBootstrapState =
   | { status: "forbidden" }
   | { status: "error" };
 
+export function useKinHubApiClient() {
+  const { instance } = useMsal();
+  const account = getActiveAccount(instance);
+  const accountKey = account?.homeAccountId ?? "";
+
+  return useMemo(
+    () => new KinHubApiClient(() => {
+      const resolvedAccount = getActiveAccount(instance);
+      return acquireApiAccessToken(instance, resolvedAccount?.homeAccountId === accountKey ? resolvedAccount : null);
+    }),
+    [accountKey, instance]
+  );
+}
+
 export function useKinHubFamilyBootstrap() {
   const { instance, inProgress } = useMsal();
   const { online } = useConnectivity();
@@ -30,13 +44,7 @@ export function useKinHubFamilyBootstrap() {
   const accountKey = account?.homeAccountId ?? "";
   const hasAccount = accountKey.length > 0;
   const createControllerRef = useRef<AbortController | null>(null);
-  const client = useMemo(
-    () => new KinHubApiClient(() => {
-      const resolvedAccount = getActiveAccount(instance);
-      return acquireApiAccessToken(instance, resolvedAccount?.homeAccountId === accountKey ? resolvedAccount : null);
-    }),
-    [accountKey, instance]
-  );
+  const client = useKinHubApiClient();
 
   useEffect(() => () => {
     createControllerRef.current?.abort();

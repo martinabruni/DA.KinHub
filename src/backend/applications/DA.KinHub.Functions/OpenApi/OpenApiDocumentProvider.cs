@@ -154,6 +154,47 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                                 schema = new { type = "string" }
                             }
                         })
+                },
+                [$"/{ApiRoutes.KinList.Items}"] = new
+                {
+                    get = FamilyOperation(
+                        "Read a keyset page of active KinList items visible to the authorized family",
+                        new Dictionary<string, object>
+                        {
+                            ["200"] = new
+                            {
+                                description = "Active KinList items page",
+                                content = new Dictionary<string, object>
+                                {
+                                    ["application/json"] = new
+                                    {
+                                        schema = new { @ref = "#/components/schemas/ActiveItemsPage" }
+                                    }
+                                }
+                            },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        },
+                        new object[]
+                        {
+                            new
+                            {
+                                name = "pageSize",
+                                @in = "query",
+                                required = true,
+                                schema = new { type = "integer", format = "int32", minimum = 1 }
+                            },
+                            new
+                            {
+                                name = "cursor",
+                                @in = "query",
+                                required = false,
+                                schema = new { type = "string" }
+                            }
+                        })
                 }
             },
             components = new
@@ -200,6 +241,60 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                                 type = "array",
                                 items = new { @ref = "#/components/schemas/KinHubServiceCatalogItem" }
                             }
+                        }
+                    },
+                    ["ActiveItemsPageAuthor"] = new
+                    {
+                        type = "object",
+                        required = new[] { "displayName" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["displayName"] = new { type = "string", nullable = true }
+                        }
+                    },
+                    ["ActiveItemsPageCategory"] = new
+                    {
+                        type = "object",
+                        required = new[] { "id", "name" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["id"] = new { type = "string", format = "uuid" },
+                            ["name"] = new { type = "string" }
+                        }
+                    },
+                    ["ActiveItemsPageItem"] = new
+                    {
+                        type = "object",
+                        required = new[] { "id", "name", "categories", "remainingCategoryCount", "author", "version" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["id"] = new { type = "string", format = "uuid" },
+                            ["name"] = new { type = "string" },
+                            ["categories"] = new
+                            {
+                                type = "array",
+                                items = new { @ref = "#/components/schemas/ActiveItemsPageCategory" }
+                            },
+                            ["remainingCategoryCount"] = new { type = "integer", format = "int32" },
+                            ["author"] = new { @ref = "#/components/schemas/ActiveItemsPageAuthor" },
+                            ["version"] = new { type = "string" }
+                        }
+                    },
+                    ["ActiveItemsPage"] = new
+                    {
+                        type = "object",
+                        required = new[] { "items", "effectivePageSize", "maxPageSize", "previousCursor", "nextCursor" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["items"] = new
+                            {
+                                type = "array",
+                                items = new { @ref = "#/components/schemas/ActiveItemsPageItem" }
+                            },
+                            ["effectivePageSize"] = new { type = "integer", format = "int32" },
+                            ["maxPageSize"] = new { type = "integer", format = "int32" },
+                            ["previousCursor"] = new { type = "string", nullable = true },
+                            ["nextCursor"] = new { type = "string", nullable = true }
                         }
                     },
                     ["ProblemDetails"] = new

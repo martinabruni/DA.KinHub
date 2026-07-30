@@ -1,4 +1,5 @@
 using DA.KinHub.Business.Identity;
+using DA.KinHub.Business.KinList;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DA.KinHub.Business;
@@ -11,5 +12,6 @@ public static class DependencyInjection
         .AddScoped<IFamilyCreationService, FamilyCreationService>()
         .AddScoped<IFamilyAccessService, FamilyAccessService>()
         .AddScoped<IKinHubServiceCatalogService, KinHubServiceCatalogService>()
-        .AddScoped<IKinHubServiceAccessService, KinHubServiceAccessService>();
+        .AddScoped<IKinHubServiceAccessService, KinHubServiceAccessService>()
+        .AddScoped<IActiveItemsPageService, ActiveItemsPageService>();
 }

@@ -46,7 +46,7 @@ Il flusso protetto e:
 4. Risolvere `(iss, oid)` senza fallback su email o nome.
 5. Per Family, validare `familyId` dopo `ApiAccess`.
 6. Valutare `FamilyAuthorizationRequirement` con resource tipizzata e handler scoped asincrono.
-7. Esporre i valori verificati in una feature HTTP tipizzata limitata all'Application layer.
+7. Esporre i valori verificati in una feature HTTP tipizzata limitata all'Application layer, inclusi `familyId` e l'eventuale `applicationUserId` applicativo gia risolto dalla policy.
 8. Passare esplicitamente identita e `familyId` al caso d'uso e alla persistenza.
 
 La policy protegge l'ingresso ma non sostituisce lo scope dati: query e scritture continuano a includere `familyId` e gli altri predicati autorevoli.

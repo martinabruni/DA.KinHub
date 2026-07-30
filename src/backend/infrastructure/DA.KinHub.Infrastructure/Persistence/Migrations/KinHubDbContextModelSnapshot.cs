@@ -124,6 +124,211 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
                     b.ToTable("application_users", "shared");
                 });
 
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.KinListCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByApplicationUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_application_user_id");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<DateTimeOffset?>("InactiveAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inactive_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("normalized_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByApplicationUserId");
+
+                    b.HasIndex("FamilyId", "NormalizedName")
+                        .IsUnique()
+                        .HasFilter("inactive_at IS NULL");
+
+                    b.ToTable("categories", "kinlist");
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.KinListItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CompletedByApplicationUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("completed_by_application_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<DateTimeOffset?>("InactiveAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inactive_at");
+
+                    b.Property<Guid?>("ModifiedByApplicationUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modified_by_application_user_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OwnerApplicationUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_application_user_id");
+
+                    b.Property<int>("PositionInGroup")
+                        .HasColumnType("integer")
+                        .HasColumnName("position_in_group");
+
+                    b.Property<Guid>("RegistrationGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registration_group_id");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("revision");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("visibility");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedByApplicationUserId");
+
+                    b.HasIndex("ModifiedByApplicationUserId");
+
+                    b.HasIndex("OwnerApplicationUserId");
+
+                    b.HasIndex("RegistrationGroupId", "FamilyId");
+
+                    b.HasIndex("RegistrationGroupId", "PositionInGroup")
+                        .IsUnique();
+
+                    b.HasIndex("RegistrationGroupId", "PositionInGroup", "Id")
+                        .HasDatabaseName("IX_items_shared_active")
+                        .HasFilter("inactive_at IS NULL AND status = 'Active' AND visibility = 'Shared'");
+
+                    b.HasIndex("RegistrationGroupId", "OwnerApplicationUserId", "PositionInGroup", "Id")
+                        .HasDatabaseName("IX_items_personal_active")
+                        .HasFilter("inactive_at IS NULL AND status = 'Active' AND visibility = 'Personal'");
+
+                    b.ToTable("items", "kinlist", t =>
+                        {
+                            t.HasCheckConstraint("CK_items_position_in_group_non_negative", "position_in_group >= 0");
+
+                            t.HasCheckConstraint("CK_items_revision_positive", "revision >= 1");
+
+                            t.HasCheckConstraint("CK_items_status", "status IN ('Active', 'Completed')");
+
+                            t.HasCheckConstraint("CK_items_visibility", "visibility IN ('Shared', 'Personal')");
+                        });
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.KinListItemCategory", b =>
+                {
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.HasKey("ItemId", "CategoryId");
+
+                    b.HasIndex("CategoryId", "FamilyId");
+
+                    b.HasIndex("FamilyId", "ItemId");
+
+                    b.HasIndex("ItemId", "FamilyId");
+
+                    b.HasIndex("FamilyId", "CategoryId", "ItemId");
+
+                    b.ToTable("item_categories", "kinlist");
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.RegistrationGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByApplicationUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_application_user_id");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<DateTimeOffset?>("InactiveAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inactive_at");
+
+                    b.Property<Guid>("RecordingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recording_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByApplicationUserId");
+
+                    b.HasIndex("FamilyId", "RecordingId")
+                        .IsUnique();
+
+                    b.HasIndex("FamilyId", "CreatedAt", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("registration_groups", "kinlist");
+                });
+
             modelBuilder.Entity("DA.KinHub.Domain.KinServices.FamilyKinServiceAvailability", b =>
                 {
                     b.Property<Guid>("Id")
@@ -265,6 +470,79 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
                     b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DA.KinHub.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.KinListCategory", b =>
+                {
+                    b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DA.KinHub.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.KinListItem", b =>
+                {
+                    b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CompletedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ModifiedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DA.KinHub.Domain.KinList.RegistrationGroup", null)
+                        .WithMany()
+                        .HasForeignKey("RegistrationGroupId", "FamilyId")
+                        .HasPrincipalKey("Id", "FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.KinListItemCategory", b =>
+                {
+                    b.HasOne("DA.KinHub.Domain.KinList.KinListCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId", "FamilyId")
+                        .HasPrincipalKey("Id", "FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DA.KinHub.Domain.KinList.KinListItem", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId", "FamilyId")
+                        .HasPrincipalKey("Id", "FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.KinList.RegistrationGroup", b =>
+                {
+                    b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByApplicationUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

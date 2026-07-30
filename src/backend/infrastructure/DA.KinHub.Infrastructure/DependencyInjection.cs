@@ -1,11 +1,15 @@
 using DA.KinHub.Domain.Families;
 using DA.KinHub.Domain.Documents;
 using DA.KinHub.Domain.Identity;
+using DA.KinHub.Domain.KinList;
 using DA.KinHub.Domain.KinServices;
 using DA.KinHub.Infrastructure.Persistence;
+using DA.KinHub.Infrastructure.Pagination;
 using DA.KinHub.Infrastructure.Storage;
 using Azure.Core;
 using Azure.Identity;
+using Azure.Storage.Blobs;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +44,12 @@ public static class DependencyInjection
         services.AddSingleton(sp => CreateDataSource(
             sp.GetRequiredService<IOptions<DatabaseOptions>>().Value,
             sp.GetRequiredService<TokenCredential>()));
+        services.AddSingleton(sp => CreateApplicationContainerClient(
+            sp.GetRequiredService<IOptions<BlobStorageOptions>>().Value,
+            sp.GetRequiredService<TokenCredential>()));
+        services.AddDataProtection()
+            .SetApplicationName("KinHub")
+            .PersistKeysToAzureBlobStorage(sp => sp.GetRequiredService<BlobContainerClient>().GetBlobClient("data-protection/kinhub-keyring.xml"));
         services.AddSingleton<IDocumentStorage, BlobDocumentStorage>();
         services.AddDbContext<KinHubDbContext>((serviceProvider, options) =>
         {
@@ -55,10 +65,23 @@ public static class DependencyInjection
         services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
         services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMembershipRepository, FamilyMembershipRepository>();
+        services.AddScoped<IActiveKinListItemRepository, ActiveKinListItemRepository>();
         services.AddScoped<IKinServiceRepository, KinServiceRepository>();
+        services.AddSingleton<IActiveItemsCursorCodec, ActiveItemsCursorCodec>();
         services.AddHealthChecks().AddDbContextCheck<KinHubDbContext>("postgresql", tags: [InfrastructureHealthChecks.ReadyTag]);
         services.AddHostedService<DatabaseMigrationHostedService>();
         return services;
+    }
+
+    private static BlobContainerClient CreateApplicationContainerClient(BlobStorageOptions options, TokenCredential credential)
+    {
+        if (!string.IsNullOrWhiteSpace(options.ConnectionString))
+        {
+            return new BlobContainerClient(options.ConnectionString, options.ContainerName);
+        }
+
+        var containerUri = new Uri(new Uri(options.AccountUri.TrimEnd('/') + "/", UriKind.Absolute), options.ContainerName);
+        return new BlobContainerClient(containerUri, credential);
     }
 
     private static NpgsqlDataSource CreateDataSource(DatabaseOptions options, TokenCredential credential)
