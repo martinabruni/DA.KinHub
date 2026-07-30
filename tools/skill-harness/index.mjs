@@ -7,6 +7,9 @@ const root = resolve(import.meta.dirname, "../..");
 const realRoot = realpathSync(root);
 const skillsRoot = join(root, "skills");
 const registryPath = join(skillsRoot, "registry.json");
+const functionsRoot = join(root, "src/backend/applications/DA.KinHub.Functions/Functions");
+const apiRoutesPath = join(root, "src/backend/applications/DA.KinHub.Functions/Http/ApiRoutes.cs");
+const openApiPath = join(root, "openapi.yaml");
 const requiredHeadings = [
   "## Scopo",
   "## Quando usare",
@@ -117,6 +120,35 @@ function loadSkills() {
   }).sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function validateOpenApiRoutes() {
+  const apiRoutes = normalizeText(readFileSync(apiRoutesPath, "utf8"));
+  const routeConstants = new Map(
+    [...apiRoutes.matchAll(/^    public static class (\w+)\s*\{([\s\S]*?)(?=^    public static class|^})/gm)]
+      .flatMap(([, group, content]) => [...content.matchAll(/public const string (\w+) = "([^"]+)";/g)]
+        .map(([, name, route]) => [`${group}.${name}`, route]))
+  );
+  const triggers =
+    walk(functionsRoot)
+      .filter((path) => path.endsWith(".cs"))
+      .flatMap((path) => [...normalizeText(readFileSync(path, "utf8")).matchAll(/\[HttpTrigger\(([\s\S]*?)\)\]/g)]);
+  const functionRoutes = new Set(triggers.map(([, trigger]) => {
+    const route = trigger.match(/Route\s*=\s*ApiRoutes\.(\w+\.\w+)/)?.[1];
+    if (!route) throw new Error("Ogni HTTP Function deve dichiarare Route = ApiRoutes.<gruppo>.<nome>");
+    return routeConstants.get(route);
+  }));
+
+  if (functionRoutes.has(undefined)) throw new Error("Impossibile risolvere una route HTTP Function da ApiRoutes.cs");
+
+  const documentedRoutes = new Set(
+    [...normalizeText(readFileSync(openApiPath, "utf8")).matchAll(/^  \/([^:]+):\s*$/gm)]
+      .map(([, route]) => route)
+  );
+  const missingRoutes = [...functionRoutes].filter((route) => !documentedRoutes.has(route));
+  if (missingRoutes.length > 0) {
+    throw new Error(`openapi.yaml non documenta le route HTTP Function: ${missingRoutes.sort().join(", ")}`);
+  }
+}
+
 function registry() {
   return { schemaVersion: 1, app: "KinHub", generatedBy: "tools/skill-harness", skills: loadSkills() };
 }
@@ -131,6 +163,7 @@ function build() {
 }
 
 function validate() {
+  validateOpenApiRoutes();
   const expected = serializedRegistry();
   if (!existsSync(registryPath)) throw new Error("skills/registry.json mancante: eseguire npm run skills:build");
   if (readFileSync(registryPath, "utf8") !== expected) throw new Error("skills/registry.json non aggiornato: eseguire npm run skills:build");

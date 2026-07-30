@@ -12,7 +12,7 @@ public sealed class EntraOptions
 
     public string TenantId { get; init; } = "common";
 
-    public string Audience { get; init; } = "api://kinhub-local";
+    public string Audience { get; init; } = "kinhub-local";
 
     public string Scope { get; init; } = "access_as_user";
 }

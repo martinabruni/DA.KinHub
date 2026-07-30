@@ -35,6 +35,12 @@ jobs:
       - name: Test backend
         run: dotnet test KinHub.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx"
 
+      - name: Build migration bundle
+        run: |
+          dotnet tool restore
+          mkdir -p artifacts/migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
+
       - name: Publish and validate Function package
         run: bash scripts/package-backend.sh CI
 

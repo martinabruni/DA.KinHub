@@ -200,8 +200,10 @@ Validazione/deploy manuale:
 
 ```bash
 az bicep build --file infra/app.bicep
-az deployment group validate --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters infra/main.dev.bicepparam --parameters postgresAdminPassword='<VALUE>'
-az deployment group create --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters infra/main.dev.bicepparam --parameters postgresAdminPassword='<VALUE>'
+mkdir -p artifacts/infra
+az bicep build-params --file infra/main.dev.bicepparam --outfile artifacts/infra/main.dev.parameters.json
+az deployment group validate --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters @artifacts/infra/main.dev.parameters.json postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' azureTenantId='<AZURE_TENANT_ID>' entraInstance='https://<TENANT_SUBDOMAIN>.ciamlogin.com/' entraTenantId='<ENTRA_TENANT_ID>' entraBackendAudience='<ENTRA_BACKEND_CLIENT_ID>' postgresEntraAdministratorName='<POSTGRES_ENTRA_ADMIN_NAME>' postgresEntraAdministratorObjectId='<POSTGRES_ENTRA_ADMIN_OBJECT_ID>'
+az deployment group create --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters @artifacts/infra/main.dev.parameters.json postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' azureTenantId='<AZURE_TENANT_ID>' entraInstance='https://<TENANT_SUBDOMAIN>.ciamlogin.com/' entraTenantId='<ENTRA_TENANT_ID>' entraBackendAudience='<ENTRA_BACKEND_CLIENT_ID>' postgresEntraAdministratorName='<POSTGRES_ENTRA_ADMIN_NAME>' postgresEntraAdministratorObjectId='<POSTGRES_ENTRA_ADMIN_OBJECT_ID>'
 ```
 
 Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, location, policy, provider e quota prima di eseguire `create`.
@@ -209,8 +211,11 @@ Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, loc
 ## CI/CD
 
 - `pr-quality.yml`: qualità completa, package e Bicep; nessun deploy.
-- `deploy-infrastructure.yml`: tag `infra-*`; Bicep completo, provisioning principal PostgreSQL Entra, migration bundle con token, One Deploy, frontend e smoke test.
-- `deploy-code.yml`: push `main`; build/test/validatori, riallineamento principal PostgreSQL Entra, migration bundle con token, One Deploy e Static Web Apps, senza modifiche infrastrutturali.
+- `deploy.yml`: push path-based su `main`; sceglie un solo scope dal diff rispetto all'ultimo deploy riuscito, serializza il run attivo e coalesce i pending senza perdere modifiche, con dispatch manuale da `main`.
+- `deploy-infrastructure.yml`: workflow riusabile full-stack; Bicep, principal PostgreSQL Entra, migration bundle e grant precedono il deploy applicativo condiviso.
+- `deploy-code.yml`: workflow riusabile applicativo; build/test/validatori, One Deploy e Static Web Apps, senza Bicep o migration.
+
+Modifiche a `infra/`, alle migration EF o al workflow infrastrutturale selezionano il percorso full-stack. Per commit misti questo percorso prevale e non parte un secondo deploy applicativo; modifiche esclusivamente applicative non ridistribuiscono l'infrastruttura.
 
 Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il token dedicato del servizio. Il publish profile Function è solo fallback opzionale e non è usato dal percorso primario.
 
@@ -285,6 +290,6 @@ Flex scala a zero e non usa always-ready in dev. PostgreSQL Burstable è il cost
 - Creare/configurare app registration External ID e consenso.
 - Creare federated credential GitHub OIDC e assegnare ruoli minimi.
 - Valorizzare secret/variable per environment.
-- Eseguire il primo workflow infrastrutturale tramite tag dopo validazione Azure.
-- Copiare output Function/SWA nelle Variables richieste e recuperare il token SWA.
+- Per un ambiente nuovo, eseguire prima il provisioning Bicep validato, recuperare il token SWA e configurare secret/variable; poi eseguire `deploy.yml` manualmente con scope `infrastructure`.
+- Copiare gli output Function/SWA nelle Variables richieste; i merge successivi su `main` saranno classificati dai path.
 - Sostituire icone PWA placeholder e verificare installazione sui browser target.

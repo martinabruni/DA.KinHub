@@ -11,7 +11,7 @@ npm run skills:build
 npm run skills:watch
 ```
 
-`build` rigenera il registry deterministico; `validate` fallisce se metadati, sezioni, cataloghi, riferimenti o registry non sono validi.
+`build` rigenera il registry deterministico; `validate` fallisce se metadati, sezioni, cataloghi, riferimenti o registry non sono validi. Verifica anche che ogni route di una HTTP Function sia documentata in `openapi.yaml`.
 
 La skill `implementation` e obbligatoria per le richieste di implementazione feature. Definisce gli unici arresti ammessi, il checkpoint `implementation-progress.md` nella cartella della feature e la consegna tramite commit e push su `dev`, quindi pull request con branch sorgente `dev` e destinazione `main`. Quando una feature passa a `In review`, il lavoro non e concluso finche la PR non esiste e tutte le GitHub Actions attivate sull'ultimo commit non sono verdi; i run rossi richiedono correzione e nuovo push. Il merge resta vietato.
 

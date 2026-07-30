@@ -1,9 +1,17 @@
-name: Deploy application code
+name: Deploy application
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      function_app_name:
+        required: false
+        type: string
+      function_app_hostname:
+        required: false
+        type: string
+      static_web_app_hostname:
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -17,6 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
+      - name: Reject out-of-order reruns
+        if: github.run_attempt != 1
+        run: |
+          echo "Start a new deploy.yml workflow_dispatch run instead of rerunning an old deployment." >&2
+          exit 1
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -67,17 +81,40 @@ jobs:
         id: deploy
         shell: bash
         run: |
-          function_app_name=$(az functionapp list \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --query "[0].name" \
-            --output tsv)
-          static_web_app_hostname=$(az staticwebapp list \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --query "[0].defaultHostname" \
-            --output tsv)
+          function_app_name="${{ inputs.function_app_name || vars.AZURE_FUNCTIONAPP_NAME }}"
+          function_app_hostname="${{ inputs.function_app_hostname }}"
+          static_web_app_hostname="${{ inputs.static_web_app_hostname }}"
+          static_web_app_name="${{ vars.AZURE_STATIC_WEB_APP_NAME }}"
+
+          if [[ -z "$function_app_name" ]]; then
+            function_app_name=$(az functionapp list \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --query "[0].name" \
+              --output tsv)
+          fi
+          if [[ -z "$function_app_hostname" ]]; then
+            function_app_hostname="${function_app_name}.azurewebsites.net"
+          fi
+          if [[ -z "$static_web_app_hostname" ]]; then
+            if [[ -n "$static_web_app_name" ]]; then
+              static_web_app_hostname=$(az staticwebapp show \
+                --name "$static_web_app_name" \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --query defaultHostname \
+                --output tsv)
+            else
+              static_web_app_hostname=$(az staticwebapp list \
+                --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+                --query "[0].defaultHostname" \
+                --output tsv)
+            fi
+          fi
+
           test -n "$function_app_name"
+          test -n "$function_app_hostname"
           test -n "$static_web_app_hostname"
           echo "function_app_name=$function_app_name" >> "$GITHUB_OUTPUT"
+          echo "function_app_hostname=$function_app_hostname" >> "$GITHUB_OUTPUT"
           echo "static_web_app_hostname=$static_web_app_hostname" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Function App with One Deploy
@@ -90,7 +127,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_BASE_URL: https://${{ steps.deploy.outputs.function_app_name }}.azurewebsites.net
+          VITE_API_BASE_URL: https://${{ steps.deploy.outputs.function_app_hostname }}
           VITE_ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID }}
           VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
           VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
@@ -109,8 +146,8 @@ jobs:
 
       - name: Smoke test API
         run: |
-          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.deploy.outputs.function_app_name }}.azurewebsites.net/health/live"
-          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.deploy.outputs.function_app_name }}.azurewebsites.net/api/version"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.deploy.outputs.function_app_hostname }}/health/live"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.deploy.outputs.function_app_hostname }}/api/version"
 
       - uses: actions/upload-artifact@v7
         with:
