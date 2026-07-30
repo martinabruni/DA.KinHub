@@ -29,7 +29,7 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
                                     || (item.Visibility == ItemVisibility.Personal && item.OwnerApplicationUserId == applicationUserId))
                             select new ItemProjection(
                                 item.Id,
-                                item.Name.Value,
+                                item.Name,
                                 item.PositionInGroup,
                                 item.Revision,
                                 registrationGroup.CreatedAt,
@@ -100,7 +100,7 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
                     categoriesByItem.TryGetValue(item.Id, out var categoryPage);
                     return new ActiveKinListItemEntry(
                         item.Id,
-                        item.Name,
+                        item.Name.Value,
                         new ActiveItemsPageAnchor(item.GroupCreatedAt, item.GroupId, item.PositionInGroup, item.Id),
                         categoryPage?.Categories ?? [],
                         categoryPage?.RemainingCategoryCount ?? 0,
@@ -121,7 +121,7 @@ internal sealed class ActiveKinListItemRepository(KinHubDbContext dbContext) : I
         or DbException
         or DbUpdateException { InnerException: DbException };
 
-    private sealed record ItemProjection(Guid Id, string Name, int PositionInGroup, long Revision, DateTimeOffset GroupCreatedAt, Guid GroupId);
+    private sealed record ItemProjection(Guid Id, KinListItemName Name, int PositionInGroup, long Revision, DateTimeOffset GroupCreatedAt, Guid GroupId);
 
     private sealed record CategoryProjection(Guid ItemId, Guid CategoryId, string Name);
 
