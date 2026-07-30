@@ -13,6 +13,7 @@ public sealed class KinHubTelemetryTests
     {
         var longMeasurements = new List<(string Instrument, long Value, string? Operation, string? Outcome)>();
         var doubleMeasurements = new List<(string Instrument, double Value, string? Operation, string? Outcome)>();
+        var measurementsLock = new object();
         using var meterListener = new MeterListener();
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
@@ -22,9 +23,19 @@ public sealed class KinHubTelemetryTests
             }
         };
         meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
-            longMeasurements.Add((instrument.Name, value, TagValue(tags, "operation"), TagValue(tags, "outcome"))));
+        {
+            lock (measurementsLock)
+            {
+                longMeasurements.Add((instrument.Name, value, TagValue(tags, "operation"), TagValue(tags, "outcome")));
+            }
+        });
         meterListener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
-            doubleMeasurements.Add((instrument.Name, value, TagValue(tags, "operation"), TagValue(tags, "outcome"))));
+        {
+            lock (measurementsLock)
+            {
+                doubleMeasurements.Add((instrument.Name, value, TagValue(tags, "operation"), TagValue(tags, "outcome")));
+            }
+        });
         meterListener.Start();
 
         var activities = new List<Activity>();
@@ -42,14 +53,14 @@ public sealed class KinHubTelemetryTests
             operation.Complete("family");
         }
 
-        Assert.Single(longMeasurements);
-        Assert.Single(doubleMeasurements);
-        Assert.Equal("kinhub.outcomes", longMeasurements[0].Instrument);
-        Assert.Equal(KinHubOperations.Bootstrap, longMeasurements[0].Operation);
-        Assert.Equal("family", longMeasurements[0].Outcome);
-        Assert.Equal("kinhub.duration.ms", doubleMeasurements[0].Instrument);
-        Assert.Equal(KinHubOperations.Bootstrap, doubleMeasurements[0].Operation);
-        Assert.Equal("family", doubleMeasurements[0].Outcome);
+        var longMeasurement = Assert.Single(Snapshot(longMeasurements, measurementsLock));
+        var doubleMeasurement = Assert.Single(Snapshot(doubleMeasurements, measurementsLock));
+        Assert.Equal("kinhub.outcomes", longMeasurement.Instrument);
+        Assert.Equal(KinHubOperations.Bootstrap, longMeasurement.Operation);
+        Assert.Equal("family", longMeasurement.Outcome);
+        Assert.Equal("kinhub.duration.ms", doubleMeasurement.Instrument);
+        Assert.Equal(KinHubOperations.Bootstrap, doubleMeasurement.Operation);
+        Assert.Equal("family", doubleMeasurement.Outcome);
 
         var activity = Assert.Single(activities);
         Assert.Equal(KinHubOperations.Bootstrap, activity.OperationName);
@@ -62,6 +73,7 @@ public sealed class KinHubTelemetryTests
     public void RecordSignalEmitsOneLowCardinalityMeasurement()
     {
         var longMeasurements = new List<(string Instrument, long Value, string? Operation, string? Outcome, string? ErrorCategory)>();
+        var measurementsLock = new object();
         using var meterListener = new MeterListener();
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
@@ -71,18 +83,23 @@ public sealed class KinHubTelemetryTests
             }
         };
         meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
-            longMeasurements.Add((
-                instrument.Name,
-                value,
-                TagValue(tags, "operation"),
-                TagValue(tags, "outcome"),
-                TagValue(tags, "errorCategory"))));
+        {
+            lock (measurementsLock)
+            {
+                longMeasurements.Add((
+                    instrument.Name,
+                    value,
+                    TagValue(tags, "operation"),
+                    TagValue(tags, "outcome"),
+                    TagValue(tags, "errorCategory")));
+            }
+        });
         meterListener.Start();
 
         using var telemetry = new KinHubTelemetry(new BuildInfoProvider(Options.Create(new RuntimeOptions { AppName = "KinHub", ApiVersion = "1.0", Environment = "Test" })));
         telemetry.RecordSignal(KinHubOperations.ApiAccess, "auth.requiredClaims", "identity");
 
-        var measurement = Assert.Single(longMeasurements, measurement => measurement.Instrument == "kinhub.signals");
+        var measurement = Assert.Single(Snapshot(longMeasurements, measurementsLock), measurement => measurement.Instrument == "kinhub.signals");
         Assert.Equal(KinHubOperations.ApiAccess, measurement.Operation);
         Assert.Equal("auth.requiredClaims", measurement.Outcome);
         Assert.Equal("identity", measurement.ErrorCategory);
@@ -92,6 +109,7 @@ public sealed class KinHubTelemetryTests
     public void FamilyCreationSignalsStayLowCardinality()
     {
         var longMeasurements = new List<(string Instrument, long Value, string? Operation, string? Outcome, string? ErrorCategory)>();
+        var measurementsLock = new object();
         using var meterListener = new MeterListener();
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
@@ -101,12 +119,17 @@ public sealed class KinHubTelemetryTests
             }
         };
         meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
-            longMeasurements.Add((
-                instrument.Name,
-                value,
-                TagValue(tags, "operation"),
-                TagValue(tags, "outcome"),
-                TagValue(tags, "errorCategory"))));
+        {
+            lock (measurementsLock)
+            {
+                longMeasurements.Add((
+                    instrument.Name,
+                    value,
+                    TagValue(tags, "operation"),
+                    TagValue(tags, "outcome"),
+                    TagValue(tags, "errorCategory")));
+            }
+        });
         meterListener.Start();
 
         using var telemetry = new KinHubTelemetry(new BuildInfoProvider(Options.Create(new RuntimeOptions { AppName = "KinHub", ApiVersion = "1.0", Environment = "Test" })));
@@ -114,15 +137,16 @@ public sealed class KinHubTelemetryTests
         telemetry.RecordSignal(KinHubOperations.FamilyCreation, "concurrent_conflict", "concurrency");
         telemetry.RecordSignal(KinHubOperations.FamilyCreation, "postgresql_unavailable", "dependency");
 
-        Assert.Contains(longMeasurements, measurement => measurement.Instrument == "kinhub.signals"
+        var measurements = Snapshot(longMeasurements, measurementsLock);
+        Assert.Contains(measurements, measurement => measurement.Instrument == "kinhub.signals"
             && measurement.Operation == KinHubOperations.FamilyCreation
             && measurement.Outcome == "attempt"
             && measurement.ErrorCategory is null);
-        Assert.Contains(longMeasurements, measurement => measurement.Instrument == "kinhub.signals"
+        Assert.Contains(measurements, measurement => measurement.Instrument == "kinhub.signals"
             && measurement.Operation == KinHubOperations.FamilyCreation
             && measurement.Outcome == "concurrent_conflict"
             && measurement.ErrorCategory == "concurrency");
-        Assert.Contains(longMeasurements, measurement => measurement.Instrument == "kinhub.signals"
+        Assert.Contains(measurements, measurement => measurement.Instrument == "kinhub.signals"
             && measurement.Operation == KinHubOperations.FamilyCreation
             && measurement.Outcome == "postgresql_unavailable"
             && measurement.ErrorCategory == "dependency");
@@ -139,5 +163,13 @@ public sealed class KinHubTelemetryTests
         }
 
         return null;
+    }
+
+    private static T[] Snapshot<T>(List<T> measurements, object gate)
+    {
+        lock (gate)
+        {
+            return measurements.ToArray();
+        }
     }
 }
