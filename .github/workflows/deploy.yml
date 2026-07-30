@@ -23,9 +23,10 @@ on:
       deployment_scope:
         description: Scope to deploy
         required: true
-        default: application
+        default: auto
         type: choice
         options:
+          - auto
           - application
           - infrastructure
 
@@ -46,7 +47,6 @@ jobs:
       deployment_scope: ${{ steps.scope.outputs.deployment_scope }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name == 'push'
         with:
           fetch-depth: 0
 
@@ -54,11 +54,30 @@ jobs:
         id: scope
         shell: bash
         env:
-          BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
           GH_TOKEN: ${{ github.token }}
           MANUAL_SCOPE: ${{ inputs.deployment_scope }}
         run: |
+          classify_range() {
+            local base_sha="$1"
+            local head_sha="$2"
+            local scope=none
+
+            while IFS= read -r changed_path; do
+              case "$changed_path" in
+                infra/*|.github/workflows/deploy.yml|.github/workflows/deploy-infrastructure.yml|src/backend/infrastructure/DA.KinHub.Infrastructure/Persistence/Migrations/*)
+                  echo infrastructure
+                  return
+                  ;;
+                .github/workflows/deploy-code.yml|src/backend/*|src/frontend/*|scripts/*|docs/user-guide/*|changes/*|tools/docs-sync/*|tools/release-notes/*|Directory.Build.props|KinHub.slnx|VERSION)
+                  scope=application
+                  ;;
+              esac
+            done < <(git diff --no-renames --name-only "$base_sha" "$head_sha")
+
+            echo "$scope"
+          }
+
           if [[ "$GITHUB_RUN_ATTEMPT" != "1" ]]; then
             echo "Do not rerun an old deployment: start a new workflow_dispatch run to preserve ordering." >&2
             exit 1
@@ -69,8 +88,27 @@ jobs:
               echo "Manual deployments must run from main." >&2
               exit 1
             fi
-            echo "deployment_scope=$MANUAL_SCOPE" >> "$GITHUB_OUTPUT"
-            exit 0
+          fi
+
+          main_head=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/branches/main" \
+            --jq '.commit.sha')
+          if [[ "$CURRENT_SHA" != "$main_head" ]]; then
+            if ! git cat-file -e "${main_head}^{commit}" 2>/dev/null; then
+              git fetch --no-tags origin "$main_head"
+            fi
+            if ! git merge-base --is-ancestor "$CURRENT_SHA" "$main_head"; then
+              echo "Rejected deployment for a commit outside the current main history." >&2
+              exit 1
+            fi
+
+            superseding_scope=$(classify_range "$CURRENT_SHA" "$main_head")
+            if [[ "$superseding_scope" != "none" ]]; then
+              echo "Rejected superseded deployment for $CURRENT_SHA; newer deployable changes exist at $main_head." >&2
+              exit 1
+            fi
+
+            echo "Current main differs only in non-deployable paths; continuing deployment for $CURRENT_SHA." >> "$GITHUB_STEP_SUMMARY"
           fi
 
           comparison_base=$(gh api \
@@ -78,12 +116,18 @@ jobs:
             --jq '.workflow_runs[0].head_sha // ""')
 
           if [[ -z "$comparison_base" ]]; then
-            comparison_base="$BEFORE_SHA"
+            echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
+            echo "No successful deployment baseline exists; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
           if [[ "$comparison_base" =~ ^0+$ ]]; then
             comparison_base=$(git hash-object -t tree /dev/null)
           elif ! git cat-file -e "${comparison_base}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$comparison_base"
+            if ! git fetch --no-tags origin "$comparison_base"; then
+              echo "deployment_scope=infrastructure" >> "$GITHUB_OUTPUT"
+              echo "The comparison base is unavailable; selected full-stack deployment." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
           fi
 
           if git cat-file -e "${comparison_base}^{commit}" 2>/dev/null && \
@@ -93,15 +137,17 @@ jobs:
             exit 0
           fi
 
-          deployment_scope=application
-          while IFS= read -r changed_path; do
-            case "$changed_path" in
-              infra/*|.github/workflows/deploy.yml|.github/workflows/deploy-infrastructure.yml|src/backend/infrastructure/DA.KinHub.Infrastructure/Persistence/Migrations/*)
-                deployment_scope=infrastructure
-                break
-                ;;
-            esac
-          done < <(git diff --name-only "$comparison_base" "$CURRENT_SHA")
+          deployment_scope=$(classify_range "$comparison_base" "$CURRENT_SHA")
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "$MANUAL_SCOPE" == "infrastructure" ]]; then
+              deployment_scope=infrastructure
+            elif [[ "$MANUAL_SCOPE" == "application" && "$deployment_scope" == "infrastructure" ]]; then
+              echo "Application scope was promoted to infrastructure because the accumulated diff contains infrastructure or migrations." >> "$GITHUB_STEP_SUMMARY"
+            elif [[ "$MANUAL_SCOPE" == "application" ]]; then
+              deployment_scope=application
+            fi
+          fi
 
           echo "deployment_scope=$deployment_scope" >> "$GITHUB_OUTPUT"
           echo "Comparison base: $comparison_base" >> "$GITHUB_STEP_SUMMARY"

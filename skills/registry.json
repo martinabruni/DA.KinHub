@@ -146,7 +146,7 @@
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "85ea4f3dba9606e8c8bb3c6cea2004d306c485eb6864603ca29b26383c93219d"
+          "checksum": "6396104a4e81931ff82924dd735d0b74b69677943e5d8c5d8c47bbfd0d2e5c8b"
         },
         {
           "path": "skills/implementation/templates/implementation-progress.md",
@@ -155,7 +155,7 @@
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "d588af20cf326808389aef32df3e52b3f22b633d89c1867e07eadc69a703d8b3"
+      "checksum": "13e0467a9f3516d5b980557bd2f3f04d516fe259c58704ff5117e07bf4c72658"
     },
     {
       "id": "kinhub-release",

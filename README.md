@@ -211,7 +211,7 @@ Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, loc
 ## CI/CD
 
 - `pr-quality.yml`: qualità completa, package e Bicep; nessun deploy.
-- `deploy.yml`: push path-based su `main`; sceglie un solo scope dal diff rispetto all'ultimo deploy riuscito, serializza il run attivo e coalesce i pending senza perdere modifiche, con dispatch manuale da `main`.
+- `deploy.yml`: push path-based su `main`; rifiuta SHA superati da input distribuibili, usa full-stack senza baseline e poi sceglie lo scope dal diff rispetto all'ultimo deploy riuscito, coalescendo i pending senza perdere modifiche, con dispatch manuale `auto` da `main`.
 - `deploy-infrastructure.yml`: workflow riusabile full-stack; Bicep, principal PostgreSQL Entra, migration bundle e grant precedono il deploy applicativo condiviso.
 - `deploy-code.yml`: workflow riusabile applicativo; build/test/validatori, One Deploy e Static Web Apps, senza Bicep o migration.
 

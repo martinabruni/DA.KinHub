@@ -944,9 +944,9 @@ Classifica tutti i file del push prima di distribuire:
 - se cambia `infra/`, il workflow infrastrutturale o una migration EF, esegui una sola pipeline full-stack;
 - in assenza di modifiche infrastrutturali, se cambia un input applicativo, esegui soltanto la pipeline applicativa;
 - per commit misti fai prevalere sempre il percorso full-stack, senza avviare in parallelo un secondo deploy applicativo;
-- serializza il run attivo con `concurrency` e `cancel-in-progress: false`; poiche GitHub mantiene un solo pending, classifica ogni run dall'ultimo deploy riuscito invece che dal solo push corrente, cosi il run piu recente incorpora anche migration o infrastruttura fallite o coalescenti.
+- serializza il run attivo con `concurrency` e `cancel-in-progress: false`; poiche GitHub mantiene un solo pending senza garantirne l'ordine, rifiuta uno SHA quando commit successivi contengono input distribuibili ma lascialo proseguire se cambiano soltanto path esclusi dal deploy. Usa il percorso full-stack finche non esiste un deploy riuscito e poi classifica dall'ultimo baseline riuscito, cosi incorpora migration o infrastruttura fallite o coalescenti.
 
-Non usare tag come trigger ordinario e non consentire il rerun di un vecchio deploy: per ripetere un rilascio crea un nuovo dispatch manuale da `main`. I cambiamenti fuori dagli input distribuibili, per esempio sola documentazione tecnica o soli test, non devono avviare un deploy.
+Non usare tag come trigger ordinario e non consentire il rerun di un vecchio deploy: per ripetere un rilascio crea un nuovo dispatch manuale da `main`, con scope `auto` per default. Un'eventuale richiesta manuale `application` deve essere promossa a full-stack quando il diff accumulato contiene infrastruttura o migration. I cambiamenti fuori dagli input distribuibili, per esempio sola documentazione tecnica o soli test, non devono avviare un deploy.
 
 ### 20.3 Workflow riusabili e responsabilita
 
