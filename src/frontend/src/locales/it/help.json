@@ -1,19 +1,19 @@
 {
   "home": {
-    "summary": "Scopri i servizi e raggiungi rapidamente le aree principali.",
-    "purpose": "Offre una panoramica essenziale di KinHub.",
-    "actions": "Aprire KinList, Versione, Note di rilascio o Impostazioni.",
-    "prerequisites": "Nessuno.",
-    "fields": "Le schede descrivono le aree disponibili.",
-    "limits": "I servizi specialistici verranno aggiunti in versioni successive."
+    "summary": "Mostra solo i servizi attivi autorizzati per la famiglia corrente oppure gli stati di accesso e onboarding.",
+    "purpose": "Usa bootstrap KinHub e catalogo server-side per evitare card hardcoded o dati familiari conservati nel browser.",
+    "actions": "Accedere dalla shell globale, creare la prima famiglia, rileggere il catalogo o aprire un servizio autorizzato.",
+    "prerequisites": "Per vedere i servizi occorrono sessione valida, connessione attiva e famiglia con disponibilita del servizio.",
+    "fields": "La pagina distingue visitatore, onboarding, caricamento catalogo, stato vuoto, offline, sessione scaduta, accesso negato ed errore recuperabile.",
+    "limits": "Release Notes resta fuori dal catalogo e disponibilita o localizzazioni non vengono salvate offline."
   },
   "kinlist": {
-    "summary": "Usa il bootstrap KinHub post-login e consente di creare la prima famiglia senza uscire da /kinlist.",
-    "purpose": "Consuma il controllo autorevole KinHub della membership familiare e salva in modo atomico famiglia e membership del creatore.",
-    "actions": "Attendere la verifica, creare una famiglia con il solo nome, tornare alla scelta iniziale oppure riprovare dopo un errore recuperabile.",
-    "prerequisites": "È necessario accedere con un token API valido e una connessione attiva per il bootstrap online.",
+    "summary": "Verifica bootstrap, famiglia attiva e disponibilita KinList prima di mostrare il contenuto protetto della route /kinlist.",
+    "purpose": "Impedisce che il solo URL diretto o la card Home diventino una prova di autorizzazione al servizio.",
+    "actions": "Attendere il controllo, creare la prima famiglia se manca, rileggere dopo un errore recuperabile oppure accedere di nuovo se la sessione è scaduta.",
+    "prerequisites": "È necessario accedere con un token API valido e una connessione attiva per bootstrap e controllo accesso server-side.",
     "fields": "La pagina distingue caricamento, onboarding, sessione scaduta, accesso negato, errore tecnico, shell offline e form con il solo campo nome famiglia da 1 a 100 caratteri.",
-    "limits": "Join con codice e lista condivisa arrivano in feature successive; offline resta disponibile solo la shell pubblica e il nome inserito non viene salvato nel browser."
+    "limits": "Il contenuto KinList non viene montato prima del controllo accesso e nessuna autorizzazione viene salvata nel browser."
   },
   "about": {
     "summary": "Controlla versione e metadati della build.",

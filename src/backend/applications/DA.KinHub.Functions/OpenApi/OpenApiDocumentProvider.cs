@@ -96,6 +96,64 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                             ["500"] = problemResponse,
                             ["503"] = problemResponse
                         })
+                },
+                [$"/{ApiRoutes.KinHub.Services}"] = new
+                {
+                    get = FamilyOperation(
+                        "List the KinServices available for the authorized family",
+                        new Dictionary<string, object>
+                        {
+                            ["200"] = new
+                            {
+                                description = "Family service catalog",
+                                content = new Dictionary<string, object>
+                                {
+                                    ["application/json"] = new
+                                    {
+                                        schema = new { @ref = "#/components/schemas/KinHubServiceCatalogResult" }
+                                    }
+                                }
+                            },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        },
+                        new object[]
+                        {
+                            new
+                            {
+                                name = "language",
+                                @in = "query",
+                                required = false,
+                                schema = new { type = "string", @enum = new[] { "it", "en" } }
+                            }
+                        })
+                },
+                [$"/{ApiRoutes.KinHub.ServiceAccess.Replace("{serviceKey}", "{serviceKey}", StringComparison.Ordinal)}"] = new
+                {
+                    get = FamilyOperation(
+                        "Check whether the authorized family can access a KinService",
+                        new Dictionary<string, object>
+                        {
+                            ["204"] = new { description = "Access granted" },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        },
+                        new object[]
+                        {
+                            new
+                            {
+                                name = "serviceKey",
+                                @in = "path",
+                                required = true,
+                                schema = new { type = "string" }
+                            }
+                        })
                 }
             },
             components = new
@@ -119,6 +177,31 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                 },
                 schemas = new Dictionary<string, object>
                 {
+                    ["KinHubServiceCatalogItem"] = new
+                    {
+                        type = "object",
+                        required = new[] { "key", "route", "name", "description" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["key"] = new { type = "string" },
+                            ["route"] = new { type = "string" },
+                            ["name"] = new { type = "string" },
+                            ["description"] = new { type = "string" }
+                        }
+                    },
+                    ["KinHubServiceCatalogResult"] = new
+                    {
+                        type = "object",
+                        required = new[] { "services" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["services"] = new
+                            {
+                                type = "array",
+                                items = new { @ref = "#/components/schemas/KinHubServiceCatalogItem" }
+                            }
+                        }
+                    },
                     ["ProblemDetails"] = new
                     {
                         type = "object",
@@ -163,12 +246,9 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
         return operation;
     }
 
-    private static object FamilyOperation(string summary, Dictionary<string, object> responses) => new
+    private static object FamilyOperation(string summary, Dictionary<string, object> responses, object[]? additionalParameters = null)
     {
-        summary,
-        responses,
-        security = new object[] { new Dictionary<string, object> { [SecurityConstants.BearerScheme] = Array.Empty<string>() } },
-        parameters = new object[]
+        var parameters = new List<object>
         {
             new
             {
@@ -177,7 +257,20 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                 required = true,
                 schema = new { type = "string", format = "uuid" }
             }
-        },
-        x_cacheControl = ApiResults.NoStorePrivateCacheControl
-    };
+        };
+
+        if (additionalParameters is not null)
+        {
+            parameters.AddRange(additionalParameters);
+        }
+
+        return new
+        {
+            summary,
+            responses,
+            security = new object[] { new Dictionary<string, object> { [SecurityConstants.BearerScheme] = Array.Empty<string>() } },
+            parameters,
+            x_cacheControl = ApiResults.NoStorePrivateCacheControl
+        };
+    }
 }

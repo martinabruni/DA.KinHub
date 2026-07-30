@@ -38,3 +38,17 @@ public interface IFamilyCreationService
 {
     Task<FamilyCreationResult> CreateFamilyAsync(ExternalIdentity externalIdentity, string? name, CancellationToken cancellationToken);
 }
+
+public sealed record KinHubServiceCatalogItem(string Key, string Route, string Name, string Description);
+
+public sealed record KinHubServiceCatalogResult(IReadOnlyList<KinHubServiceCatalogItem> Services);
+
+public interface IKinHubServiceCatalogService
+{
+    Task<KinHubServiceCatalogResult> GetCatalogAsync(Guid familyId, string? language, CancellationToken cancellationToken);
+}
+
+public interface IKinHubServiceAccessService
+{
+    Task EnsureAccessAsync(Guid familyId, string serviceKey, CancellationToken cancellationToken);
+}

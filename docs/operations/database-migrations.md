@@ -48,3 +48,41 @@ WHERE fm."Id" IS NULL;
 ```
 
 Il rollback operativo di FEAT-002 usa il `Down` solo prima di creare la prima famiglia nel nuovo modello. Dopo scritture reali preferire una migration correttiva compatibile con i dati e verificare backup o PITR prima di ogni inversione.
+
+## FEAT-015 - Catalogo servizi familiari
+
+Prima della migration FEAT-015 verificare inoltre:
+
+- presenza della migration FEAT-002 in `__EFMigrationsHistory`;
+- grant runtime e migration ancora validi sullo schema `shared`;
+- assenza preventiva di tabelle applicative omonime create manualmente fuori da EF.
+
+Dopo la migration FEAT-015 verificare:
+
+- tabelle `shared.kin_services`, `shared.kin_service_localizations` e `shared.family_kin_service_availabilities` presenti;
+- servizio `kinlist` presente una sola volta con route `/kinlist`, `is_active = true` e `is_preconfigured = true`;
+- due localizzazioni `it` ed `en` presenti per `kinlist`;
+- una disponibilita attiva per ogni famiglia attiva esistente con:
+
+```sql
+SELECT COUNT(*)
+FROM shared.families f
+LEFT JOIN shared.family_kin_service_availabilities availability
+  ON availability.family_id = f."Id"
+ AND availability.kin_service_id = (SELECT "Id" FROM shared.kin_services WHERE key = 'kinlist')
+WHERE f.inactive_at IS NULL
+  AND availability."Id" IS NULL;
+```
+
+- assenza di duplicati con:
+
+```sql
+SELECT family_id, kin_service_id, COUNT(*)
+FROM shared.family_kin_service_availabilities
+GROUP BY family_id, kin_service_id
+HAVING COUNT(*) > 1;
+```
+
+- assenza di record orfani verso famiglie o servizi.
+
+Il `Down` di FEAT-015 e usabile solo su database disposable o prima di scritture dipendenti. Dopo famiglie o disponibilita reali il rollback operativo usa una migration correttiva compatibile, preceduta da backup o PITR e da verifica esplicita di servizi, localizzazioni e disponibilita gia scritte.

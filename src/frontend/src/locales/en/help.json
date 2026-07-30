@@ -1,19 +1,19 @@
 {
   "home": {
-    "summary": "Discover services and quickly reach the main areas.",
-    "purpose": "Provides an essential overview of KinHub.",
-    "actions": "Open KinList, Version, Release notes, or Settings.",
-    "prerequisites": "None.",
-    "fields": "Cards describe the available areas.",
-    "limits": "Specialized services will be added in later versions."
+    "summary": "Shows only the active services authorized for the current family or the relevant access and onboarding states.",
+    "purpose": "Uses KinHub bootstrap and a server-side catalog to avoid hardcoded cards or family data stored in the browser.",
+    "actions": "Sign in from the global shell, create the first family, reload the catalog, or open an authorized service.",
+    "prerequisites": "A valid session, network connectivity, and a family with service availability are required to see services.",
+    "fields": "The page distinguishes visitor, onboarding, catalog loading, empty, offline, session expired, access denied, and recoverable error states.",
+    "limits": "Release Notes stays outside the catalog and no availability or localization is saved offline."
   },
   "kinlist": {
-    "summary": "Uses the KinHub post-login bootstrap and lets the user create the first family without leaving /kinlist.",
-    "purpose": "Consumes KinHub's authoritative family membership check and atomically saves the family plus the creator membership.",
-    "actions": "Wait for the check, create a family with just its name, return to the initial choice, or retry after a recoverable error.",
-    "prerequisites": "You need to sign in with a valid API token and have a live network connection for the online bootstrap.",
+    "summary": "Checks bootstrap, active family, and KinList availability before showing the protected /kinlist route content.",
+    "purpose": "Prevents the direct URL or the Home card from becoming proof of service authorization.",
+    "actions": "Wait for the check, create the first family if missing, retry after a recoverable error, or sign in again when the session expired.",
+    "prerequisites": "A valid API token and an active connection are required for both bootstrap and the server-side access check.",
     "fields": "The page distinguishes loading, onboarding, expired session, denied access, technical failure, the offline shell, and a form with only the 1-100 character family name field.",
-    "limits": "Join by code and the shared list arrive in later features; offline keeps only the public shell and the entered name is not stored in the browser."
+    "limits": "KinList content is not mounted before the access check and no authorization is stored in the browser."
   },
   "about": {
     "summary": "Check the version and build metadata.",
