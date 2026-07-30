@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "407d212",
-  "buildDate": "2026-07-30T08:51:32.219Z",
+  "commit": "124109f",
+  "buildDate": "2026-07-30T09:37:03.425Z",
   "environment": "Development",
   "entries": [
     {
@@ -138,6 +138,17 @@
       }
     },
     {
+      "id": "none-changed-in-review-pr-guardrail",
+      "type": "changed",
+      "area": "tools",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Reso esplicito nell'harness che portare una feature a `In review` richiede sempre commit e push su `dev`, pull request aperta verso `main` e tutte le GitHub Actions verdi sull'ultimo SHA prima di considerare conclusa la consegna.",
+        "en": "Made the implementation harness explicit that moving a feature to `In review` always requires commit and push on `dev`, an open pull request to `main`, and green GitHub Actions on the latest SHA before delivery can be considered complete."
+      }
+    },
+    {
       "id": "none-changed-kinhub-access-routing",
       "type": "changed",
       "area": "backend",
@@ -234,6 +245,17 @@
       "descriptions": {
         "it": "La configurazione di Microsoft Entra External ID ora separa il tenant clienti dal tenant Azure e valida correttamente autorita CIAM, audience GUID e nome dello scope dei token API.",
         "en": "Microsoft Entra External ID configuration now separates the customer tenant from the Azure tenant and correctly validates the CIAM authority, GUID audience, and API token scope name."
+      }
+    },
+    {
+      "id": "none-fixed-family-creation-verification-gaps",
+      "type": "fixed",
+      "area": "shared",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Allineati il testo di onboarding di KinList alla creazione famiglia gia disponibile e aggiunte verifiche PostgreSQL reali per migration FEAT-002, retry e concorrenza del repository.",
+        "en": "Aligned KinList onboarding copy with the already-available family creation flow and added real PostgreSQL coverage for FEAT-002 migrations, repository retry, and concurrency."
       }
     },
     {

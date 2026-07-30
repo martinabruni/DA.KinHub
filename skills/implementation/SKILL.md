@@ -1,7 +1,7 @@
 ---
 id: kinhub-implementation
 name: KinHub repository implementation workflow
-version: 0.4.0
+version: 0.5.0
 area: implementation
 description: Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.
 references: AGENTS.md, skills/implementation/templates/implementation-progress.md
@@ -55,7 +55,7 @@ Dipende dal contesto autorevole della richiesta, dalla Definition of Done del re
 
 ## Vincoli
 
-Gli unici arresti ammessi sono utilizzo del contesto almeno al 35% e human in the loop realmente necessario. Non fermarti con documentazione incompleta, verifiche applicabili fallite o GitHub Actions della PR queued, in progress o non concluse con `success` sull'ultimo SHA. Non inserire secret o PII nel checkpoint, non includere modifiche estranee nel commit e non eseguire mai merge della pull request. Ogni pull request parte dal branch sorgente `dev` ed e destinata a `main`.
+Gli unici arresti ammessi sono utilizzo del contesto almeno al 35% e human in the loop realmente necessario. Non fermarti con documentazione incompleta, verifiche applicabili fallite o GitHub Actions della PR queued, in progress o non concluse con `success` sull'ultimo SHA. Se il lavoro porta una feature da `In progress` a `In review`, considera obbligatori commit, push, pull request aperta e monitoraggio fino al verde dell'ultimo SHA prima di trattare la consegna come completa, salvo blocco reale di credenziali o autorizzazioni. Non inserire secret o PII nel checkpoint, non includere modifiche estranee nel commit e non eseguire mai merge della pull request. Ogni pull request parte dal branch sorgente `dev` ed e destinata a `main`.
 
 ## Test richiesti
 
@@ -63,9 +63,11 @@ Esegui tutte le verifiche richieste dalla modifica e da `AGENTS.md`. Prima della
 
 ## Checklist di aggiornamento
 
-Leggi gli artefatti e l'eventuale checkpoint; verifica di lavorare su `dev`; implementa la modifica richiesta; aggiorna codice, test, documentazione, traduzioni, guide, skill e fragment applicabili; ripeti le verifiche fino al successo; controlla diff e stato; crea commit e push su `dev`; apri una PR da `dev` verso `main`; monitora le Actions dell'ultimo SHA; per ogni esito non verde correggi, verifica, committa e pusha di nuovo; rimuovi il checkpoint solo quando tutti i check sono verdi; non eseguire il merge.
+Leggi gli artefatti e l'eventuale checkpoint; verifica di lavorare su `dev`; implementa la modifica richiesta; aggiorna codice, test, documentazione, traduzioni, guide, skill e fragment applicabili; ripeti le verifiche fino al successo; se la feature passa a `In review`, non fermarti allo stato locale ma continua con diff e stato Git, commit e push su `dev`, apertura della PR verso `main` e monitoraggio dei check; per ogni esito non verde correggi, verifica, committa e pusha di nuovo; rimuovi il checkpoint solo quando tutti i check sono verdi; non eseguire il merge.
 
 ## Changelog
+
+0.5.0: rendo esplicito che il passaggio di una feature a `In review` non conclude il lavoro senza commit, push, pull request aperta e GitHub Actions verdi sull'ultimo SHA.
 
 0.4.1: ricordo di includere i validator frontend introdotti dal design system condiviso quando la modifica tocca shell, route, componenti o CSS del frontend.
 
