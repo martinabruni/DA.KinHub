@@ -132,7 +132,7 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
 
             migrationBuilder.Sql(
                 $"""
-                INSERT INTO shared.kin_services (\"Id\", key, route, is_active, is_preconfigured, created_at, updated_at)
+                INSERT INTO shared.kin_services ("Id", key, route, is_active, is_preconfigured, created_at, updated_at)
                 VALUES ('{KinListServiceId}', 'kinlist', '/kinlist', TRUE, TRUE, TIMESTAMPTZ '{SeedTimestamp:O}', NULL)
                 ON CONFLICT (key) DO UPDATE
                 SET route = EXCLUDED.route,
@@ -142,7 +142,7 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
 
             migrationBuilder.Sql(
                 $"""
-                INSERT INTO shared.kin_service_localizations (\"Id\", kin_service_id, language, name, description, created_at, updated_at)
+                INSERT INTO shared.kin_service_localizations ("Id", kin_service_id, language, name, description, created_at, updated_at)
                 VALUES
                     ('{KinListItLocalizationId}', '{KinListServiceId}', 'it', 'KinList', 'Lista condivisa della famiglia.', TIMESTAMPTZ '{SeedTimestamp:O}', NULL),
                     ('{KinListEnLocalizationId}', '{KinListServiceId}', 'en', 'KinList', 'Shared list for the family.', TIMESTAMPTZ '{SeedTimestamp:O}', NULL)
@@ -153,16 +153,16 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
 
             migrationBuilder.Sql(
                 $"""
-                INSERT INTO shared.family_kin_service_availabilities (\"Id\", family_id, kin_service_id, is_active, created_at, updated_at)
+                INSERT INTO shared.family_kin_service_availabilities ("Id", family_id, kin_service_id, is_active, created_at, updated_at)
                 SELECT
                     (
-                        substr(md5(f.\"Id\"::text || '{KinListServiceId}'), 1, 8) || '-' ||
-                        substr(md5(f.\"Id\"::text || '{KinListServiceId}'), 9, 4) || '-' ||
-                        substr(md5(f.\"Id\"::text || '{KinListServiceId}'), 13, 4) || '-' ||
-                        substr(md5(f.\"Id\"::text || '{KinListServiceId}'), 17, 4) || '-' ||
-                        substr(md5(f.\"Id\"::text || '{KinListServiceId}'), 21, 12)
+                        substr(md5(f."Id"::text || '{KinListServiceId}'), 1, 8) || '-' ||
+                        substr(md5(f."Id"::text || '{KinListServiceId}'), 9, 4) || '-' ||
+                        substr(md5(f."Id"::text || '{KinListServiceId}'), 13, 4) || '-' ||
+                        substr(md5(f."Id"::text || '{KinListServiceId}'), 17, 4) || '-' ||
+                        substr(md5(f."Id"::text || '{KinListServiceId}'), 21, 12)
                     )::uuid,
-                    f.\"Id\",
+                    f."Id",
                     '{KinListServiceId}',
                     TRUE,
                     TIMESTAMPTZ '{SeedTimestamp:O}',
