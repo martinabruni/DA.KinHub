@@ -10,6 +10,8 @@ public sealed class KinHubTelemetry : IDisposable
     private readonly Counter<long> outcomeCounter;
     private readonly Counter<long> signalCounter;
     private readonly Histogram<double> durationHistogram;
+    private readonly Histogram<int> requestedPageSizeHistogram;
+    private readonly Histogram<int> effectivePageSizeHistogram;
     private readonly ActivitySource activitySource = new("KinHub");
 
     public KinHubTelemetry(BuildInfoProvider buildInfoProvider)
@@ -18,6 +20,8 @@ public sealed class KinHubTelemetry : IDisposable
         outcomeCounter = meter.CreateCounter<long>("kinhub.outcomes");
         signalCounter = meter.CreateCounter<long>("kinhub.signals");
         durationHistogram = meter.CreateHistogram<double>("kinhub.duration.ms");
+        requestedPageSizeHistogram = meter.CreateHistogram<int>("kinhub.pagination.requested_page_size");
+        effectivePageSizeHistogram = meter.CreateHistogram<int>("kinhub.pagination.effective_page_size");
     }
 
     public OperationScope Begin(string operation) => new(operation, activitySource, outcomeCounter, durationHistogram);
@@ -33,6 +37,27 @@ public sealed class KinHubTelemetry : IDisposable
         }
 
         signalCounter.Add(1, tags);
+    }
+
+    public void RecordItemsPageRequest(int requestedPageSize, bool hasCursor)
+    {
+        var tags = new TagList
+        {
+            { "operation", KinHubOperations.KinListItemsPage },
+            { "cursor", hasCursor ? "present" : "absent" }
+        };
+        requestedPageSizeHistogram.Record(requestedPageSize, tags);
+    }
+
+    public void RecordItemsPageResult(int effectivePageSize, bool hasPrevious, bool hasNext)
+    {
+        var tags = new TagList
+        {
+            { "operation", KinHubOperations.KinListItemsPage },
+            { "hasPrevious", hasPrevious ? "true" : "false" },
+            { "hasNext", hasNext ? "true" : "false" }
+        };
+        effectivePageSizeHistogram.Record(effectivePageSize, tags);
     }
 
     public void Dispose()

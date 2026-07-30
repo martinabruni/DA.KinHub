@@ -8,12 +8,12 @@
     "limits": "Release Notes resta fuori dal catalogo e disponibilita o localizzazioni non vengono salvate offline."
   },
   "kinlist": {
-    "summary": "Verifica bootstrap, famiglia attiva e disponibilita KinList prima di mostrare il contenuto protetto della route /kinlist.",
-    "purpose": "Impedisce che il solo URL diretto o la card Home diventino una prova di autorizzazione al servizio.",
-    "actions": "Attendere il controllo, creare la prima famiglia se manca, rileggere dopo un errore recuperabile oppure accedere di nuovo se la sessione è scaduta.",
-    "prerequisites": "È necessario accedere con un token API valido e una connessione attiva per bootstrap e controllo accesso server-side.",
-    "fields": "La pagina distingue caricamento, onboarding, sessione scaduta, accesso negato, errore tecnico, shell offline e form con il solo campo nome famiglia da 1 a 100 caratteri.",
-    "limits": "Il contenuto KinList non viene montato prima del controllo accesso e nessuna autorizzazione viene salvata nel browser."
+    "summary": "Mostra pagine limitate di soli elementi KinList attivi e visibili per la famiglia autorizzata, dopo bootstrap e controllo servizio.",
+    "purpose": "Mantiene il perimetro famiglia server-side e usa cursori opachi invece di numero pagina o letture integrali.",
+    "actions": "Aggiornare, andare avanti o indietro, leggere autore e categorie essenziali oppure tornare all'inizio se il cursore non e piu valido.",
+    "prerequisites": "Servono sessione valida, famiglia autorizzata, servizio KinList disponibile e connessione attiva.",
+    "fields": "La pagina distingue caricamento iniziale, stato vuoto reale, pagina valida, refresh, navigazione, cursore invalido, offline, sessione scaduta, accesso negato ed errore con ultima pagina preservata.",
+    "limits": "Questa slice non include creazione manuale, microfono, filtro, drawer, selezione o completamento e non salva elementi o cursori nel browser."
   },
   "about": {
     "summary": "Controlla versione e metadati della build.",

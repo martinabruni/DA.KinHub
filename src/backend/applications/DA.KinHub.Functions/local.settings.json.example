@@ -11,6 +11,7 @@
     "Database__ConnectionString": "Host=localhost;Port=5432;Database=kinhub;Username=kinhub;Password=kinhub",
     "Storage__ConnectionString": "UseDevelopmentStorage=true",
     "Storage__ContainerName": "documents",
+    "Pagination__ReadMax": "5000",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": ""
   },
   "Host": {

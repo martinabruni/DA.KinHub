@@ -110,7 +110,7 @@ public sealed class KinHubFamilyCreationFunctionsTests
         context.Request.ContentType = "application/json";
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
         ApiResults.EnsureCorrelationId(context);
-        context.Features.Set(new KinHubAuthorizationFeature(new ExternalIdentity("https://issuer", Guid.NewGuid()), null));
+        context.Features.Set(new KinHubAuthorizationFeature(new ExternalIdentity("https://issuer", Guid.NewGuid()), null, null));
         return context.Request;
     }
 

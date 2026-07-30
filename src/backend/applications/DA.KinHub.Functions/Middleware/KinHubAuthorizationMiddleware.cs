@@ -73,6 +73,7 @@ public sealed class KinHubAuthorizationMiddleware(
         }
 
         Guid? familyId = null;
+        Guid? applicationUserId = null;
         if (descriptor.RequiresFamilyAccess)
         {
             var familyIdOutcome = TryResolveFamilyId(httpContext.Request, out familyId);
@@ -88,9 +89,10 @@ public sealed class KinHubAuthorizationMiddleware(
                 return;
             }
 
+            var resource = new FamilyAuthorizationResource(familyId!.Value, externalIdentity, context.CancellationToken);
             var authorized = await authorizationService.AuthorizeAsync(
                 httpContext.User,
-                new FamilyAuthorizationResource(familyId!.Value, externalIdentity, context.CancellationToken),
+                resource,
                 SecurityConstants.FamilyPolicy);
 
             if (!authorized.Succeeded)
@@ -99,9 +101,11 @@ public sealed class KinHubAuthorizationMiddleware(
                 ShortCircuit(context, httpContext, StatusCodes.Status403Forbidden, "Forbidden", "Access is not allowed.", "family.accessDenied");
                 return;
             }
+
+            applicationUserId = resource.ApplicationUserId;
         }
 
-        httpContext.Features.Set(new KinHubAuthorizationFeature(externalIdentity, familyId));
+        httpContext.Features.Set(new KinHubAuthorizationFeature(externalIdentity, familyId, applicationUserId));
         await next(context);
     }
 

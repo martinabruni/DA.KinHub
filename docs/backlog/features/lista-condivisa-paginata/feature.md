@@ -1,5 +1,5 @@
 ---
-status: Open
+status: In review
 ---
 
 # FEAT-003 - Consultare la lista condivisa paginata

@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, ApiNetworkError, ApiResponseError } from "../lib/api";
 import { useConnectivity } from "./ConnectivityProvider";
@@ -16,7 +16,7 @@ type AccessState =
   | { status: "forbidden" }
   | { status: "error" };
 
-export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadingElement | null> }) {
+export function KinListAccessGate({ titleRef, children }: { titleRef?: RefObject<HTMLHeadingElement | null>; children?: (familyId: string) => ReactNode }) {
   const { t } = useTranslation(["pages", "common"]);
   const { online } = useConnectivity();
   const { setContextualBar } = useShellBar();
@@ -85,7 +85,7 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
     return () => controller.abort();
   }, [bootstrap.client, bootstrap.state, online, reloadToken]);
 
-  if (bootstrap.state.status === "initializing" || bootstrap.state.status === "loading" || accessState.status === "loading") {
+  if (bootstrap.state.status === "initializing" || bootstrap.state.status === "loading" || accessState.status === "loading" || (bootstrap.state.status === "family" && accessState.status === "idle")) {
     return <StatePanel data-kinlist-state="loading" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.loading", { ns: "pages" })} role="status" live="polite" busy />;
   }
 
@@ -118,7 +118,7 @@ export function KinListAccessGate({ titleRef }: { titleRef?: RefObject<HTMLHeadi
     }} />;
   }
 
-  return (
-    <StatePanel data-kinlist-state="ready" data-family-id={accessState.status === "ready" ? accessState.familyId : undefined} title={t("kinlist.ready", { ns: "pages" })} description={t("kinlist.readyDetail", { ns: "pages" })} tone="success" />
-  );
+  return accessState.status === "ready"
+    ? <>{children ? children(accessState.familyId) : <StatePanel data-kinlist-state="ready" title={t("kinlist.ready", { ns: "pages" })} description={t("kinlist.readyDetail", { ns: "pages" })} tone="success" />}</>
+    : <StatePanel data-kinlist-state="loading" title={t("kinlist.title", { ns: "pages" })} description={t("kinlist.loading", { ns: "pages" })} role="status" live="polite" busy />;
 }

@@ -23,4 +23,9 @@ public static class ApiRoutes
         public const string Services = "api/kinhub/services";
         public const string ServiceAccess = "api/kinhub/services/{serviceKey}/access";
     }
+
+    public static class KinList
+    {
+        public const string Items = "api/kinlist/items";
+    }
 }

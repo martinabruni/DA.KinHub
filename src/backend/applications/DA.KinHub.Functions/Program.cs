@@ -1,4 +1,5 @@
 using DA.KinHub.Business;
+using DA.KinHub.Business.KinList;
 using DA.KinHub.Functions.Configuration;
 using DA.KinHub.Functions.Http;
 using DA.KinHub.Functions.Middleware;
@@ -27,6 +28,8 @@ var host = new HostBuilder()
     {
         services.AddOptions<RuntimeOptions>().BindConfiguration(RuntimeOptions.SectionName).ValidateOnStart();
         services.AddSingleton<IValidateOptions<RuntimeOptions>, RuntimeOptionsValidator>();
+        services.AddOptions<PaginationReadOptions>().BindConfiguration(PaginationReadOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PaginationReadOptions>, PaginationReadOptionsValidator>();
 
         services.AddKinHubObservability(context.Configuration);
         services.AddKinHubSecurity(context.Configuration);

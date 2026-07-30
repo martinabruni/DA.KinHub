@@ -2,12 +2,20 @@
 slug: kinlist
 locale: en
 title: KinList
-description: Correct post-login routing, required onboarding, and a safe offline shell.
+description: Shared paginated list with stable ordering, author, essential categories, and previous/next navigation.
 ---
 
-## What happens after sign-in
+## What KinList shows
 
-KinHub always checks authoritatively whether your profile has an active family membership. If the check finds an active family, the `/kinlist` route also performs a dedicated server-side availability check for the `kinlist` service on the authorized family. If the family is missing or the membership is no longer active, you stay on `/kinlist` and only see KinHub onboarding.
+KinHub always checks authoritatively whether your profile has an active family membership. When the check succeeds, the `/kinlist` route also performs a dedicated server-side availability check for the `kinlist` service on the authorized family and then reads only visible `Active` items.
+
+Ordering is stable: newer groups first, then the original item position inside the group. Each page shows the name, up to three categories, an optional `+N`, and the author. When a profile still has no display name, the author falls back to the accessible label **Member** and a `?` avatar.
+
+## Moving through pages and refresh
+
+The first page reads 50 items at a time. You can use **Back** and **Next** to move through pages without a page number or total. **Refresh** always restarts from the first page.
+
+During refresh or navigation, the last valid page stays readable. If a page cursor is no longer valid, KinList does not show partial new data: it preserves the current view and offers a way back to the start.
 
 ## Creating the first family
 
@@ -19,10 +27,8 @@ If the request is retried or races with another one, KinHub still returns the sa
 
 When there is no active membership, KinHub does not show members, list data, or any other shared information. Denied access also stays distinct from an empty state and does not reveal whether the service is unknown, inactive, or simply unavailable to the family.
 
+This slice still does not include manual item creation, microphone input, category filtering, drawers, selection, or completion.
+
 ## Offline and privacy
 
-Only the public PWA shell stays available offline. KinList does not keep personal data in cache, does not call authenticated APIs, and does not queue remote operations. The entered family name also stays only in memory while the page is active.
-
-## Current feature scope
-
-This slice connects KinList to KinHub's shared bootstrap, enables atomic first-family creation, and uses the new persisted family-service catalog. Join by code and the shared list arrive in later features.
+Only the public PWA shell stays available offline. KinList does not keep items, pages, or cursors in cache, `localStorage`, `sessionStorage`, IndexedDB, or the service worker. The entered family name also stays only in memory while the page is active.

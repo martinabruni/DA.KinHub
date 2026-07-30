@@ -104,6 +104,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'Database__ApplyMigrationsOnStartup', value: 'false' }
         { name: 'Storage__AccountUri', value: storageBlobEndpoint }
         { name: 'Storage__ContainerName', value: applicationContainerName }
+        { name: 'Pagination__ReadMax', value: '5000' }
       ]
     }
   }

@@ -17,6 +17,13 @@ public enum FamilyAccessOutcome
     MembershipInactiveOrMissing = 3
 }
 
+public sealed record FamilyAccessResult(FamilyAccessOutcome Outcome, Guid? ApplicationUserId)
+{
+    public static FamilyAccessResult Granted(Guid applicationUserId) => new(FamilyAccessOutcome.Granted, applicationUserId);
+
+    public static FamilyAccessResult Denied(FamilyAccessOutcome outcome) => new(outcome, null);
+}
+
 public interface IKinHubBootstrapService
 {
     Task<KinHubBootstrapResult> GetBootstrapAsync(ExternalIdentity externalIdentity, CancellationToken cancellationToken);
@@ -24,7 +31,7 @@ public interface IKinHubBootstrapService
 
 public interface IFamilyAccessService
 {
-    Task<FamilyAccessOutcome> CheckAccessAsync(ExternalIdentity externalIdentity, Guid familyId, CancellationToken cancellationToken);
+    Task<FamilyAccessResult> CheckAccessAsync(ExternalIdentity externalIdentity, Guid familyId, CancellationToken cancellationToken);
 }
 
 public sealed record FamilyCreationResult(Guid FamilyId, bool Created, bool ReconciledConflict)

@@ -71,7 +71,7 @@ public sealed class KinHubServicesFunctionsTests
         }
 
         ApiResults.EnsureCorrelationId(context);
-        context.Features.Set(new KinHubAuthorizationFeature(new DA.KinHub.Domain.Identity.ExternalIdentity("https://issuer", Guid.NewGuid()), familyId));
+        context.Features.Set(new KinHubAuthorizationFeature(new DA.KinHub.Domain.Identity.ExternalIdentity("https://issuer", Guid.NewGuid()), familyId, Guid.NewGuid()));
         return context.Request;
     }
 

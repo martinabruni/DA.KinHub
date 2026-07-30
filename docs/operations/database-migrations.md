@@ -86,3 +86,20 @@ HAVING COUNT(*) > 1;
 - assenza di record orfani verso famiglie o servizi.
 
 Il `Down` di FEAT-015 e usabile solo su database disposable o prima di scritture dipendenti. Dopo famiglie o disponibilita reali il rollback operativo usa una migration correttiva compatibile, preceduta da backup o PITR e da verifica esplicita di servizi, localizzazioni e disponibilita gia scritte.
+
+## FEAT-003 - Lista condivisa paginata
+
+Prima della migration FEAT-003 verificare inoltre:
+
+- presenza della migration FEAT-015 in `__EFMigrationsHistory`;
+- grant runtime e migration ancora validi sullo schema `shared`;
+- storage applicativo raggiungibile per il key ring Data Protection condiviso.
+
+Dopo la migration FEAT-003 verificare:
+
+- schema `kinlist` creato correttamente;
+- tabelle `registration_groups`, `items`, `categories` e `item_categories` presenti;
+- vincoli `revision >= 1`, `position_in_group >= 0`, FK composite cross-family e indici di lettura presenti;
+- assenza di grant runtime mancanti sul nuovo schema `kinlist`.
+
+Il `Down` di FEAT-003 e consentito solo su database disposable o prima di scritture KinList reali. Dopo dati reali il rollback operativo usa una migration correttiva compatibile preceduta da backup o PITR.

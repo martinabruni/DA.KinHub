@@ -9,24 +9,24 @@ public sealed class FamilyAccessService(
     IApplicationUserRepository applicationUserRepository,
     IFamilyMembershipRepository familyMembershipRepository) : IFamilyAccessService
 {
-    public async Task<FamilyAccessOutcome> CheckAccessAsync(ExternalIdentity externalIdentity, Guid familyId, CancellationToken cancellationToken)
+    public async Task<FamilyAccessResult> CheckAccessAsync(ExternalIdentity externalIdentity, Guid familyId, CancellationToken cancellationToken)
     {
         try
         {
             var applicationUser = await applicationUserRepository.FindByExternalIdentityAsync(externalIdentity, cancellationToken);
             if (applicationUser is null)
             {
-                return FamilyAccessOutcome.ProfileNotFound;
+                return FamilyAccessResult.Denied(FamilyAccessOutcome.ProfileNotFound);
             }
 
             if (!applicationUser.IsActive)
             {
-                return FamilyAccessOutcome.ProfileInactive;
+                return FamilyAccessResult.Denied(FamilyAccessOutcome.ProfileInactive);
             }
 
             return await familyMembershipRepository.HasActiveMembershipAsync(applicationUser.Id, familyId, cancellationToken)
-                ? FamilyAccessOutcome.Granted
-                : FamilyAccessOutcome.MembershipInactiveOrMissing;
+                ? FamilyAccessResult.Granted(applicationUser.Id)
+                : FamilyAccessResult.Denied(FamilyAccessOutcome.MembershipInactiveOrMissing);
         }
         catch (RepositoryUnavailableException exception)
         {

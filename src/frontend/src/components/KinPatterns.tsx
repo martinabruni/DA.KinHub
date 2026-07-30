@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Clock3, Copy, Ellipsis, ListChecks, Mail, Users } from "lucide-react";
+import { ArrowRight, Clock3, Copy, Ellipsis, ListChecks, Mail, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -38,8 +38,8 @@ export function CategoryCarousel({ label, categories, selected, onSelect }: { la
   return <div className="kh-category-carousel" role="group" aria-label={label}>{categories.map((category) => <Chip key={category.id} tone={category.tone} selected={category.id === selected} onClick={() => onSelect(category.id)}>{category.label}</Chip>)}</div>;
 }
 
-export function KinListItem({ title, detail, completed, selected, onToggle, onSelect }: { title: string; detail: string; completed?: boolean; selected?: boolean; onToggle: () => void; onSelect: () => void }) {
-  return <article className={cn("kh-list-item", completed && "is-completed", selected && "is-selected")}><Button variant={completed ? "primary" : "secondary"} className="kh-list-item__check" aria-pressed={completed} onClick={onToggle}>{completed && <Check aria-hidden="true" />}</Button><Button variant="ghost" className="kh-list-item__body" aria-pressed={selected} onClick={onSelect}><strong>{title}</strong><span>{detail}</span></Button></article>;
+export function KinListItem({ name, categories, remainingCategoryCount, authorName, authorDisplayName }: { name: string; categories: Array<{ id: string; name: string }>; remainingCategoryCount: number; authorName: string; authorDisplayName?: string | null }) {
+  return <li className={cn("kh-list-item")}><article className="kh-list-item__body"><div className="kh-list-item__content"><strong>{name}</strong><div className="kh-list-item__meta">{categories.map((category) => <Badge key={category.id} tone="accent">{category.name}</Badge>)}{remainingCategoryCount > 0 ? <Badge tone="neutral">+{remainingCategoryCount}</Badge> : null}</div></div><div className="kh-list-item__author"><Avatar name={authorName} displayName={authorDisplayName} fallback="?" size="sm" /><span>{authorDisplayName ?? authorName}</span></div></article></li>;
 }
 
 export function FamilyCard({ name, members, label }: { name: string; members: number; label: string }) {
