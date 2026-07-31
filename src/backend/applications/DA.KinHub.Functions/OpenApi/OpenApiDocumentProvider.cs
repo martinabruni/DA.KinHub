@@ -83,6 +83,115 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                             }
                         })
                 },
+                [$"/{ApiRoutes.KinHub.FamilyDetails}"] = new
+                {
+                    get = FamilyOperation(
+                        "Read the active family name for the authorized family",
+                        new Dictionary<string, object>
+                        {
+                            ["200"] = new
+                            {
+                                description = "Family details",
+                                content = new Dictionary<string, object>
+                                {
+                                    ["application/json"] = new
+                                    {
+                                        schema = new { @ref = "#/components/schemas/FamilyDetails" }
+                                    }
+                                }
+                            },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["409"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        })
+                },
+                [$"/{ApiRoutes.KinHub.FamilyMembers}"] = new
+                {
+                    get = FamilyOperation(
+                        "Read a keyset page of active family members for the authorized family",
+                        new Dictionary<string, object>
+                        {
+                            ["200"] = new
+                            {
+                                description = "Family members page",
+                                content = new Dictionary<string, object>
+                                {
+                                    ["application/json"] = new
+                                    {
+                                        schema = new { @ref = "#/components/schemas/FamilyMembersPage" }
+                                    }
+                                }
+                            },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["409"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        },
+                        new object[]
+                        {
+                            new
+                            {
+                                name = "pageSize",
+                                @in = "query",
+                                required = true,
+                                schema = new { type = "integer", format = "int32", minimum = 1 }
+                            },
+                            new
+                            {
+                                name = "cursor",
+                                @in = "query",
+                                required = false,
+                                schema = new { type = "string" }
+                            }
+                        })
+                },
+                [$"/{ApiRoutes.KinHub.FamilyInvitations}"] = new
+                {
+                    get = FamilyOperation(
+                        "Read a keyset page of active family invitations for the authorized family",
+                        new Dictionary<string, object>
+                        {
+                            ["200"] = new
+                            {
+                                description = "Family invitations page",
+                                content = new Dictionary<string, object>
+                                {
+                                    ["application/json"] = new
+                                    {
+                                        schema = new { @ref = "#/components/schemas/FamilyInvitationsPage" }
+                                    }
+                                }
+                            },
+                            ["400"] = problemResponse,
+                            ["401"] = problemResponse,
+                            ["403"] = problemResponse,
+                            ["409"] = problemResponse,
+                            ["500"] = problemResponse,
+                            ["503"] = problemResponse
+                        },
+                        new object[]
+                        {
+                            new
+                            {
+                                name = "pageSize",
+                                @in = "query",
+                                required = true,
+                                schema = new { type = "integer", format = "int32", minimum = 1 }
+                            },
+                            new
+                            {
+                                name = "cursor",
+                                @in = "query",
+                                required = false,
+                                schema = new { type = "string" }
+                            }
+                        })
+                },
                 [$"/{ApiRoutes.KinHub.FamilyContext}"] = new
                 {
                     get = FamilyOperation(
@@ -218,6 +327,82 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                 },
                 schemas = new Dictionary<string, object>
                 {
+                    ["FamilyDetails"] = new
+                    {
+                        type = "object",
+                        required = new[] { "name" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["name"] = new { type = "string" }
+                        }
+                    },
+                    ["FamilyMember"] = new
+                    {
+                        type = "object",
+                        required = new[] { "displayName", "initials" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["displayName"] = new { type = "string", nullable = true },
+                            ["initials"] = new { type = "string", nullable = true }
+                        }
+                    },
+                    ["FamilyMembersPage"] = new
+                    {
+                        type = "object",
+                        required = new[] { "items", "effectivePageSize", "maxPageSize", "previousCursor", "nextCursor" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["items"] = new
+                            {
+                                type = "array",
+                                items = new { @ref = "#/components/schemas/FamilyMember" }
+                            },
+                            ["effectivePageSize"] = new { type = "integer", format = "int32" },
+                            ["maxPageSize"] = new { type = "integer", format = "int32" },
+                            ["previousCursor"] = new { type = "string", nullable = true },
+                            ["nextCursor"] = new { type = "string", nullable = true }
+                        }
+                    },
+                    ["FamilyInvitationCreator"] = new
+                    {
+                        type = "object",
+                        required = new[] { "displayName", "initials" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["displayName"] = new { type = "string", nullable = true },
+                            ["initials"] = new { type = "string", nullable = true }
+                        }
+                    },
+                    ["FamilyInvitation"] = new
+                    {
+                        type = "object",
+                        required = new[] { "id", "creator", "createdAt", "expiresAt", "status" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["id"] = new { type = "string", format = "uuid" },
+                            ["creator"] = new { @ref = "#/components/schemas/FamilyInvitationCreator" },
+                            ["createdAt"] = new { type = "string", format = "date-time" },
+                            ["expiresAt"] = new { type = "string", format = "date-time" },
+                            ["status"] = new { type = "string", @enum = new[] { "active" } }
+                        }
+                    },
+                    ["FamilyInvitationsPage"] = new
+                    {
+                        type = "object",
+                        required = new[] { "items", "effectivePageSize", "maxPageSize", "previousCursor", "nextCursor" },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["items"] = new
+                            {
+                                type = "array",
+                                items = new { @ref = "#/components/schemas/FamilyInvitation" }
+                            },
+                            ["effectivePageSize"] = new { type = "integer", format = "int32" },
+                            ["maxPageSize"] = new { type = "integer", format = "int32" },
+                            ["previousCursor"] = new { type = "string", nullable = true },
+                            ["nextCursor"] = new { type = "string", nullable = true }
+                        }
+                    },
                     ["KinHubServiceCatalogItem"] = new
                     {
                         type = "object",

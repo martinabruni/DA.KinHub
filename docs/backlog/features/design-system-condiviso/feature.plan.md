@@ -150,8 +150,7 @@ Introdurre un validator dedicato, ad esempio `src/frontend/scripts/validate-desi
 Registrare il validator in `src/frontend/package.json` e richiamarlo in:
 
 - `.github/workflows/pr-quality.yml`
-- `.github/workflows/deploy-code.yml`
-- `.github/workflows/deploy-infrastructure.yml`
+- `.github/workflows/deploy-frontend.yml`
 
 ## 10. Documentazione, skill e contratti di riuso
 

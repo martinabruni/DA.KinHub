@@ -27,6 +27,10 @@ public sealed class ExceptionHandlingMiddleware(ApiProblemDetailsFactory problem
         {
             SetProblem(context, problemDetailsFactory.Create(GetHttpContext(context), StatusCodes.Status403Forbidden, "Forbidden", "Access is not allowed.", exception.Code));
         }
+        catch (BusinessConflictException exception)
+        {
+            SetProblem(context, problemDetailsFactory.Create(GetHttpContext(context), StatusCodes.Status409Conflict, "Conflict", exception.Message, exception.Code));
+        }
         catch (BusinessDependencyException exception)
         {
             logger.LogError(exception, "A required dependency failed while processing the request.");

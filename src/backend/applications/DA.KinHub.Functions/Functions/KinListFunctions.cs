@@ -37,7 +37,7 @@ public sealed class KinListFunctions(
             pageSize,
             hasCursor ? cursorValues[0] : null,
             cancellationToken);
-        telemetry.RecordItemsPageResult(result.EffectivePageSize, result.PreviousCursor is not null, result.NextCursor is not null);
+        telemetry.RecordItemsPageResult(result.EffectivePageSize, result.PreviousCursor is not null, result.NextCursor is not null, result.Items.Count);
         operation.Complete(result.Items.Count == 0 ? "empty" : "success");
         return new OkObjectResult(result);
     }

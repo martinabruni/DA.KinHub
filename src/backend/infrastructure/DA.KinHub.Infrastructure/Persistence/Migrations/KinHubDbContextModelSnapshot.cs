@@ -53,6 +53,69 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
                     b.ToTable("families", "shared");
                 });
 
+            modelBuilder.Entity("DA.KinHub.Domain.Families.FamilyInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("CodeHmac")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("code_hmac");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByApplicationUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_application_user_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<string>("HmacKeyVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("hmac_key_version");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByApplicationUserId");
+
+                    b.HasIndex("FamilyId", "CreatedAt", "Id")
+                        .HasDatabaseName("IX_family_invitations_active_by_family_created_at_id")
+                        .HasFilter("revoked_at IS NULL AND consumed_at IS NULL");
+
+                    b.ToTable("family_invitations", "shared", t =>
+                        {
+                            t.HasCheckConstraint("CK_family_invitations_consumed_after_created", "consumed_at IS NULL OR consumed_at >= created_at");
+
+                            t.HasCheckConstraint("CK_family_invitations_expires_after_created", "expires_at > created_at");
+
+                            t.HasCheckConstraint("CK_family_invitations_hmac_key_version_non_empty", "char_length(hmac_key_version) > 0");
+
+                            t.HasCheckConstraint("CK_family_invitations_hmac_non_empty", "octet_length(code_hmac) > 0");
+
+                            t.HasCheckConstraint("CK_family_invitations_revoked_after_created", "revoked_at IS NULL OR revoked_at >= created_at");
+                        });
+                });
+
             modelBuilder.Entity("DA.KinHub.Domain.Families.FamilyMembership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -461,6 +524,21 @@ namespace DA.KinHub.Infrastructure.Persistence.Migrations
                     b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("CreatedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DA.KinHub.Domain.Families.FamilyInvitation", b =>
+                {
+                    b.HasOne("DA.KinHub.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DA.KinHub.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

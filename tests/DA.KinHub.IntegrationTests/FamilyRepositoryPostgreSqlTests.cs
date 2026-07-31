@@ -37,6 +37,23 @@ public sealed class FamilyRepositoryPostgreSqlTests
         Assert.Equal(1L, await harness.ExecuteScalarAsync<long>(
             """
             SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_schema = 'shared'
+              AND table_name = 'family_invitations';
+            """));
+
+        Assert.Equal(1L, await harness.ExecuteScalarAsync<long>(
+            """
+            SELECT COUNT(*)
+            FROM pg_indexes
+            WHERE schemaname = 'shared'
+              AND tablename = 'family_invitations'
+              AND indexname = 'IX_family_invitations_active_by_family_created_at_id';
+            """));
+
+        Assert.Equal(1L, await harness.ExecuteScalarAsync<long>(
+            """
+            SELECT COUNT(*)
             FROM information_schema.columns
             WHERE table_schema = 'shared'
               AND table_name = 'families'

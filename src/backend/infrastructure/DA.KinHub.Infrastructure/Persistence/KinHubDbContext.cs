@@ -14,6 +14,8 @@ public sealed class KinHubDbContext(DbContextOptions<KinHubDbContext> options) :
 
     public DbSet<FamilyMembership> FamilyMemberships => Set<FamilyMembership>();
 
+    public DbSet<FamilyInvitation> FamilyInvitations => Set<FamilyInvitation>();
+
     public DbSet<KinService> KinServices => Set<KinService>();
 
     public DbSet<KinServiceLocalization> KinServiceLocalizations => Set<KinServiceLocalization>();

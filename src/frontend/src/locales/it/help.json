@@ -34,10 +34,18 @@
   "settings": {
     "summary": "Personalizza lingua, tema e tutorial.",
     "purpose": "Conserva le preferenze di esperienza sul dispositivo.",
-    "actions": "Cambiare lingua e tema o riavviare il tutorial.",
+    "actions": "Cambiare lingua e tema, riavviare il tutorial o aprire la sezione Famiglia quando il bootstrap rileva una membership attiva.",
     "prerequisites": "Il browser deve consentire l'archiviazione locale.",
-    "fields": "Lingua, tema chiaro/scuro/sistema e tutorial.",
-    "limits": "Le preferenze non sono ancora sincronizzate tra dispositivi."
+    "fields": "Lingua, tema chiaro/scuro/sistema, tutorial, installazione PWA e collegamento Famiglia quando disponibile.",
+    "limits": "Le preferenze non sono ancora sincronizzate tra dispositivi e la card Famiglia non mostra ancora azioni di invito o uscita."
+  },
+  "familySettings": {
+    "summary": "Mostra nome della famiglia, membri attivi e inviti attivi con pagine indipendenti e cursori opachi.",
+    "purpose": "Ricostruisce server-side il contesto famiglia autorizzato senza salvare dati o cursori nel browser e senza esporre codici invito o HMAC.",
+    "actions": "Aggiornare la pagina, navigare tra pagine membri e inviti e tornare all'inizio della sezione quando un cursore non e piu valido.",
+    "prerequisites": "Servono sessione valida, connessione attiva e membership familiare attiva ottenuta dal bootstrap KinHub.",
+    "fields": "La pagina mostra solo nome famiglia, nome o fallback dei membri, iniziali o ?, creatore invito, creazione, scadenza e stato attivo.",
+    "limits": "Questa slice non mostra codice invito, impronta, revoca, generazione o uscita dalla famiglia e non conserva dati offline."
   },
   "notFound": {
     "summary": "Spiega perché una pagina non è disponibile.",

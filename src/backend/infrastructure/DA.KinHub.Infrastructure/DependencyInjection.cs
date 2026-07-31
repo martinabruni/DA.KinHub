@@ -65,9 +65,14 @@ public static class DependencyInjection
         services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
         services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMembershipRepository, FamilyMembershipRepository>();
+        services.AddScoped<IFamilyDetailsRepository, FamilyDetailsRepository>();
+        services.AddScoped<IFamilyMemberPageRepository, FamilyMemberPageRepository>();
+        services.AddScoped<IFamilyInvitationPageRepository, FamilyInvitationPageRepository>();
         services.AddScoped<IActiveKinListItemRepository, ActiveKinListItemRepository>();
         services.AddScoped<IKinServiceRepository, KinServiceRepository>();
         services.AddSingleton<IActiveItemsCursorCodec, ActiveItemsCursorCodec>();
+        services.AddSingleton<IFamilyMemberCursorCodec, FamilyMemberCursorCodec>();
+        services.AddSingleton<IFamilyInvitationCursorCodec, FamilyInvitationCursorCodec>();
         services.AddHealthChecks().AddDbContextCheck<KinHubDbContext>("postgresql", tags: [InfrastructureHealthChecks.ReadyTag]);
         services.AddHostedService<DatabaseMigrationHostedService>();
         return services;

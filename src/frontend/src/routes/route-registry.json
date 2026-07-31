@@ -4,6 +4,7 @@
   { "id": "about", "path": "/about", "titleKey": "about.title", "helpKey": "about", "guideSlug": "version" },
   { "id": "releaseNotes", "path": "/release-notes", "titleKey": "releaseNotes.title", "helpKey": "releaseNotes", "guideSlug": "release-notes" },
   { "id": "settings", "path": "/settings", "titleKey": "settings.title", "helpKey": "settings", "guideSlug": "settings" },
+  { "id": "familySettings", "path": "/settings/family", "titleKey": "familySettings.title", "helpKey": "familySettings", "guideSlug": "family" },
   { "id": "docs", "path": "/docs/:slug", "titleKey": "docs.title", "helpKey": "docs", "guideSlug": "getting-started" },
   { "id": "notFound", "path": "*", "titleKey": "notFound.title", "helpKey": "notFound", "guideSlug": "troubleshooting" },
   { "id": "error", "path": "__error__", "titleKey": "error.title", "helpKey": "error", "guideSlug": "troubleshooting" }

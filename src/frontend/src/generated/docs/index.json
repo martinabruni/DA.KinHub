@@ -7,6 +7,14 @@
   "pages": {
     "it": [
       {
+        "slug": "family",
+        "locale": "it",
+        "title": "Famiglia",
+        "description": "Consultare il nome della famiglia, i membri attivi e gli inviti attivi senza esporre codici segreti.",
+        "content": "## Nome della famiglia\n\nLa pagina **Famiglia** mostra il nome corrente della famiglia autorizzata. La route e ricostruibile (`/settings/family`) e ricarica i dati dal server ogni volta che account, famiglia o sessione cambiano.\n\n## Membri attivi\n\nLa sezione Membri legge pagine limitate di membership attive. Ogni riga mostra solo nome e iniziali minime. Se un profilo non ha un nome approvato, KinHub usa il fallback **Membro** e l'avatar mostra `?`.\n\n## Inviti attivi\n\nLa sezione Inviti attivi mostra solo creatore, data di creazione, scadenza e stato attivo. Il codice segreto e la relativa impronta non vengono mai mostrati in questa pagina.\n\n## Paginazione e recupero\n\nMembri e inviti usano cursori opachi indipendenti e non salvati nel browser. Se un cursore non e piu valido, puoi tornare all'inizio della sola sezione interessata. Se la famiglia non ha inviti attivi, compare uno stato vuoto dedicato.\n\n## Requisito online\n\nLa pagina Famiglia richiede connessione attiva e sessione valida. KinHub non salva nome, membri, inviti o cursori in storage locale, quindi offline i dati non sono disponibili.",
+        "source": "docs/user-guide/it/family.md"
+      },
+      {
         "slug": "getting-started",
         "locale": "it",
         "title": "Primi passi",
@@ -35,7 +43,7 @@
         "locale": "it",
         "title": "Impostazioni, temi e installazione",
         "description": "Gestire preferenze, tutorial e installazione PWA.",
-        "content": "## Preferenze\n\nLa lingua e il tema vengono salvati nel browser. Puoi cambiarli sia dalla pagina Impostazioni sia dalla barra flottante condivisa. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.\n\n## Tutorial\n\nSeleziona **Riavvia il tutorial** per rivedere tutti i passaggi. Il completamento è associato alla versione del tutorial: nuovi passaggi importanti possono apparire dopo un aggiornamento senza bloccare l'app.\n\n## Installazione PWA\n\nSu desktop e Android usa il comando Installa del browser. Su iOS usa Condividi → Aggiungi alla schermata Home. Le funzionalità disponibili offline sono limitate all'involucro applicativo e ai contenuti già memorizzati; dati e autenticazione richiedono rete.",
+        "content": "## Preferenze\n\nLa lingua e il tema vengono salvati nel browser. Puoi cambiarli sia dalla pagina Impostazioni sia dalla barra flottante condivisa. L'opzione Sistema segue `prefers-color-scheme`; KinHub aggiorna anche il colore dell'interfaccia del browser.\n\n## Tutorial\n\nSeleziona **Riavvia il tutorial** per rivedere tutti i passaggi. Il completamento è associato alla versione del tutorial: nuovi passaggi importanti possono apparire dopo un aggiornamento senza bloccare l'app.\n\n## Installazione PWA\n\nSu desktop e Android usa il comando Installa del browser. Su iOS usa Condividi → Aggiungi alla schermata Home. Le funzionalità disponibili offline sono limitate all'involucro applicativo e ai contenuti già memorizzati; dati e autenticazione richiedono rete.\n\n## Famiglia\n\nQuando il bootstrap KinHub rileva una membership attiva, Impostazioni mostra anche la voce **Famiglia**. Da qui raggiungi la route `/settings/family`, che mostra nome della famiglia, membri attivi e inviti attivi con pagine indipendenti. La pagina non espone codici segreti e non salva dati familiari nel browser.",
         "source": "docs/user-guide/it/settings.md"
       },
       {
@@ -56,6 +64,14 @@
       }
     ],
     "en": [
+      {
+        "slug": "family",
+        "locale": "en",
+        "title": "Family",
+        "description": "Review the family name, active members, and active invitations without exposing secret codes.",
+        "content": "## Family name\n\nThe **Family** page shows the current name of the authorized family. The route is rebuildable (`/settings/family`) and reloads data from the server whenever the account, family, or session changes.\n\n## Active members\n\nThe Members section reads limited pages of active memberships. Each row shows only the minimum name and initials. If a profile does not have an approved name, KinHub uses the **Member** fallback and the avatar shows `?`.\n\n## Active invitations\n\nThe Active invitations section shows only the creator, creation date, expiration date, and active status. The secret code and its fingerprint never appear on this page.\n\n## Paging and recovery\n\nMembers and invitations use independent opaque cursors that are not stored in the browser. If a cursor is no longer valid, you can restart only the affected section from the beginning. If the family has no active invitations, the page shows a dedicated empty state.\n\n## Online requirement\n\nThe Family page requires an active connection and a valid session. KinHub does not store the name, members, invitations, or cursors in local browser storage, so data is not available offline.",
+        "source": "docs/user-guide/en/family.md"
+      },
       {
         "slug": "getting-started",
         "locale": "en",
@@ -85,7 +101,7 @@
         "locale": "en",
         "title": "Settings, themes, and installation",
         "description": "Manage preferences, tutorial state, and PWA installation.",
-        "content": "## Preferences\n\nLanguage and theme are saved in the browser. You can change them both from Settings and from the shared floating bar. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.\n\n## Tutorial\n\nSelect **Restart tutorial** to revisit every step. Completion is tied to the tutorial version, so important new steps can appear after an update without locking the app.\n\n## PWA installation\n\nOn desktop and Android, use the browser's Install command. On iOS, use Share → Add to Home Screen. Offline behavior is limited to the application shell and previously cached content; data and authentication require a connection.",
+        "content": "## Preferences\n\nLanguage and theme are saved in the browser. You can change them both from Settings and from the shared floating bar. System follows `prefers-color-scheme`; KinHub also updates the browser interface color.\n\n## Tutorial\n\nSelect **Restart tutorial** to revisit every step. Completion is tied to the tutorial version, so important new steps can appear after an update without locking the app.\n\n## PWA installation\n\nOn desktop and Android, use the browser's Install command. On iOS, use Share → Add to Home Screen. Offline behavior is limited to the application shell and previously cached content; data and authentication require a connection.\n\n## Family\n\nWhen KinHub bootstrap detects an active membership, Settings also shows the **Family** entry. From there you can open `/settings/family`, which shows the family name, active members, and active invitations with independent pages. The page does not expose secret codes and does not store family data in the browser.",
         "source": "docs/user-guide/en/settings.md"
       },
       {

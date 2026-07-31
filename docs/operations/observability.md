@@ -29,6 +29,8 @@ Non registrare token, password, connection string, claim completi, issuer, oid, 
 
 Per FEAT-003 l'operation della lista paginata e `kinlist.items_page`. Gli outcome ammessi restano finiti e le metriche custom registrano solo dimensioni a bassa cardinalita, come presenza cursore e disponibilita dei controlli di pagina. Non registrare mai cursori, item, categorie o identificativi familiari/utente.
 
+Per FEAT-004 le operation delle impostazioni famiglia sono `kinhub.family_details`, `kinhub.family_members_page` e `kinhub.family_invitations_page`. Le richieste paginated registrano soltanto `requested_page_size`, presenza del cursore e direzione; i risultati registrano `effective_page_size`, numero di righe e presenza dei cursori precedente/successivo. Verificare che le metriche aggregate non contengano `familyId`, identificativi utente, nomi, codici invito o il valore del cursore.
+
 ## Logging
 
 Il correlation middleware apre uno scope con `CorrelationId`; il trace distribuito rimane in `Activity.TraceId`. Il middleware eccezioni logga la causa di `500` e `503`, mentre normali `400`, `401` e `403` non sono errori server.
@@ -53,5 +55,12 @@ Dopo il deploy verificare in Application Insights:
 5. eccezioni tecniche senza dettagli sensibili;
 6. assenza di duplicati fra host Functions e worker;
 7. sampling coerente con i volumi e request operative non perse.
+
+Per FEAT-004 eseguire inoltre query aggregate per le tre operation famiglia e verificare che:
+
+- ogni richiesta abbia una sola durata e un solo outcome;
+- i bucket `cursor`, `direction`, `hasPrevious` e `hasNext` contengano solo i valori previsti;
+- gli errori di cursore, dipendenza PostgreSQL e stato famiglia siano classificati senza dati funzionali;
+- non siano presenti trace o log che includano il cursore opaco o il codice HMAC dell'invito.
 
 Se l'ingestione fallisce, controllare connection string, modalita `host.json`, credential dell'exporter, ruolo della managed identity e diagnostica dell'exporter. Non riattivare una seconda SDK come fallback permanente: ripristinare il pacchetto N-1 oppure correggere la configurazione e ridistribuire.

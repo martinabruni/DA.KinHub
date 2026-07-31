@@ -10,7 +10,7 @@ Per ambienti condivisi genera un bundle:
 dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
 ```
 
-In Azure una modifica sotto `Persistence/Migrations` seleziona automaticamente il percorso full-stack anche senza modifiche Bicep. Il bundle viene eseguito una volta, dopo infrastruttura e principal ma prima del deploy applicativo, con una connection string costruita al volo da host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
+In Azure ogni modifica sotto `src/backend/**`, incluse `Persistence/Migrations`, attiva il workflow backend senza rieseguire Bicep. Il bundle viene eseguito una volta dopo la creazione/verifica dei principal e prima di One Deploy, con una connection string costruita al volo da host/database/username Entra e token `oss-rdbms` come password temporanea. Verifica `__EFMigrationsHistory`, health readiness e log. Il rollback è una migration correttiva versionata; usa `dotnet ef database update <PreviousMigration>` soltanto dopo aver verificato la reversibilità e un backup.
 
 Prima della migration in ambienti condivisi verifica anche:
 
@@ -103,3 +103,34 @@ Dopo la migration FEAT-003 verificare:
 - assenza di grant runtime mancanti sul nuovo schema `kinlist`.
 
 Il `Down` di FEAT-003 e consentito solo su database disposable o prima di scritture KinList reali. Dopo dati reali il rollback operativo usa una migration correttiva compatibile preceduta da backup o PITR.
+
+## FEAT-004 - Impostazioni della famiglia
+
+Prima della migration `20260730202708_AddFamilyInvitations` verificare inoltre:
+
+- presenza della migration FEAT-003 in `__EFMigrationsHistory`;
+- grant del principal runtime e del principal migrator sullo schema `shared`;
+- assenza di una tabella `shared.family_invitations` creata manualmente fuori da EF;
+- disponibilita del key ring Data Protection condiviso, necessario per i cursori di lettura.
+
+Dopo la migration verificare:
+
+- tabella `shared.family_invitations` presente;
+- foreign key verso `shared.families` e `shared.application_users` presenti;
+- vincoli `expires_at > created_at`, HMAC non vuoto e timestamp di revoca/consumo non precedenti alla creazione;
+- indice parziale `IX_family_invitations_active_by_family_created_at_id` presente;
+- assenza di inviti orfani e di record attivi con `expires_at <= now()`:
+
+```sql
+SELECT COUNT(*)
+FROM shared.family_invitations invitation
+LEFT JOIN shared.families family ON family."Id" = invitation.family_id
+LEFT JOIN shared.application_users creator ON creator."Id" = invitation.created_by_application_user_id
+WHERE family."Id" IS NULL
+   OR creator."Id" IS NULL
+   OR (invitation.revoked_at IS NULL
+       AND invitation.consumed_at IS NULL
+       AND invitation.expires_at <= now());
+```
+
+Il `Down` di FEAT-004 e consentito solo su database disposable o prima della creazione di inviti reali. Dopo l'emissione di inviti il rollback operativo usa una migration correttiva compatibile, preceduta da backup o PITR e dalla verifica che nessun flusso dipenda dalla tabella; non eliminare dati applicativi con un rollback distruttivo.

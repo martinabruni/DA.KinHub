@@ -67,4 +67,25 @@ describe("KinHubApiClient", () => {
       "Content-Type": "application/json"
     }));
   });
+
+  it("serializes family settings requests and opaque cursors", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ name: "Famiglia Bruni" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [], effectivePageSize: 50, maxPageSize: 50, previousCursor: null, nextCursor: "next" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [], effectivePageSize: 50, maxPageSize: 50, previousCursor: null, nextCursor: null }), { status: 200 }));
+    const client = new KinHubApiClient(() => Promise.resolve("token-123"));
+
+    await client.getFamilyDetails("family-a");
+    await client.getFamilyMembers("family-a", 50, "member-cursor");
+    await client.getFamilyInvitations("family-a", 50);
+
+    expect(fetchMock.mock.calls.map(([path]) => {
+      const url = new URL(String(path), window.location.origin);
+      return `${url.pathname}${url.search}`;
+    })).toEqual([
+      "/api/kinhub/families/details?familyId=family-a",
+      "/api/kinhub/families/members?familyId=family-a&pageSize=50&cursor=member-cursor",
+      "/api/kinhub/families/invitations?familyId=family-a&pageSize=50"
+    ]);
+  });
 });

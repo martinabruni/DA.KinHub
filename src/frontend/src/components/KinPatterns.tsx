@@ -1,8 +1,8 @@
-import { ArrowRight, Clock3, Copy, Ellipsis, ListChecks, Mail, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, Clock3, Ellipsis, ListChecks, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "../lib/utils";
-import { Avatar, Badge, Button, Card, Chip, IconBadge, StatusDot, type Tone } from "./ui/core";
+import { Avatar, Badge, Card, Chip, IconBadge, StatusDot, type Tone } from "./ui/core";
 
 function BaseServiceCard({ to, icon, title, description, tone, badge }: { to?: string; icon: Parameters<typeof IconBadge>[0]["icon"]; title: string; description: string; tone: Tone; badge?: ReactNode }) {
   const content = <>
@@ -46,10 +46,10 @@ export function FamilyCard({ name, members, label }: { name: string; members: nu
   return <Card className="kh-family-card" highlighted><IconBadge icon={Users} tone="accent" size="lg" /><div><strong>{name}</strong><p>{label}</p></div><Badge tone="success">{members}</Badge></Card>;
 }
 
-export function MemberRow({ name, role, status }: { name: string; role: string; status: string }) {
-  return <div className="kh-person-row"><Avatar name={name} /><div><strong>{name}</strong><span>{role}</span></div><StatusDot label={status} /></div>;
+export function MemberRow({ label, displayName, initials, status }: { label: string; displayName: string; initials: string; status: string }) {
+  return <li className="kh-person-row"><Avatar name={label} displayName={displayName} fallback={initials} /><div><strong>{displayName}</strong><span>{status}</span></div><StatusDot label={status} /></li>;
 }
 
-export function InviteRow({ address, status, actionLabel, onAction }: { address: string; status: string; actionLabel: string; onAction: () => void }) {
-  return <div className="kh-person-row"><IconBadge icon={Mail} tone="info" /><div><strong>{address}</strong><span><Clock3 size={14} aria-hidden="true" /> {status}</span></div><Button variant="soft" onClick={onAction}><Copy size={16} aria-hidden="true" />{actionLabel}</Button></div>;
+export function InviteRow({ creatorLabel, creatorDisplayName, creatorInitials, createdAtLabel, expiresAtLabel, status }: { creatorLabel: string; creatorDisplayName: string; creatorInitials: string; createdAtLabel: string; expiresAtLabel: string; status: string }) {
+  return <li className="kh-person-row"><Avatar name={creatorLabel} displayName={creatorDisplayName} fallback={creatorInitials} tone="info" /><div><strong>{creatorDisplayName}</strong><span><Clock3 size={14} aria-hidden="true" /> {createdAtLabel}</span><span><CalendarClock size={14} aria-hidden="true" /> {expiresAtLabel}</span></div><StatusDot tone="info" label={status} /></li>;
 }
