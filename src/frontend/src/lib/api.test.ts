@@ -79,10 +79,13 @@ describe("KinHubApiClient", () => {
     await client.getFamilyMembers("family-a", 50, "member-cursor");
     await client.getFamilyInvitations("family-a", 50);
 
-    expect(fetchMock.mock.calls.map(([path]) => String(path))).toEqual([
-      "http://localhost:7071/api/kinhub/families/details?familyId=family-a",
-      "http://localhost:7071/api/kinhub/families/members?familyId=family-a&pageSize=50&cursor=member-cursor",
-      "http://localhost:7071/api/kinhub/families/invitations?familyId=family-a&pageSize=50"
+    expect(fetchMock.mock.calls.map(([path]) => {
+      const url = new URL(String(path), window.location.origin);
+      return `${url.pathname}${url.search}`;
+    })).toEqual([
+      "/api/kinhub/families/details?familyId=family-a",
+      "/api/kinhub/families/members?familyId=family-a&pageSize=50&cursor=member-cursor",
+      "/api/kinhub/families/invitations?familyId=family-a&pageSize=50"
     ]);
   });
 });
