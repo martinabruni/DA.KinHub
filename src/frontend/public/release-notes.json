@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "0e48e6a",
-  "buildDate": "2026-07-30T16:01:27.171Z",
+  "commit": "1bc499a",
+  "buildDate": "2026-07-31T08:19:16.425Z",
   "environment": "Development",
   "entries": [
     {
@@ -58,6 +58,17 @@
       "descriptions": {
         "it": "Introdotto il catalogo persistito dei servizi familiari con KinList preconfigurato, disponibilita assegnata alle famiglie esistenti e nuove, Home dinamica basata sui servizi autorizzati e controllo server-side dell'accesso diretto a `/kinlist`.",
         "en": "Added the persisted family service catalog with KinList preconfigured, availability assigned to existing and new families, a dynamic Home driven by authorized services, and a server-side access check for direct `/kinlist` navigation."
+      }
+    },
+    {
+      "id": "none-added-family-settings-page",
+      "type": "added",
+      "area": "frontend",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Aggiunta la route `/settings/family` con lettura del nome famiglia, pagine di membri attivi e inviti attivi, nuovi endpoint KinHub Family protetti e documentazione bilingue collegata.",
+        "en": "Added the `/settings/family` route with family name reading, active member and active invitation pages, new protected KinHub Family endpoints, and linked bilingual documentation."
       }
     },
     {
@@ -223,6 +234,17 @@
       "descriptions": {
         "it": "I merge su `main` distribuiscono automaticamente il solo scope modificato: il codice applicativo usa il deploy leggero, mentre infrastruttura e migration usano un percorso full-stack serializzato che applica il database prima del codice senza deploy duplicati.",
         "en": "Merges to `main` now automatically deploy only the changed scope: application code uses the lightweight deployment, while infrastructure and migrations use a serialized full-stack path that updates the database before the code without duplicate deployments."
+      }
+    },
+    {
+      "id": "none-changed-separated-deployment-workflows",
+      "type": "changed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Separati i deploy Azure per responsabilita: `infra/**` esegue solo il provisioning Bicep, `src/backend/**` applica migration e distribuisce la Function App, `src/frontend/**` distribuisce soltanto la SPA, mantenendo l'ordine corretto nei commit misti.",
+        "en": "Separated Azure deployments by responsibility: `infra/**` only provisions Bicep resources, `src/backend/**` applies migrations and deploys the Function App, and `src/frontend/**` only deploys the SPA, while preserving the correct order for mixed commits."
       }
     },
     {

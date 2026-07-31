@@ -216,6 +216,132 @@ paths:
           $ref: "#/components/responses/ProblemDetails"
         "503":
           $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/families/details:
+    get:
+      tags:
+        - KinHub
+      summary: Read the active family name for the authorized family
+      operationId: getKinHubFamilyDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Family details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyDetails"
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "409":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/families/members:
+    get:
+      tags:
+        - KinHub
+      summary: Read a keyset page of active family members for the authorized family
+      operationId: getKinHubFamilyMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Family members page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyMembersPage"
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "409":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/families/invitations:
+    get:
+      tags:
+        - KinHub
+      summary: Read a keyset page of active family invitations for the authorized family
+      operationId: getKinHubFamilyInvitations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pageSize
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Family invitations page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyInvitationsPage"
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "409":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
   /api/kinhub/services:
     get:
       tags:
@@ -492,6 +618,111 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/KinHubServiceCatalogItem"
+    FamilyDetails:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+    FamilyMember:
+      type: object
+      required:
+        - displayName
+        - initials
+      properties:
+        displayName:
+          type: string
+          nullable: true
+        initials:
+          type: string
+          nullable: true
+    FamilyMembersPage:
+      type: object
+      required:
+        - items
+        - effectivePageSize
+        - maxPageSize
+        - previousCursor
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FamilyMember"
+        effectivePageSize:
+          type: integer
+          format: int32
+        maxPageSize:
+          type: integer
+          format: int32
+        previousCursor:
+          type: string
+          nullable: true
+        nextCursor:
+          type: string
+          nullable: true
+    FamilyInvitationCreator:
+      type: object
+      required:
+        - displayName
+        - initials
+      properties:
+        displayName:
+          type: string
+          nullable: true
+        initials:
+          type: string
+          nullable: true
+    FamilyInvitation:
+      type: object
+      required:
+        - id
+        - creator
+        - createdAt
+        - expiresAt
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        creator:
+          $ref: "#/components/schemas/FamilyInvitationCreator"
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - active
+    FamilyInvitationsPage:
+      type: object
+      required:
+        - items
+        - effectivePageSize
+        - maxPageSize
+        - previousCursor
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FamilyInvitation"
+        effectivePageSize:
+          type: integer
+          format: int32
+        maxPageSize:
+          type: integer
+          format: int32
+        previousCursor:
+          type: string
+          nullable: true
+        nextCursor:
+          type: string
+          nullable: true
     ActiveItemsPageAuthor:
       type: object
       required:

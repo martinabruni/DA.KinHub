@@ -16,3 +16,7 @@ Seleziona **Riavvia il tutorial** per rivedere tutti i passaggi. Il completament
 ## Installazione PWA
 
 Su desktop e Android usa il comando Installa del browser. Su iOS usa Condividi → Aggiungi alla schermata Home. Le funzionalità disponibili offline sono limitate all'involucro applicativo e ai contenuti già memorizzati; dati e autenticazione richiedono rete.
+
+## Famiglia
+
+Quando il bootstrap KinHub rileva una membership attiva, Impostazioni mostra anche la voce **Famiglia**. Da qui raggiungi la route `/settings/family`, che mostra nome della famiglia, membri attivi e inviti attivi con pagine indipendenti. La pagina non espone codici segreti e non salva dati familiari nel browser.

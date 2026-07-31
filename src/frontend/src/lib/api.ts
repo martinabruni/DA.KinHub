@@ -56,6 +56,44 @@ export interface KinListItemsPage {
   nextCursor: string | null;
 }
 
+export interface FamilyDetails {
+  name: string;
+}
+
+export interface FamilyMember {
+  displayName: string | null;
+  initials: string | null;
+}
+
+export interface FamilyMembersPage {
+  items: FamilyMember[];
+  effectivePageSize: number;
+  maxPageSize: number;
+  previousCursor: string | null;
+  nextCursor: string | null;
+}
+
+export interface FamilyInvitationCreator {
+  displayName: string | null;
+  initials: string | null;
+}
+
+export interface FamilyInvitation {
+  id: string;
+  creator: FamilyInvitationCreator;
+  createdAt: string;
+  expiresAt: string;
+  status: "active";
+}
+
+export interface FamilyInvitationsPage {
+  items: FamilyInvitation[];
+  effectivePageSize: number;
+  maxPageSize: number;
+  previousCursor: string | null;
+  nextCursor: string | null;
+}
+
 export class ApiError extends Error {}
 
 export class ApiResponseError extends ApiError {
@@ -103,6 +141,28 @@ export class KinHubApiClient {
     }
 
     return this.request<KinListItemsPage>(`/api/kinlist/items?${params.toString()}`, { signal });
+  }
+
+  async getFamilyDetails(familyId: string, signal?: AbortSignal): Promise<FamilyDetails> {
+    return this.request<FamilyDetails>(`/api/kinhub/families/details?${new URLSearchParams({ familyId }).toString()}`, { signal });
+  }
+
+  async getFamilyMembers(familyId: string, pageSize: number, cursor?: string | null, signal?: AbortSignal): Promise<FamilyMembersPage> {
+    const params = new URLSearchParams({ familyId, pageSize: String(pageSize) });
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+
+    return this.request<FamilyMembersPage>(`/api/kinhub/families/members?${params.toString()}`, { signal });
+  }
+
+  async getFamilyInvitations(familyId: string, pageSize: number, cursor?: string | null, signal?: AbortSignal): Promise<FamilyInvitationsPage> {
+    const params = new URLSearchParams({ familyId, pageSize: String(pageSize) });
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+
+    return this.request<FamilyInvitationsPage>(`/api/kinhub/families/invitations?${params.toString()}`, { signal });
   }
 
   private async request<T>(path: string, init: RequestInit & { expectNoContent?: boolean }): Promise<T> {

@@ -12,6 +12,7 @@ public sealed class KinHubTelemetry : IDisposable
     private readonly Histogram<double> durationHistogram;
     private readonly Histogram<int> requestedPageSizeHistogram;
     private readonly Histogram<int> effectivePageSizeHistogram;
+    private readonly Histogram<int> rowsHistogram;
     private readonly ActivitySource activitySource = new("KinHub");
 
     public KinHubTelemetry(BuildInfoProvider buildInfoProvider)
@@ -22,6 +23,7 @@ public sealed class KinHubTelemetry : IDisposable
         durationHistogram = meter.CreateHistogram<double>("kinhub.duration.ms");
         requestedPageSizeHistogram = meter.CreateHistogram<int>("kinhub.pagination.requested_page_size");
         effectivePageSizeHistogram = meter.CreateHistogram<int>("kinhub.pagination.effective_page_size");
+        rowsHistogram = meter.CreateHistogram<int>("kinhub.pagination.rows");
     }
 
     public OperationScope Begin(string operation) => new(operation, activitySource, outcomeCounter, durationHistogram);
@@ -39,26 +41,34 @@ public sealed class KinHubTelemetry : IDisposable
         signalCounter.Add(1, tags);
     }
 
-    public void RecordItemsPageRequest(int requestedPageSize, bool hasCursor)
+    public void RecordPagedRequest(string operation, int requestedPageSize, bool hasCursor, string direction)
     {
         var tags = new TagList
         {
-            { "operation", KinHubOperations.KinListItemsPage },
-            { "cursor", hasCursor ? "present" : "absent" }
+            { "operation", operation },
+            { "cursor", hasCursor ? "present" : "absent" },
+            { "direction", direction }
         };
         requestedPageSizeHistogram.Record(requestedPageSize, tags);
     }
 
-    public void RecordItemsPageResult(int effectivePageSize, bool hasPrevious, bool hasNext)
+    public void RecordPagedResult(string operation, int effectivePageSize, int itemCount, bool hasPrevious, bool hasNext)
     {
         var tags = new TagList
         {
-            { "operation", KinHubOperations.KinListItemsPage },
+            { "operation", operation },
             { "hasPrevious", hasPrevious ? "true" : "false" },
             { "hasNext", hasNext ? "true" : "false" }
         };
         effectivePageSizeHistogram.Record(effectivePageSize, tags);
+        rowsHistogram.Record(itemCount, new TagList { { "operation", operation } });
     }
+
+    public void RecordItemsPageRequest(int requestedPageSize, bool hasCursor)
+        => RecordPagedRequest(KinHubOperations.KinListItemsPage, requestedPageSize, hasCursor, "forward");
+
+    public void RecordItemsPageResult(int effectivePageSize, bool hasPrevious, bool hasNext, int itemCount)
+        => RecordPagedResult(KinHubOperations.KinListItemsPage, effectivePageSize, itemCount, hasPrevious, hasNext);
 
     public void Dispose()
     {

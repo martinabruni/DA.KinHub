@@ -152,6 +152,27 @@ public sealed class KinHubTelemetryTests
             && measurement.ErrorCategory == "dependency");
     }
 
+    [Fact]
+    public void FamilySettingsPageMetricsUseApprovedOperationNames()
+    {
+        var measurements = new List<(string Instrument, string? Operation, string? Cursor, string? Direction)>();
+        using var meterListener = new MeterListener();
+        meterListener.InstrumentPublished = (instrument, listener) =>
+        {
+            if (instrument.Meter.Name == "KinHub") listener.EnableMeasurementEvents(instrument);
+        };
+        meterListener.SetMeasurementEventCallback<int>((instrument, _, tags, _) =>
+            measurements.Add((instrument.Name, TagValue(tags, "operation"), TagValue(tags, "cursor"), TagValue(tags, "direction"))));
+        meterListener.Start();
+
+        using var telemetry = new KinHubTelemetry(new BuildInfoProvider(Options.Create(new RuntimeOptions { AppName = "KinHub", ApiVersion = "1.0", Environment = "Test" })));
+        telemetry.RecordPagedRequest(KinHubOperations.FamilyMembersPage, 50, true, "forward");
+        telemetry.RecordPagedRequest(KinHubOperations.FamilyInvitationsPage, 50, false, "forward");
+
+        Assert.Contains(measurements, item => item.Instrument == "kinhub.pagination.requested_page_size" && item.Operation == KinHubOperations.FamilyMembersPage && item.Cursor == "present");
+        Assert.Contains(measurements, item => item.Instrument == "kinhub.pagination.requested_page_size" && item.Operation == KinHubOperations.FamilyInvitationsPage && item.Cursor == "absent");
+    }
+
     private static string? TagValue(ReadOnlySpan<KeyValuePair<string, object?>> tags, string key)
     {
         foreach (var tag in tags)

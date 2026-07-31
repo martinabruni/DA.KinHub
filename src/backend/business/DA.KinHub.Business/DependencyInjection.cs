@@ -11,6 +11,7 @@ public static class DependencyInjection
         .AddScoped<IKinHubBootstrapService, KinHubBootstrapService>()
         .AddScoped<IFamilyCreationService, FamilyCreationService>()
         .AddScoped<IFamilyAccessService, FamilyAccessService>()
+        .AddScoped<IFamilySettingsService, FamilySettingsService>()
         .AddScoped<IKinHubServiceCatalogService, KinHubServiceCatalogService>()
         .AddScoped<IKinHubServiceAccessService, KinHubServiceAccessService>()
         .AddScoped<IActiveItemsPageService, ActiveItemsPageService>();

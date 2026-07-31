@@ -34,10 +34,18 @@
   "settings": {
     "summary": "Customize language, theme, and tutorial.",
     "purpose": "Stores experience preferences on this device.",
-    "actions": "Change language or theme, or restart the tutorial.",
+    "actions": "Change language and theme, restart the tutorial, or open the Family section when bootstrap detects an active membership.",
     "prerequisites": "The browser must allow local storage.",
-    "fields": "Language, light/dark/system theme, and tutorial.",
-    "limits": "Preferences are not yet synchronized across devices."
+    "fields": "Language, light/dark/system theme, tutorial, PWA installation, and the Family link when available.",
+    "limits": "Preferences are not synchronized across devices yet and the Family card does not show invite or leave actions yet."
+  },
+  "familySettings": {
+    "summary": "Shows the family name, active members, and active invitations with independent pages and opaque cursors.",
+    "purpose": "Rebuilds the authorized family context server-side without storing data or cursors in the browser and without exposing invitation codes or HMAC values.",
+    "actions": "Refresh the page, move through member and invitation pages, and restart a section when a cursor is no longer valid.",
+    "prerequisites": "A valid session, network connectivity, and an active family membership returned by KinHub bootstrap are required.",
+    "fields": "The page shows only the family name, member name or fallback, initials or ?, invitation creator, creation, expiration, and active status.",
+    "limits": "This slice does not show the invitation code, fingerprint, revoke, create, or leave actions, and it does not keep data offline."
   },
   "notFound": {
     "summary": "Explains why a page is unavailable.",

@@ -16,3 +16,7 @@ Select **Restart tutorial** to revisit every step. Completion is tied to the tut
 ## PWA installation
 
 On desktop and Android, use the browser's Install command. On iOS, use Share → Add to Home Screen. Offline behavior is limited to the application shell and previously cached content; data and authentication require a connection.
+
+## Family
+
+When KinHub bootstrap detects an active membership, Settings also shows the **Family** entry. From there you can open `/settings/family`, which shows the family name, active members, and active invitations with independent pages. The page does not expose secret codes and does not store family data in the browser.
