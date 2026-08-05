@@ -82,6 +82,10 @@ jobs:
             static_web_app_hostname="${static_web_app_hostname%%/*}"
           fi
 
+          if [[ -z "$static_web_app_name" && -n "$static_web_app_hostname" ]]; then
+            static_web_app_name="$static_web_app_hostname"
+          fi
+
           if [[ -z "$static_web_app_name" ]]; then
             static_web_app_name=$(az resource list \
               --resource-group "$resource_group" \
@@ -97,10 +101,6 @@ jobs:
               --resource-type "Microsoft.Web/staticSites" \
               --query properties.defaultHostname \
               --output tsv)
-          fi
-
-          if [[ -z "$static_web_app_name" && -n "$static_web_app_hostname" ]]; then
-            static_web_app_name="$static_web_app_hostname"
           fi
 
           test -n "$function_app_hostname"
