@@ -127,7 +127,7 @@ Le feature sono vertical slice orientate a un risultato utente o operativo e inc
 
 | Checkpoint | Feature coinvolte | Contratto da congelare | Possibili conflitti |
 |---|---|---|---|
-| CP-DS1 | FEAT-014, FEAT-002-FEAT-011 | Catalogo componenti, token, regole i18n e wrapper specifici consentiti del design system | `src/frontend/src/components/ui`, `Layout.tsx`, `styles.css`, `route-registry.json`, `skills/frontend/*`, `AGENTS.md` |
+| CP-DS1 | FEAT-014, FEAT-002-FEAT-011 | Catalogo componenti, token, regole i18n e wrapper specifici consentiti del design system | `src/frontend/src/components/ui`, `Layout.tsx`, `styles.css`, `route-registry.json`, `.agents/skills/frontend/*`, `AGENTS.md` |
 | CP-001 | FEAT-015, FEAT-003, FEAT-004 | Identità interna, membership, policy `Family`, forma `familyId`, schema shared, catalogo servizi, guard KinService e strategia migration | `Program.cs`, DI, `KinHubDbContext`, migration, API client, Home e gate KinList |
 | CP-002 | FEAT-005, FEAT-007, FEAT-008, FEAT-009 | Contratto pagina/cursori, codici Problem Details, predicato visibilità e convenzioni API tipizzate | `src/frontend/src/lib/api.ts`, DbContext, opzioni, traduzioni condivise |
 | CP-003 | FEAT-007, FEAT-009, FEAT-010 | Stato item, owner/visibility, versione concorrente, ordine, tipi timeline e idempotency key | Entità/configurazioni item, timeline, riga lista e refresh |

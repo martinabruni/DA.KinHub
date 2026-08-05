@@ -9,7 +9,7 @@
       "version": "0.2.0",
       "area": "architecture",
       "description": "Confini DDD, decisioni serverless e procedura per nuove convenzioni strutturali.",
-      "path": "skills/architecture/SKILL.md",
+      "path": ".agents/skills/architecture/SKILL.md",
       "references": [
         {
           "path": "docs/architecture/overview.md",
@@ -30,7 +30,7 @@
       "version": "0.3.0",
       "area": "backend",
       "description": "Servizi business, contratti DDD, Function endpoint e pattern infrastrutturali riutilizzabili.",
-      "path": "skills/backend/SKILL.md",
+      "path": ".agents/skills/backend/SKILL.md",
       "references": [
         {
           "path": "docs/architecture/http-functions.md",
@@ -41,7 +41,7 @@
           "checksum": "d05464d5e5f907df6f6d6aba6027bb1bcee0cf9f0a50a85f167fe5b0cfd90b3e"
         }
       ],
-      "catalog": "skills/backend/catalog.json",
+      "catalog": ".agents/skills/backend/catalog.json",
       "catalogItems": [
         {
           "id": "build-info-provider",
@@ -77,7 +77,7 @@
       "version": "0.2.0",
       "area": "documentation",
       "description": "Guide bilingui, help contestuale e sincronizzazione Markdown nel frontend.",
-      "path": "skills/documentation/SKILL.md",
+      "path": ".agents/skills/documentation/SKILL.md",
       "references": [
         {
           "path": "docs/CR/README.md",
@@ -94,9 +94,9 @@
       "version": "0.2.0",
       "area": "frontend",
       "description": "Pattern UI React riutilizzabili, accessibili, localizzati e compatibili con temi e PWA.",
-      "path": "skills/frontend/SKILL.md",
+      "path": ".agents/skills/frontend/SKILL.md",
       "references": [],
-      "catalog": "skills/frontend/catalog.json",
+      "catalog": ".agents/skills/frontend/catalog.json",
       "catalogItems": [
         {
           "id": "page-scaffold",
@@ -142,20 +142,20 @@
       "version": "0.8.0",
       "area": "implementation",
       "description": "Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.",
-      "path": "skills/implementation/SKILL.md",
+      "path": ".agents/skills/implementation/SKILL.md",
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "e0f72026285c37208cf08ec52a542f6ab1186f977c4dcd81a9098df18f24e9a9"
+          "checksum": "6d73d58bf3951f10fd9696fc3054f541806e1dd99d81d903f090dd3f0546911d"
         },
         {
-          "path": "skills/implementation/templates/implementation-progress.md",
+          "path": ".agents/skills/implementation/templates/implementation-progress.md",
           "checksum": "8ee651b93d2d45a5ef460e4a252e8cf4a6b8c22715c951c9e95a799e707eb4bb"
         }
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "356fa0ddbb59834e44f7045a15a812232fcd93247912d55a06caccc5953c94ab"
+      "checksum": "6af1f5b33563683f800bf6ad072a63e58a35413b41de60813b23be6f4120e5ba"
     },
     {
       "id": "kinhub-release",
@@ -163,7 +163,7 @@
       "version": "0.1.0",
       "area": "release",
       "description": "Semantic Versioning, change fragment, patch note e metadati di build condivisi.",
-      "path": "skills/release/SKILL.md",
+      "path": ".agents/skills/release/SKILL.md",
       "references": [],
       "catalog": null,
       "catalogItems": [],

@@ -156,12 +156,12 @@ Registrare il validator in `src/frontend/package.json` e richiamarlo in:
 
 Aggiornare:
 
-- `skills/frontend/SKILL.md`
-- `skills/frontend/catalog.json`
-- `skills/frontend/examples/`
-- `skills/implementation/SKILL.md`
+- `.agents/skills/frontend/SKILL.md`
+- `.agents/skills/frontend/catalog.json`
+- `.agents/skills/frontend/examples/`
+- `.agents/skills/implementation/SKILL.md`
 - `AGENTS.md`
-- `skills/registry.json` rigenerato dall'harness
+- `.agents/skills/registry.json` rigenerato dall'harness
 - una guida tecnica autorevole, preferibilmente `docs/architecture/frontend-design-system.md`
 - guide utente italiane e inglesi che descrivono shell, navigazione o stati migrati
 - change fragment bilingue relativo alla feature

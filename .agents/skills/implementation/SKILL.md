@@ -4,7 +4,7 @@ name: KinHub repository implementation workflow
 version: 0.8.0
 area: implementation
 description: Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.
-references: AGENTS.md, skills/implementation/templates/implementation-progress.md
+references: AGENTS.md, .agents/skills/implementation/templates/implementation-progress.md
 ---
 
 # KinHub repository implementation

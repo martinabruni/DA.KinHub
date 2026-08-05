@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "1bc499a",
-  "buildDate": "2026-07-31T08:19:16.425Z",
+  "commit": "28e5c97",
+  "buildDate": "2026-08-05T10:40:29.827Z",
   "environment": "Development",
   "entries": [
     {
@@ -278,6 +278,17 @@
       "descriptions": {
         "it": "Corretto il workflow `deploy-infrastructure.yml` per risolvere in modo affidabile nome e object id dell'amministratore Entra di PostgreSQL, evitando parametri vuoti che invalidavano il deployment Bicep.",
         "en": "Fixed `deploy-infrastructure.yml` to resolve the PostgreSQL Entra administrator name and object id reliably, preventing empty parameters that invalidated the Bicep deployment."
+      }
+    },
+    {
+      "id": "none-fixed-deploy-workflow-resource-discovery",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretti i workflow di deploy rendendo il build backend coerente con il percorso gia validato in `pr-quality` e sostituendo nel deploy frontend la discovery della Static Web App via `az staticwebapp` con query ARM generiche piu affidabili sul runner GitHub.",
+        "en": "Fixed the deployment workflows by aligning the backend build with the path already validated in `pr-quality` and replacing frontend Static Web App discovery via `az staticwebapp` with more reliable generic ARM queries on the GitHub runner."
       }
     },
     {

@@ -113,4 +113,4 @@ La CR rende questi comportamenti sicuri per default e riutilizzabili, senza camb
 - Requisiti originari: `feature.md`.
 - Piano di consegna originario: `feature.plan.md`.
 - Piano correttivo approvato: `cr.plan.md`.
-- Regole future generiche: `AGENTS.md` e `skills/backend/references/functions-http-pipeline.md`.
+- Regole future generiche: `AGENTS.md` e `.agents/skills/backend/references/functions-http-pipeline.md`.

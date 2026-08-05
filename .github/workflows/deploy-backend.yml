@@ -41,12 +41,16 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
 
-      - name: Build and test backend
+      - name: Restore and build backend
         run: |
           dotnet restore KinHub.slnx
-          dotnet build KinHub.slnx --configuration Release --no-restore
-          dotnet test KinHub.slnx --configuration Release --no-build
+          dotnet build KinHub.slnx --configuration Release --no-restore -p:CommitSha="${GITHUB_SHA::12}" -p:BuildDate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -p:BuildEnvironment=CI
+
+      - name: Test backend
+        run: dotnet test KinHub.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx"
 
       - name: Build migration bundle
         run: |

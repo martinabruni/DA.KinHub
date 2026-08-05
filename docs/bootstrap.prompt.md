@@ -135,7 +135,7 @@ Crea almeno la seguente struttura, aggiungendo i file necessari:
 │       └── README.en.md
 ├── changes/
 │   └── README.md
-├── skills/
+├── .agents/skills/
 │   ├── README.md
 │   ├── registry.json
 │   ├── frontend/
@@ -223,7 +223,7 @@ Il file deve essere scritto in modo che un coding agent possa leggerlo prima di 
 
 ## 6. Skill harness di progetto
 
-Predisponi un sistema di skill locali nella cartella `skills/`.
+Predisponi un sistema di skill locali nella cartella `.agents/skills/`.
 
 ### 6.1 Scopo
 
@@ -241,7 +241,7 @@ Esempi:
 Ogni skill deve avere almeno:
 
 ```text
-skills/<area>/
+.agents/skills/<area>/
 ├── SKILL.md
 ├── catalog.json          # se utile
 ├── examples/             # se utile
@@ -266,9 +266,9 @@ skills/<area>/
 
 Crea in `tools/skill-harness/` un piccolo tool funzionante, documentato e testabile che:
 
-- esegua la scansione di `skills/**/SKILL.md`;
+- esegua la scansione di `.agents/skills/**/SKILL.md`;
 - validi struttura e metadati;
-- generi o aggiorni `skills/registry.json`;
+- generi o aggiorni `.agents/skills/registry.json`;
 - esponga un comando per elencare le skill;
 - esponga un comando per leggere la skill corretta per area;
 - esponga un comando `watch` per rileggere e rigenerare il registry quando i file cambiano in sviluppo;
@@ -298,7 +298,7 @@ Quando viene creato qualcosa di riutilizzabile:
 3. documentalo;
 4. registralo nel catalogo della skill appropriata;
 5. aggiorna `SKILL.md`;
-6. aggiorna `skills/registry.json` tramite harness;
+6. aggiorna `.agents/skills/registry.json` tramite harness;
 7. aggiungi una change fragment;
 8. aggiorna la documentazione localizzata, se visibile agli utenti;
 9. verifica che `AGENTS.md` resti coerente.
