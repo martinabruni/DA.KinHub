@@ -54,6 +54,7 @@ jobs:
         shell: bash
         run: |
           resource_group="${{ vars.AZURE_RESOURCE_GROUP }}"
+          static_web_app_url="${{ vars.AZURE_STATIC_WEB_APP_URL }}"
           test -n "$resource_group"
 
           function_app_hostname="${{ inputs.function_app_hostname }}"
@@ -73,6 +74,14 @@ jobs:
           fi
 
           static_web_app_name="${{ inputs.static_web_app_name || vars.AZURE_STATIC_WEB_APP_NAME }}"
+          static_web_app_hostname="${{ inputs.static_web_app_hostname }}"
+
+          if [[ -z "$static_web_app_hostname" && -n "$static_web_app_url" ]]; then
+            static_web_app_hostname="${static_web_app_url#https://}"
+            static_web_app_hostname="${static_web_app_hostname#http://}"
+            static_web_app_hostname="${static_web_app_hostname%%/*}"
+          fi
+
           if [[ -z "$static_web_app_name" ]]; then
             static_web_app_name=$(az resource list \
               --resource-group "$resource_group" \
@@ -81,7 +90,6 @@ jobs:
               --output tsv)
           fi
 
-          static_web_app_hostname="${{ inputs.static_web_app_hostname }}"
           if [[ -z "$static_web_app_hostname" ]]; then
             static_web_app_hostname=$(az resource show \
               --name "$static_web_app_name" \
@@ -89,6 +97,10 @@ jobs:
               --resource-type "Microsoft.Web/staticSites" \
               --query properties.defaultHostname \
               --output tsv)
+          fi
+
+          if [[ -z "$static_web_app_name" && -n "$static_web_app_hostname" ]]; then
+            static_web_app_name="$static_web_app_hostname"
           fi
 
           test -n "$function_app_hostname"
