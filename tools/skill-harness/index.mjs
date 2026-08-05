@@ -5,7 +5,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
 const realRoot = realpathSync(root);
-const skillsRoot = join(root, "skills");
+const skillsRoot = join(root, ".agents/skills");
 const registryPath = join(skillsRoot, "registry.json");
 const functionsRoot = join(root, "src/backend/applications/DA.KinHub.Functions/Functions");
 const apiRoutesPath = join(root, "src/backend/applications/DA.KinHub.Functions/Http/ApiRoutes.cs");
@@ -75,7 +75,8 @@ function loadReferences(metadata, source) {
 }
 
 function loadSkills() {
-  const files = walk(skillsRoot).filter((path) => path.endsWith("SKILL.md"));
+  // Agent skills can coexist with the repository skill schema in this directory.
+  const files = walk(skillsRoot).filter((path) => path.endsWith("SKILL.md")).filter((path) => /^---\r?\nid\s*:/m.test(readFileSync(path, "utf8")));
   if (files.length === 0) throw new Error("Nessuna skill trovata");
   const ids = new Set();
   const catalogIds = new Set();
@@ -165,8 +166,8 @@ function build() {
 function validate() {
   validateOpenApiRoutes();
   const expected = serializedRegistry();
-  if (!existsSync(registryPath)) throw new Error("skills/registry.json mancante: eseguire npm run skills:build");
-  if (readFileSync(registryPath, "utf8") !== expected) throw new Error("skills/registry.json non aggiornato: eseguire npm run skills:build");
+  if (!existsSync(registryPath)) throw new Error(".agents/skills/registry.json mancante: eseguire npm run skills:build");
+  if (readFileSync(registryPath, "utf8") !== expected) throw new Error(".agents/skills/registry.json non aggiornato: eseguire npm run skills:build");
   console.log(`Skill valide: ${registry().skills.length}`);
 }
 

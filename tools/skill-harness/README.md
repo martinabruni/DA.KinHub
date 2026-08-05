@@ -2,6 +2,8 @@
 
 Tool Node.js senza dipendenze esterne. Scansiona esclusivamente documenti e cataloghi JSON: non importa né esegue codice indicato dalle skill.
 
+Le skill di progetto sono in `.agents/skills/`; il harness considera le skill con frontmatter dello schema repository (`id`, `name`, `version`, `area`, `description`) e lascia disponibili nello stesso albero le skill agente con schema differente.
+
 ```bash
 npm run skills:list
 npm run skills:read -- frontend

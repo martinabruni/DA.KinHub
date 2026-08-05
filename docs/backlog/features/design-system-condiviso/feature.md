@@ -74,7 +74,7 @@ Nessuno nella wave. La feature congela catalogo componenti, token, convenzioni i
 - **API/integrazioni**: client API tipizzato e contratti già esistenti, senza cambiare comportamento server-side.
 - **Frontend/UX**: `src/frontend/src/components/ui/`, `src/frontend/src/components/FloatingBars.tsx`, `src/frontend/src/components/KinPatterns.tsx`, `src/frontend/src/components/Layout.tsx`, `src/frontend/src/components/PageScaffold.tsx`, pagine correnti, route registry, risorse `it`/`en` e `styles.css`.
 - **Infrastruttura/configurazione**: Nessuna nuova risorsa; solo eventuali asset/configurazioni frontend strettamente necessari alla UI.
-- **Documentazione/operazioni**: `skills/frontend/SKILL.md`, `skills/frontend/catalog.json`, eventuali esempi skill, `skills/implementation/*`, guide/help bilingui, change fragment e `AGENTS.md` se le regole di riuso cambiano.
+- **Documentazione/operazioni**: `.agents/skills/frontend/SKILL.md`, `.agents/skills/frontend/catalog.json`, eventuali esempi skill, `.agents/skills/implementation/*`, guide/help bilingui, change fragment e `AGENTS.md` se le regole di riuso cambiano.
 
 La proposta di modifica successiva su help e navigazione informativa è descritta in `cr-help-navigation.md`.
 

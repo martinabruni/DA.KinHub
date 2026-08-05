@@ -36,7 +36,7 @@ Non introdurre CQRS, mediator, event bus o microservizi senza un problema concre
 - `src/frontend`: SPA/PWA.
 - `tests`: xUnit dominio, business e integrazione.
 - `docs`: architettura, sviluppo, operazioni, guide e patch note.
-- `skills`: conoscenza riutilizzabile versionata.
+- `.agents/skills`: conoscenza riutilizzabile versionata e skill locali degli agenti.
 - `tools`: harness skill, docs sync e release notes.
 - `infra`: Bicep applicativo modulare.
 - `scripts`: publish e packaging.
@@ -189,8 +189,8 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 1. Implementalo in `src/frontend/src/components` o `components/ui`.
 2. Aggiungi uso reale/esempio e tutte le verifiche statiche.
 3. Documenta API, accessibilità, temi e limiti.
-4. Aggiungi l'item a `skills/frontend/catalog.json` e aggiorna `SKILL.md`.
-5. Rigenera `skills/registry.json`.
+4. Aggiungi l'item a `.agents/skills/frontend/catalog.json` e aggiorna `SKILL.md`.
+5. Rigenera `.agents/skills/registry.json`.
 6. Aggiorna guide/help/traduzioni se visibile e crea change fragment.
 
 ### Promuovere un servizio business
@@ -198,7 +198,7 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 1. Implementa contratto nel layer corretto e dipendenze verso il dominio.
 2. Aggiungi test di regole, errori e integrazione DI.
 3. Aggiungi esempio e documentazione operativa.
-4. Registra il servizio in `skills/backend/catalog.json` e aggiorna `SKILL.md`.
+4. Registra il servizio in `.agents/skills/backend/catalog.json` e aggiorna `SKILL.md`.
 5. Rigenera registry, aggiungi fragment e verifica coerenza di questo file.
 
 ## Esecuzione autonoma di modifiche, fix e feature

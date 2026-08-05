@@ -28,7 +28,7 @@ src/backend/{domains,business,infrastructure,applications}
 src/frontend
 tests
 docs/{architecture,development,operations,user-guide,patch-notes,FP,CR}
-skills
+.agents/skills
 tools/{skill-harness,docs-sync,release-notes}
 infra/modules
 scripts
