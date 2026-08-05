@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "28e5c97",
-  "buildDate": "2026-08-05T10:40:29.827Z",
+  "commit": "b7525e3",
+  "buildDate": "2026-08-05T13:39:37.227Z",
   "environment": "Development",
   "entries": [
     {
@@ -355,6 +355,17 @@
       "descriptions": {
         "it": "Corretto il runtime .NET 10 della Function App Flex per consentire l'allocazione dei worker ed evitare risposte 503 senza telemetria.",
         "en": "Corrected the Flex Function App .NET 10 runtime so workers can be allocated, preventing 503 responses without telemetry."
+      }
+    },
+    {
+      "id": "none-fixed-frontend-deploy-static-web-app-url-fallback",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il workflow di deploy frontend aggiungendo `AZURE_STATIC_WEB_APP_URL` come fallback autorevole per risolvere l'hostname della Static Web App quando nome e query ARM non sono sufficienti nell'environment GitHub.",
+        "en": "Fixed the frontend deployment workflow by adding `AZURE_STATIC_WEB_APP_URL` as the authoritative fallback to resolve the Static Web App hostname when the name and ARM queries are not sufficient in the GitHub environment."
       }
     },
     {
