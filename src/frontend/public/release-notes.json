@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "c37bff4",
-  "buildDate": "2026-08-05T16:12:53.476Z",
+  "commit": "522e690",
+  "buildDate": "2026-08-05T22:08:15.003Z",
   "environment": "Development",
   "entries": [
     {
@@ -355,6 +355,17 @@
       "descriptions": {
         "it": "Corretto il runtime .NET 10 della Function App Flex per consentire l'allocazione dei worker ed evitare risposte 503 senza telemetria.",
         "en": "Corrected the Flex Function App .NET 10 runtime so workers can be allocated, preventing 503 responses without telemetry."
+      }
+    },
+    {
+      "id": "none-fixed-frontend-deploy-function-app-url-fallback",
+      "type": "fixed",
+      "area": "infra",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Corretto il deploy frontend usando `AZURE_FUNCTIONAPP_URL` come fallback autorevole per l'hostname API quando il provisioning infrastrutturale non viene eseguito nello stesso workflow.",
+        "en": "Fixed frontend deployment by using `AZURE_FUNCTIONAPP_URL` as the authoritative API hostname fallback when infrastructure provisioning does not run in the same workflow."
       }
     },
     {

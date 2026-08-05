@@ -31,3 +31,4 @@ Le migration non usano una connection string segreta e vengono applicate a ogni 
 - readiness 503: controllare PostgreSQL, bootstrap KinHub, settings database, principal Entra e migration.
 - provisioning Flex negato: eseguire `az functionapp list-flexconsumption-locations` e verificare quota regionale.
 - backend senza risorse: eseguire prima lo scope `infrastructure` e valorizzare `AZURE_FUNCTIONAPP_NAME`.
+- frontend senza provisioning nello stesso run: valorizzare `AZURE_FUNCTIONAPP_URL` e `AZURE_STATIC_WEB_APP_URL` con gli URL ottenuti dagli output Bicep, evitando che il deploy dipenda dalla discovery ARM degli hostname.
