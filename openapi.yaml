@@ -342,6 +342,106 @@ paths:
           $ref: "#/components/responses/ProblemDetails"
         "503":
           $ref: "#/components/responses/ProblemDetails"
+    post:
+      tags:
+        - KinHub
+      summary: Create an invitation for the authorized family
+      operationId: postKinHubFamilyInvitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Invitation created
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "409":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/families/invitations/{invitationId:guid}:
+    delete:
+      tags:
+        - KinHub
+      summary: Revoke an active family invitation
+      operationId: deleteKinHubFamilyInvitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: familyId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Invitation revoked
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "403":
+          $ref: "#/components/responses/ProblemDetails"
+        "404":
+          $ref: "#/components/responses/ProblemDetails"
+        "409":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
+  /api/kinhub/families/join:
+    post:
+      tags:
+        - KinHub
+      summary: Join a family using an invitation code
+      operationId: postKinHubFamilyJoin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+      responses:
+        "200":
+          description: Family joined
+        "400":
+          $ref: "#/components/responses/ProblemDetails"
+        "401":
+          $ref: "#/components/responses/ProblemDetails"
+        "409":
+          $ref: "#/components/responses/ProblemDetails"
+        "429":
+          $ref: "#/components/responses/ProblemDetails"
+        "500":
+          $ref: "#/components/responses/ProblemDetails"
+        "503":
+          $ref: "#/components/responses/ProblemDetails"
   /api/kinhub/services:
     get:
       tags:

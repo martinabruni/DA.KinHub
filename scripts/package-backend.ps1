@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Environment = "Development",
-    [string]$Configuration = "Release"
+    [string]$Configuration = "Release",
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,11 +36,17 @@ $properties = @(
     "-p:UseAppHost=false"
 )
 
-dotnet restore $project
-if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed." }
-dotnet build $project --configuration $Configuration --no-restore @properties
-if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
-dotnet publish $project --configuration $Configuration --no-restore --output $publishPath @properties
+if (-not $SkipBuild) {
+    dotnet restore $project
+    if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed." }
+    dotnet build $project --configuration $Configuration --no-restore @properties
+    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
+}
+if ($SkipBuild) {
+    dotnet publish $project --configuration $Configuration --no-build --no-restore --output $publishPath @properties
+} else {
+    dotnet publish $project --configuration $Configuration --no-restore --output $publishPath @properties
+}
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
 
 $required = @("host.json", "DA.KinHub.Functions.dll")

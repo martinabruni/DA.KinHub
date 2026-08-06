@@ -5,6 +5,8 @@ param tags object = {}
 @minValue(30)
 @maxValue(730)
 param retentionDays int = 30
+@minValue(1)
+param dailyCapGb int = 1
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
@@ -14,6 +16,7 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     retentionInDays: retentionDays
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
     sku: { name: 'PerGB2018' }
+    workspaceCapping: { dailyQuotaGb: dailyCapGb }
   }
 }
 

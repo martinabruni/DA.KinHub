@@ -314,7 +314,7 @@ npm run docs:sync
 npm run skills:validate
 npm run skills:build
 npm run release:validate
-az bicep build --file infra/app.bicep
+az bicep build --file infra/main.bicep
 ```
 
 Completare test manuali su Chrome desktop, Chrome Android/PWA ed Edge per login associato/non associato, refresh, URL diretto, sessione scaduta, cambio account, perdita rete, riconnessione, installazione e avvio offline.

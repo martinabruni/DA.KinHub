@@ -74,7 +74,7 @@ Nessuno: questa feature stabilisce i contratti iniziali di identità, membership
 - **Persistenza/migration**: `src/backend/infrastructure/DA.KinHub.Infrastructure/Persistence`, schema shared, vincoli univoci e migration con verifica/rollback in `docs/operations/database-migrations.md`.
 - **API/integrazioni**: `src/backend/applications/DA.KinHub.Functions/Program.cs`, configurazione auth, endpoint bootstrap e Problem Details.
 - **Frontend/UX**: `src/frontend/src/App.tsx`, `components/ProtectedRoute.tsx`, `lib/auth.ts`, `lib/api.ts`, route e risorse `it`/`en`.
-- **Infrastruttura/configurazione**: `infra/modules/postgres.bicep`, composition Bicep/workflow per Entra auth e provisioning identity-based già approvato.
+- **Infrastruttura/configurazione**: `infra/modules/data-security.bicep`, composition Bicep/workflow per Entra auth e provisioning identity-based già approvato.
 - **Documentazione/operazioni**: guida onboarding bilingue, help route, runbook autenticazione/DB e change fragment.
 
 ### Errori, sicurezza e osservabilità

@@ -67,9 +67,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       scaleAndConcurrency: {
         instanceMemoryMB: instanceMemoryMB
         maximumInstanceCount: maximumInstanceCount
-        alwaysReady: alwaysReadyInstanceCount > 0 ? [
-          { name: 'http', instanceCount: alwaysReadyInstanceCount }
-        ] : []
+        alwaysReady: alwaysReadyInstanceCount > 0 ? [{ name: 'http', instanceCount: alwaysReadyInstanceCount }] : []
       }
       runtime: { name: runtimeName, version: runtimeVersion }
     }
@@ -78,10 +76,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       ftpsState: 'Disabled'
       http20Enabled: true
       minTlsVersion: '1.2'
-      cors: {
-        allowedOrigins: allowedOrigins
-        supportCredentials: false
-      }
+      cors: { allowedOrigins: allowedOrigins, supportCredentials: false }
       appSettings: [
         { name: 'AzureWebJobsStorage__accountName', value: storageAccountName }
         { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
@@ -116,41 +111,25 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing
 resource storageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccountId, functionApp.id, storageBlobDataOwnerRoleId)
   scope: storage
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
+  properties: { roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId), principalId: functionApp.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
 resource storageQueueRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccountId, functionApp.id, storageQueueDataContributorRoleId)
   scope: storage
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId)
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
+  properties: { roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId), principalId: functionApp.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
 resource storageTableRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccountId, functionApp.id, storageTableDataContributorRoleId)
   scope: storage
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributorRoleId)
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
+  properties: { roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributorRoleId), principalId: functionApp.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
 resource monitoringRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(applicationInsights.id, functionApp.id, monitoringMetricsPublisherRoleId)
   scope: applicationInsights
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', monitoringMetricsPublisherRoleId)
-    principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
+  properties: { roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', monitoringMetricsPublisherRoleId), principalId: functionApp.identity.principalId, principalType: 'ServicePrincipal' }
 }
 
 output id string = functionApp.id

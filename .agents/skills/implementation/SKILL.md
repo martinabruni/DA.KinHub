@@ -1,7 +1,7 @@
 ---
 id: kinhub-implementation
 name: KinHub repository implementation workflow
-version: 0.8.0
+version: 0.9.0
 area: implementation
 description: Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.
 references: AGENTS.md, .agents/skills/implementation/templates/implementation-progress.md
@@ -43,7 +43,7 @@ Prima di implementare o correggere una modifica applica sempre questi controlli,
 - Quando tocchi versioni o runtime, aggiorna nello stesso change tutti i consumer accoppiati: package .NET, Bicep/bicepparam, workflow, file generati e documentazione operativa.
 - Per ogni rename di env var, app setting, parametro Bicep, secret, namespace o artifact name, esegui grep repository-wide e aggiorna codice, script, workflow, README, prompt e documentazione che lo consumano.
 - Le modifiche ai workflow devono essere verificate contro i contratti reali del repository: path esistenti, artifact name, vars/secrets, permessi `GITHUB_TOKEN`, workflow riusabili, output e sintassi esatta dei comandi `az` tramite `--help`.
-- Nei workflow di deploy mantieni un solo orchestratore su `main`, attivato esclusivamente da `infra/**`, `src/backend/**` e `src/frontend/**`. Infrastructure esegue solo Bicep, Backend applica migration e grant prima di One Deploy, Frontend distribuisce solo la SPA; nei commit misti il provisioning precede gli scope applicativi modificati.
+- Mantieni soltanto `ci.yml`, `infrastructure.yml` e `release.yml`: la CI usa `pull_request` senza secret, infrastructure applica solo Bicep e release ricompila il commit trusted e promuove gli artifact.
 - Su Azure Functions Flex usa `functionAppConfig` come fonte primaria per runtime, deployment storage, scala e concorrenza; non duplicare la stessa configurazione con app setting legacy se la piattaforma non li richiede.
 - Le connessioni identity-based dello storage host Functions devono restare non ambigue: usa `accountName` oppure gli URI espliciti richiesti, mai entrambi; allinea anche i ruoli blob/queue/table realmente necessari.
 - I bundle EF e l'automazione migration devono partire dal design-time factory/progetto autorevole. Se tocchi migration runner, Dockerfile, startup project o quoting SQL/KQL nei workflow, riesegui packaging e validazione end-to-end.
@@ -68,6 +68,8 @@ Esegui tutte le verifiche richieste dalla modifica e da `AGENTS.md`. Prima della
 Leggi gli artefatti e l'eventuale checkpoint; verifica di lavorare su `dev`; implementa la modifica richiesta; aggiorna codice, test, documentazione, traduzioni, guide, skill e fragment applicabili; ripeti le verifiche fino al successo; se la feature passa a `In review`, non fermarti allo stato locale ma continua con diff e stato Git, commit e push su `dev`, apertura della PR verso `main` e monitoraggio dei check; per ogni esito non verde correggi, verifica, committa e pusha di nuovo; rimuovi il checkpoint solo quando tutti i check sono verdi; non eseguire il merge.
 
 ## Changelog
+
+0.9.0: sostituisco l'orchestrazione path-based e i workflow riusabili con CI, provisioning e release espliciti, usando deployment ARM stabile e artifact build-once.
 
 0.8.0: separo provisioning Azure, migration/deploy backend e deploy frontend in workflow riusabili attivati dai rispettivi path, mantenendo l'ordine nei commit misti.
 

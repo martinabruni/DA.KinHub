@@ -1,12 +1,12 @@
 # Deployment Azure
 
-Il push su `main` avvia `deploy.yml` soltanto per modifiche a `infra/**`, `src/backend/**` o `src/frontend/**`. L'orchestratore rileva tutti gli scope presenti nel push e richiama workflow riusabili con responsabilita separate:
+Il push su `main` avvia `infrastructure.yml` per `infra/**` e `release.yml` per il codice applicativo. Il workflow `ci.yml` gira sulle pull request senza credenziali Azure:
 
-- `deploy-infrastructure.yml` valida e applica Bicep, senza migration o deploy applicativi;
-- `deploy-backend.yml` compila e testa il backend, applica migration e grant PostgreSQL, pubblica la Function App e verifica health/version;
-- `deploy-frontend.yml` valida e compila la SPA, pubblica Static Web Apps e verifica il sito.
+- `infrastructure.yml` valida, esegue what-if e applica Bicep in modalità incremental;
+- `release.yml` ricompila il commit unito, applica migration, pubblica Function e Static Web Apps e verifica health/version;
+- `ci.yml` valida build, test, package, frontend, documentazione, skill e Bicep.
 
-Uno scope non modificato non viene distribuito. Nei commit misti il provisioning termina prima di backend e frontend, che possono poi procedere in parallelo. Il dispatch manuale da `main` consente di eseguire `infrastructure`, `backend`, `frontend` oppure `all`; quest'ultimo mantiene lo stesso ordine.
+Il provisioning e la release sono serializzati con concurrency `cancel-in-progress: false`. Il dispatch manuale consente di riallineare l'infrastruttura o ripetere una release trusted.
 
 Il backend viene pubblicato in ZIP con `host.json` e assembly nella root, checksum SHA-256 e manifest. `Azure/functions-action` rileva Flex Consumption e usa One Deploy sul container configurato da `functionAppConfig.deployment.storage`.
 
@@ -16,7 +16,7 @@ OIDC e obbligatorio come percorso primario. La federated credential GitHub deve 
 
 Le migration non usano una connection string segreta e vengono applicate a ogni deploy backend prima di One Deploy. Il workflow:
 
-- recupera host e database dalle impostazioni della Function App quando non riceve output da un provisioning nello stesso run;
+- recupera nomi e hostname dagli output del deployment ARM stabile `kinhub-dev-infrastructure`;
 - risolve il principal Entra della pipeline e la managed identity della Function App;
 - apre una firewall rule temporanea per il runner quando il server e pubblico;
 - crea o verifica i principal database `kinhub_app` e `kinhub_migrator`;
@@ -30,5 +30,5 @@ Le migration non usano una connection string segreta e vengono applicate a ogni 
 - package non avviabile: verificare `host.json` e `DA.KinHub.Functions.dll` nella root ZIP.
 - readiness 503: controllare PostgreSQL, bootstrap KinHub, settings database, principal Entra e migration.
 - provisioning Flex negato: eseguire `az functionapp list-flexconsumption-locations` e verificare quota regionale.
-- backend senza risorse: eseguire prima lo scope `infrastructure` e valorizzare `AZURE_FUNCTIONAPP_NAME`.
-- frontend senza provisioning nello stesso run: valorizzare `AZURE_FUNCTIONAPP_URL` e `AZURE_STATIC_WEB_APP_URL` con gli URL ottenuti dagli output Bicep, evitando che il deploy dipenda dalla discovery ARM degli hostname.
+- backend senza risorse: eseguire prima `infrastructure.yml` e verificare il deployment ARM stabile.
+- frontend senza collegamento `/api`: verificare il resource `staticSites/linkedBackends/api` e gli output del deployment.

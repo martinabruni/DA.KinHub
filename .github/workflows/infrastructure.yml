@@ -1,0 +1,70 @@
+name: Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infrastructure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: kinhub-dev-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Azure login with OIDC
+        uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Validate and run what-if
+        shell: bash
+        env:
+          POSTGRES_ADMIN_PASSWORD_INPUT: ${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}
+          POSTGRES_ADMIN_USERNAME_INPUT: ${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}
+          AZURE_TENANT_ID_INPUT: ${{ secrets.AZURE_TENANT_ID }}
+          ENTRA_BACKEND_AUDIENCE_INPUT: ${{ secrets.ENTRA_BACKEND_AUDIENCE }}
+          ENTRA_INSTANCE_INPUT: ${{ vars.ENTRA_INSTANCE }}
+          ENTRA_TENANT_ID_INPUT: ${{ secrets.ENTRA_TENANT_ID }}
+          POSTGRES_ENTRA_ADMIN_NAME: ${{ vars.POSTGRES_ENTRA_ADMIN_NAME }}
+          POSTGRES_ENTRA_ADMIN_OBJECT_ID: ${{ vars.POSTGRES_ENTRA_ADMIN_OBJECT_ID }}
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep build --file infra/main.bicep --outfile "$RUNNER_TEMP/kinhub-infra.json"
+          az bicep build-params --file infra/environments/dev.bicepparam --outfile "$RUNNER_TEMP/kinhub-dev-parameters.json"
+          az deployment group validate --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" --template-file infra/main.bicep --parameters @"$RUNNER_TEMP/kinhub-dev-parameters.json" postgresAdminUsername="$POSTGRES_ADMIN_USERNAME_INPUT" postgresAdminPassword="$POSTGRES_ADMIN_PASSWORD_INPUT" azureTenantId="$AZURE_TENANT_ID_INPUT" entraInstance="$ENTRA_INSTANCE_INPUT" entraTenantId="$ENTRA_TENANT_ID_INPUT" entraBackendAudience="$ENTRA_BACKEND_AUDIENCE_INPUT" postgresEntraAdministratorName="$POSTGRES_ENTRA_ADMIN_NAME" postgresEntraAdministratorObjectId="$POSTGRES_ENTRA_ADMIN_OBJECT_ID" --mode Incremental --only-show-errors --output none
+          az deployment group what-if --name kinhub-dev-infrastructure --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" --template-file infra/main.bicep --parameters @"$RUNNER_TEMP/kinhub-dev-parameters.json" postgresAdminUsername="$POSTGRES_ADMIN_USERNAME_INPUT" postgresAdminPassword="$POSTGRES_ADMIN_PASSWORD_INPUT" azureTenantId="$AZURE_TENANT_ID_INPUT" entraInstance="$ENTRA_INSTANCE_INPUT" entraTenantId="$ENTRA_TENANT_ID_INPUT" entraBackendAudience="$ENTRA_BACKEND_AUDIENCE_INPUT" postgresEntraAdministratorName="$POSTGRES_ENTRA_ADMIN_NAME" postgresEntraAdministratorObjectId="$POSTGRES_ENTRA_ADMIN_OBJECT_ID" --result-format ResourceIdOnly --no-pretty-print | tee "$RUNNER_TEMP/kinhub-what-if.txt"
+          if grep -Eiq '(^|[[:space:]])(Delete|Replace|CreateAndDelete|Recreate)([[:space:]]|$)' "$RUNNER_TEMP/kinhub-what-if.txt" || grep -Eiq '(Delete|Replace|CreateAndDelete|Recreate).*(Microsoft\.DBforPostgreSQL|Microsoft\.Network)' "$RUNNER_TEMP/kinhub-what-if.txt"; then
+            echo 'What-if rileva una modifica distruttiva, una sostituzione o una modifica a PostgreSQL/rete.' >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kinhub-dev-what-if
+          path: ${{ runner.temp }}/kinhub-what-if.txt
+          retention-days: 7
+      - name: Apply incremental deployment
+        shell: bash
+        env:
+          POSTGRES_ADMIN_PASSWORD_INPUT: ${{ secrets.POSTGRES_ADMIN_PASSWORD || secrets.POSTGRES_ADMINISTRATOR_PASSWORD }}
+          POSTGRES_ADMIN_USERNAME_INPUT: ${{ secrets.POSTGRES_ADMIN_USERNAME || secrets.POSTGRES_ADMINISTRATOR_LOGIN }}
+          AZURE_TENANT_ID_INPUT: ${{ secrets.AZURE_TENANT_ID }}
+          ENTRA_BACKEND_AUDIENCE_INPUT: ${{ secrets.ENTRA_BACKEND_AUDIENCE }}
+          ENTRA_INSTANCE_INPUT: ${{ vars.ENTRA_INSTANCE }}
+          ENTRA_TENANT_ID_INPUT: ${{ secrets.ENTRA_TENANT_ID }}
+          POSTGRES_ENTRA_ADMIN_NAME: ${{ vars.POSTGRES_ENTRA_ADMIN_NAME }}
+          POSTGRES_ENTRA_ADMIN_OBJECT_ID: ${{ vars.POSTGRES_ENTRA_ADMIN_OBJECT_ID }}
+        run: |
+          az deployment group create --name kinhub-dev-infrastructure --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" --template-file infra/main.bicep --parameters @"$RUNNER_TEMP/kinhub-dev-parameters.json" postgresAdminUsername="$POSTGRES_ADMIN_USERNAME_INPUT" postgresAdminPassword="$POSTGRES_ADMIN_PASSWORD_INPUT" azureTenantId="$AZURE_TENANT_ID_INPUT" entraInstance="$ENTRA_INSTANCE_INPUT" entraTenantId="$ENTRA_TENANT_ID_INPUT" entraBackendAudience="$ENTRA_BACKEND_AUDIENCE_INPUT" postgresEntraAdministratorName="$POSTGRES_ENTRA_ADMIN_NAME" postgresEntraAdministratorObjectId="$POSTGRES_ENTRA_ADMIN_OBJECT_ID" --mode Incremental --only-show-errors --output none

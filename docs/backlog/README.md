@@ -13,6 +13,8 @@
 | Frontend esistente | `src/frontend/src/`, `src/frontend/public/staticwebapp.config.json`, `src/frontend/vite.config.ts` | Stato reale di routing, Settings, MSAL, API client, i18n, help e PWA |
 | Design system condiviso integrato | `src/frontend/src/components/ui/`, `src/frontend/src/components/FloatingBars.tsx`, `src/frontend/src/components/KinPatterns.tsx`, `src/frontend/src/components/Layout.tsx`, `src/frontend/src/styles.css` | Primitive ufficiali, floating navigation, wrapper sottili e token finali riusati nelle pagine reali |
 | Infrastruttura esistente | `infra/`, `.github/workflows/`, `docs/operations/database-migrations.md` | Risorse condivise, deployment, migrazioni e differenze da colmare rispetto all'architettura approvata |
+| Piano refactor infrastruttura dev | `docs/backlog/features/riallineamento-infrastruttura-dev/feature.plan.md` | Refactor approvato di Bicep, workflow, harness, packaging e documentazione operativa |
+| Linee guida infrastruttura dev | `docs/backlog/features/riallineamento-infrastruttura-dev/infra-guidelines.md` | Vincoli di adozione sicura, acceptance checklist e controlli CI/CD del refactor |
 
 I documenti in `docs/kinlist/research/` non sono stati usati come fonte di nuovi requisiti: analisi e architettura ne hanno già consolidato gli esiti approvati.
 
@@ -31,6 +33,7 @@ I documenti in `docs/kinlist/research/` non sono stati usati come fonte di nuovi
 - Retention degli item completati e cleanup dei dati inattivi come esiti distinti del timer giornaliero.
 - Catalogo KinService persistito e localizzato, disponibilità per famiglia, Home dinamica e protezione dell'accesso diretto ai servizi.
 - Sicurezza, privacy, accessibilità, osservabilità, documentazione e test applicati nelle feature che toccano le relative superfici.
+- Riallineamento operativo dell'ambiente `dev` con nomi Azure espliciti, Bicep incrementale, linked backend `/api`, workflow `ci.yml`/`infrastructure.yml`/`release.yml`, harness e documentazione coerenti.
 
 ### Out of scope
 
@@ -80,6 +83,7 @@ Nessuna decisione funzionale condivisa è aperta. Le selezioni tecniche non anco
 |---|---|---|---|---|
 | GATE-001 | blocking | Quali deployment, modello/versione pinned e regione Azure AI Foundry sono approvati per ogni ambiente, con identità gestita e contratto strict supportato? | FEAT-007 | Decisione tecnica registrata con identificativi non segreti, disponibilità/capacità verificata, RBAC definito e contratto provider eseguibile |
 | GATE-002 | blocking | Privacy/prodotto confermano ASM-007: nessuna cancellazione prima di 30 periodi di 24 ore, ma è ammesso completarla in esecuzioni giornaliere successive? | FEAT-012, FEAT-013 | Approvazione registrata della semantica di ritardo; eventuale SLA diverso richiede aggiornamento delle fonti prima dell'implementazione |
+| GATE-003 | blocking | La subscription `a148a62f-0509-4dd5-a61f-0043b182d5f1` e le credenziali OIDC sono disponibili per inventory live, validate, what-if e smoke test Azure del refactor infrastrutturale? | FEAT-016 | Accesso reale alla subscription, artifact what-if, runtime ARM, `health/live`, `/api/version` e telemetria verificati |
 | TECH-001 | technical-check | L'issuer atteso emette stabilmente `iss` e `oid` e la configurazione MSAL/JWT usa audience e scope corretti? | FEAT-001 | Test con token rappresentativi e casi claim mancanti fail-closed |
 | TECH-002 | technical-check | Quali nomi, regione, rete e principal esistenti vanno riusati e come si migra PostgreSQL da password/Entra disabilitato a managed identity senza interrompere il deploy? | FEAT-001 | Inventario ambienti, piano migration verificabile e preflight della connessione identity-based |
 | TECH-003 | technical-check | Quali formato/protezione/durata dei cursori e ordini totali sono adatti a ogni collezione? | FEAT-003, FEAT-004, FEAT-009, FEAT-012, FEAT-013 | Contratti opachi congelati, indici verificati e test avanti/indietro/stale senza dati nel cursore |
@@ -101,7 +105,7 @@ Nessuna decisione funzionale condivisa è aperta. Le selezioni tecniche non anco
 
 ## Strategia di scomposizione
 
-Le feature sono vertical slice orientate a un risultato utente o operativo e includono i layer necessari. FEAT-001 crea la capacità stabile di identità, autorizzazione e instradamento usata dalle altre slice; FEAT-014 aggiunge la fondazione UI condivisa di KinHub e congela catalogo componenti, token, convenzioni i18n e regole di riuso prima delle slice che estendono l'esperienza utente. FEAT-015 aggiunge catalogo, disponibilità, Home e guard KinService come un solo risultato sicuro prima che la lista paginata ne estenda l'interno. Retention e cleanup restano feature distinte perché hanno cutoff, dati ed esiti diversi, mentre FEAT-013 integra il secondo caso nel timer introdotto da FEAT-012.
+Le feature sono vertical slice orientate a un risultato utente o operativo e includono i layer necessari. FEAT-001 crea la capacità stabile di identità, autorizzazione e instradamento usata dalle altre slice; FEAT-014 aggiunge la fondazione UI condivisa di KinHub e congela catalogo componenti, token, convenzioni i18n e regole di riuso prima delle slice che estendono l'esperienza utente. FEAT-015 aggiunge catalogo, disponibilità, Home e guard KinService come un solo risultato sicuro prima che la lista paginata ne estenda l'interno. FEAT-016 è una slice operativa autonoma: consolida infrastruttura e delivery del repository senza introdurre nuovo scope prodotto, ma tocca contratti autorevoli condivisi e quindi non procede in parallelo con altre feature sui medesimi file. Retention e cleanup restano feature distinte perché hanno cutoff, dati ed esiti diversi, mentre FEAT-013 integra il secondo caso nel timer introdotto da FEAT-012.
 
 ## Ordine di esecuzione
 
@@ -114,6 +118,7 @@ Le feature sono vertical slice orientate a un risultato utente o operativo e inc
 | 4 | FEAT-003 - Consultare la lista condivisa paginata | product | Lista attiva, visibile, ordinata e limitata | FEAT-002, FEAT-014 | Con FEAT-004 dopo CP-001; migration coordinate |
 | 4 | FEAT-004 - Consultare le impostazioni della famiglia | product | Ingranaggio, Settings e pagina membri/inviti | FEAT-002, FEAT-014 | Con FEAT-003 dopo CP-001; route/i18n separati |
 | 5 | FEAT-005 - Invitare e unirsi con un codice | product | Ciclo completo invito/join/revoca | FEAT-004, FEAT-014 | Con FEAT-007/008/009 dopo CP-002 |
+| 5 | FEAT-016 - Riallineare infrastruttura e delivery dell'ambiente dev | operational | Provisioning dev esplicito, workflow stabili e refactor documentale coerente | FEAT-001, FEAT-015 | Nessuno: modifica file autorevoli condivisi |
 | 5 | FEAT-007 - Aggiungere un gruppo tramite la voce | product | Registrazione e generazione atomica | FEAT-003, FEAT-014 | Bloccata da GATE-001; con FEAT-005/008/009 dopo CP-002/003 |
 | 5 | FEAT-008 - Filtrare la lista per categoria | product | Filtro singolo prima della paginazione | FEAT-003, FEAT-014 | Con FEAT-005/007/009 dopo CP-002 |
 | 5 | FEAT-009 - Correggere un item e consultarne la storia | product | Drawer, modifica, categorie e timeline | FEAT-003, FEAT-014 | Con FEAT-005/007/008 dopo CP-002/003 |
@@ -142,6 +147,8 @@ flowchart LR
     F001 --> F002["FEAT-002 - Creazione famiglia"]
     F014 --> F002
     F002 --> F015["FEAT-015 - Catalogo KinService"]
+    F001 --> F016["FEAT-016 - Refactor infrastruttura dev"]
+    F015 --> F016
     F014 --> F015
     F014 --> F003["FEAT-003 - Lista paginata"]
     F014 --> F004["FEAT-004 - Impostazioni famiglia"]
@@ -176,7 +183,7 @@ Le frecce continue sono dipendenze `hard`; le tratteggiate indicano coordinament
 
 `FEAT-001 -> FEAT-014 -> FEAT-002 -> FEAT-003 -> FEAT-009 -> FEAT-010 -> FEAT-012 -> FEAT-013`
 
-È il cammino hard più lungo fino alla chiusura del lifecycle: stabilisce accesso, contratto UI condiviso, famiglia, modello item/timeline, completamento, retention e infine cleanup. GATE-002 blocca gli ultimi due nodi; GATE-001 blocca FEAT-007 ma non il resto del grafo.
+È il cammino hard più lungo fino alla chiusura del lifecycle: stabilisce accesso, contratto UI condiviso, famiglia, modello item/timeline, completamento, retention e infine cleanup. GATE-002 blocca gli ultimi due nodi; GATE-001 blocca FEAT-007 ma non il resto del grafo. FEAT-016 dipende da FEAT-001 e FEAT-015 ma non allunga il percorso critico perché non ha nodi dipendenti a valle.
 
 ## Catalogo feature
 
@@ -197,6 +204,7 @@ Le frecce continue sono dipendenze `hard`; le tratteggiate indicano coordinament
 | FEAT-011 | `completamento-multiplo` | Completare una selezione come unico gruppo | ready | 7 | `features/completamento-multiplo/feature.md` |
 | FEAT-012 | `retention-item-completati` | Eliminare gli item completati oltre retention | blocked | 7 | `features/retention-item-completati/feature.md` |
 | FEAT-013 | `cleanup-dati-inattivi` | Eliminare in sicurezza i dati inattivi | blocked | 8 | `features/cleanup-dati-inattivi/feature.md` |
+| FEAT-016 | `riallineamento-infrastruttura-dev` | Riallineare infrastruttura e delivery dell'ambiente dev | blocked | 5 | `features/riallineamento-infrastruttura-dev/feature.md` |
 
 FEAT-001 ha applicato la correzione architetturale descritta in `features/accesso-instradamento/cr.md`; il piano originario è conservato in `feature.plan.md` e quello correttivo in `cr.plan.md`. La CR `features/accesso-instradamento/cr-login-refresh.md` sostituisce il solo vincolo `memoryStorage` con `sessionStorage` per mantenere la sessione MSAL nel refresh della stessa scheda, senza persistere dati familiari. Le feature dipendenti non devono copiare pattern endpoint locali e seguono invece `docs/architecture/http-functions.md`.
 
@@ -240,6 +248,7 @@ FEAT-014 include la CR implementata `features/design-system-condiviso/cr-help-na
 | ADR-015 | FEAT-011 | FEAT-008, FEAT-010 | AC-061-AC-066 |
 | ADR-016 | FEAT-004 | FEAT-001 | AC-018-AC-022 |
 | ADR-018-ADR-020 | FEAT-015 | FEAT-002, FEAT-003 | AC-084-AC-090 |
+| Refactor infrastrutturale approvato (`feature.plan.md`, `infra-guidelines.md`, sezioni CI/CD di `AGENTS.md`) | FEAT-016 | Nessuna | AC-091-AC-096 |
 
 ## Verifica di copertura
 
@@ -249,5 +258,5 @@ FEAT-014 include la CR implementata `features/design-system-condiviso/cr-help-na
 - Feature senza requisito o vincolo sorgente: Nessuna.
 - Feature prive di criteri verificabili: Nessuna.
 - Dipendenze cicliche: Nessuna.
-- Gate bloccanti: GATE-001 su FEAT-007; GATE-002 su FEAT-012 e FEAT-013. TECH-009 è una verifica locale non bloccante di FEAT-015.
-- Stato complessivo: backlog coerente e sviluppabile per le feature `ready`; non interamente ready finché i gate indicati restano aperti.
+- Gate bloccanti: GATE-001 su FEAT-007; GATE-002 su FEAT-012 e FEAT-013; GATE-003 su FEAT-016. TECH-009 è una verifica locale non bloccante di FEAT-015.
+- Stato complessivo: backlog coerente e sviluppabile per le feature `ready`; FEAT-016 è definita ma resta `blocked` in `In review` finché la verifica Azure live non chiude GATE-003.

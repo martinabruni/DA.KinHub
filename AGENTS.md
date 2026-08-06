@@ -236,12 +236,11 @@ Il frontmatter di una skill puo dichiarare `references` come elenco separato da 
 
 ## CI/CD
 
-- `pr-quality.yml`: restore/build/test/publish/package, frontend, tool e Bicep; nessun deploy.
-- `deploy.yml`: orchestratore su `main` con i soli path `infra/**`, `src/backend/**` e `src/frontend/**`; nei commit misti ordina provisioning e deploy applicativi e mantiene il dispatch manuale esplicito.
-- `deploy-infrastructure.yml`: workflow riusabile di solo provisioning Bicep; non applica migration e non distribuisce codice.
-- `deploy-backend.yml`: workflow riusabile per build/test backend, principal e grant PostgreSQL, migration bundle identity-based, One Deploy e smoke test API.
-- `deploy-frontend.yml`: workflow riusabile per test/build frontend, Static Web Apps e smoke test della SPA.
-- Parametri Flex restano in Bicep/bicepparam; GitHub Variable contiene solo il nome Function App necessario al deploy.
+- `ci.yml`: pull request quality senza secret Azure, build/test/package backend, frontend, tool e Bicep.
+- `infrastructure.yml`: provisioning Bicep da `main` o dispatch manuale, con validate, what-if, blocco distruttivo e deployment incremental.
+- `release.yml`: build trusted una volta, migration, One Deploy Function e Static Web Apps dagli artifact della stessa release.
+- Le action esterne sono fissate a SHA completi; `.github/CODEOWNERS` protegge workflow e `infra/**`.
+- Parametri Flex e nomi risorse restano in `infra/environments/dev.bicepparam`; le Variables GitHub contengono solo configurazione bootstrap non derivabile dal template.
 - Le modifiche a workflow, packaging, deploy o observability non sono concluse finche non verifichi anche lo stato live risultante: runtime effettivo ARM, `health/live`, `api/version` e ingestione telemetrica attesa quando applicabile.
 - Non stampare secret o output sensibili nei log.
 

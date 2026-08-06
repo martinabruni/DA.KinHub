@@ -10,6 +10,8 @@ const registryPath = join(skillsRoot, "registry.json");
 const functionsRoot = join(root, "src/backend/applications/DA.KinHub.Functions/Functions");
 const apiRoutesPath = join(root, "src/backend/applications/DA.KinHub.Functions/Http/ApiRoutes.cs");
 const openApiPath = join(root, "openapi.yaml");
+const workflowsRoot = join(root, ".github/workflows");
+const infrastructureRoot = join(root, "infra");
 const requiredHeadings = [
   "## Scopo",
   "## Quando usare",
@@ -141,12 +143,42 @@ function validateOpenApiRoutes() {
   if (functionRoutes.has(undefined)) throw new Error("Impossibile risolvere una route HTTP Function da ApiRoutes.cs");
 
   const documentedRoutes = new Set(
-    [...normalizeText(readFileSync(openApiPath, "utf8")).matchAll(/^  \/([^:]+):\s*$/gm)]
+    [...normalizeText(readFileSync(openApiPath, "utf8")).matchAll(/^  \/(.+):\s*$/gm)]
       .map(([, route]) => route)
   );
   const missingRoutes = [...functionRoutes].filter((route) => !documentedRoutes.has(route));
   if (missingRoutes.length > 0) {
     throw new Error(`openapi.yaml non documenta le route HTTP Function: ${missingRoutes.sort().join(", ")}`);
+  }
+}
+
+function validateInfrastructureContracts() {
+  const workflowFiles = readdirSync(workflowsRoot).filter((file) => file.endsWith(".yml") || file.endsWith(".yaml"));
+  const allowed = new Set(["ci.yml", "infrastructure.yml", "release.yml"]);
+  const unexpected = workflowFiles.filter((file) => !allowed.has(file));
+  if (unexpected.length > 0) throw new Error(`Workflow non ammessi: ${unexpected.join(", ")}`);
+  if (workflowFiles.length !== allowed.size) throw new Error("Mancano workflow infrastrutturali obbligatori");
+
+  const workflowContents = workflowFiles.map((file) => readFileSync(join(workflowsRoot, file), "utf8"));
+  for (const [index, content] of workflowContents.entries()) {
+    if (/pull_request_target/i.test(content)) throw new Error(`${workflowFiles[index]} usa pull_request_target`);
+    for (const match of content.matchAll(/uses:\s*([^\s#]+)@([^\s#]+)/g)) {
+      const reference = match[2];
+      if (!/^[0-9a-f]{40}$/i.test(reference)) throw new Error(`${workflowFiles[index]}: action non fissata a SHA completo: ${match[1]}`);
+    }
+  }
+
+  const bicepFiles = walk(infrastructureRoot).filter((path) => path.endsWith(".bicep"));
+  const bicep = bicepFiles.map((path) => normalizeText(readFileSync(path, "utf8"))).join("\n");
+  if (/uniqueString\s*\(/.test(bicep)) throw new Error("Bicep non deve usare uniqueString");
+  if (/namingPrefix/.test(bicep)) throw new Error("Bicep non deve usare namingPrefix");
+  const staticWebApp = normalizeText(readFileSync(join(infrastructureRoot, "modules/static-web-app.bicep"), "utf8"));
+  if (!/sku:\s*\{\s*name:\s*'Standard',\s*tier:\s*'Standard'/s.test(staticWebApp)) throw new Error("Static Web Apps deve usare SKU Standard");
+  const infrastructure = normalizeText(readFileSync(join(workflowsRoot, "infrastructure.yml"), "utf8"));
+  if (!/what-if/.test(infrastructure) || !/--mode\s+Incremental/.test(infrastructure)) throw new Error("Infrastructure workflow deve eseguire what-if e deployment incremental");
+  for (const file of ["infrastructure.yml", "release.yml"]) {
+    const content = normalizeText(readFileSync(join(workflowsRoot, file), "utf8"));
+    if (!/^concurrency:\s*$/m.test(content) || !/cancel-in-progress:\s*false/.test(content)) throw new Error(`${file}: concurrency senza cancel-in-progress false`);
   }
 }
 
@@ -165,6 +197,7 @@ function build() {
 
 function validate() {
   validateOpenApiRoutes();
+  validateInfrastructureContracts();
   const expected = serializedRegistry();
   if (!existsSync(registryPath)) throw new Error(".agents/skills/registry.json mancante: eseguire npm run skills:build");
   if (readFileSync(registryPath, "utf8") !== expected) throw new Error(".agents/skills/registry.json non aggiornato: eseguire npm run skills:build");
