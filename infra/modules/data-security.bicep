@@ -91,7 +91,7 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
-resource entraAdministrator 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = {
+resource entraAdministrator 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = if (!empty(entraAdministratorPrincipalName) && !empty(entraAdministratorObjectId)) {
   parent: postgres
   name: entraAdministratorObjectId
   properties: {

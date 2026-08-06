@@ -185,7 +185,11 @@ export class KinHubApiClient {
 
     let response: Response;
     try {
-      response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}${path}`, {
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+      const requestUrl = apiBaseUrl && (path === apiBaseUrl || path.startsWith(`${apiBaseUrl}/`))
+        ? path
+        : `${apiBaseUrl}${path}`;
+      response = await fetch(requestUrl, {
         ...init,
         cache: "no-store",
         credentials: "omit",
