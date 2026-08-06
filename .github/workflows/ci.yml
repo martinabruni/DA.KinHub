@@ -62,7 +62,8 @@ jobs:
         run: |
           if ! command -v actionlint >/dev/null 2>&1; then
             go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-            export PATH="$PATH:$(go env GOPATH)/bin"
+            go_path="$(go env GOPATH)"
+            export PATH="$PATH:$go_path/bin"
           fi
           actionlint
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
