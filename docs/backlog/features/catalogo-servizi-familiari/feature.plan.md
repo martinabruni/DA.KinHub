@@ -368,8 +368,8 @@ npm run release:validate
 npm run skills:build
 npm run skills:validate
 
-az bicep build --file infra/app.bicep
-az bicep build-params --file infra/main.dev.bicepparam
+az bicep build --file infra/main.bicep
+az bicep build-params --file infra/environments/dev.bicepparam
 ```
 
 Completare il flusso manuale autenticato:

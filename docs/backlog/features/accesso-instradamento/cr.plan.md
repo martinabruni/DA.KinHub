@@ -288,7 +288,7 @@ npm run docs:validate
 npm run docs:sync
 npm run release:validate
 
-az bicep build --file infra/app.bicep
+az bicep build --file infra/main.bicep
 ```
 
 Completare smoke test locale di health, status, version e OpenAPI, test autenticati `ApiAccess`/`Family` e verifica Application Insights di correlazione, custom metric/trace, dependency ed assenza di duplicati.

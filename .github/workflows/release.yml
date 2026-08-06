@@ -1,0 +1,166 @@
+name: Release dev
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+      - 'src/frontend/**'
+      - 'scripts/**'
+      - 'VERSION'
+      - 'KinHub.slnx'
+      - '**/*.csproj'
+      - 'Directory.*'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: kinhub-dev-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+      - name: Build backend and migration bundle
+        run: |
+          dotnet restore KinHub.slnx
+          dotnet build KinHub.slnx --configuration Release --no-restore -p:CommitSha="${GITHUB_SHA::12}" -p:BuildDate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -p:BuildEnvironment=CI
+          dotnet test KinHub.slnx --configuration Release --no-build
+          dotnet tool restore
+          mkdir -p artifacts/migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
+      - name: Package backend without recompiling
+        env:
+          SKIP_BUILD: 'true'
+        run: bash scripts/package-backend.sh CI
+      - name: Build frontend and metadata
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID }}
+          VITE_ENTRA_FRONTEND_CLIENT_ID: ${{ secrets.ENTRA_FRONTEND_CLIENT_ID }}
+          VITE_ENTRA_API_SCOPE: ${{ secrets.ENTRA_API_SCOPE }}
+          VITE_ENTRA_AUTHORITY: ${{ vars.ENTRA_INSTANCE }}
+        run: |
+          npm ci --prefix src/frontend
+          npm run --prefix src/frontend test
+          npm run --prefix src/frontend lint
+          npm run --prefix src/frontend typecheck
+          npm run --prefix src/frontend i18n:validate
+          npm run --prefix src/frontend routes:validate
+          npm run --prefix src/frontend design-system:validate
+          npm run --prefix src/frontend build
+          sha256sum artifacts/backend/*.zip > artifacts/backend/checksums.txt
+          printf '{"commitSha":"%s","runId":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > artifacts/release-metadata.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kinhub-release-${{ github.sha }}
+          path: |
+            artifacts/backend
+            artifacts/migrations/kinhub-migrations
+            artifacts/release-metadata.json
+            src/frontend/dist
+          retention-days: 30
+      - name: Azure login with OIDC
+        uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Read ARM deployment outputs
+        id: arm
+        shell: bash
+        run: |
+          outputs=$(az deployment group show --name kinhub-dev-infrastructure --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" --query properties.outputs --only-show-errors --output json)
+          for key in functionAppName functionAppHostname functionAppPrincipalId postgresServerName postgresServerFqdn postgresDatabaseName staticWebAppName staticWebAppHostname; do
+            value=$(jq -r ".${key}.value // empty" <<< "$outputs")
+            test -n "$value"
+            echo "${key}=$value" >> "$GITHUB_OUTPUT"
+          done
+      - name: Open temporary PostgreSQL firewall rule
+        id: firewall
+        shell: bash
+        run: |
+          runner_ip=$(curl --fail --silent --show-error https://api.ipify.org)
+          subscription_id=$(az account show --query id --output tsv)
+          rule_name="gha-${GITHUB_RUN_ID}"
+          rule_url="https://management.azure.com/subscriptions/${subscription_id}/resourceGroups/${{ vars.AZURE_RESOURCE_GROUP }}/providers/Microsoft.DBforPostgreSQL/flexibleServers/${{ steps.arm.outputs.postgresServerName }}/firewallRules/${rule_name}?api-version=2024-08-01"
+          az rest --method put --url "$rule_url" --body "{\"properties\":{\"startIpAddress\":\"${runner_ip}\",\"endIpAddress\":\"${runner_ip}\"}}" --only-show-errors --output none
+          echo "rule_name=$rule_name" >> "$GITHUB_OUTPUT"
+      - name: Provision database principals and runtime grants
+        shell: bash
+        run: |
+          sudo apt-get update && sudo apt-get install --yes postgresql-client
+          admin_name=$(az account show --query user.name --output tsv)
+          access_token=$(az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv)
+          admin_object_id=$(node -e "const token=process.argv[1].split('.')[1]; const normalized=token.replace(/-/g,'+').replace(/_/g,'/'); const padded=normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '='); const payload=JSON.parse(Buffer.from(padded, 'base64').toString('utf8')); process.stdout.write(payload.oid ?? '');" "$access_token")
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          export PGPASSWORD="$token"
+          psql --host "${{ steps.arm.outputs.postgresServerFqdn }}" --dbname postgres --username "$admin_name" --set ON_ERROR_STOP=1 <<SQL
+          DO \$kinhub\$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'kinhub_app') THEN
+              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('kinhub_app', '${{ steps.arm.outputs.functionAppPrincipalId }}', 'service', false, false);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'kinhub_migrator') THEN
+              PERFORM * FROM pg_catalog.pgaadauth_create_principal_with_oid('kinhub_migrator', '$admin_object_id', 'service', true, false);
+            END IF;
+          END
+          \$kinhub\$;
+          SQL
+          psql --host "${{ steps.arm.outputs.postgresServerFqdn }}" --dbname "${{ steps.arm.outputs.postgresDatabaseName }}" --username kinhub_migrator --set ON_ERROR_STOP=1 <<SQL
+          GRANT CONNECT ON DATABASE "${{ steps.arm.outputs.postgresDatabaseName }}" TO kinhub_app;
+          GRANT USAGE ON SCHEMA shared, kinlist TO kinhub_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA shared, kinlist TO kinhub_app;
+          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA shared, kinlist TO kinhub_app;
+          SQL
+      - name: Apply migration bundle
+        env:
+          POSTGRES_MIGRATION_USERNAME: kinhub_migrator
+        run: |
+          token=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv)
+          artifacts/migrations/kinhub-migrations --connection "Host=${{ steps.arm.outputs.postgresServerFqdn }};Port=5432;Database=${{ steps.arm.outputs.postgresDatabaseName }};Username=$POSTGRES_MIGRATION_USERNAME;Password=$token;SSL Mode=Require;Trust Server Certificate=false"
+      - name: Close temporary PostgreSQL firewall rule
+        if: always() && steps.firewall.outputs.rule_name != ''
+        shell: bash
+        run: |
+          subscription_id=$(az account show --query id --output tsv)
+          rule_url="https://management.azure.com/subscriptions/${subscription_id}/resourceGroups/${{ vars.AZURE_RESOURCE_GROUP }}/providers/Microsoft.DBforPostgreSQL/flexibleServers/${{ steps.arm.outputs.postgresServerName }}/firewallRules/${{ steps.firewall.outputs.rule_name }}?api-version=2024-08-01"
+          az rest --method delete --url "$rule_url" --only-show-errors --output none
+      - name: Deploy Function with One Deploy
+        uses: Azure/functions-action@c9cc8ee93d1285e2a17312cc8357dc1775955272 # v1
+        with:
+          app-name: ${{ steps.arm.outputs.functionAppName }}
+          package: artifacts/backend/*.zip
+          sku: flexconsumption
+          remote-build: false
+      - name: Deploy Static Web App without rebuilding
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: src/frontend/dist
+          skip_app_build: true
+          output_location: ''
+      - name: Smoke test release
+        shell: bash
+        run: |
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.arm.outputs.functionAppHostname }}/health/live"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.arm.outputs.staticWebAppHostname }}/"
+          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.arm.outputs.staticWebAppHostname }}/api/version"

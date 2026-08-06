@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+      - name: Backend build and test
+        run: |
+          dotnet restore KinHub.slnx
+          dotnet build KinHub.slnx --configuration Release --no-restore -p:CommitSha="${GITHUB_SHA::12}" -p:BuildDate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -p:BuildEnvironment=CI
+          dotnet test KinHub.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx"
+      - name: Verify migration bundle
+        run: |
+          dotnet tool restore
+          mkdir -p artifacts/migrations
+          dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
+          test -x artifacts/migrations/kinhub-migrations
+      - name: Validate backend package
+        run: bash scripts/package-backend.sh CI
+      - name: Frontend install and validation
+        run: |
+          npm ci --prefix src/frontend
+          npm run --prefix src/frontend test
+          npm run --prefix src/frontend lint
+          npm run --prefix src/frontend typecheck
+          npm run --prefix src/frontend i18n:validate
+          npm run --prefix src/frontend routes:validate
+          npm run --prefix src/frontend design-system:validate
+          npm run --prefix src/frontend build
+      - name: Validate repository tools
+        run: |
+          npm run skills:validate
+          npm run docs:validate
+          npm run release:validate
+      - name: Validate Bicep
+        run: |
+          az bicep install
+          az bicep format --file infra/main.bicep
+          az bicep build --file infra/main.bicep --outfile "$RUNNER_TEMP/kinhub-infra.json"
+          az bicep build-params --file infra/environments/dev.bicepparam --outfile "$RUNNER_TEMP/kinhub-dev-parameters.json"
+      - name: Validate workflows
+        run: |
+          if ! command -v actionlint >/dev/null 2>&1; then
+            go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+            go_path="$(go env GOPATH)"
+            export PATH="$PATH:$go_path/bin"
+          fi
+          actionlint
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kinhub-ci-reports
+          path: "**/*.trx"
+          if-no-files-found: ignore
+          retention-days: 7

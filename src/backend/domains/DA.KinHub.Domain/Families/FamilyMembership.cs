@@ -40,4 +40,14 @@ public sealed class FamilyMembership
 
     public static FamilyMembership Create(Guid applicationUserId, Guid familyId, DateTimeOffset createdAt) =>
         new(Guid.NewGuid(), applicationUserId, familyId, createdAt);
+
+    public void Reactivate()
+    {
+        if (InactiveAt is null)
+        {
+            throw new DomainException("The family membership is already active.");
+        }
+
+        InactiveAt = null;
+    }
 }

@@ -139,14 +139,14 @@
     {
       "id": "kinhub-implementation",
       "name": "KinHub repository implementation workflow",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "area": "implementation",
       "description": "Esecuzione autonoma end-to-end di modifiche repository, checkpoint riprendibili e consegna tramite pull request.",
       "path": ".agents/skills/implementation/SKILL.md",
       "references": [
         {
           "path": "AGENTS.md",
-          "checksum": "6d73d58bf3951f10fd9696fc3054f541806e1dd99d81d903f090dd3f0546911d"
+          "checksum": "e0c6a7e26bb4dcc50747611caec22df17a4fa75abce7c13c8fffeb1054b27b7f"
         },
         {
           "path": ".agents/skills/implementation/templates/implementation-progress.md",
@@ -155,7 +155,24 @@
       ],
       "catalog": null,
       "catalogItems": [],
-      "checksum": "6af1f5b33563683f800bf6ad072a63e58a35413b41de60813b23be6f4120e5ba"
+      "checksum": "91ebd90ca32311f13ffb958f94ecefa326ddbfb3fdf11e9ad2f341d490357eee"
+    },
+    {
+      "id": "kinhub-infrastructure",
+      "name": "KinHub infrastructure and delivery patterns",
+      "version": "0.1.0",
+      "area": "infrastructure",
+      "description": "Bicep, Azure adoption safety and GitHub Actions delivery for the single dev environment.",
+      "path": ".agents/skills/infrastructure/SKILL.md",
+      "references": [
+        {
+          "path": "docs/backlog/features/riallineamento-infrastruttura-dev/infra-guidelines.md",
+          "checksum": "828bad776ed7da18b2853926c07329896dc167c2d14d7e157289885258dd03c5"
+        }
+      ],
+      "catalog": null,
+      "catalogItems": [],
+      "checksum": "dcbfe021ae99b81c11f303a63a443100da0a2d1460ed7296b96e13a9e0c5e609"
     },
     {
       "id": "kinhub-release",

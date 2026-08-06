@@ -19,8 +19,10 @@ public static class ApiRoutes
     {
         public const string Bootstrap = "api/kinhub/bootstrap";
         public const string Families = "api/kinhub/families";
+        public const string FamilyJoin = "api/kinhub/families/join";
         public const string FamilyDetails = "api/kinhub/families/details";
         public const string FamilyInvitations = "api/kinhub/families/invitations";
+        public const string FamilyInvitationById = "api/kinhub/families/invitations/{invitationId:guid}";
         public const string FamilyMembers = "api/kinhub/families/members";
         public const string FamilyContext = "api/kinhub/family-context";
         public const string Services = "api/kinhub/services";

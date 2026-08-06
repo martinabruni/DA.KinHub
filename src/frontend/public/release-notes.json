@@ -1,8 +1,8 @@
 {
   "appName": "KinHub",
   "version": "0.1.0",
-  "commit": "522e690",
-  "buildDate": "2026-08-05T22:08:15.003Z",
+  "commit": "c69b4a4",
+  "buildDate": "2026-08-06T10:48:56.924Z",
   "environment": "Development",
   "entries": [
     {
@@ -91,6 +91,17 @@
       "descriptions": {
         "it": "Aggiunto il backlog esecutivo KinList con 13 feature autonome, tracciabilità completa, dipendenze, wave, gate e criteri verificabili.",
         "en": "Added the KinList execution backlog with 13 autonomous features, complete traceability, dependencies, waves, gates, and verifiable acceptance criteria."
+      }
+    },
+    {
+      "id": "none-changed-explicit-infrastructure-release",
+      "type": "changed",
+      "area": "infrastructure",
+      "breaking": false,
+      "issue": "none",
+      "descriptions": {
+        "it": "Ristrutturata l'infrastruttura Azure con nomi dev espliciti, adozione incrementale e linked backend Static Web Apps. Sostituiti i workflow precedenti con CI, provisioning e release con action fissate a SHA.",
+        "en": "Restructured Azure infrastructure with explicit dev names, incremental adoption and a Static Web Apps linked backend. Replaced the previous workflows with CI, provisioning and release workflows using SHA-pinned actions."
       }
     },
     {

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 environment="${1:-Development}"
+skip_build="${SKIP_BUILD:-false}"
 configuration="Release"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project="$root/src/backend/applications/DA.KinHub.Functions/DA.KinHub.Functions.csproj"
@@ -21,9 +22,15 @@ mkdir -p "$publish_dir"
 rm -f "$zip_path" "$zip_path.sha256"
 
 properties=("-p:Version=$version" "-p:CommitSha=$sha" "-p:BuildDate=$build_date" "-p:BuildEnvironment=$environment" "-p:UseAppHost=false")
-dotnet restore "$project"
-dotnet build "$project" --configuration "$configuration" --no-restore "${properties[@]}"
-dotnet publish "$project" --configuration "$configuration" --no-restore --output "$publish_dir" "${properties[@]}"
+if [[ "$skip_build" != "true" ]]; then
+  dotnet restore "$project"
+  dotnet build "$project" --configuration "$configuration" --no-restore "${properties[@]}"
+fi
+if [[ "$skip_build" == "true" ]]; then
+  dotnet publish "$project" --configuration "$configuration" --no-build --no-restore --output "$publish_dir" "${properties[@]}"
+else
+  dotnet publish "$project" --configuration "$configuration" --no-restore --output "$publish_dir" "${properties[@]}"
+fi
 
 test -f "$publish_dir/host.json" || { echo "host.json missing from publish root" >&2; exit 1; }
 test -f "$publish_dir/DA.KinHub.Functions.dll" || { echo "Function assembly missing from publish root" >&2; exit 1; }

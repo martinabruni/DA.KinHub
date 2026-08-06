@@ -114,7 +114,7 @@ npm run i18n:validate
 npm run routes:validate
 npm run build
 
-az bicep build --file infra/app.bicep
+az bicep build --file infra/main.bicep
 ```
 
 ## Publish e packaging Function App
@@ -186,37 +186,35 @@ Il frontend usa popup con selezione account; il backend convalida JWT e scope. N
 
 ## Infrastruttura Azure
 
-`infra/app.bicep` usa scope resource group e moduli per:
+`infra/main.bicep` usa scope resource group e moduli per:
 
 - piano `FC1/FlexConsumption` dedicato e Function App Linux .NET 10 isolated;
 - Storage LRS e container One Deploy privato;
 - PostgreSQL Flexible Server Burstable `Standard_B1ms`, 32 GiB, con Microsoft Entra admin e autenticazione passwordless per runtime/migration;
 - Key Vault RBAC, Application Insights e Log Analytics;
-- Static Web Apps Free con location fissata nel modulo a `westeurope`.
+- Static Web Apps Standard in `westeurope`, collegata alla Function tramite `/api`.
 
 Parametri dev: `location=italynorth`, `instanceMemoryMB=2048`, `maximumInstanceCount=20`, `alwaysReadyInstanceCount=0`, concorrenza HTTP piattaforma, VNet disabilitata. Memoria/scala/always-ready restano esclusivamente in Bicep/bicepparam.
 
 Validazione/deploy manuale:
 
 ```bash
-az bicep build --file infra/app.bicep
+az bicep build --file infra/main.bicep
 mkdir -p artifacts/infra
-az bicep build-params --file infra/main.dev.bicepparam --outfile artifacts/infra/main.dev.parameters.json
-az deployment group validate --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters @artifacts/infra/main.dev.parameters.json postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' azureTenantId='<AZURE_TENANT_ID>' entraInstance='https://<TENANT_SUBDOMAIN>.ciamlogin.com/' entraTenantId='<ENTRA_TENANT_ID>' entraBackendAudience='<ENTRA_BACKEND_CLIENT_ID>' postgresEntraAdministratorName='<POSTGRES_ENTRA_ADMIN_NAME>' postgresEntraAdministratorObjectId='<POSTGRES_ENTRA_ADMIN_OBJECT_ID>'
-az deployment group create --resource-group rg-kinhub-dev --template-file infra/app.bicep --parameters @artifacts/infra/main.dev.parameters.json postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' azureTenantId='<AZURE_TENANT_ID>' entraInstance='https://<TENANT_SUBDOMAIN>.ciamlogin.com/' entraTenantId='<ENTRA_TENANT_ID>' entraBackendAudience='<ENTRA_BACKEND_CLIENT_ID>' postgresEntraAdministratorName='<POSTGRES_ENTRA_ADMIN_NAME>' postgresEntraAdministratorObjectId='<POSTGRES_ENTRA_ADMIN_OBJECT_ID>'
+az bicep build-params --file infra/environments/dev.bicepparam --outfile artifacts/infra/dev.parameters.json
+az deployment group validate --resource-group rg-kinhub-dev --template-file infra/main.bicep --parameters @artifacts/infra/dev.parameters.json postgresAdminUsername='<VALUE>' postgresAdminPassword='<VALUE>' azureTenantId='<AZURE_TENANT_ID>' entraInstance='https://<TENANT_SUBDOMAIN>.ciamlogin.com/' entraTenantId='<ENTRA_TENANT_ID>' entraBackendAudience='<ENTRA_BACKEND_CLIENT_ID>' postgresEntraAdministratorName='<POSTGRES_ENTRA_ADMIN_NAME>' postgresEntraAdministratorObjectId='<POSTGRES_ENTRA_ADMIN_OBJECT_ID>'
+az deployment group what-if --name kinhub-dev-infrastructure --resource-group rg-kinhub-dev --template-file infra/main.bicep --parameters @artifacts/infra/dev.parameters.json
 ```
 
 Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, location, policy, provider e quota prima di eseguire `create`.
 
 ## CI/CD
 
-- `pr-quality.yml`: qualità completa, package e Bicep; nessun deploy.
-- `deploy.yml`: push path-based su `main` limitato a `infra/**`, `src/backend/**` e `src/frontend/**`; rileva gli scope modificati e mantiene il dispatch manuale.
-- `deploy-infrastructure.yml`: solo validazione e provisioning Bicep.
-- `deploy-backend.yml`: build/test backend, principal e grant PostgreSQL, migration bundle, One Deploy e smoke test API.
-- `deploy-frontend.yml`: test/build frontend, deploy Static Web Apps e smoke test SPA.
+- `ci.yml`: qualità completa su pull request, senza secret Azure.
+- `infrastructure.yml`: validate, what-if e provisioning incrementale da `main` o dispatch.
+- `release.yml`: build once, migration, One Deploy Function e Static Web Apps con gli artifact della stessa release.
 
-Ogni workflow parte solo per modifiche nella propria cartella. Se un commit tocca piu scope, il provisioning termina prima dei deploy backend/frontend; le migration appartengono sempre al backend e vengono applicate prima del relativo codice.
+La release usa gli output del deployment ARM stabile e non esegue discovery euristica di hostname o risorse. Le action esterne sono fissate a SHA completi e gli artifact di release durano 30 giorni.
 
 Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il token dedicato del servizio. Il publish profile Function è solo fallback opzionale e non è usato dal percorso primario.
 
@@ -244,14 +242,9 @@ Per ambienti GitHub distinti (`dev`, `prod`) configura secret e protection rule 
 |---|---|
 | `AZURE_RESOURCE_GROUP` | `rg-kinhub-dev`, manuale |
 | `AZURE_LOCATION` | `italynorth`, manuale |
-| `AZURE_FUNCTIONAPP_NAME` | output Bicep copiato dopo il primo provisioning |
-| `AZURE_FUNCTIONAPP_URL` | `https://<BICEP_OUTPUT_HOSTNAME>`, output Bicep copiato dopo provisioning |
-| `AZURE_STATIC_WEB_APP_NAME` | output Bicep, informativo |
-| `AZURE_STATIC_WEB_APP_URL` | `https://<BICEP_OUTPUT_HOSTNAME>`, output Bicep copiato dopo provisioning |
-| `BUILD_ENVIRONMENT` | `Development` |
 | `ENTRA_INSTANCE` | `https://<tenant-subdomain>.ciamlogin.com/` | tenant clienti External ID |
 
-Non creare Variables per memoria, scala, concorrenza o always-ready: appartengono a `main.dev.bicepparam`.
+Non creare Variables per memoria, scala, concorrenza o always-ready: appartengono a `environments/dev.bicepparam`.
 
 ### Comandi GitHub CLI
 
@@ -293,6 +286,6 @@ Flex scala a zero e non usa always-ready in dev. PostgreSQL Burstable è il cost
 - Creare/configurare app registration External ID e consenso.
 - Creare federated credential GitHub OIDC e assegnare ruoli minimi.
 - Valorizzare secret/variable per environment.
-- Per un ambiente nuovo, eseguire prima `deploy.yml` manualmente con scope `infrastructure`, recuperare il token SWA e configurare secret/variable; poi eseguire separatamente gli scope `backend` e `frontend`.
+- Per un ambiente nuovo, eseguire prima `infrastructure.yml` da `main` o dispatch manuale, recuperare il token SWA e configurare i secret dell'environment `dev`; quindi eseguire `release.yml`.
 - Copiare gli output Function/SWA nelle Variables richieste; i merge successivi su `main` attiveranno soltanto gli scope le cui cartelle sono cambiate.
 - Sostituire icone PWA placeholder e verificare installazione sui browser target.

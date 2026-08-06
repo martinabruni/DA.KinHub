@@ -32,7 +32,7 @@
 - Regole repository: `AGENTS.md`
 - Skill frontend: `.agents/skills/frontend/SKILL.md`, `.agents/skills/frontend/catalog.json`, `.agents/skills/frontend/examples/ShellBar.example.tsx`
 - Guida tecnica: `docs/architecture/frontend-design-system.md`
-- Workflow: `.github/workflows/pr-quality.yml`, `deploy-frontend.yml`
+- Workflow: `.github/workflows/ci.yml`, `release.yml`
 - Registro skill rigenerato: `.agents/skills/registry.json`
 
 ## AC-083 - Stati e temi preservati

@@ -387,8 +387,8 @@ npm run release:validate
 npm run skills:build
 npm run skills:validate
 
-az bicep build --file infra/app.bicep
-az bicep build-params --file infra/main.dev.bicepparam
+az bicep build --file infra/main.bicep
+az bicep build-params --file infra/environments/dev.bicepparam
 ```
 
 Completare manualmente prima/ultima pagina, navigazione avanti/indietro, inserimenti concorrenti, item Shared/Personal, cursori alterati/scaduti, refresh, `403`, cambio account, offline, Chrome desktop/Android PWA/Edge, italiano/inglese, temi, tastiera, zoom e screen reader.

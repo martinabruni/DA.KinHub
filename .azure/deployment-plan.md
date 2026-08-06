@@ -213,9 +213,9 @@ Validazione completata il 2026-07-16 senza provisioning o deploy.
 | Documentation | architecture, development, operations, guide e patch note bilingui | Generated |
 | Skills | 5 skill locali, cataloghi e registry | Generated |
 | Tools | skill harness, docs sync, release notes | Generated |
-| Infrastructure | `infra/app.bicep`, moduli e `main.dev.bicepparam` | Generated |
+| Infrastructure | `infra/main.bicep`, `infra/modules/`, `infra/environments/dev.bicepparam` | Generated |
 | Packaging | script PowerShell e Bash | Generated |
-| CI/CD | PR, deploy tag e deploy main | Generated |
+| CI/CD | `ci.yml`, `infrastructure.yml`, `release.yml` | Generated |
 
 ## 11. Manual Prerequisites
 
@@ -224,7 +224,7 @@ Validazione completata il 2026-07-16 senza provisioning o deploy.
 - valorizzare secret e variable GitHub documentati;
 - scegliere username/password amministratore PostgreSQL al deploy senza versionarli;
 - registrare i resource provider mancanti soltanto previa autorizzazione;
-- confermare i nomi globalmente univoci prodotti dal naming Bicep.
+- confermare i nomi globalmente univoci delle risorse adottate in `dev.bicepparam`.
 
 ## 12. Next Step
 

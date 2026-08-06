@@ -165,14 +165,13 @@ Crea almeno la seguente struttura, aggiungendo i file necessari:
 │   └── frontend/
 ├── infra/
 │   ├── modules/
-│   │   ├── function-app-flex.bicep
-│   │   ├── storage.bicep
-│   │   ├── observability.bicep
-│   │   ├── postgres.bicep
-│   │   ├── key-vault.bicep
+│   │   ├── monitoring.bicep
+│   │   ├── data-security.bicep
+│   │   ├── functions.bicep
 │   │   └── static-web-app.bicep
-│   ├── app.bicep
-│   ├── main.dev.bicepparam
+│   ├── environments/
+│   │   └── dev.bicepparam
+│   ├── main.bicep
 │   └── README.md
 ├── scripts/
 │   ├── package-backend.sh
@@ -800,7 +799,7 @@ Requisiti:
 
 Dentro `infra/` crea file modulari e parametrizzabili per una Azure Function App Linux su piano Flex Consumption.
 
-`infra/app.bicep` deve creare almeno:
+`infra/main.bicep` deve creare almeno:
 
 - Azure Functions Flex Consumption plan dedicato alla singola Function App, con SKU `FC1` e tier `FlexConsumption`;
 - Azure Function App Linux con runtime `dotnet-isolated` e versione runtime coerente con .NET 10 nel formato esatto richiesto dall'API Azure scelta;
@@ -814,7 +813,7 @@ Dentro `infra/` crea file modulari e parametrizzabili per una Azure Function App
 - Application Insights;
 - Log Analytics Workspace;
 - Key Vault;
-- Azure Static Web Apps, con location fissata a `westeurope` direttamente nel Bicep e non esposta come parametro o record di configurazione separato;
+- Azure Static Web Apps Standard in `westeurope`, con linked backend Function sul percorso `/api`;
 - managed identity user-assigned o system-assigned, motivando la scelta;
 - RBAC least privilege verso Storage, Key Vault, Application Insights e altre risorse;
 - ruoli dati minimi realmente necessari per lo storage host Functions, inclusi blob/queue/table quando richiesti dal runtime o dalla configurazione identity-based adottata;
@@ -830,7 +829,7 @@ Usa parametri espliciti per:
 
 - `environmentName`;
 - location, verificando che supporti Flex Consumption;
-- naming prefix;
+- nomi espliciti delle risorse confermate dall'utente;
 - runtime `dotnet-isolated`;
 - runtime version `.NET 10` nel formato richiesto dall’API Azure usata;
 - `instanceMemoryMB`, con valori consentiti `512`, `2048` o `4096` e default `2048`;
@@ -866,7 +865,7 @@ Il codice viene pubblicato separatamente dalla pipeline mediante pacchetto `.zip
 
 Non inserire password in file versionati. Usa parametri `@secure()`, Key Vault, OIDC e secret pipeline.
 
-Aggiungi almeno `main.dev.bicepparam` con placeholder non sensibili e valori Flex Consumption economici per l’ambiente dev.
+Aggiungi `environments/dev.bicepparam` con i nomi confermati, placeholder non sensibili e valori Flex Consumption economici per l'ambiente dev.
 
 ---
 

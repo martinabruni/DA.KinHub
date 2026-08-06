@@ -14,6 +14,10 @@ status: In review
 
 KinHub possiede già `SettingsPage` con lingua, tema, tutorial e PWA. La feature aggiunge un ingranaggio secondario nella vista KinList, una voce Famiglia nelle impostazioni e la route canonica `/settings/family`. Membri e inviti sono collezioni paginate; il codice segreto non compare mai in questa pagina.
 
+## Bug registrati
+
+- `bug-family-settings-deployment-404.md` - nell'ambiente dev le route Family e l'asset `staticwebapp.config.json` risultano non raggiungibili nel deployment pubblicato.
+
 ## Scope
 
 ### Incluso

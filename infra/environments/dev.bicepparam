@@ -1,8 +1,16 @@
-using './app.bicep'
+using '../main.bicep'
 
 param environmentName = 'dev'
 param location = 'italynorth'
-param namingPrefix = 'kinhub'
+param staticWebAppLocation = 'westeurope'
+param storageAccountName = 'kinhubdevlauj4ewc'
+param keyVaultName = 'kinhub-dev-lauj4ewc'
+param logAnalyticsName = 'kinhub-dev-lauj4ewc-log'
+param applicationInsightsName = 'kinhub-dev-lauj4ewc-appi'
+param postgresServerName = 'kinhub-dev-lauj4ewc-pg'
+param functionAppName = 'kinhub-dev-lauj4ewc-func'
+param functionPlanName = 'kinhub-dev-lauj4ewc-fc'
+param staticWebAppName = 'kinhub-dev-lauj4ewc-web'
 param runtimeName = 'dotnet-isolated'
 param runtimeVersion = '10.0'
 param instanceMemoryMB = 2048
@@ -25,3 +33,11 @@ param allowedOrigins = [
 param enableVnetIntegration = false
 param virtualNetworkSubnetResourceId = ''
 param enablePurgeProtection = true
+param logRetentionDays = 30
+param logDailyCapGb = 1
+param tags = {
+  workload: 'kinhub'
+  environment: 'dev'
+  owner: 'martinabruni'
+  costClassification: 'personal-low-cost'
+}
