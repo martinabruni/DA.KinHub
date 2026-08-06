@@ -51,34 +51,33 @@ public sealed class HttpFunctionContractTests
         var document = JsonSerializer.SerializeToDocument(provider.GetDocument());
         var paths = document.RootElement.GetProperty("paths");
 
-        foreach (var function in HttpFunctions())
+        foreach (var routeGroup in HttpFunctions().GroupBy(function => function.Route))
         {
-            var route = $"/{function.Route}";
+            var route = $"/{routeGroup.Key}";
             Assert.True(paths.TryGetProperty(route, out var pathItem), $"Route '{route}' is missing from OpenAPI.");
-            var operationProperty = Assert.Single(pathItem.EnumerateObject());
-            var operation = operationProperty.Value;
+            foreach (var function in routeGroup)
+            {
+                Assert.True(pathItem.TryGetProperty(function.Method, out var operation), $"Route '{route}' is missing method '{function.Method}'.");
 
-            var hasSecurity = operation.TryGetProperty("security", out _);
-            if (function.AllowAnonymous)
-            {
-                Assert.False(hasSecurity, $"Route '{route}' should be public in OpenAPI.");
-            }
-            else
-            {
-                Assert.True(hasSecurity, $"Route '{route}' should require bearer security in OpenAPI.");
-            }
+                var hasSecurity = operation.TryGetProperty("security", out _);
+                if (function.AllowAnonymous)
+                {
+                    Assert.False(hasSecurity, $"Route '{route}' should be public in OpenAPI.");
+                }
+                else
+                {
+                    Assert.True(hasSecurity, $"Route '{route}' should require bearer security in OpenAPI.");
+                }
 
-            if (function.RequiresFamilyAccess)
-            {
-                Assert.True(operation.TryGetProperty("parameters", out var parameters), $"Route '{route}' should declare the familyId query parameter.");
-                Assert.Contains(parameters.EnumerateArray(), parameter =>
-                    parameter.GetProperty("name").GetString() == SecurityConstants.FamilyIdQueryParameter
-                    && parameter.GetProperty("in").GetString() == "query"
-                    && parameter.GetProperty("required").GetBoolean());
-            }
-            else
-            {
-                if (operation.TryGetProperty("parameters", out var parameters))
+                if (function.RequiresFamilyAccess)
+                {
+                    Assert.True(operation.TryGetProperty("parameters", out var parameters), $"Route '{route}' should declare the familyId query parameter.");
+                    Assert.Contains(parameters.EnumerateArray(), parameter =>
+                        parameter.GetProperty("name").GetString() == SecurityConstants.FamilyIdQueryParameter
+                        && parameter.GetProperty("in").GetString() == "query"
+                        && parameter.GetProperty("required").GetBoolean());
+                }
+                else if (operation.TryGetProperty("parameters", out var parameters))
                 {
                     Assert.DoesNotContain(parameters.EnumerateArray(), parameter => parameter.GetProperty("name").GetString() == SecurityConstants.FamilyIdQueryParameter);
                 }
@@ -86,7 +85,7 @@ public sealed class HttpFunctionContractTests
         }
 
         var documentedRoutes = paths.EnumerateObject().Select(path => path.Name).OrderBy(name => name).ToArray();
-        var functionRoutes = HttpFunctions().Select(function => $"/{function.Route}").OrderBy(name => name).ToArray();
+        var functionRoutes = HttpFunctions().Select(function => $"/{function.Route}").Distinct().OrderBy(name => name).ToArray();
         Assert.Equal(functionRoutes, documentedRoutes);
     }
 

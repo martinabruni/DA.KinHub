@@ -150,9 +150,9 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                             }
                         })
                 },
-                [$"/{ApiRoutes.KinHub.FamilyInvitations}"] = new
-                {
-                    get = FamilyOperation(
+                 [$"/{ApiRoutes.KinHub.FamilyInvitations}"] = new
+                 {
+                     get = FamilyOperation(
                         "Read a keyset page of active family invitations for the authorized family",
                         new Dictionary<string, object>
                         {
@@ -190,9 +190,62 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                                 required = false,
                                 schema = new { type = "string" }
                             }
-                        })
-                },
-                [$"/{ApiRoutes.KinHub.FamilyContext}"] = new
+                         }),
+                     post = FamilyOperation(
+                         "Create an invitation for the authorized family",
+                         new Dictionary<string, object>
+                         {
+                             ["201"] = new { description = "Invitation created" },
+                             ["400"] = problemResponse,
+                             ["401"] = problemResponse,
+                             ["403"] = problemResponse,
+                             ["409"] = problemResponse,
+                             ["500"] = problemResponse,
+                             ["503"] = problemResponse
+                         })
+                  },
+                 [$"/{ApiRoutes.KinHub.FamilyInvitationById}"] = new
+                 {
+                     delete = FamilyOperation(
+                         "Revoke an active family invitation",
+                         new Dictionary<string, object>
+                         {
+                             ["204"] = new { description = "Invitation revoked" },
+                             ["400"] = problemResponse,
+                             ["401"] = problemResponse,
+                             ["403"] = problemResponse,
+                             ["404"] = problemResponse,
+                             ["409"] = problemResponse,
+                             ["500"] = problemResponse,
+                             ["503"] = problemResponse
+                         },
+                         new object[]
+                         {
+                             new
+                             {
+                                 name = "invitationId",
+                                 @in = "path",
+                                 required = true,
+                                 schema = new { type = "string", format = "uuid" }
+                             }
+                          })
+                  },
+                 [$"/{ApiRoutes.KinHub.FamilyJoin}"] = new
+                 {
+                     post = ProtectedOperation(
+                         "Join a family using an invitation code",
+                         new Dictionary<string, object>
+                         {
+                             ["200"] = new { description = "Family joined" },
+                             ["400"] = problemResponse,
+                             ["401"] = problemResponse,
+                             ["409"] = problemResponse,
+                             ["429"] = problemResponse,
+                             ["500"] = problemResponse,
+                             ["503"] = problemResponse
+                         })
+                 },
+                 [$"/{ApiRoutes.KinHub.FamilyContext}"] = new
                 {
                     get = FamilyOperation(
                         "Validate the Family policy for a familyId",

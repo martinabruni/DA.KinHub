@@ -101,4 +101,44 @@ public sealed class FamilyInvitation
         DateTimeOffset? revokedAt = null,
         DateTimeOffset? consumedAt = null) =>
         new(id, familyId, createdByApplicationUserId, createdAt, expiresAt, codeHmac, hmacKeyVersion, revokedAt, consumedAt);
+
+    public void Revoke(DateTimeOffset revokedAt)
+    {
+        if (RevokedAt is not null)
+        {
+            throw new DomainException("The invitation is already revoked.");
+        }
+
+        if (ConsumedAt is not null)
+        {
+            throw new DomainException("The invitation has already been consumed.");
+        }
+
+        if (revokedAt < CreatedAt)
+        {
+            throw new DomainException("Invitation revocation cannot precede creation.");
+        }
+
+        RevokedAt = revokedAt;
+    }
+
+    public void Consume(DateTimeOffset consumedAt)
+    {
+        if (ConsumedAt is not null)
+        {
+            throw new DomainException("The invitation has already been consumed.");
+        }
+
+        if (RevokedAt is not null)
+        {
+            throw new DomainException("The invitation has already been revoked.");
+        }
+
+        if (consumedAt < CreatedAt)
+        {
+            throw new DomainException("Invitation consumption cannot precede creation.");
+        }
+
+        ConsumedAt = consumedAt;
+    }
 }

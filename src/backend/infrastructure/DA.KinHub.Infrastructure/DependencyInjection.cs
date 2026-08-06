@@ -30,8 +30,10 @@ public static class DependencyInjection
     {
         services.AddOptions<DatabaseOptions>().Bind(configuration.GetSection(DatabaseOptions.SectionName)).ValidateOnStart();
         services.AddOptions<BlobStorageOptions>().Bind(configuration.GetSection(BlobStorageOptions.SectionName)).ValidateOnStart();
+        services.AddOptions<FamilyInvitationCodeOptions>().Bind(configuration.GetSection(FamilyInvitationCodeOptions.SectionName)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<DatabaseOptions>, DatabaseOptionsValidator>();
         services.AddSingleton<IValidateOptions<BlobStorageOptions>, BlobStorageOptionsValidator>();
+        services.AddSingleton<IValidateOptions<FamilyInvitationCodeOptions>, FamilyInvitationCodeOptionsValidator>();
 
         services.TryAddSingleton<TokenCredential>(provider =>
         {
@@ -65,12 +67,14 @@ public static class DependencyInjection
         services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
         services.AddScoped<IFamilyRepository, FamilyRepository>();
         services.AddScoped<IFamilyMembershipRepository, FamilyMembershipRepository>();
+        services.AddScoped<IFamilyInvitationRepository, FamilyInvitationRepository>();
         services.AddScoped<IFamilyDetailsRepository, FamilyDetailsRepository>();
         services.AddScoped<IFamilyMemberPageRepository, FamilyMemberPageRepository>();
         services.AddScoped<IFamilyInvitationPageRepository, FamilyInvitationPageRepository>();
         services.AddScoped<IActiveKinListItemRepository, ActiveKinListItemRepository>();
         services.AddScoped<IKinServiceRepository, KinServiceRepository>();
         services.AddSingleton<IActiveItemsCursorCodec, ActiveItemsCursorCodec>();
+        services.AddSingleton<IFamilyInvitationCodeProtector, FamilyInvitationCodeProtector>();
         services.AddSingleton<IFamilyMemberCursorCodec, FamilyMemberCursorCodec>();
         services.AddSingleton<IFamilyInvitationCursorCodec, FamilyInvitationCursorCodec>();
         services.AddHealthChecks().AddDbContextCheck<KinHubDbContext>("postgresql", tags: [InfrastructureHealthChecks.ReadyTag]);

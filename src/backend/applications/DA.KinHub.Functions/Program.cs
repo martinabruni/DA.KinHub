@@ -1,6 +1,7 @@
 using DA.KinHub.Business;
 using DA.KinHub.Business.KinList;
 using DA.KinHub.Functions.Configuration;
+using DA.KinHub.Functions.Functions;
 using DA.KinHub.Functions.Http;
 using DA.KinHub.Functions.Middleware;
 using DA.KinHub.Functions.Observability;
@@ -37,6 +38,7 @@ var host = new HostBuilder()
         services.AddInfrastructure(context.Configuration);
         services.AddSingleton<ApiProblemDetailsFactory>();
         services.AddSingleton<OpenApiDocumentProvider>();
+        services.AddSingleton<JoinFamilyRateLimiter>();
     })
     .Build();
 
