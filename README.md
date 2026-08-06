@@ -245,6 +245,7 @@ Per ambienti GitHub distinti (`dev`, `prod`) configura secret e protection rule 
 | `AZURE_RESOURCE_GROUP` | `rg-kinhub-dev`, manuale |
 | `AZURE_LOCATION` | `italynorth`, manuale |
 | `AZURE_FUNCTIONAPP_NAME` | output Bicep copiato dopo il primo provisioning |
+| `AZURE_FUNCTIONAPP_URL` | `https://<BICEP_OUTPUT_HOSTNAME>`, output Bicep copiato dopo provisioning |
 | `AZURE_STATIC_WEB_APP_NAME` | output Bicep, informativo |
 | `AZURE_STATIC_WEB_APP_URL` | `https://<BICEP_OUTPUT_HOSTNAME>`, output Bicep copiato dopo provisioning |
 | `BUILD_ENVIRONMENT` | `Development` |
@@ -269,6 +270,7 @@ gh secret set ENTRA_API_SCOPE --body "<VALUE>"
 gh variable set AZURE_RESOURCE_GROUP --body "rg-kinhub-dev"
 gh variable set AZURE_LOCATION --body "italynorth"
 gh variable set AZURE_FUNCTIONAPP_NAME --body "<BICEP_OUTPUT>"
+gh variable set AZURE_FUNCTIONAPP_URL --body "https://<BICEP_OUTPUT_HOSTNAME>"
 gh variable set AZURE_STATIC_WEB_APP_NAME --body "<BICEP_OUTPUT>"
 gh variable set AZURE_STATIC_WEB_APP_URL --body "https://<BICEP_OUTPUT_HOSTNAME>"
 gh variable set BUILD_ENVIRONMENT --body "Development"

@@ -54,10 +54,17 @@ jobs:
         shell: bash
         run: |
           resource_group="${{ vars.AZURE_RESOURCE_GROUP }}"
+          function_app_url="${{ vars.AZURE_FUNCTIONAPP_URL }}"
           static_web_app_url="${{ vars.AZURE_STATIC_WEB_APP_URL }}"
           test -n "$resource_group"
 
           function_app_hostname="${{ inputs.function_app_hostname }}"
+          if [[ -z "$function_app_hostname" && -n "$function_app_url" ]]; then
+            function_app_hostname="${function_app_url#https://}"
+            function_app_hostname="${function_app_hostname#http://}"
+            function_app_hostname="${function_app_hostname%%/*}"
+          fi
+
           if [[ -z "$function_app_hostname" ]]; then
             function_app_name="${{ vars.AZURE_FUNCTIONAPP_NAME }}"
             if [[ -z "$function_app_name" ]]; then
