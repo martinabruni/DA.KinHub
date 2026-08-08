@@ -109,7 +109,7 @@ Bicep adotterà e gestirà le risorse esistenti tramite questi nomi. Non saranno
      - `AZURE_CLIENT_ID`
      - `AZURE_TENANT_ID`
      - `AZURE_SUBSCRIPTION_ID`
-     - `AZURE_STATIC_WEB_APPS_API_TOKEN`
+      - token Static Web Apps recuperato con Azure CLI dopo il login OIDC
      - configurazione Entra External ID
      - eventuali credenziali PostgreSQL ancora necessarie al provisioning
    - Impostare `AZURE_SUBSCRIPTION_ID` alla subscription confermata.

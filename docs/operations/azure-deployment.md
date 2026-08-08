@@ -8,7 +8,7 @@ Il push su `main` avvia `infrastructure.yml` per `infra/**` e `release.yml` per 
 
 Il provisioning e la release sono serializzati con concurrency `cancel-in-progress: false`. Il gate usa soltanto il `GITHUB_TOKEN` con permesso `actions: read`: attende gli stati `queued` e `in_progress`, procede solo con `success` e blocca `failure`, `cancelled`, `timed_out` o assenza di completamento entro 30 minuti. Il dispatch manuale consente di riallineare l'infrastruttura o ripetere una release trusted senza attivare questo gate push.
 
-Il backend viene pubblicato in ZIP con `host.json` e assembly nella root, checksum SHA-256 e manifest. `Azure/functions-action` rileva Flex Consumption e usa One Deploy sul container configurato da `functionAppConfig.deployment.storage`.
+Il backend viene pubblicato in ZIP con `host.json` e assembly nella root, checksum SHA-256 e manifest. `Azure/functions-action` riceve il path ZIP esatto prodotto dal packaging, rileva Flex Consumption e usa One Deploy sul container configurato da `functionAppConfig.deployment.storage`. Dopo il login OIDC, `release.yml` recupera il token Static Web Apps con `az staticwebapp secrets list` e lo maschera prima del deploy, senza richiedere un secret GitHub separato.
 
 OIDC e obbligatorio come percorso primario. La federated credential GitHub deve autorizzare repository, branch/environment e workflow necessari. L'identita della pipeline richiede Contributor sul resource group, User Access Administrator (o custom equivalente) per creare role assignment durante il provisioning e deve essere configurata come Microsoft Entra administrator del server PostgreSQL usato dal workflow backend.
 
