@@ -1,12 +1,12 @@
 # Deployment Azure
 
-Il push su `main` avvia `infrastructure.yml` per `infra/**` e `release.yml` per il codice applicativo. Il workflow `ci.yml` gira sulle pull request senza credenziali Azure:
+Il push su `main` avvia `infrastructure.yml` per `infra/**` e `release.yml` per il codice applicativo. Se lo stesso commit modifica anche `infra/**` o `infrastructure.yml`, il primo job di `release.yml` attende il run `Infrastructure` relativo allo stesso SHA prima di leggere output ARM, applicare migration o distribuire applicazioni. Il workflow `ci.yml` gira sulle pull request senza credenziali Azure:
 
 - `infrastructure.yml` valida, esegue what-if e applica Bicep in modalità incremental;
 - `release.yml` ricompila il commit unito, applica migration, pubblica Function e Static Web Apps e verifica health/version;
 - `ci.yml` valida build, test, package, frontend, documentazione, skill e Bicep.
 
-Il provisioning e la release sono serializzati con concurrency `cancel-in-progress: false`. Il dispatch manuale consente di riallineare l'infrastruttura o ripetere una release trusted.
+Il provisioning e la release sono serializzati con concurrency `cancel-in-progress: false`. Il gate usa soltanto il `GITHUB_TOKEN` con permesso `actions: read`: attende gli stati `queued` e `in_progress`, procede solo con `success` e blocca `failure`, `cancelled`, `timed_out` o assenza di completamento entro 30 minuti. Il dispatch manuale consente di riallineare l'infrastruttura o ripetere una release trusted senza attivare questo gate push.
 
 Il backend viene pubblicato in ZIP con `host.json` e assembly nella root, checksum SHA-256 e manifest. `Azure/functions-action` rileva Flex Consumption e usa One Deploy sul container configurato da `functionAppConfig.deployment.storage`.
 

@@ -180,6 +180,13 @@ function validateInfrastructureContracts() {
     const content = normalizeText(readFileSync(join(workflowsRoot, file), "utf8"));
     if (!/^concurrency:\s*$/m.test(content) || !/cancel-in-progress:\s*false/.test(content)) throw new Error(`${file}: concurrency senza cancel-in-progress false`);
   }
+  const release = normalizeText(readFileSync(join(workflowsRoot, "release.yml"), "utf8"));
+  if (!/actions:\s*read/.test(release) || !/actions\/workflows\/infrastructure\.yml\/runs\?head_sha=\$\{GITHUB_SHA\}/.test(release)) {
+    throw new Error("Release workflow deve attendere il run Infrastructure dello stesso SHA");
+  }
+  if (!/completed:success/.test(release) || !/completed:failure\|completed:cancelled/.test(release) || !/in_progress/.test(release)) {
+    throw new Error("Release workflow deve gestire success, failure, cancelled e in_progress dell'infrastruttura");
+  }
 }
 
 function registry() {
