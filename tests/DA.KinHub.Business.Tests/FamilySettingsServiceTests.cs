@@ -14,14 +14,29 @@ public sealed class FamilySettingsServiceTests
     public async Task MembersPageClampsPageSizeAndMapsItems()
     {
         var anchor = new FamilyMemberPageAnchor(DateTimeOffset.UtcNow, Guid.NewGuid());
-        var repository = new StubMemberRepository(new FamilyMemberEntriesPage([new FamilyMemberEntry("Ada", "A", anchor)], false));
+        var applicationUserId = Guid.NewGuid();
+        var repository = new StubMemberRepository(new FamilyMemberEntriesPage([new FamilyMemberEntry(applicationUserId, "Ada", "A", anchor)], false));
         var service = CreateService(memberRepository: repository);
 
-        var result = await service.GetFamilyMembersPageAsync(FamilyId, 999, null, CancellationToken.None);
+        var result = await service.GetFamilyMembersPageAsync(FamilyId, applicationUserId, 999, null, CancellationToken.None);
 
         Assert.Equal(50, result.EffectivePageSize);
         Assert.Equal("Ada", Assert.Single(result.Items).DisplayName);
+        Assert.True(Assert.Single(result.Items).IsCurrentUser);
         Assert.Equal(50, repository.PageSize);
+    }
+
+    [Fact]
+    public async Task MembersPageDoesNotMarkAnotherMemberAsCurrentUser()
+    {
+        var anchor = new FamilyMemberPageAnchor(DateTimeOffset.UtcNow, Guid.NewGuid());
+        var service = CreateService(memberRepository: new StubMemberRepository(new FamilyMemberEntriesPage([
+            new FamilyMemberEntry(Guid.NewGuid(), "Ada", "A", anchor)
+        ], false)));
+
+        var result = await service.GetFamilyMembersPageAsync(FamilyId, Guid.NewGuid(), 20, null, CancellationToken.None);
+
+        Assert.False(Assert.Single(result.Items).IsCurrentUser);
     }
 
     [Fact]
@@ -33,7 +48,7 @@ public sealed class FamilySettingsServiceTests
         };
         var service = CreateService(memberCodec: codec);
 
-        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() => service.GetFamilyMembersPageAsync(FamilyId, 20, "cursor", CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<BusinessValidationException>(() => service.GetFamilyMembersPageAsync(FamilyId, Guid.NewGuid(), 20, "cursor", CancellationToken.None));
 
         Assert.Equal(BusinessErrorCodes.PaginationCursorInvalid, exception.Code);
     }
@@ -43,7 +58,7 @@ public sealed class FamilySettingsServiceTests
     {
         var service = CreateService(memberRepository: new StubMemberRepository(new FamilyMemberEntriesPage([], false)));
 
-        var exception = await Assert.ThrowsAsync<BusinessConflictException>(() => service.GetFamilyMembersPageAsync(FamilyId, 20, null, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<BusinessConflictException>(() => service.GetFamilyMembersPageAsync(FamilyId, Guid.NewGuid(), 20, null, CancellationToken.None));
 
         Assert.Equal(BusinessErrorCodes.FamilyStateInconsistent, exception.Code);
     }

@@ -2,7 +2,7 @@ namespace DA.KinHub.Business.Identity;
 
 public sealed record FamilyDetailsDto(string Name);
 
-public sealed record FamilyMemberDto(string? DisplayName, string? Initials);
+public sealed record FamilyMemberDto(string? DisplayName, string? Initials, bool IsCurrentUser);
 
 public sealed record FamilyMembersPageDto(
     IReadOnlyList<FamilyMemberDto> Items,
@@ -31,7 +31,7 @@ public interface IFamilySettingsService
 {
     Task<FamilyDetailsDto> GetFamilyDetailsAsync(Guid familyId, CancellationToken cancellationToken);
 
-    Task<FamilyMembersPageDto> GetFamilyMembersPageAsync(Guid familyId, int requestedPageSize, string? opaqueCursor, CancellationToken cancellationToken);
+    Task<FamilyMembersPageDto> GetFamilyMembersPageAsync(Guid familyId, Guid applicationUserId, int requestedPageSize, string? opaqueCursor, CancellationToken cancellationToken);
 
     Task<FamilyInvitationsPageDto> GetActiveFamilyInvitationsPageAsync(Guid familyId, int requestedPageSize, string? opaqueCursor, CancellationToken cancellationToken);
 }

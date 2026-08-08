@@ -26,6 +26,7 @@ internal sealed class FamilyMemberPageRepository(KinHubDbContext dbContext) : IF
                     && family.InactiveAt == null
                 select new
                 {
+                    membership.ApplicationUserId,
                     membership.Id,
                     membership.CreatedAt
                 };
@@ -58,7 +59,7 @@ internal sealed class FamilyMemberPageRepository(KinHubDbContext dbContext) : IF
             }
 
             return new FamilyMemberEntriesPage(
-                rows.Select(item => new FamilyMemberEntry(null, null, new FamilyMemberPageAnchor(item.CreatedAt, item.Id))).ToArray(),
+                rows.Select(item => new FamilyMemberEntry(item.ApplicationUserId, null, null, new FamilyMemberPageAnchor(item.CreatedAt, item.Id))).ToArray(),
                 hasMore);
         }
         catch (Exception exception) when (IsRepositoryUnavailable(exception))

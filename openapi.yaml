@@ -730,6 +730,7 @@ components:
       required:
         - displayName
         - initials
+        - isCurrentUser
       properties:
         displayName:
           type: string
@@ -737,6 +738,8 @@ components:
         initials:
           type: string
           nullable: true
+        isCurrentUser:
+          type: boolean
     FamilyMembersPage:
       type: object
       required:

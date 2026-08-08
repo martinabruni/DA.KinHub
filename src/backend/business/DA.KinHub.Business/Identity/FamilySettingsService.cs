@@ -42,9 +42,13 @@ public sealed class FamilySettingsService(
         }
     }
 
-    public async Task<FamilyMembersPageDto> GetFamilyMembersPageAsync(Guid familyId, int requestedPageSize, string? opaqueCursor, CancellationToken cancellationToken)
+    public async Task<FamilyMembersPageDto> GetFamilyMembersPageAsync(Guid familyId, Guid applicationUserId, int requestedPageSize, string? opaqueCursor, CancellationToken cancellationToken)
     {
         ValidateFamilyId(familyId);
+        if (applicationUserId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Application user ID is required.");
+        }
         var effectivePageSize = ValidateAndClampPageSize(requestedPageSize);
 
         try
@@ -74,7 +78,7 @@ public sealed class FamilySettingsService(
                 throw new BusinessConflictException(BusinessErrorCodes.FamilyStateInconsistent, "The family state is inconsistent.");
             }
 
-            var items = page.Items.Select(item => new FamilyMemberDto(item.DisplayName, item.Initials)).ToArray();
+            var items = page.Items.Select(item => new FamilyMemberDto(item.DisplayName, item.Initials, item.ApplicationUserId == applicationUserId)).ToArray();
             BuildPageCursors(
                 familyId,
                 effectivePageSize,

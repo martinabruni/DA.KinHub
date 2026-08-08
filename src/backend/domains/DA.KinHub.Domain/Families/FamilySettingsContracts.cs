@@ -50,7 +50,7 @@ public sealed record DecodedFamilyInvitationCursor(FamilyPageCursorDirection Dir
 
 public sealed record FamilyDetailsEntry(string Name);
 
-public sealed record FamilyMemberEntry(string? DisplayName, string? Initials, FamilyMemberPageAnchor Anchor);
+public sealed record FamilyMemberEntry(Guid ApplicationUserId, string? DisplayName, string? Initials, FamilyMemberPageAnchor Anchor);
 
 public sealed record FamilyMemberEntriesPage(IReadOnlyList<FamilyMemberEntry> Items, bool HasMore);
 

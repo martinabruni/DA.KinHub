@@ -65,7 +65,7 @@ public sealed class KinHubFamilyFunctions(
         var hasCursor = request.Query.TryGetValue("cursor", out var cursorValues) && cursorValues.Count == 1 && !string.IsNullOrWhiteSpace(cursorValues[0]);
         using var operation = telemetry.Begin(KinHubOperations.FamilyMembersPage);
         telemetry.RecordPagedRequest(KinHubOperations.FamilyMembersPage, pageSize, hasCursor, hasCursor ? "cursor" : "initial");
-        var result = await familySettingsService.GetFamilyMembersPageAsync(authorization.RequireFamilyId(), pageSize, hasCursor ? cursorValues[0] : null, cancellationToken);
+        var result = await familySettingsService.GetFamilyMembersPageAsync(authorization.RequireFamilyId(), authorization.RequireApplicationUserId(), pageSize, hasCursor ? cursorValues[0] : null, cancellationToken);
         telemetry.RecordPagedResult(KinHubOperations.FamilyMembersPage, result.EffectivePageSize, result.Items.Count, result.PreviousCursor is not null, result.NextCursor is not null);
         operation.Complete(result.Items.Count == 0 ? "empty" : "success");
         return new OkObjectResult(result);

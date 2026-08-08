@@ -8,6 +8,7 @@ import { routeDefinition } from "./PageHelpAccordion";
 import { ShellBarProvider, useShellBar } from "./ShellBarContext";
 import { useTheme } from "./ThemeProvider";
 import { VersionNotification } from "./VersionNotification";
+import { AccountProfileProvider, useAccountProfileName } from "./AccountProfileContext";
 
 function LayoutContent() {
   const { t } = useTranslation("common");
@@ -17,6 +18,7 @@ function LayoutContent() {
   const location = useLocation();
   const { contextualBar } = useShellBar();
   const account = getActiveAccount(instance);
+  const accountName = useAccountProfileName();
   const isDark = theme === "dark" || (theme === "system" && document.documentElement.classList.contains("dark"));
   const globalPaths = {
     home: routeDefinition("home").path,
@@ -72,7 +74,7 @@ function LayoutContent() {
               paths={globalPaths}
               theme={isDark ? "dark" : "light"}
               authenticated={Boolean(account)}
-              accountName={account?.name}
+              accountName={accountName}
               currentLanguage={i18n.language === "it" ? "it" : "en"}
               onLanguageChange={(language) => { void i18n.changeLanguage(language); }}
               onThemeToggle={() => handleThemeToggle()}
@@ -91,5 +93,7 @@ function LayoutContent() {
 }
 
 export function Layout() {
-  return <ShellBarProvider><LayoutContent /></ShellBarProvider>;
+  const { instance } = useMsal();
+  const account = getActiveAccount(instance);
+  return <AccountProfileProvider accountName={account?.name}><ShellBarProvider><LayoutContent /></ShellBarProvider></AccountProfileProvider>;
 }
