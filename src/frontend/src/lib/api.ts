@@ -63,6 +63,7 @@ export interface FamilyDetails {
 export interface FamilyMember {
   displayName: string | null;
   initials: string | null;
+  isCurrentUser: boolean;
 }
 
 export interface FamilyMembersPage {

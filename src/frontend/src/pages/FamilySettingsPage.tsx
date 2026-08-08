@@ -6,6 +6,7 @@ import { PageScaffold } from "../components/PageScaffold";
 import { Button, ButtonLink, Card, Pagination } from "../components/ui/core";
 import { Alert, StatePanel } from "../components/ui/feedback";
 import { ApiError, ApiNetworkError, ApiResponseError, type FamilyDetails, type FamilyInvitationsPage, type FamilyMembersPage } from "../lib/api";
+import { useAccountProfileName } from "../components/AccountProfileContext";
 
 type CollectionState<TPage> =
   | { status: "loading" }
@@ -19,6 +20,7 @@ const PAGE_SIZE = 50;
 export function FamilySettingsPage() {
   const { t, i18n } = useTranslation(["pages", "common"]);
   const bootstrap = useKinHubFamilyBootstrap();
+  const accountName = useAccountProfileName();
   const generationRef = useRef(0);
   const familyCardRef = useRef<HTMLHeadingElement>(null);
   const membersHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -237,9 +239,6 @@ export function FamilySettingsPage() {
           <h2 ref={familyCardRef} tabIndex={-1}>{t("familySettings.familyCardTitle", { ns: "pages" })}</h2>
           <p>{t("familySettings.familyCardDescription", { ns: "pages" })}</p>
           <strong>{details.name}</strong>
-          <div className="page-actions">
-            <Button variant="secondary" onClick={() => bootstrap.state.status === "family" ? void loadInitial(bootstrap.state.familyId) : undefined}>{t("actions.refresh", { ns: "common" })}</Button>
-          </div>
         </Card>
 
         <Card className="kh-settings-card">
@@ -249,7 +248,7 @@ export function FamilySettingsPage() {
           {membersState.status === "cursorInvalid" ? <Alert tone="warning" title={t("familySettings.cursorInvalidTitle", { ns: "pages" })}>{t("familySettings.cursorInvalidDescription", { ns: "pages" })} <Button variant="ghost" onClick={() => void loadMembers(null, "refresh")}>{t("familySettings.restartSection", { ns: "pages" })}</Button></Alert> : null}
           {membersState.status === "error" ? <Alert tone="danger" title={t("familySettings.membersErrorTitle", { ns: "pages" })}>{t("familySettings.membersErrorDescription", { ns: "pages" })}</Alert> : null}
           {membersPage ? <ul>{membersPage.items.map((member, index) => {
-            const displayName = member.displayName ?? memberFallback;
+            const displayName = member.isCurrentUser ? (accountName?.trim() || member.displayName || memberFallback) : (member.displayName ?? memberFallback);
             const initials = member.initials ?? "?";
             return <MemberRow key={`${displayName}-${index}`} label={displayName} displayName={displayName} initials={initials} status={t("familySettings.memberStatus", { ns: "pages" })} />;
           })}</ul> : null}

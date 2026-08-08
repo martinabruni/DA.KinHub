@@ -392,11 +392,12 @@ public sealed class OpenApiDocumentProvider(BuildInfoProvider buildInfoProvider,
                     ["FamilyMember"] = new
                     {
                         type = "object",
-                        required = new[] { "displayName", "initials" },
+                        required = new[] { "displayName", "initials", "isCurrentUser" },
                         properties = new Dictionary<string, object>
                         {
                             ["displayName"] = new { type = "string", nullable = true },
-                            ["initials"] = new { type = "string", nullable = true }
+                            ["initials"] = new { type = "string", nullable = true },
+                            ["isCurrentUser"] = new { type = "boolean" }
                         }
                     },
                     ["FamilyMembersPage"] = new

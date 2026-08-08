@@ -49,6 +49,7 @@ jobs:
           npm run --prefix src/frontend build
       - name: Validate repository tools
         run: |
+          node --test scripts/smoke-test-release.test.mjs
           npm run skills:validate
           npm run docs:validate
           npm run release:validate
