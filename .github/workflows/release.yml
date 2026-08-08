@@ -121,9 +121,14 @@ jobs:
           mkdir -p artifacts/migrations
           dotnet ef migrations bundle --project src/backend/infrastructure/DA.KinHub.Infrastructure --configuration Release --force --output artifacts/migrations/kinhub-migrations
       - name: Package backend without recompiling
+        id: package_backend
         env:
           SKIP_BUILD: 'true'
-        run: bash scripts/package-backend.sh CI
+        run: |
+          set -euo pipefail
+          backend_zip=$(bash scripts/package-backend.sh CI | tee "$RUNNER_TEMP/backend-package.log" | tail -n 1)
+          test -f "$backend_zip"
+          echo "zip_path=$backend_zip" >> "$GITHUB_OUTPUT"
       - name: Build frontend and metadata
         env:
           VITE_API_BASE_URL: /api
@@ -221,7 +226,7 @@ jobs:
         uses: Azure/functions-action@c9cc8ee93d1285e2a17312cc8357dc1775955272 # v1
         with:
           app-name: ${{ steps.arm.outputs.functionAppName }}
-          package: artifacts/backend/*.zip
+          package: ${{ steps.package_backend.outputs.zip_path }}
           sku: flexconsumption
           remote-build: false
       - name: Deploy Static Web App without rebuilding
