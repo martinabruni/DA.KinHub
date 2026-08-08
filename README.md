@@ -216,7 +216,7 @@ Il deploy live non è implicito nel bootstrap. Verifica sempre subscription, loc
 
 La release usa gli output del deployment ARM stabile e non esegue discovery euristica di hostname o risorse. Le action esterne sono fissate a SHA completi e gli artifact di release durano 30 giorni.
 
-Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il token dedicato del servizio. Il publish profile Function è solo fallback opzionale e non è usato dal percorso primario.
+Azure login usa federated credential OIDC. Il workflow recupera il token Static Web Apps tramite Azure CLI dopo il login e lo maschera prima del deploy. Il publish profile Function è solo fallback opzionale e non è usato dal percorso primario.
 
 ## GitHub Secrets
 
@@ -225,7 +225,6 @@ Azure login usa federated credential OIDC. Il deploy Static Web Apps usa il toke
 | `AZURE_CLIENT_ID` | OIDC service principal/client | configurazione manuale/federated credential |
 | `AZURE_TENANT_ID` | tenant Azure | configurazione manuale |
 | `AZURE_SUBSCRIPTION_ID` | subscription target | configurazione manuale |
-| `AZURE_STATIC_WEB_APPS_API_TOKEN` | deploy frontend | generato da Static Web Apps |
 | `POSTGRES_ADMIN_USERNAME` | bootstrap del server PostgreSQL Flexible Server | scelto manualmente; usato solo in provisioning infrastrutturale |
 | `POSTGRES_ADMIN_PASSWORD` | bootstrap del server PostgreSQL Flexible Server | generata e conservata come secret; non usata dal runtime applicativo |
 | `ENTRA_TENANT_ID` | tenant clienti External ID, distinto dal tenant Azure | app registration External ID |
@@ -252,7 +251,6 @@ Non creare Variables per memoria, scala, concorrenza o always-ready: appartengon
 gh secret set AZURE_CLIENT_ID --body "<VALUE>"
 gh secret set AZURE_TENANT_ID --body "<VALUE>"
 gh secret set AZURE_SUBSCRIPTION_ID --body "<VALUE>"
-gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_USERNAME --body "<VALUE>"
 gh secret set POSTGRES_ADMIN_PASSWORD --body "<VALUE>"
 gh secret set ENTRA_TENANT_ID --body "<VALUE>"

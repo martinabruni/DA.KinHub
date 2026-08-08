@@ -187,6 +187,9 @@ function validateInfrastructureContracts() {
   if (!/completed:success/.test(release) || !/completed:failure\|completed:cancelled/.test(release) || !/in_progress/.test(release)) {
     throw new Error("Release workflow deve gestire success, failure, cancelled e in_progress dell'infrastruttura");
   }
+  if (!/az staticwebapp secrets list/.test(release) || !/steps\.static_web_app_token\.outputs\.deployment_token/.test(release)) {
+    throw new Error("Release workflow deve recuperare il token Static Web Apps tramite Azure OIDC");
+  }
 }
 
 function registry() {
