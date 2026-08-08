@@ -247,7 +247,17 @@ jobs:
           output_location: ''
       - name: Smoke test release
         shell: bash
+        env:
+          ENTRA_BACKEND_AUDIENCE: ${{ secrets.ENTRA_BACKEND_AUDIENCE }}
+          FUNCTION_HEALTH_URL: https://${{ steps.arm.outputs.functionAppHostname }}/health/live
+          STATIC_ROOT_URL: https://${{ steps.arm.outputs.staticWebAppHostname }}/
+          STATIC_VERSION_URL: https://${{ steps.arm.outputs.staticWebAppHostname }}/api/version
         run: |
-          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.arm.outputs.functionAppHostname }}/health/live"
-          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.arm.outputs.staticWebAppHostname }}/"
-          curl --fail --retry 8 --retry-delay 10 "https://${{ steps.arm.outputs.staticWebAppHostname }}/api/version"
+          set -euo pipefail
+          test -n "$ENTRA_BACKEND_AUDIENCE"
+          health_token=$(az account get-access-token \
+            --scope "api://${ENTRA_BACKEND_AUDIENCE}/.default" \
+            --query accessToken --output tsv)
+          test -n "$health_token"
+          echo "::add-mask::$health_token"
+          FUNCTION_HEALTH_TOKEN="$health_token" node scripts/smoke-test-release.mjs
